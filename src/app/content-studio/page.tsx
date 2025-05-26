@@ -1,8 +1,8 @@
 
 "use client";
 
-import React, { useState } from 'react';
-import { useFormState } from "react-dom";
+import React, { useState, useEffect } from 'react';
+import { useActionState } from "react"; // Changed from react-dom
 import Image from 'next/image';
 import { AppShell } from '@/components/AppShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -19,30 +19,32 @@ import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, han
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
 
-const initialFormState = { error: undefined, data: undefined, message: undefined };
+const initialFormState: FormState = { error: undefined, data: undefined, message: undefined };
 
 export default function ContentStudioPage() {
-  const { brandData, addGeneratedImage, addGeneratedSocialPost, addGeneratedBlogPost } = useBrand();
+  const { brandData, addGeneratedImage, addGeneratedSocialPost, addGeneratedBlogPost, generatedImages } = useBrand();
   const { toast } = useToast();
 
-  const [imageState, imageAction] = useFormState(handleGenerateImagesAction, initialFormState);
-  const [socialState, socialAction] = useFormState(handleGenerateSocialMediaCaptionAction, initialFormState);
-  const [blogState, blogAction] = useFormState(handleGenerateBlogContentAction, initialFormState);
+  const [imageState, imageAction] = useActionState(handleGenerateImagesAction, initialFormState); // Changed from useFormState
+  const [socialState, socialAction] = useActionState(handleGenerateSocialMediaCaptionAction, initialFormState); // Changed from useFormState
+  const [blogState, blogAction] = useActionState(handleGenerateBlogContentAction, initialFormState); // Changed from useFormState
   
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [generatedSocialPost, setGeneratedSocialPost] = useState<{caption: string, hashtags: string} | null>(null);
   const [generatedBlogPost, setGeneratedBlogPost] = useState<{title: string, content: string, tags: string} | null>(null);
   const [selectedImageForSocial, setSelectedImageForSocial] = useState<string>("");
+  const [socialToneValue, setSocialToneValue] = useState<string>("professional");
+  const [blogPlatformValue, setBlogPlatformValue] = useState<"Medium" | "Other">("Medium");
 
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (imageState.data) {
       setGeneratedImageUrl(imageState.data);
       const newImage: GeneratedImage = {
         id: new Date().toISOString(),
         src: imageState.data,
-        prompt: (document.getElementById("imageGenBrandDescription") as HTMLTextAreaElement)?.value || "", // poor man's way, should pass through form
-        style: (document.getElementById("imageGenImageStyle") as HTMLInputElement)?.value || ""
+        prompt: (document.querySelector('form[action^="/content-studio"] textarea[name="brandDescription"]') as HTMLTextAreaElement)?.value || "",
+        style: (document.querySelector('form[action^="/content-studio"] input[name="imageStyle"]') as HTMLInputElement)?.value || ""
       };
       addGeneratedImage(newImage);
       toast({ title: "Success", description: imageState.message });
@@ -50,25 +52,25 @@ export default function ContentStudioPage() {
     if (imageState.error) toast({ title: "Error", description: imageState.error, variant: "destructive" });
   }, [imageState, toast, addGeneratedImage]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (socialState.data) {
       setGeneratedSocialPost(socialState.data);
        const newPost: GeneratedSocialMediaPost = {
         id: new Date().toISOString(),
-        platform: 'Instagram',
-        imageSrc: selectedImageForSocial,
-        imageDescription: (document.getElementById("socialImageDescription") as HTMLTextAreaElement)?.value || "",
+        platform: 'Instagram', // Assuming Instagram for now
+        imageSrc: selectedImageForSocial, 
+        imageDescription: (document.querySelector('form[action^="/content-studio"] textarea[name="imageDescription"]') as HTMLTextAreaElement)?.value || "",
         caption: socialState.data.caption,
         hashtags: socialState.data.hashtags,
-        tone: (document.getElementById("socialTone") as HTMLInputElement)?.value || "", // This ID is not correct, needs Select value
+        tone: socialToneValue,
       };
       addGeneratedSocialPost(newPost);
       toast({ title: "Success", description: socialState.message });
     }
     if (socialState.error) toast({ title: "Error", description: socialState.error, variant: "destructive" });
-  }, [socialState, toast, addGeneratedSocialPost, selectedImageForSocial]);
+  }, [socialState, toast, addGeneratedSocialPost, selectedImageForSocial, socialToneValue]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (blogState.data) {
       setGeneratedBlogPost(blogState.data);
       const newPost: GeneratedBlogPost = {
@@ -76,13 +78,13 @@ export default function ContentStudioPage() {
         title: blogState.data.title,
         content: blogState.data.content,
         tags: blogState.data.tags,
-        platform: (document.getElementById("blogTargetPlatform") as HTMLInputElement)?.value as "Medium" | "Other", // This ID is not correct, needs Select value
+        platform: blogPlatformValue,
       };
       addGeneratedBlogPost(newPost);
       toast({ title: "Success", description: blogState.message });
     }
     if (blogState.error) toast({ title: "Error", description: blogState.error, variant: "destructive" });
-  }, [blogState, toast, addGeneratedBlogPost]);
+  }, [blogState, toast, addGeneratedBlogPost, blogPlatformValue]);
 
 
   const copyToClipboard = (text: string, type: string) => {
@@ -117,12 +119,12 @@ export default function ContentStudioPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>Generate Brand Images</CardTitle>
-                <CardDescription>Create unique images based on your brand's aesthetics.</CardDescription>
+                <CardDescription>Create unique images based on your brand's aesthetics. Uses brand description and style. Optionally provide an example image Data URI.</CardDescription>
               </CardHeader>
               <form action={imageAction}>
                 <CardContent className="space-y-6">
                   <div>
-                    <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Description</Label>
+                    <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
                     <Textarea
                       id="imageGenBrandDescription"
                       name="brandDescription"
@@ -133,7 +135,7 @@ export default function ContentStudioPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="imageGenImageStyle" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Image Style</Label>
+                    <Label htmlFor="imageGenImageStyle" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Image Style (from Profile)</Label>
                     <Input
                       id="imageGenImageStyle"
                       name="imageStyle"
@@ -143,13 +145,19 @@ export default function ContentStudioPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="imageGenExampleImage" className="flex items-center mb-1"><ImageIcon className="w-4 h-4 mr-2 text-primary" />Example Image URL (Optional)</Label>
+                    <Label htmlFor="imageGenExampleImage" className="flex items-center mb-1"><ImageIcon className="w-4 h-4 mr-2 text-primary" />Example Image Data URI (from Profile, Optional)</Label>
                     <Input
                       id="imageGenExampleImage"
                       name="exampleImage"
                       defaultValue={brandData?.exampleImage || ""}
-                      placeholder="URL of an image to inform the style"
+                      placeholder="Paste a Data URI of an image to inform the style"
                     />
+                    {brandData?.exampleImage && (
+                        <div className="mt-2">
+                            <p className="text-xs text-muted-foreground">Preview of example image from profile:</p>
+                            <Image src={brandData.exampleImage} alt="Example image from profile" width={80} height={80} className="rounded border object-contain" data-ai-hint="style example"/>
+                        </div>
+                    )}
                   </div>
                 </CardContent>
                 <CardFooter>
@@ -162,7 +170,12 @@ export default function ContentStudioPage() {
                   <div className="relative w-full overflow-hidden border rounded-md aspect-video bg-muted">
                     <Image src={generatedImageUrl} alt="Generated brand image" layout="fill" objectFit="contain" data-ai-hint="brand marketing" />
                   </div>
-                  <Button variant="outline" className="mt-2" onClick={() => setSelectedImageForSocial(generatedImageUrl)}>Use for Social Post</Button>
+                   <Button variant="outline" className="mt-2" onClick={() => {
+                       setSelectedImageForSocial(generatedImageUrl);
+                       toast({title: "Image Selected", description: "This image will be used for the next social post."});
+                    }}>
+                        Use for Social Post
+                    </Button>
                 </CardContent>
               )}
             </Card>
@@ -173,12 +186,12 @@ export default function ContentStudioPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>Create Social Media Post</CardTitle>
-                <CardDescription>Generate engaging captions and hashtags for Instagram.</CardDescription>
+                <CardDescription>Generate engaging captions and hashtags. Uses brand description, image description, and selected tone.</CardDescription>
               </CardHeader>
               <form action={socialAction}>
                 <CardContent className="space-y-6">
                   <div>
-                    <Label htmlFor="socialBrandDescription" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Description</Label>
+                    <Label htmlFor="socialBrandDescription" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
                     <Textarea
                       id="socialBrandDescription"
                       name="brandDescription"
@@ -197,12 +210,17 @@ export default function ContentStudioPage() {
                       rows={3}
                       required
                     />
-                     {selectedImageForSocial && <p className="text-xs text-muted-foreground mt-1">Using selected generated image for context.</p>}
+                     {selectedImageForSocial && 
+                        <div className="mt-2">
+                            <p className="text-xs text-muted-foreground">Selected image for post:</p>
+                            <Image src={selectedImageForSocial} alt="Selected image for social post" width={80} height={80} className="rounded border object-contain" data-ai-hint="social content"/>
+                        </div>
+                     }
                   </div>
                    <div>
                     <Label htmlFor="socialTone" className="flex items-center mb-1"><ThumbsUp className="w-4 h-4 mr-2 text-primary" />Tone</Label>
-                     <Select name="tone" required defaultValue="professional">
-                        <SelectTrigger id="socialTone">
+                     <Select name="tone" required value={socialToneValue} onValueChange={setSocialToneValue}>
+                        <SelectTrigger id="socialToneSelect">
                           <SelectValue placeholder="Select a tone" />
                         </SelectTrigger>
                         <SelectContent>
@@ -249,12 +267,12 @@ export default function ContentStudioPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>Create Blog Content</CardTitle>
-                <CardDescription>Generate SEO-friendly blog posts for platforms like Medium.</CardDescription>
+                <CardDescription>Generate SEO-friendly blog posts. Uses brand name, description, keywords, and target platform.</CardDescription>
               </CardHeader>
               <form action={blogAction}>
                 <CardContent className="space-y-6">
                   <div>
-                    <Label htmlFor="blogBrandName" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Name</Label>
+                    <Label htmlFor="blogBrandName" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Name (from Profile)</Label>
                     <Input
                       id="blogBrandName"
                       name="brandName"
@@ -264,7 +282,7 @@ export default function ContentStudioPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="blogBrandDescription" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Description</Label>
+                    <Label htmlFor="blogBrandDescription" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
                     <Textarea
                       id="blogBrandDescription"
                       name="brandDescription"
@@ -275,7 +293,7 @@ export default function ContentStudioPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="blogKeywords" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Keywords</Label>
+                    <Label htmlFor="blogKeywords" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Keywords (from Profile)</Label>
                     <Input
                       id="blogKeywords"
                       name="keywords"
@@ -286,8 +304,8 @@ export default function ContentStudioPage() {
                   </div>
                   <div>
                     <Label htmlFor="blogTargetPlatform" className="flex items-center mb-1"><Newspaper className="w-4 h-4 mr-2 text-primary" />Target Platform</Label>
-                    <Select name="targetPlatform" required defaultValue="Medium">
-                      <SelectTrigger id="blogTargetPlatform">
+                    <Select name="targetPlatform" required value={blogPlatformValue} onValueChange={(value) => setBlogPlatformValue(value as "Medium" | "Other")}>
+                      <SelectTrigger id="blogTargetPlatformSelect">
                         <SelectValue placeholder="Select platform" />
                       </SelectTrigger>
                       <SelectContent>
@@ -339,3 +357,4 @@ export default function ContentStudioPage() {
     </AppShell>
   );
 }
+

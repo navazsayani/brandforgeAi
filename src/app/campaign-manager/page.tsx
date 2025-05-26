@@ -1,8 +1,8 @@
 
 "use client";
 
-import React, { useState } from 'react';
-import { useFormState } from "react-dom";
+import React, { useState, useEffect } from 'react';
+import { useActionState } from "react"; // Changed from react-dom
 import { AppShell } from '@/components/AppShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,11 +29,11 @@ const platforms = [
 export default function CampaignManagerPage() {
   const { brandData, addGeneratedAdCampaign, generatedBlogPosts, generatedSocialPosts } = useBrand(); // Assuming you might want to use generated content
   const { toast } = useToast();
-  const [state, formAction] = useFormState(handleGenerateAdCampaignAction, initialFormState);
+  const [state, formAction] = useActionState(handleGenerateAdCampaignAction, initialFormState); // Changed from useFormState
   const [generatedCampaign, setGeneratedCampaign] = useState<{campaignSummary: string; platformDetails: Record<string, string>} | null>(null);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (state.data) {
       setGeneratedCampaign(state.data);
       const newCampaign: GeneratedAdCampaign = {
