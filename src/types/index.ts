@@ -17,7 +17,7 @@ export interface GeneratedImage {
 
 export interface GeneratedSocialMediaPost {
   id: string;
-  platform: 'Instagram';
+  platform: 'Instagram'; // Example, could be extended
   imageSrc: string; // reference to a generated image or uploaded one
   imageDescription: string;
   caption: string;

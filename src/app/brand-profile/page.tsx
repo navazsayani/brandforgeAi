@@ -1,7 +1,7 @@
 
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -14,7 +14,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-import { UserCircle, LinkIcon, FileText, Palette, UploadCloud, Tag, Image as ImageIcon } from 'lucide-react';
+import { UserCircle, LinkIcon, FileText, Palette, UploadCloud, Tag, Image as ImageIconLucide } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const brandProfileSchema = z.object({
   brandName: z.string().min(2, { message: "Brand name must be at least 2 characters." }),
@@ -27,47 +28,109 @@ const brandProfileSchema = z.object({
 
 type BrandProfileFormData = z.infer<typeof brandProfileSchema>;
 
+const defaultFormValues: BrandProfileFormData = {
+  brandName: "",
+  websiteUrl: "",
+  brandDescription: "",
+  imageStyle: "",
+  exampleImage: "",
+  targetKeywords: "",
+};
+
 export default function BrandProfilePage() {
-  const { brandData, setBrandData } = useBrand();
+  const { brandData, setBrandData, isLoading: isBrandContextLoading, error: brandContextError } = useBrand();
   const { toast } = useToast();
 
   const form = useForm<BrandProfileFormData>({
     resolver: zodResolver(brandProfileSchema),
-    defaultValues: {
-      brandName: brandData?.brandName || "",
-      websiteUrl: brandData?.websiteUrl || "",
-      brandDescription: brandData?.brandDescription || "",
-      imageStyle: brandData?.imageStyle || "",
-      exampleImage: brandData?.exampleImage || "",
-      targetKeywords: brandData?.targetKeywords || "",
-    },
+    defaultValues: brandData || defaultFormValues,
   });
 
-  const onSubmit: SubmitHandler<BrandProfileFormData> = (data) => {
-    setBrandData(data);
-    toast({
-      title: "Brand Profile Updated",
-      description: "Your brand information has been saved successfully.",
-    });
-    // Here you would typically also make an API call to save to a backend
-    console.log("Brand profile data:", data); 
+  useEffect(() => {
+    if (brandData) {
+      form.reset(brandData);
+    } else if (!isBrandContextLoading) { // Only reset to defaults if not loading and no data
+      form.reset(defaultFormValues);
+    }
+  }, [brandData, form, isBrandContextLoading]);
+  
+  useEffect(() => {
+    if (brandContextError) {
+      toast({
+        title: "Error",
+        description: brandContextError,
+        variant: "destructive",
+      });
+    }
+  }, [brandContextError, toast]);
+
+  const onSubmit: SubmitHandler<BrandProfileFormData> = async (data) => {
+    try {
+      await setBrandData(data);
+      toast({
+        title: "Brand Profile Saved",
+        description: "Your brand information has been saved successfully to the cloud.",
+      });
+    } catch (error) {
+      toast({
+        title: "Save Error",
+        description: "Failed to save brand profile. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Brand profile save error:", error); 
+    }
   };
 
-  // Placeholder for image upload handling
   const [fileName, setFileName] = React.useState<string | null>(null);
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
       setFileName(file.name);
-      // In a real app, you'd upload this file and get a URL or convert to Data URI
-      // For now, we'll rely on the exampleImage URL input
-      toast({
-        title: "Image Selected (Mock)",
-        description: `${file.name} selected. Please use the 'Example Image URL' field for now.`,
-      });
+      // For now, we'll rely on the exampleImage URL input for data URI or external URL
+      // Actual file upload to Firebase Storage would be a separate step.
+       const reader = new FileReader();
+        reader.onloadend = () => {
+            const dataUri = reader.result as string;
+            form.setValue('exampleImage', dataUri, { shouldValidate: true });
+             toast({
+                title: "Image Ready for Profile",
+                description: `${file.name} converted to Data URI and set in 'Example Image URL' field. Save profile to persist.`,
+            });
+        };
+        reader.onerror = () => {
+            toast({
+                title: "Image Error",
+                description: "Could not read image file.",
+                variant: "destructive",
+            });
+        }
+        reader.readAsDataURL(file);
     }
   };
 
+  if (isBrandContextLoading && !form.formState.isDirty && !brandData) { // Show skeleton only on initial load
+    return (
+      <AppShell>
+        <div className="max-w-3xl mx-auto">
+          <Card className="shadow-lg">
+            <CardHeader>
+              <Skeleton className="h-10 w-1/2 mb-2" />
+              <Skeleton className="h-6 w-3/4" />
+            </CardHeader>
+            <CardContent className="space-y-8">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-5 w-1/4" />
+                  <Skeleton className={i === 2 || i === 4 ? "h-24 w-full" : "h-10 w-full"} />
+                </div>
+              ))}
+              <Skeleton className="h-12 w-full" />
+            </CardContent>
+          </Card>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>
@@ -94,7 +157,7 @@ export default function BrandProfilePage() {
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><UserCircle className="w-5 h-5 mr-2 text-primary"/>Brand Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="E.g., Acme Innovations" {...field} />
+                        <Input placeholder="E.g., Acme Innovations" {...field} disabled={isBrandContextLoading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -108,7 +171,7 @@ export default function BrandProfilePage() {
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><LinkIcon className="w-5 h-5 mr-2 text-primary"/>Website URL</FormLabel>
                       <FormControl>
-                        <Input placeholder="https://www.example.com" {...field} />
+                        <Input placeholder="https://www.example.com" {...field} disabled={isBrandContextLoading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -126,6 +189,7 @@ export default function BrandProfilePage() {
                           placeholder="Describe your brand, its values, target audience, and unique selling propositions."
                           rows={5}
                           {...field}
+                          disabled={isBrandContextLoading}
                         />
                       </FormControl>
                       <FormMessage />
@@ -140,7 +204,7 @@ export default function BrandProfilePage() {
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><Palette className="w-5 h-5 mr-2 text-primary"/>Desired Image Style</FormLabel>
                       <FormControl>
-                        <Input placeholder="E.g., minimalist, vibrant, professional, retro" {...field} />
+                        <Input placeholder="E.g., minimalist, vibrant, professional, retro" {...field} disabled={isBrandContextLoading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -148,23 +212,20 @@ export default function BrandProfilePage() {
                 />
                 
                 <FormItem>
-                  <FormLabel className="flex items-center text-base"><UploadCloud className="w-5 h-5 mr-2 text-primary"/>Upload Brand Images (Mock)</FormLabel>
+                  <FormLabel className="flex items-center text-base"><UploadCloud className="w-5 h-5 mr-2 text-primary"/>Upload Example Image (Optional)</FormLabel>
                    <FormControl>
                     <div className="flex items-center justify-center w-full">
-                        <Label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer border-border bg-card hover:bg-secondary">
+                        <Label htmlFor="dropzone-file" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer border-border bg-card hover:bg-secondary ${isBrandContextLoading ? 'opacity-50 cursor-not-allowed' : ''}`}>
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                 <UploadCloud className="w-8 h-8 mb-2 text-muted-foreground" />
                                 <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                                <p className="text-xs text-muted-foreground">SVG, PNG, JPG or GIF (MAX. 800x400px)</p>
+                                <p className="text-xs text-muted-foreground">SVG, PNG, JPG, GIF. Will be converted to Data URI.</p>
                             </div>
-                            <Input id="dropzone-file" type="file" className="hidden" onChange={handleImageUpload} accept="image/*" />
+                            <Input id="dropzone-file" type="file" className="hidden" onChange={handleImageUpload} accept="image/*" disabled={isBrandContextLoading} />
                         </Label>
                     </div> 
                    </FormControl>
                   {fileName && <p className="mt-2 text-sm text-muted-foreground">Selected file: {fileName}</p>}
-                  <p className="text-xs text-muted-foreground">
-                    Image upload is illustrative. Please provide an example image URL below for AI generation.
-                  </p>
                 </FormItem>
 
                 <FormField
@@ -172,11 +233,22 @@ export default function BrandProfilePage() {
                   name="exampleImage"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center text-base"><ImageIcon className="w-5 h-5 mr-2 text-primary"/>Example Image URL</FormLabel>
+                      <FormLabel className="flex items-center text-base"><ImageIconLucide className="w-5 h-5 mr-2 text-primary"/>Example Image (URL or Data URI)</FormLabel>
                       <FormControl>
-                        <Input placeholder="https://example.com/image.png or data:image/png;base64,..." {...field} />
+                        <Textarea 
+                            placeholder="https://example.com/image.png or data:image/png;base64,..." 
+                            {...field} 
+                            disabled={isBrandContextLoading}
+                            rows={3} 
+                        />
                       </FormControl>
-                      <FormMessage />
+                       <FormMessage />
+                       {field.value && field.value.startsWith('data:image') && (
+                        <div className="mt-2">
+                            <p className="text-xs text-muted-foreground mb-1">Preview:</p>
+                            <Image src={field.value} alt="Example image preview" width={100} height={100} className="rounded border object-contain" data-ai-hint="brand image"/>
+                        </div>
+                       )}
                     </FormItem>
                   )}
                 />
@@ -188,7 +260,7 @@ export default function BrandProfilePage() {
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><Tag className="w-5 h-5 mr-2 text-primary"/>Target Keywords</FormLabel>
                       <FormControl>
-                        <Input placeholder="E.g., innovation, tech solutions, eco-friendly (comma-separated)" {...field} />
+                        <Input placeholder="E.g., innovation, tech solutions, eco-friendly (comma-separated)" {...field} disabled={isBrandContextLoading} />
                       </FormControl>
                        <p className="text-xs text-muted-foreground">
                         Comma-separated keywords related to your brand and industry.
@@ -198,8 +270,8 @@ export default function BrandProfilePage() {
                   )}
                 />
                 
-                <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" size="lg">
-                  Save Brand Profile
+                <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" size="lg" disabled={isBrandContextLoading || form.formState.isSubmitting}>
+                  {isBrandContextLoading || form.formState.isSubmitting ? 'Saving...' : 'Save Brand Profile'}
                 </Button>
               </form>
             </Form>
