@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useActionState, startTransition } from 'react';
 import NextImage from 'next/image';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,12 +17,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { UserCircle, LinkIcon, FileText, Palette, UploadCloud, Tag, Image as ImageIconLucide, Brain, Loader2, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-// Firebase Storage imports are no longer needed here
-// import { storage } from '@/lib/firebaseConfig';
-// import { ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { useActionState } from "react";
 import { handleExtractBrandInfoFromUrlAction, type FormState as ExtractFormState } from '@/lib/actions';
-import { Alert, AlertDescription as AlertDescriptionShadcn } from "@/components/ui/alert"; // Renamed to avoid conflict
+import { Alert, AlertTitle as AlertTitleShadcn, AlertDescription as AlertDescriptionShadcn } from "@/components/ui/alert";
+
 
 const MAX_FILE_SIZE_MB = 0.5; // Max file size in MB for base64 to avoid Firestore limits
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
@@ -33,14 +30,11 @@ const brandProfileSchema = z.object({
   brandDescription: z.string().min(10, { message: "Description must be at least 10 characters." }),
   imageStyle: z.string().min(5, { message: "Image style description must be at least 5 characters." }),
   exampleImage: z.string().optional().refine(value => {
-    if (!value) return true; // Optional field
-    // Check if it's a data URI and roughly estimate its size. This is not perfect.
-    // A more accurate check would be on the file object before conversion.
-    // For simplicity, we are checking length here. A 1MB base64 string is ~1.37MB in length.
-    // So, roughly 1MB / 1.37 = 730,000 characters limit.
-    // For simplicity, we are checking length here. A 1MB base64 string is ~1.37MB in length.
-    // So, roughly 1MB / 1.37 = 730,000 characters limit.
-    return value.length < 1000000; // Approx 0.7MB to be safe for Firestore field limit
+    if (!value) return true;
+    // Basic check for base64 string length. 1MB base64 string is ~1.37MB in length.
+    // So, 0.5MB file is roughly 0.5 * 1.37 * 1024 * 1024 = ~718,848 characters.
+    // We'll set a limit slightly above that to be safe, but still well under Firestore's 1MB field limit.
+    return value.length < 750000;
   }, {message: `Image data is too large. Please use a smaller image (under ${MAX_FILE_SIZE_MB}MB).`}),
   targetKeywords: z.string().optional(),
 });
@@ -65,6 +59,7 @@ export default function BrandProfilePage() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
 
 
   // For AI extraction
@@ -105,12 +100,12 @@ export default function BrandProfilePage() {
     if (extractState.data) {
       form.setValue('brandDescription', extractState.data.brandDescription, { shouldValidate: true });
       form.setValue('targetKeywords', extractState.data.targetKeywords, { shouldValidate: true });
-      toast({ title: "Success", description: "Brand information extracted from website." });
+      toast({ title: "Success", description: extractState.message || "Brand information extracted from website." });
     }
     if (extractState.error) {
       toast({ title: "Extraction Error", description: extractState.error, variant: "destructive" });
     }
-    setIsExtracting(false);
+    setIsExtracting(false); // Reset loading state regardless of outcome
   }, [extractState, form, toast]);
 
   const handleAutoFill = async () => {
@@ -124,9 +119,12 @@ export default function BrandProfilePage() {
       return;
     }
     setIsExtracting(true);
-    const formData = new FormData();
-    formData.append("websiteUrl", websiteUrl);
-    extractAction(formData);
+    
+    startTransition(() => {
+      const formData = new FormData();
+      formData.append("websiteUrl", websiteUrl);
+      extractAction(formData);
+    });
   };
 
   const onSubmit: SubmitHandler<BrandProfileFormData> = async (data) => {
@@ -149,16 +147,21 @@ export default function BrandProfilePage() {
   const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
+      setSelectedFileName(file.name); // Keep track of the file name
 
       if (file.size > MAX_FILE_SIZE_BYTES) {
         toast({
           title: "File Too Large",
-          description: `Please upload an image smaller than ${MAX_FILE_SIZE_MB}MB. This is a temporary limit.`,
+          description: `Please upload an image smaller than ${MAX_FILE_SIZE_MB}MB. This is a temporary limit for storing directly in the profile.`,
           variant: "destructive",
         });
         if (fileInputRef.current) {
             fileInputRef.current.value = ""; // Reset file input
         }
+        // Clear related form field and preview if file is too large
+        form.setValue('exampleImage', brandData?.exampleImage || '', { shouldValidate: true });
+        setPreviewImage(brandData?.exampleImage || null);
+        setSelectedFileName(null);
         return;
       }
 
@@ -171,11 +174,11 @@ export default function BrandProfilePage() {
         setIsProcessingImage(false);
         toast({
           title: "Image Ready",
-          description: "Image prepared. Save profile to persist.",
+          description: "Image prepared as data. Save profile to persist.",
         });
       };
-      reader.onerror = () => {
-        console.error("Error reading file");
+      reader.onerror = (error) => {
+        console.error("Error reading file:", error);
         toast({
           title: "File Read Error",
           description: "Could not read the selected file.",
@@ -183,10 +186,18 @@ export default function BrandProfilePage() {
         });
         setIsProcessingImage(false);
         if (fileInputRef.current) {
-            fileInputRef.current.value = ""; // Reset file input
+            fileInputRef.current.value = ""; 
         }
+        form.setValue('exampleImage', brandData?.exampleImage || '', { shouldValidate: true });
+        setPreviewImage(brandData?.exampleImage || null);
+        setSelectedFileName(null);
       };
       reader.readAsDataURL(file);
+    } else {
+        // No file selected, reset to original state if available
+        form.setValue('exampleImage', brandData?.exampleImage || '', { shouldValidate: true });
+        setPreviewImage(brandData?.exampleImage || null);
+        setSelectedFileName(null);
     }
   };
   
@@ -259,7 +270,7 @@ export default function BrandProfilePage() {
                             <Button 
                                 type="button" 
                                 onClick={handleAutoFill} 
-                                disabled={isExtracting || isBrandContextLoading || !field.value || isProcessingImage}
+                                disabled={isExtracting || isBrandContextLoading || !field.value || form.getFieldState("websiteUrl").invalid || isProcessingImage}
                                 variant="outline"
                                 size="icon"
                                 title="Auto-fill from Website"
@@ -309,9 +320,10 @@ export default function BrandProfilePage() {
                   <FormLabel className="flex items-center text-base"><UploadCloud className="w-5 h-5 mr-2 text-primary"/>Upload Example Image (Optional)</FormLabel>
                   <Alert variant="destructive" className="mb-2">
                     <AlertTriangle className="h-4 w-4" />
+                    <AlertTitleShadcn>Image Size Limit</AlertTitleShadcn>
                     <AlertDescriptionShadcn>
-                      For now, please use very small images (under {MAX_FILE_SIZE_MB}MB) due to temporary storage limitations.
-                      A future update will support larger images via dedicated file storage.
+                      Due to current limitations of storing images directly in the profile, please use very small images (under {MAX_FILE_SIZE_MB}MB).
+                      Larger images will cause errors when saving.
                     </AlertDescriptionShadcn>
                   </Alert>
                    <FormControl>
@@ -319,10 +331,10 @@ export default function BrandProfilePage() {
                         <Label htmlFor="dropzone-file" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer border-border bg-card hover:bg-secondary ${isBrandContextLoading || isProcessingImage ? 'opacity-50 cursor-not-allowed' : ''}`}>
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                 {isProcessingImage ? <Loader2 className="w-8 h-8 mb-2 text-muted-foreground animate-spin" /> : <UploadCloud className="w-8 h-8 mb-2 text-muted-foreground" />}
-                                <p className="mb-2 text-sm text-muted-foreground">
-                                  {isProcessingImage ? "Processing..." : <><span className="font-semibold">Click to upload</span> or drag and drop</>}
+                                <p className="mb-1 text-sm text-muted-foreground">
+                                  {isProcessingImage ? "Processing..." : (selectedFileName ? selectedFileName : <><span className="font-semibold">Click to upload</span> or drag and drop</>)}
                                 </p>
-                                <p className="text-xs text-muted-foreground">SVG, PNG, JPG, GIF (Max {MAX_FILE_SIZE_MB}MB for now)</p>
+                                {!selectedFileName && !isProcessingImage && <p className="text-xs text-muted-foreground">SVG, PNG, JPG, GIF (Max {MAX_FILE_SIZE_MB}MB)</p>}
                             </div>
                             <Input 
                                 id="dropzone-file" 
@@ -338,29 +350,29 @@ export default function BrandProfilePage() {
                    </FormControl>
                 </FormItem>
 
+                {/* This field holds the base64 data URI and is submitted with the form */}
                 <FormField
                   control={form.control}
                   name="exampleImage"
-                  render={({ field }) => ( // This field will now hold the base64 data URI
-                    <FormItem>
-                       {/* We can hide this field or make it read-only as it's populated by the uploader */}
-                       {/* <FormLabel className="flex items-center text-base"><ImageIconLucide className="w-5 h-5 mr-2 text-primary"/>Example Image Data (Hidden)</FormLabel> */}
+                  render={({ field }) => ( 
+                    <FormItem className="hidden"> {/* Hidden as it's a long string */}
                        <FormControl>
-                         <Input type="hidden" {...field} />
+                         <Input type="text" {...field} />
                        </FormControl>
                        <FormMessage /> 
-                       {previewImage && (
-                        <div className="mt-2">
-                            <p className="text-xs text-muted-foreground mb-1">Preview:</p>
-                            <NextImage src={previewImage} alt="Example image preview" width={100} height={100} className="rounded border object-contain" data-ai-hint="brand example"/>
-                        </div>
-                       )}
-                       {!previewImage && field.value && (
-                           <p className="text-xs text-destructive mt-1">Could not load preview for the current image data.</p>
-                       )}
                     </FormItem>
                   )}
                 />
+                {/* Preview logic remains visible */}
+                {previewImage && (
+                  <div className="mt-2">
+                      <p className="text-xs text-muted-foreground mb-1">Preview:</p>
+                      <NextImage src={previewImage} alt="Example image preview" width={100} height={100} className="rounded border object-contain" data-ai-hint="brand example"/>
+                  </div>
+                )}
+                {!previewImage && form.getValues("exampleImage") && (
+                    <p className="text-xs text-destructive mt-1">Could not load preview for current image data.</p>
+                )}
 
 
                 <FormField
@@ -391,5 +403,3 @@ export default function BrandProfilePage() {
     </AppShell>
   );
 }
-
-    
