@@ -1,8 +1,8 @@
 
 "use client";
 
-import React, { useEffect } from 'react';
-import Image from 'next/image'; // Added Next.js Image import
+import React, { useEffect, useState } from 'react';
+import NextImage from 'next/image'; // Renamed to avoid conflict
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -15,8 +15,14 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-import { UserCircle, LinkIcon, FileText, Palette, UploadCloud, Tag, Image as ImageIconLucide } from 'lucide-react';
+import { UserCircle, LinkIcon, FileText, Palette, UploadCloud, Tag, Image as ImageIconLucide, Brain, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { storage } from '@/lib/firebaseConfig'; // Import storage
+import { ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { useFormState } from "react-dom";
+import { handleExtractBrandInfoFromUrlAction, type FormState as ExtractFormState } from '@/lib/actions'; // Import the new action
+import { Progress } from "@/components/ui/progress";
+
 
 const brandProfileSchema = z.object({
   brandName: z.string().min(2, { message: "Brand name must be at least 2 characters." }),
@@ -38,9 +44,21 @@ const defaultFormValues: BrandProfileFormData = {
   targetKeywords: "",
 };
 
+const initialExtractState: ExtractFormState<{ brandDescription: string; targetKeywords: string; }> = { error: undefined, data: undefined, message: undefined };
+
+
 export default function BrandProfilePage() {
   const { brandData, setBrandData, isLoading: isBrandContextLoading, error: brandContextError } = useBrand();
   const { toast } = useToast();
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  // For AI extraction
+  const [extractState, extractAction] = useFormState(handleExtractBrandInfoFromUrlAction, initialExtractState);
+  const [isExtracting, setIsExtracting] = useState(false);
+
 
   const form = useForm<BrandProfileFormData>({
     resolver: zodResolver(brandProfileSchema),
@@ -50,8 +68,12 @@ export default function BrandProfilePage() {
   useEffect(() => {
     if (brandData) {
       form.reset(brandData);
-    } else if (!isBrandContextLoading) { // Only reset to defaults if not loading and no data
+      if (brandData.exampleImage) {
+        setPreviewImage(brandData.exampleImage);
+      }
+    } else if (!isBrandContextLoading) {
       form.reset(defaultFormValues);
+      setPreviewImage(null);
     }
   }, [brandData, form, isBrandContextLoading]);
   
@@ -65,6 +87,34 @@ export default function BrandProfilePage() {
     }
   }, [brandContextError, toast]);
 
+  useEffect(() => {
+    if (extractState.data) {
+      form.setValue('brandDescription', extractState.data.brandDescription, { shouldValidate: true });
+      form.setValue('targetKeywords', extractState.data.targetKeywords, { shouldValidate: true });
+      toast({ title: "Success", description: "Brand information extracted from website." });
+    }
+    if (extractState.error) {
+      toast({ title: "Extraction Error", description: extractState.error, variant: "destructive" });
+    }
+    setIsExtracting(false);
+  }, [extractState, form, toast]);
+
+  const handleAutoFill = async () => {
+    const websiteUrl = form.getValues("websiteUrl");
+    if (!websiteUrl) {
+      toast({
+        title: "Missing URL",
+        description: "Please enter a website URL first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsExtracting(true);
+    const formData = new FormData();
+    formData.append("websiteUrl", websiteUrl);
+    extractAction(formData);
+  };
+
   const onSubmit: SubmitHandler<BrandProfileFormData> = async (data) => {
     try {
       await setBrandData(data);
@@ -72,44 +122,76 @@ export default function BrandProfilePage() {
         title: "Brand Profile Saved",
         description: "Your brand information has been saved successfully to the cloud.",
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Save Error",
-        description: "Failed to save brand profile. Please try again.",
+        description: error.message || "Failed to save brand profile. Please try again.",
         variant: "destructive",
       });
       console.error("Brand profile save error:", error); 
     }
   };
 
-  const [fileName, setFileName] = React.useState<string | null>(null);
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit for example
+        toast({
+          title: "File Too Large",
+          description: "Please upload an image smaller than 5MB.",
+          variant: "destructive",
+        });
+        return;
+      }
       setFileName(file.name);
-      // For now, we'll rely on the exampleImage URL input for data URI or external URL
-      // Actual file upload to Firebase Storage would be a separate step.
-       const reader = new FileReader();
-        reader.onloadend = () => {
-            const dataUri = reader.result as string;
-            form.setValue('exampleImage', dataUri, { shouldValidate: true });
-             toast({
-                title: "Image Ready for Profile",
-                description: `${file.name} converted to Data URI and set in 'Example Image URL' field. Save profile to persist.`,
-            });
-        };
-        reader.onerror = () => {
+      setIsUploading(true);
+      setUploadProgress(0);
+
+      // Create a temporary URL for preview
+      const tempPreviewUrl = URL.createObjectURL(file);
+      setPreviewImage(tempPreviewUrl);
+
+
+      const imageFileName = `brand_example_images/${BRAND_PROFILE_DOC_ID}/${Date.now()}_${file.name}`;
+      const imageRef = storageRef(storage, imageFileName);
+      const uploadTask = uploadBytesResumable(imageRef, file);
+
+      uploadTask.on('state_changed',
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(progress);
+        },
+        (error) => {
+          setIsUploading(false);
+          setUploadProgress(null);
+          setFileName(null);
+          setPreviewImage(form.getValues('exampleImage') || null); // Revert to old image if upload fails
+          toast({
+            title: "Upload Error",
+            description: `Failed to upload image: ${error.message}`,
+            variant: "destructive",
+          });
+        },
+        () => {
+          getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+            form.setValue('exampleImage', downloadURL, { shouldValidate: true });
+            setPreviewImage(downloadURL); // Update preview to Storage URL
+            setIsUploading(false);
+            setUploadProgress(null);
             toast({
-                title: "Image Error",
-                description: "Could not read image file.",
-                variant: "destructive",
+              title: "Image Uploaded",
+              description: `${file.name} uploaded and URL set. Save profile to persist.`,
             });
+          });
         }
-        reader.readAsDataURL(file);
+      );
     }
   };
+  
+  // Used a fixed ID for simplicity as per BrandContext
+  const BRAND_PROFILE_DOC_ID = "defaultBrandProfile"; 
 
-  if (isBrandContextLoading && !form.formState.isDirty && !brandData) { // Show skeleton only on initial load
+  if (isBrandContextLoading && !form.formState.isDirty && !brandData) {
     return (
       <AppShell>
         <div className="max-w-3xl mx-auto">
@@ -158,7 +240,7 @@ export default function BrandProfilePage() {
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><UserCircle className="w-5 h-5 mr-2 text-primary"/>Brand Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="E.g., Acme Innovations" {...field} disabled={isBrandContextLoading} />
+                        <Input placeholder="E.g., Acme Innovations" {...field} disabled={isBrandContextLoading || isUploading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -171,9 +253,21 @@ export default function BrandProfilePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><LinkIcon className="w-5 h-5 mr-2 text-primary"/>Website URL</FormLabel>
-                      <FormControl>
-                        <Input placeholder="https://www.example.com" {...field} disabled={isBrandContextLoading} />
-                      </FormControl>
+                        <div className="flex items-center space-x-2">
+                           <FormControl>
+                            <Input placeholder="https://www.example.com" {...field} disabled={isBrandContextLoading || isUploading || isExtracting} />
+                           </FormControl>
+                            <Button 
+                                type="button" 
+                                onClick={handleAutoFill} 
+                                disabled={isExtracting || isBrandContextLoading || !field.value}
+                                variant="outline"
+                                size="icon"
+                                title="Auto-fill from Website"
+                            >
+                                {isExtracting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="w-4 h-4" />}
+                            </Button>
+                        </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -190,7 +284,7 @@ export default function BrandProfilePage() {
                           placeholder="Describe your brand, its values, target audience, and unique selling propositions."
                           rows={5}
                           {...field}
-                          disabled={isBrandContextLoading}
+                          disabled={isBrandContextLoading || isUploading || isExtracting}
                         />
                       </FormControl>
                       <FormMessage />
@@ -205,7 +299,7 @@ export default function BrandProfilePage() {
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><Palette className="w-5 h-5 mr-2 text-primary"/>Desired Image Style</FormLabel>
                       <FormControl>
-                        <Input placeholder="E.g., minimalist, vibrant, professional, retro" {...field} disabled={isBrandContextLoading} />
+                        <Input placeholder="E.g., minimalist, vibrant, professional, retro" {...field} disabled={isBrandContextLoading || isUploading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -216,17 +310,23 @@ export default function BrandProfilePage() {
                   <FormLabel className="flex items-center text-base"><UploadCloud className="w-5 h-5 mr-2 text-primary"/>Upload Example Image (Optional)</FormLabel>
                    <FormControl>
                     <div className="flex items-center justify-center w-full">
-                        <Label htmlFor="dropzone-file" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer border-border bg-card hover:bg-secondary ${isBrandContextLoading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                        <Label htmlFor="dropzone-file" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer border-border bg-card hover:bg-secondary ${isBrandContextLoading || isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                 <UploadCloud className="w-8 h-8 mb-2 text-muted-foreground" />
                                 <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                                <p className="text-xs text-muted-foreground">SVG, PNG, JPG, GIF. Will be converted to Data URI.</p>
+                                <p className="text-xs text-muted-foreground">SVG, PNG, JPG, GIF (Max 5MB). Will be uploaded to secure storage.</p>
                             </div>
-                            <Input id="dropzone-file" type="file" className="hidden" onChange={handleImageUpload} accept="image/*" disabled={isBrandContextLoading} />
+                            <Input id="dropzone-file" type="file" className="hidden" onChange={handleImageUpload} accept="image/*" disabled={isBrandContextLoading || isUploading} />
                         </Label>
                     </div> 
                    </FormControl>
-                  {fileName && <p className="mt-2 text-sm text-muted-foreground">Selected file: {fileName}</p>}
+                  {fileName && !isUploading && <p className="mt-2 text-sm text-muted-foreground">Selected file: {fileName}</p>}
+                  {isUploading && uploadProgress !== null && (
+                    <div className="mt-2">
+                      <p className="text-sm text-muted-foreground">Uploading: {fileName}...</p>
+                      <Progress value={uploadProgress} className="w-full h-2 mt-1" />
+                    </div>
+                  )}
                 </FormItem>
 
                 <FormField
@@ -234,20 +334,20 @@ export default function BrandProfilePage() {
                   name="exampleImage"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center text-base"><ImageIconLucide className="w-5 h-5 mr-2 text-primary"/>Example Image (URL or Data URI)</FormLabel>
+                      <FormLabel className="flex items-center text-base"><ImageIconLucide className="w-5 h-5 mr-2 text-primary"/>Example Image URL</FormLabel>
                       <FormControl>
                         <Textarea 
-                            placeholder="https://example.com/image.png or data:image/png;base64,..." 
+                            placeholder="Upload an image above, or paste an existing public URL here." 
                             {...field} 
-                            disabled={isBrandContextLoading}
-                            rows={3} 
+                            disabled={isBrandContextLoading || isUploading}
+                            rows={2} 
                         />
                       </FormControl>
                        <FormMessage />
-                       {field.value && field.value.startsWith('data:image') && (
+                       {previewImage && (
                         <div className="mt-2">
                             <p className="text-xs text-muted-foreground mb-1">Preview:</p>
-                            <Image src={field.value} alt="Example image preview" width={100} height={100} className="rounded border object-contain" data-ai-hint="brand image"/>
+                            <NextImage src={previewImage} alt="Example image preview" width={100} height={100} className="rounded border object-contain" data-ai-hint="brand example"/>
                         </div>
                        )}
                     </FormItem>
@@ -261,7 +361,7 @@ export default function BrandProfilePage() {
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><Tag className="w-5 h-5 mr-2 text-primary"/>Target Keywords</FormLabel>
                       <FormControl>
-                        <Input placeholder="E.g., innovation, tech solutions, eco-friendly (comma-separated)" {...field} disabled={isBrandContextLoading} />
+                        <Input placeholder="E.g., innovation, tech solutions, eco-friendly (comma-separated)" {...field} disabled={isBrandContextLoading || isUploading || isExtracting}/>
                       </FormControl>
                        <p className="text-xs text-muted-foreground">
                         Comma-separated keywords related to your brand and industry.
@@ -271,8 +371,8 @@ export default function BrandProfilePage() {
                   )}
                 />
                 
-                <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" size="lg" disabled={isBrandContextLoading || form.formState.isSubmitting}>
-                  {isBrandContextLoading || form.formState.isSubmitting ? 'Saving...' : 'Save Brand Profile'}
+                <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" size="lg" disabled={isBrandContextLoading || form.formState.isSubmitting || isUploading || isExtracting}>
+                  {isBrandContextLoading || form.formState.isSubmitting ? 'Saving...' : (isUploading ? 'Uploading...' : (isExtracting ? 'Extracting Info...' : 'Save Brand Profile'))}
                 </Button>
               </form>
             </Form>
