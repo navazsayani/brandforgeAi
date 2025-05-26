@@ -2,14 +2,14 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useActionState } from "react"; // Changed from react-dom
+import { useActionState } from "react";
 import { AppShell } from '@/components/AppShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator } from '@/components/ui/select';
 import { Checkbox } from "@/components/ui/checkbox"
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
@@ -27,9 +27,9 @@ const platforms = [
 
 
 export default function CampaignManagerPage() {
-  const { brandData, addGeneratedAdCampaign, generatedBlogPosts, generatedSocialPosts } = useBrand(); // Assuming you might want to use generated content
+  const { brandData, addGeneratedAdCampaign, generatedBlogPosts, generatedSocialPosts } = useBrand();
   const { toast } = useToast();
-  const [state, formAction] = useActionState(handleGenerateAdCampaignAction, initialFormState); // Changed from useFormState
+  const [state, formAction] = useActionState(handleGenerateAdCampaignAction, initialFormState);
   const [generatedCampaign, setGeneratedCampaign] = useState<{campaignSummary: string; platformDetails: Record<string, string>} | null>(null);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
 
@@ -56,7 +56,7 @@ export default function CampaignManagerPage() {
   const availableContent = [
     ...generatedSocialPosts.map(p => ({ id: `social-${p.id}`, label: `Social: ${p.caption.substring(0,30)}...`, content: p.caption })),
     ...generatedBlogPosts.map(p => ({ id: `blog-${p.id}`, label: `Blog: ${p.title}`, content: p.title + "\n" + p.content.substring(0,100)+"..."})),
-  ];
+  ].filter(item => item.content && item.content.trim() !== ""); // Filter out items with empty or whitespace-only content
 
   return (
     <AppShell>
@@ -105,12 +105,17 @@ export default function CampaignManagerPage() {
                   <SelectContent>
                     {availableContent.length > 0 ? (
                       availableContent.map(item => (
-                        <SelectItem key={item.id} value={item.content}>{item.label}</SelectItem>
+                        <SelectItem key={item.id} value={item.content}>
+                          {item.label}
+                        </SelectItem>
                       ))
                     ) : (
-                      <SelectItem value="" disabled>No content generated yet. Create some in Content Studio.</SelectItem>
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground text-center">
+                        No pre-generated content available.
+                      </div>
                     )}
-                     <SelectItem value="Custom content for ad campaign">Custom (type below)</SelectItem>
+                    {availableContent.length > 0 && <SelectSeparator />}
+                    <SelectItem value="Custom content for ad campaign">Custom (type below)</SelectItem>
                   </SelectContent>
                 </Select>
                  <Textarea
