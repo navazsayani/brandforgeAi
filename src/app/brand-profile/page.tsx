@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useEffect } from 'react';
+import Image from 'next/image'; // Added Next.js Image import
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -281,3 +282,4 @@ export default function BrandProfilePage() {
     </AppShell>
   );
 }
+
