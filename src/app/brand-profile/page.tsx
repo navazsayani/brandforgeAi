@@ -1,8 +1,8 @@
 
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import NextImage from 'next/image'; // Renamed to avoid conflict
+import React, { useEffect, useState, useRef } from 'react';
+import NextImage from 'next/image'; // Renamed to avoid conflict with HTMLImageElement
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -17,10 +17,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { UserCircle, LinkIcon, FileText, Palette, UploadCloud, Tag, Image as ImageIconLucide, Brain, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { storage } from '@/lib/firebaseConfig'; // Import storage
+import { storage } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { useFormState } from "react-dom";
-import { handleExtractBrandInfoFromUrlAction, type FormState as ExtractFormState } from '@/lib/actions'; // Import the new action
+import { handleExtractBrandInfoFromUrlAction, type FormState as ExtractFormState } from '@/lib/actions';
 import { Progress } from "@/components/ui/progress";
 
 
@@ -46,6 +46,8 @@ const defaultFormValues: BrandProfileFormData = {
 
 const initialExtractState: ExtractFormState<{ brandDescription: string; targetKeywords: string; }> = { error: undefined, data: undefined, message: undefined };
 
+// Used a fixed ID for simplicity as per BrandContext
+const BRAND_PROFILE_DOC_ID = "defaultBrandProfile"; 
 
 export default function BrandProfilePage() {
   const { brandData, setBrandData, isLoading: isBrandContextLoading, error: brandContextError } = useBrand();
@@ -54,6 +56,8 @@ export default function BrandProfilePage() {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const originalExampleImageUrlRef = useRef<string | undefined>(undefined);
+
 
   // For AI extraction
   const [extractState, extractAction] = useFormState(handleExtractBrandInfoFromUrlAction, initialExtractState);
@@ -68,11 +72,15 @@ export default function BrandProfilePage() {
   useEffect(() => {
     if (brandData) {
       form.reset(brandData);
+      originalExampleImageUrlRef.current = brandData.exampleImage;
       if (brandData.exampleImage) {
         setPreviewImage(brandData.exampleImage);
+      } else {
+        setPreviewImage(null);
       }
     } else if (!isBrandContextLoading) {
       form.reset(defaultFormValues);
+      originalExampleImageUrlRef.current = undefined;
       setPreviewImage(null);
     }
   }, [brandData, form, isBrandContextLoading]);
@@ -80,7 +88,7 @@ export default function BrandProfilePage() {
   useEffect(() => {
     if (brandContextError) {
       toast({
-        title: "Error",
+        title: "Error loading brand data",
         description: brandContextError,
         variant: "destructive",
       });
@@ -118,6 +126,7 @@ export default function BrandProfilePage() {
   const onSubmit: SubmitHandler<BrandProfileFormData> = async (data) => {
     try {
       await setBrandData(data);
+      originalExampleImageUrlRef.current = data.exampleImage; // Update ref after successful save
       toast({
         title: "Brand Profile Saved",
         description: "Your brand information has been saved successfully to the cloud.",
@@ -135,7 +144,7 @@ export default function BrandProfilePage() {
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit for example
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
         toast({
           title: "File Too Large",
           description: "Please upload an image smaller than 5MB.",
@@ -146,11 +155,13 @@ export default function BrandProfilePage() {
       setFileName(file.name);
       setIsUploading(true);
       setUploadProgress(0);
+      
+      originalExampleImageUrlRef.current = form.getValues('exampleImage'); // Store current value before attempting upload
 
       // Create a temporary URL for preview
       const tempPreviewUrl = URL.createObjectURL(file);
       setPreviewImage(tempPreviewUrl);
-
+      form.setValue('exampleImage', '', { shouldValidate: false }); // Temporarily clear form value
 
       const imageFileName = `brand_example_images/${BRAND_PROFILE_DOC_ID}/${Date.now()}_${file.name}`;
       const imageRef = storageRef(storage, imageFileName);
@@ -162,13 +173,17 @@ export default function BrandProfilePage() {
           setUploadProgress(progress);
         },
         (error) => {
+          console.error("Firebase Storage Upload Error:", error);
           setIsUploading(false);
           setUploadProgress(null);
           setFileName(null);
-          setPreviewImage(form.getValues('exampleImage') || null); // Revert to old image if upload fails
+          // Revert to original image URL if upload fails
+          form.setValue('exampleImage', originalExampleImageUrlRef.current || '', { shouldValidate: true });
+          setPreviewImage(originalExampleImageUrlRef.current || null);
+          
           toast({
             title: "Upload Error",
-            description: `Failed to upload image: ${error.message}`,
+            description: `Failed to upload image: ${error.message}. Check console and Firebase Storage rules.`,
             variant: "destructive",
           });
         },
@@ -176,11 +191,24 @@ export default function BrandProfilePage() {
           getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
             form.setValue('exampleImage', downloadURL, { shouldValidate: true });
             setPreviewImage(downloadURL); // Update preview to Storage URL
+            originalExampleImageUrlRef.current = downloadURL; // Update ref to new successful URL
             setIsUploading(false);
             setUploadProgress(null);
             toast({
               title: "Image Uploaded",
-              description: `${file.name} uploaded and URL set. Save profile to persist.`,
+              description: `${file.name} uploaded. Save profile to persist the new image URL.`,
+            });
+          }).catch( (error) => {
+            console.error("Firebase Storage Get URL Error:", error);
+            setIsUploading(false);
+            setUploadProgress(null);
+            setFileName(null);
+            form.setValue('exampleImage', originalExampleImageUrlRef.current || '', { shouldValidate: true });
+            setPreviewImage(originalExampleImageUrlRef.current || null);
+            toast({
+              title: "Upload Finalization Error",
+              description: `Failed to get image URL: ${error.message}`,
+              variant: "destructive",
             });
           });
         }
@@ -188,9 +216,6 @@ export default function BrandProfilePage() {
     }
   };
   
-  // Used a fixed ID for simplicity as per BrandContext
-  const BRAND_PROFILE_DOC_ID = "defaultBrandProfile"; 
-
   if (isBrandContextLoading && !form.formState.isDirty && !brandData) {
     return (
       <AppShell>
@@ -260,7 +285,7 @@ export default function BrandProfilePage() {
                             <Button 
                                 type="button" 
                                 onClick={handleAutoFill} 
-                                disabled={isExtracting || isBrandContextLoading || !field.value}
+                                disabled={isExtracting || isBrandContextLoading || !field.value || isUploading}
                                 variant="outline"
                                 size="icon"
                                 title="Auto-fill from Website"
@@ -323,7 +348,7 @@ export default function BrandProfilePage() {
                   {fileName && !isUploading && <p className="mt-2 text-sm text-muted-foreground">Selected file: {fileName}</p>}
                   {isUploading && uploadProgress !== null && (
                     <div className="mt-2">
-                      <p className="text-sm text-muted-foreground">Uploading: {fileName}...</p>
+                      <p className="text-sm text-muted-foreground">Uploading: {fileName} ({Math.round(uploadProgress)}%)...</p>
                       <Progress value={uploadProgress} className="w-full h-2 mt-1" />
                     </div>
                   )}
@@ -372,7 +397,7 @@ export default function BrandProfilePage() {
                 />
                 
                 <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" size="lg" disabled={isBrandContextLoading || form.formState.isSubmitting || isUploading || isExtracting}>
-                  {isBrandContextLoading || form.formState.isSubmitting ? 'Saving...' : (isUploading ? 'Uploading...' : (isExtracting ? 'Extracting Info...' : 'Save Brand Profile'))}
+                  {isBrandContextLoading ? 'Loading Profile...' : (form.formState.isSubmitting ? 'Saving...' : (isUploading ? 'Uploading...' : (isExtracting ? 'Extracting Info...' : 'Save Brand Profile')))}
                 </Button>
               </form>
             </Form>
@@ -383,3 +408,4 @@ export default function BrandProfilePage() {
   );
 }
 
+    
