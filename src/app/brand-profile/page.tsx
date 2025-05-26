@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
-import NextImage from 'next/image';
+import NextImage from 'next/image'; // Corrected import alias
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -19,7 +19,7 @@ import { UserCircle, LinkIcon, FileText, Palette, UploadCloud, Tag, Image as Ima
 import { Skeleton } from '@/components/ui/skeleton';
 import { storage } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { useFormState } from "react-dom";
+import { useActionState } from "react"; // Updated from useFormState
 import { handleExtractBrandInfoFromUrlAction, type FormState as ExtractFormState } from '@/lib/actions';
 import { Progress } from "@/components/ui/progress";
 
@@ -52,7 +52,8 @@ const BRAND_PROFILE_DOC_ID = "defaultBrandProfile";
 export default function BrandProfilePage() {
   const { brandData, setBrandData, isLoading: isBrandContextLoading, error: brandContextError } = useBrand();
   const { toast } = useToast();
-  const [fileName, setFileName] = useState<string | null>(null);
+  
+  const fileNameRef = useRef<string | null>(null); // To store the current selected file name
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -60,7 +61,7 @@ export default function BrandProfilePage() {
 
 
   // For AI extraction
-  const [extractState, extractAction] = useFormState(handleExtractBrandInfoFromUrlAction, initialExtractState);
+  const [extractState, extractAction] = useActionState(handleExtractBrandInfoFromUrlAction, initialExtractState);
   const [isExtracting, setIsExtracting] = useState(false);
 
 
@@ -152,14 +153,17 @@ export default function BrandProfilePage() {
         });
         return;
       }
-      setFileName(file.name);
+      fileNameRef.current = file.name; // Store filename in ref
       setIsUploading(true);
       setUploadProgress(0);
       
-      originalExampleImageUrlRef.current = form.getValues('exampleImage'); 
+      // Temporarily store the current value of exampleImage in case of upload failure
+      const lastSavedImageUrl = form.getValues('exampleImage'); 
 
       const tempPreviewUrl = URL.createObjectURL(file);
       setPreviewImage(tempPreviewUrl);
+      // Clear the form field for exampleImage as we will populate it with the new URL
+      // Don't validate yet, as it will be empty until upload completes
       form.setValue('exampleImage', '', { shouldValidate: false }); 
 
       const imageFileName = `brand_example_images/${BRAND_PROFILE_DOC_ID}/${Date.now()}_${file.name}`;
@@ -172,18 +176,22 @@ export default function BrandProfilePage() {
           setUploadProgress(progress);
         },
         (error) => {
-          console.error("Firebase Storage Upload Error:", error);
+          console.error("Firebase Storage Upload Error Object:", error); // Log the full error object
+          console.error("Firebase Storage Upload Error Code:", error.code); // Log specific error code
+          console.error("Firebase Storage Upload Error Message:", error.message); // Log error message
+          
           setIsUploading(false);
           setUploadProgress(null);
-          // Don't setFileName(null) here, so user sees which file failed.
-          form.setValue('exampleImage', originalExampleImageUrlRef.current || '', { shouldValidate: true });
-          setPreviewImage(originalExampleImageUrlRef.current || null);
+          // Revert to the last saved image URL and preview
+          form.setValue('exampleImage', lastSavedImageUrl || '', { shouldValidate: true });
+          setPreviewImage(lastSavedImageUrl || null);
           
           toast({
             title: "Upload Error",
-            description: `Failed to upload '${file.name}': ${error.message}. Check console, Firebase Storage rules, and ensure your storage bucket is correctly configured in .env.`,
+            description: `Failed to upload '${fileNameRef.current || 'file'}': ${error.message}. Check console for details. Verify Firebase Storage rules and bucket configuration.`,
             variant: "destructive",
           });
+          // Keep fileNameRef.current so user sees which file failed if they try again
         },
         () => {
           getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
@@ -194,18 +202,18 @@ export default function BrandProfilePage() {
             setUploadProgress(null);
             toast({
               title: "Image Uploaded",
-              description: `${file.name} uploaded. Save profile to persist the new image URL.`,
+              description: `${fileNameRef.current || 'Image'} uploaded. Save profile to persist the new image URL.`,
             });
+            fileNameRef.current = null; // Clear after successful upload + form update
           }).catch( (error) => {
             console.error("Firebase Storage Get URL Error:", error);
             setIsUploading(false);
             setUploadProgress(null);
-            // Don't setFileName(null) here.
-            form.setValue('exampleImage', originalExampleImageUrlRef.current || '', { shouldValidate: true });
-            setPreviewImage(originalExampleImageUrlRef.current || null);
+            form.setValue('exampleImage', lastSavedImageUrl || '', { shouldValidate: true });
+            setPreviewImage(lastSavedImageUrl || null);
             toast({
               title: "Upload Finalization Error",
-              description: `Failed to get URL for '${file.name}': ${error.message}`,
+              description: `Failed to get URL for '${fileNameRef.current || 'file'}': ${error.message}`,
               variant: "destructive",
             });
           });
@@ -343,10 +351,10 @@ export default function BrandProfilePage() {
                         </Label>
                     </div> 
                    </FormControl>
-                  {fileName && <p className="mt-2 text-sm text-muted-foreground">Selected file: {fileName}{isUploading ? "" : " (upload failed, try again or choose a different file)"}</p>}
+                  {fileNameRef.current && !isUploading && uploadProgress === null && <p className="mt-2 text-sm text-destructive">Failed to upload: {fileNameRef.current}. Please try again.</p>}
                   {isUploading && uploadProgress !== null && (
                     <div className="mt-2">
-                      <p className="text-sm text-muted-foreground">Uploading: {fileName} ({Math.round(uploadProgress)}%)...</p>
+                      <p className="text-sm text-muted-foreground">Uploading: {fileNameRef.current || 'file'} ({Math.round(uploadProgress)}%)...</p>
                       <Progress value={uploadProgress} className="w-full h-2 mt-1" />
                     </div>
                   )}
@@ -364,6 +372,11 @@ export default function BrandProfilePage() {
                             {...field} 
                             disabled={isBrandContextLoading || isUploading}
                             rows={2} 
+                            onChange={(e) => {
+                              field.onChange(e); // Propagate change to react-hook-form
+                              setPreviewImage(e.target.value); // Update preview from textarea
+                              if (!e.target.value) originalExampleImageUrlRef.current = undefined; // Clear ref if URL is manually cleared
+                            }}
                         />
                       </FormControl>
                        <FormMessage />
@@ -405,7 +418,5 @@ export default function BrandProfilePage() {
     </AppShell>
   );
 }
-
-    
 
     
