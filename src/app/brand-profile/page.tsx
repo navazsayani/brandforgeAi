@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
-import NextImage from 'next/image'; // Corrected import alias
+import NextImage from 'next/image';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -15,21 +15,33 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-import { UserCircle, LinkIcon, FileText, Palette, UploadCloud, Tag, Image as ImageIconLucide, Brain, Loader2 } from 'lucide-react';
+import { UserCircle, LinkIcon, FileText, Palette, UploadCloud, Tag, Image as ImageIconLucide, Brain, Loader2, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { storage } from '@/lib/firebaseConfig';
-import { ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { useActionState } from "react"; // Updated from useFormState
+// Firebase Storage imports are no longer needed here
+// import { storage } from '@/lib/firebaseConfig';
+// import { ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { useActionState } from "react";
 import { handleExtractBrandInfoFromUrlAction, type FormState as ExtractFormState } from '@/lib/actions';
-import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription as AlertDescriptionShadcn } from "@/components/ui/alert"; // Renamed to avoid conflict
 
+const MAX_FILE_SIZE_MB = 0.5; // Max file size in MB for base64 to avoid Firestore limits
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 const brandProfileSchema = z.object({
   brandName: z.string().min(2, { message: "Brand name must be at least 2 characters." }),
   websiteUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   brandDescription: z.string().min(10, { message: "Description must be at least 10 characters." }),
   imageStyle: z.string().min(5, { message: "Image style description must be at least 5 characters." }),
-  exampleImage: z.string().url({ message: "Please enter a valid URL for the example image."}).optional().or(z.literal('')),
+  exampleImage: z.string().optional().refine(value => {
+    if (!value) return true; // Optional field
+    // Check if it's a data URI and roughly estimate its size. This is not perfect.
+    // A more accurate check would be on the file object before conversion.
+    // For simplicity, we are checking length here. A 1MB base64 string is ~1.37MB in length.
+    // So, roughly 1MB / 1.37 = 730,000 characters limit.
+    // For simplicity, we are checking length here. A 1MB base64 string is ~1.37MB in length.
+    // So, roughly 1MB / 1.37 = 730,000 characters limit.
+    return value.length < 1000000; // Approx 0.7MB to be safe for Firestore field limit
+  }, {message: `Image data is too large. Please use a smaller image (under ${MAX_FILE_SIZE_MB}MB).`}),
   targetKeywords: z.string().optional(),
 });
 
@@ -46,18 +58,13 @@ const defaultFormValues: BrandProfileFormData = {
 
 const initialExtractState: ExtractFormState<{ brandDescription: string; targetKeywords: string; }> = { error: undefined, data: undefined, message: undefined };
 
-// Used a fixed ID for simplicity as per BrandContext
-const BRAND_PROFILE_DOC_ID = "defaultBrandProfile"; 
-
 export default function BrandProfilePage() {
   const { brandData, setBrandData, isLoading: isBrandContextLoading, error: brandContextError } = useBrand();
   const { toast } = useToast();
   
-  const fileNameRef = useRef<string | null>(null); // To store the current selected file name
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const originalExampleImageUrlRef = useRef<string | undefined>(undefined);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
 
   // For AI extraction
@@ -73,7 +80,6 @@ export default function BrandProfilePage() {
   useEffect(() => {
     if (brandData) {
       form.reset(brandData);
-      originalExampleImageUrlRef.current = brandData.exampleImage;
       if (brandData.exampleImage) {
         setPreviewImage(brandData.exampleImage);
       } else {
@@ -81,7 +87,6 @@ export default function BrandProfilePage() {
       }
     } else if (!isBrandContextLoading) {
       form.reset(defaultFormValues);
-      originalExampleImageUrlRef.current = undefined;
       setPreviewImage(null);
     }
   }, [brandData, form, isBrandContextLoading]);
@@ -127,10 +132,9 @@ export default function BrandProfilePage() {
   const onSubmit: SubmitHandler<BrandProfileFormData> = async (data) => {
     try {
       await setBrandData(data);
-      originalExampleImageUrlRef.current = data.exampleImage; // Update ref after successful save
       toast({
         title: "Brand Profile Saved",
-        description: "Your brand information has been saved successfully to the cloud.",
+        description: "Your brand information has been saved successfully.",
       });
     } catch (error: any) {
       toast({
@@ -142,83 +146,47 @@ export default function BrandProfilePage() {
     }
   };
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+
+      if (file.size > MAX_FILE_SIZE_BYTES) {
         toast({
           title: "File Too Large",
-          description: "Please upload an image smaller than 5MB.",
+          description: `Please upload an image smaller than ${MAX_FILE_SIZE_MB}MB. This is a temporary limit.`,
           variant: "destructive",
         });
+        if (fileInputRef.current) {
+            fileInputRef.current.value = ""; // Reset file input
+        }
         return;
       }
-      fileNameRef.current = file.name; // Store filename in ref
-      setIsUploading(true);
-      setUploadProgress(0);
-      
-      // Temporarily store the current value of exampleImage in case of upload failure
-      const lastSavedImageUrl = form.getValues('exampleImage'); 
 
-      const tempPreviewUrl = URL.createObjectURL(file);
-      setPreviewImage(tempPreviewUrl);
-      // Clear the form field for exampleImage as we will populate it with the new URL
-      // Don't validate yet, as it will be empty until upload completes
-      form.setValue('exampleImage', '', { shouldValidate: false }); 
-
-      const imageFileName = `brand_example_images/${BRAND_PROFILE_DOC_ID}/${Date.now()}_${file.name}`;
-      const imageRef = storageRef(storage, imageFileName);
-      const uploadTask = uploadBytesResumable(imageRef, file);
-
-      uploadTask.on('state_changed',
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setUploadProgress(progress);
-        },
-        (error) => {
-          console.error("Firebase Storage Upload Error Object:", error); // Log the full error object
-          console.error("Firebase Storage Upload Error Code:", error.code); // Log specific error code
-          console.error("Firebase Storage Upload Error Message:", error.message); // Log error message
-          
-          setIsUploading(false);
-          setUploadProgress(null);
-          // Revert to the last saved image URL and preview
-          form.setValue('exampleImage', lastSavedImageUrl || '', { shouldValidate: true });
-          setPreviewImage(lastSavedImageUrl || null);
-          
-          toast({
-            title: "Upload Error",
-            description: `Failed to upload '${fileNameRef.current || 'file'}': ${error.message}. Check console for details. Verify Firebase Storage rules and bucket configuration.`,
-            variant: "destructive",
-          });
-          // Keep fileNameRef.current so user sees which file failed if they try again
-        },
-        () => {
-          getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-            form.setValue('exampleImage', downloadURL, { shouldValidate: true });
-            setPreviewImage(downloadURL); 
-            originalExampleImageUrlRef.current = downloadURL; 
-            setIsUploading(false);
-            setUploadProgress(null);
-            toast({
-              title: "Image Uploaded",
-              description: `${fileNameRef.current || 'Image'} uploaded. Save profile to persist the new image URL.`,
-            });
-            fileNameRef.current = null; // Clear after successful upload + form update
-          }).catch( (error) => {
-            console.error("Firebase Storage Get URL Error:", error);
-            setIsUploading(false);
-            setUploadProgress(null);
-            form.setValue('exampleImage', lastSavedImageUrl || '', { shouldValidate: true });
-            setPreviewImage(lastSavedImageUrl || null);
-            toast({
-              title: "Upload Finalization Error",
-              description: `Failed to get URL for '${fileNameRef.current || 'file'}': ${error.message}`,
-              variant: "destructive",
-            });
-          });
+      setIsProcessingImage(true);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const dataUri = reader.result as string;
+        form.setValue('exampleImage', dataUri, { shouldValidate: true });
+        setPreviewImage(dataUri);
+        setIsProcessingImage(false);
+        toast({
+          title: "Image Ready",
+          description: "Image prepared. Save profile to persist.",
+        });
+      };
+      reader.onerror = () => {
+        console.error("Error reading file");
+        toast({
+          title: "File Read Error",
+          description: "Could not read the selected file.",
+          variant: "destructive",
+        });
+        setIsProcessingImage(false);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = ""; // Reset file input
         }
-      );
+      };
+      reader.readAsDataURL(file);
     }
   };
   
@@ -271,7 +239,7 @@ export default function BrandProfilePage() {
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><UserCircle className="w-5 h-5 mr-2 text-primary"/>Brand Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="E.g., Acme Innovations" {...field} disabled={isBrandContextLoading || isUploading} />
+                        <Input placeholder="E.g., Acme Innovations" {...field} disabled={isBrandContextLoading || isProcessingImage} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -286,12 +254,12 @@ export default function BrandProfilePage() {
                       <FormLabel className="flex items-center text-base"><LinkIcon className="w-5 h-5 mr-2 text-primary"/>Website URL</FormLabel>
                         <div className="flex items-center space-x-2">
                            <FormControl>
-                            <Input placeholder="https://www.example.com" {...field} disabled={isBrandContextLoading || isUploading || isExtracting} />
+                            <Input placeholder="https://www.example.com" {...field} disabled={isBrandContextLoading || isProcessingImage || isExtracting} />
                            </FormControl>
                             <Button 
                                 type="button" 
                                 onClick={handleAutoFill} 
-                                disabled={isExtracting || isBrandContextLoading || !field.value || isUploading}
+                                disabled={isExtracting || isBrandContextLoading || !field.value || isProcessingImage}
                                 variant="outline"
                                 size="icon"
                                 title="Auto-fill from Website"
@@ -315,7 +283,7 @@ export default function BrandProfilePage() {
                           placeholder="Describe your brand, its values, target audience, and unique selling propositions."
                           rows={5}
                           {...field}
-                          disabled={isBrandContextLoading || isUploading || isExtracting}
+                          disabled={isBrandContextLoading || isProcessingImage || isExtracting}
                         />
                       </FormControl>
                       <FormMessage />
@@ -330,7 +298,7 @@ export default function BrandProfilePage() {
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><Palette className="w-5 h-5 mr-2 text-primary"/>Desired Image Style</FormLabel>
                       <FormControl>
-                        <Input placeholder="E.g., minimalist, vibrant, professional, retro" {...field} disabled={isBrandContextLoading || isUploading} />
+                        <Input placeholder="E.g., minimalist, vibrant, professional, retro" {...field} disabled={isBrandContextLoading || isProcessingImage} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -339,56 +307,61 @@ export default function BrandProfilePage() {
                 
                 <FormItem>
                   <FormLabel className="flex items-center text-base"><UploadCloud className="w-5 h-5 mr-2 text-primary"/>Upload Example Image (Optional)</FormLabel>
+                  <Alert variant="destructive" className="mb-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescriptionShadcn>
+                      For now, please use very small images (under {MAX_FILE_SIZE_MB}MB) due to temporary storage limitations.
+                      A future update will support larger images via dedicated file storage.
+                    </AlertDescriptionShadcn>
+                  </Alert>
                    <FormControl>
                     <div className="flex items-center justify-center w-full">
-                        <Label htmlFor="dropzone-file" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer border-border bg-card hover:bg-secondary ${isBrandContextLoading || isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                        <Label htmlFor="dropzone-file" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer border-border bg-card hover:bg-secondary ${isBrandContextLoading || isProcessingImage ? 'opacity-50 cursor-not-allowed' : ''}`}>
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                <UploadCloud className="w-8 h-8 mb-2 text-muted-foreground" />
-                                <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                                <p className="text-xs text-muted-foreground">SVG, PNG, JPG, GIF (Max 5MB). Will be uploaded to secure storage.</p>
+                                {isProcessingImage ? <Loader2 className="w-8 h-8 mb-2 text-muted-foreground animate-spin" /> : <UploadCloud className="w-8 h-8 mb-2 text-muted-foreground" />}
+                                <p className="mb-2 text-sm text-muted-foreground">
+                                  {isProcessingImage ? "Processing..." : <><span className="font-semibold">Click to upload</span> or drag and drop</>}
+                                </p>
+                                <p className="text-xs text-muted-foreground">SVG, PNG, JPG, GIF (Max {MAX_FILE_SIZE_MB}MB for now)</p>
                             </div>
-                            <Input id="dropzone-file" type="file" className="hidden" onChange={handleImageUpload} accept="image/*" disabled={isBrandContextLoading || isUploading} />
+                            <Input 
+                                id="dropzone-file" 
+                                type="file" 
+                                className="hidden" 
+                                onChange={handleImageFileChange} 
+                                accept="image/*" 
+                                disabled={isBrandContextLoading || isProcessingImage}
+                                ref={fileInputRef} 
+                            />
                         </Label>
                     </div> 
                    </FormControl>
-                  {fileNameRef.current && !isUploading && uploadProgress === null && <p className="mt-2 text-sm text-destructive">Failed to upload: {fileNameRef.current}. Please try again.</p>}
-                  {isUploading && uploadProgress !== null && (
-                    <div className="mt-2">
-                      <p className="text-sm text-muted-foreground">Uploading: {fileNameRef.current || 'file'} ({Math.round(uploadProgress)}%)...</p>
-                      <Progress value={uploadProgress} className="w-full h-2 mt-1" />
-                    </div>
-                  )}
                 </FormItem>
 
                 <FormField
                   control={form.control}
                   name="exampleImage"
-                  render={({ field }) => (
+                  render={({ field }) => ( // This field will now hold the base64 data URI
                     <FormItem>
-                      <FormLabel className="flex items-center text-base"><ImageIconLucide className="w-5 h-5 mr-2 text-primary"/>Example Image URL</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                            placeholder="Upload an image above, or paste an existing public URL here." 
-                            {...field} 
-                            disabled={isBrandContextLoading || isUploading}
-                            rows={2} 
-                            onChange={(e) => {
-                              field.onChange(e); // Propagate change to react-hook-form
-                              setPreviewImage(e.target.value); // Update preview from textarea
-                              if (!e.target.value) originalExampleImageUrlRef.current = undefined; // Clear ref if URL is manually cleared
-                            }}
-                        />
-                      </FormControl>
-                       <FormMessage />
+                       {/* We can hide this field or make it read-only as it's populated by the uploader */}
+                       {/* <FormLabel className="flex items-center text-base"><ImageIconLucide className="w-5 h-5 mr-2 text-primary"/>Example Image Data (Hidden)</FormLabel> */}
+                       <FormControl>
+                         <Input type="hidden" {...field} />
+                       </FormControl>
+                       <FormMessage /> 
                        {previewImage && (
                         <div className="mt-2">
                             <p className="text-xs text-muted-foreground mb-1">Preview:</p>
                             <NextImage src={previewImage} alt="Example image preview" width={100} height={100} className="rounded border object-contain" data-ai-hint="brand example"/>
                         </div>
                        )}
+                       {!previewImage && field.value && (
+                           <p className="text-xs text-destructive mt-1">Could not load preview for the current image data.</p>
+                       )}
                     </FormItem>
                   )}
                 />
+
 
                 <FormField
                   control={form.control}
@@ -397,7 +370,7 @@ export default function BrandProfilePage() {
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><Tag className="w-5 h-5 mr-2 text-primary"/>Target Keywords</FormLabel>
                       <FormControl>
-                        <Input placeholder="E.g., innovation, tech solutions, eco-friendly (comma-separated)" {...field} disabled={isBrandContextLoading || isUploading || isExtracting}/>
+                        <Input placeholder="E.g., innovation, tech solutions, eco-friendly (comma-separated)" {...field} disabled={isBrandContextLoading || isProcessingImage || isExtracting}/>
                       </FormControl>
                        <p className="text-xs text-muted-foreground">
                         Comma-separated keywords related to your brand and industry.
@@ -407,8 +380,8 @@ export default function BrandProfilePage() {
                   )}
                 />
                 
-                <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" size="lg" disabled={isBrandContextLoading || form.formState.isSubmitting || isUploading || isExtracting}>
-                  {isBrandContextLoading ? 'Loading Profile...' : (form.formState.isSubmitting ? 'Saving...' : (isUploading ? 'Uploading...' : (isExtracting ? 'Extracting Info...' : 'Save Brand Profile')))}
+                <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" size="lg" disabled={isBrandContextLoading || form.formState.isSubmitting || isProcessingImage || isExtracting}>
+                  {isBrandContextLoading ? 'Loading Profile...' : (form.formState.isSubmitting ? 'Saving...' : (isProcessingImage ? 'Processing Image...' : (isExtracting ? 'Extracting Info...' : 'Save Brand Profile')))}
                 </Button>
               </form>
             </Form>
