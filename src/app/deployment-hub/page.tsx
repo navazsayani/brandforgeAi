@@ -2,7 +2,7 @@
 "use client";
 
 import React from 'react';
-import Image from 'next/image';
+import NextImage from 'next/image'; // Renamed to NextImage to avoid conflict
 import { AppShell } from '@/components/AppShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { Send, Image as ImageIconLucide, MessageSquareText, Newspaper, Briefcase, ExternalLink } from 'lucide-react';
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign } from '@/types';
+import { Badge } from '@/components/ui/badge';
 
 export default function DeploymentHubPage() {
   const { generatedImages, generatedSocialPosts, generatedBlogPosts, generatedAdCampaigns } = useBrand();
@@ -25,7 +26,7 @@ export default function DeploymentHubPage() {
 
   return (
     <AppShell>
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-6xl mx-auto"> {/* Increased max-width for better spacing */}
         <CardHeader className="px-0 mb-6">
             <div className="flex items-center space-x-3">
                 <Send className="w-10 h-10 text-primary" />
@@ -51,12 +52,16 @@ export default function DeploymentHubPage() {
         {generatedImages.length > 0 && (
           <ContentSection title="Generated Images" icon={<ImageIconLucide className="w-6 h-6 text-primary" />}>
             {generatedImages.map((image) => (
-              <GeneratedItemCard key={image.id} title={`Image: ${image.style.substring(0, 20)}...`} description={`Prompt: ${image.prompt.substring(0,50)}...`}>
-                <div className="relative w-full overflow-hidden border rounded-md aspect-video bg-muted">
-                  <Image src={image.src} alt="Generated brand image" layout="fill" objectFit="contain" data-ai-hint="brand visual" />
+              <GeneratedItemCard 
+                key={image.id} 
+                title={`Style: ${image.style.substring(0, 30)}${image.style.length > 30 ? '...' : ''}`} 
+                description={`Prompt: ${image.prompt.substring(0,80)}${image.prompt.length > 80 ? '...' : ''}`}
+              >
+                <div className="relative w-full overflow-hidden border rounded-md aspect-[16/9] bg-muted mb-4"> {/* Aspect ratio for consistency */}
+                  <NextImage src={image.src} alt="Generated brand image" layout="fill" objectFit="contain" data-ai-hint="brand visual" />
                 </div>
                 <CardFooter className="pt-4">
-                  <Button onClick={() => handleDeploy("Social Media", `Image for ${image.style}`)} className="w-full">
+                  <Button onClick={() => handleDeploy("Social Media Platform", `Image for ${image.style}`)} className="w-full">
                     <Send className="w-4 h-4 mr-2" /> Mock Post to Social
                   </Button>
                 </CardFooter>
@@ -69,18 +74,26 @@ export default function DeploymentHubPage() {
         {generatedSocialPosts.length > 0 && (
           <ContentSection title="Social Media Posts" icon={<MessageSquareText className="w-6 h-6 text-primary" />}>
             {generatedSocialPosts.map((post) => (
-              <GeneratedItemCard key={post.id} title={`Instagram: ${post.tone}`} description={post.caption.substring(0,100) + "..."}>
-                <p className="mb-2 text-xs text-muted-foreground">Hashtags: {post.hashtags}</p>
-                {post.imageSrc && (
-                  <div className="relative w-full h-32 mb-2 overflow-hidden border rounded-md">
-                    <Image src={post.imageSrc} alt="Social post image" layout="fill" objectFit="cover" data-ai-hint="social media" />
-                  </div>
-                )}
-                <CardFooter className="pt-4">
+              <GeneratedItemCard 
+                key={post.id} 
+                title={`${post.platform}: ${post.tone}`} 
+                description={post.caption} // Full caption will be handled by description styling
+                footerContent={
                   <Button onClick={() => handleDeploy(post.platform, post.caption.substring(0,30))} className="w-full">
                     <Send className="w-4 h-4 mr-2" /> Mock Post to {post.platform}
                   </Button>
-                </CardFooter>
+                }
+              >
+                {post.imageSrc && (
+                  <div className="relative w-full h-40 mb-3 overflow-hidden border rounded-md bg-muted"> {/* Consistent height */}
+                    <NextImage src={post.imageSrc} alt="Social post image" layout="fill" objectFit="cover" data-ai-hint="social media" />
+                  </div>
+                )}
+                 <div className="mb-2 space-x-1">
+                    {post.hashtags.split(',').map(tag => tag.trim()).filter(tag => tag).map(tag => (
+                        <Badge key={tag} variant="secondary" className="text-xs">#{tag}</Badge>
+                    ))}
+                </div>
               </GeneratedItemCard>
             ))}
           </ContentSection>
@@ -90,14 +103,22 @@ export default function DeploymentHubPage() {
         {generatedBlogPosts.length > 0 && (
           <ContentSection title="Blog Posts" icon={<Newspaper className="w-6 h-6 text-primary" />}>
             {generatedBlogPosts.map((post) => (
-              <GeneratedItemCard key={post.id} title={post.title} description={post.content.substring(0,150) + "..."}>
-                <p className="mb-2 text-xs text-muted-foreground">Tags: {post.tags}</p>
-                <p className="mb-2 text-xs text-muted-foreground">Platform: {post.platform}</p>
-                <CardFooter className="pt-4">
-                   <Button onClick={() => handleDeploy(post.platform, post.title)} className="w-full">
+              <GeneratedItemCard 
+                key={post.id} 
+                title={post.title} 
+                description={post.content} // Full content will be handled by description styling
+                footerContent={
+                  <Button onClick={() => handleDeploy(post.platform, post.title)} className="w-full">
                     <Send className="w-4 h-4 mr-2" /> Mock Publish to {post.platform}
                   </Button>
-                </CardFooter>
+                }
+              >
+                <p className="mb-1 text-xs text-muted-foreground">Platform: <Badge variant="outline">{post.platform}</Badge></p>
+                <div className="mb-2 space-x-1">
+                    {post.tags.split(',').map(tag => tag.trim()).filter(tag => tag).map(tag => (
+                        <Badge key={tag} variant="secondary" className="text-xs">#{tag}</Badge>
+                    ))}
+                </div>
               </GeneratedItemCard>
             ))}
           </ContentSection>
@@ -107,18 +128,28 @@ export default function DeploymentHubPage() {
         {generatedAdCampaigns.length > 0 && (
           <ContentSection title="Ad Campaigns" icon={<Briefcase className="w-6 h-6 text-primary" />}>
             {generatedAdCampaigns.map((campaign) => (
-              <GeneratedItemCard key={campaign.id} title={`Campaign for ${campaign.targetPlatforms.join(', ')}`} description={campaign.summary.substring(0,150) + "..."}>
-                 <div className="p-2 my-2 text-xs border rounded-md bg-muted">
-                  <h4 className="font-semibold">Platform Details:</h4>
-                  {Object.entries(campaign.platformDetails).map(([key, value]) => (
-                    <p key={key} className="truncate"><strong>{key.replace('_',' ')}:</strong> {String(value).substring(0,50)}...</p>
-                  ))}
-                 </div>
-                <CardFooter className="pt-4">
-                  <Button onClick={() => handleDeploy("Ad Platforms", `Campaign: ${campaign.summary.substring(0,20)}`)} className="w-full">
+              <GeneratedItemCard 
+                key={campaign.id} 
+                title={`Ad Campaign Summary`} 
+                description={campaign.summary}
+                footerContent={
+                  <Button onClick={() => handleDeploy("Ad Platforms", `Campaign: ${campaign.summary.substring(0,20)}...`)} className="w-full">
                     <ExternalLink className="w-4 h-4 mr-2" /> Mock Launch Campaign
                   </Button>
-                </CardFooter>
+                }
+              >
+                 <div className="p-3 my-2 text-sm border rounded-md bg-secondary/50"> {/* Changed bg-muted to bg-secondary/50 for contrast */}
+                  <h4 className="mb-1 font-semibold">Target Platforms:</h4>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {campaign.targetPlatforms.map(platform => (
+                        <Badge key={platform} variant="default">{platform.replace('_', ' ')}</Badge>
+                    ))}
+                  </div>
+                  <h4 className="mt-3 mb-1 font-semibold">Platform Specifics:</h4>
+                  {Object.entries(campaign.platformDetails).map(([key, value]) => (
+                    <p key={key} className="text-xs break-all"><strong>{key.replace('_',' ')}:</strong> {String(value)}</p>
+                  ))}
+                 </div>
               </GeneratedItemCard>
             ))}
           </ContentSection>
@@ -136,12 +167,12 @@ interface ContentSectionProps {
 
 function ContentSection({ title, icon, children }: ContentSectionProps) {
   return (
-    <div className="mb-10">
-      <h2 className="flex items-center mb-4 text-2xl font-semibold">
+    <div className="mb-12"> {/* Increased margin-bottom */}
+      <h2 className="flex items-center mb-6 text-2xl font-semibold"> {/* Increased margin-bottom */}
         {icon}
-        <span className="ml-2">{title}</span>
+        <span className="ml-3">{title}</span> {/* Increased margin-left */}
       </h2>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"> {/* Added xl:grid-cols-4 */}
         {children}
       </div>
     </div>
@@ -151,22 +182,29 @@ function ContentSection({ title, icon, children }: ContentSectionProps) {
 interface GeneratedItemCardProps {
   title: string;
   description: string;
-  children: React.ReactNode; // For image or specific content preview
+  children?: React.ReactNode; // For image or specific content preview, optional
+  footerContent?: React.ReactNode; // For buttons or actions in the footer
 }
 
-function GeneratedItemCard({ title, description, children }: GeneratedItemCardProps) {
+function GeneratedItemCard({ title, description, children, footerContent }: GeneratedItemCardProps) {
   return (
-    <Card className="flex flex-col shadow-md hover:shadow-xl">
+    <Card className="flex flex-col shadow-md hover:shadow-xl transition-shadow duration-200">
       <CardHeader>
-        <CardTitle className="text-lg truncate">{title}</CardTitle>
+        <CardTitle className="text-lg">{title}</CardTitle>
       </CardHeader>
-      <CardContent className="flex-grow">
-        <p className="mb-2 text-sm text-muted-foreground break-words overflow-hidden max-h-[6em] text-ellipsis">
+      <CardContent className="flex-grow space-y-3"> {/* Added space-y for better content separation */}
+        {/* Render children (like images or specific campaign details) before description */}
+        {children} 
+        <p className="text-sm text-muted-foreground line-clamp-4 break-words"> 
+            {/* line-clamp-4 will show up to 4 lines and truncate with '...' */}
             {description}
         </p>
-        {children}
       </CardContent>
-      {/* Footer is now part of children if needed */}
+      {footerContent && (
+        <CardFooter className="pt-4 mt-auto border-t"> {/* Ensure footer is at the bottom and has a top border */}
+          {footerContent}
+        </CardFooter>
+      )}
     </Card>
   );
 }
