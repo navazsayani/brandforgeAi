@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSe
 import { Checkbox } from "@/components/ui/checkbox"
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { Briefcase, Type, DollarSign, Target, CheckSquare, Copy } from 'lucide-react';
+import { Briefcase, Type, DollarSign, Target, CheckSquare, Copy, Info, Edit3, AlignLeft, MessageSquare } from 'lucide-react';
 import { handleGenerateAdCampaignAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedAdCampaign } from '@/types';
@@ -32,6 +32,7 @@ export default function CampaignManagerPage() {
   const [state, formAction] = useActionState(handleGenerateAdCampaignAction, initialFormState);
   const [generatedCampaign, setGeneratedCampaign] = useState<{campaignSummary: string; platformDetails: Record<string, string>} | null>(null);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+  const [selectedContentSource, setSelectedContentSource] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (state.data) {
@@ -55,8 +56,8 @@ export default function CampaignManagerPage() {
 
   const availableContent = [
     ...generatedSocialPosts.map(p => ({ id: `social-${p.id}`, label: `Social: ${p.caption.substring(0,30)}...`, content: p.caption })),
-    ...generatedBlogPosts.map(p => ({ id: `blog-${p.id}`, label: `Blog: ${p.title}`, content: p.title + "\n" + p.content.substring(0,100)+"..."})),
-  ].filter(item => item.content && item.content.trim() !== ""); // Filter out items with empty or whitespace-only content
+    ...generatedBlogPosts.map(p => ({ id: `blog-${p.id}`, label: `Blog: ${p.title}`, content: `${p.title}\n\n${p.content}`})),
+  ].filter(item => item.content && item.content.trim() !== "");
 
   return (
     <AppShell>
@@ -74,9 +75,9 @@ export default function CampaignManagerPage() {
             </div>
           </CardHeader>
           <form action={formAction}>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-8"> {/* Increased spacing */}
               <div>
-                <Label htmlFor="adBrandName" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Name</Label>
+                <Label htmlFor="adBrandName" className="flex items-center mb-2 text-base"><Edit3 className="w-5 h-5 mr-2 text-primary" />Brand Name</Label>
                 <Input
                   id="adBrandName"
                   name="brandName"
@@ -86,21 +87,26 @@ export default function CampaignManagerPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="adBrandDescription" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Description</Label>
+                <Label htmlFor="adBrandDescription" className="flex items-center mb-2 text-base"><AlignLeft className="w-5 h-5 mr-2 text-primary" />Brand Description</Label>
                 <Textarea
                   id="adBrandDescription"
                   name="brandDescription"
                   defaultValue={brandData?.brandDescription || ""}
-                  placeholder="Detailed brand description"
-                  rows={3}
+                  placeholder="Detailed brand description, values, and target audience"
+                  rows={4} // Slightly more rows
                   required
                 />
               </div>
               <div>
-                <Label htmlFor="adGeneratedContent" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Ad Content</Label>
-                <Select name="generatedContent" required>
+                <Label htmlFor="adGeneratedContent" className="flex items-center mb-2 text-base"><MessageSquare className="w-5 h-5 mr-2 text-primary" />Ad Content Source</Label>
+                <Select 
+                  name="generatedContent" 
+                  required 
+                  onValueChange={setSelectedContentSource}
+                  value={selectedContentSource}
+                >
                   <SelectTrigger id="adGeneratedContent">
-                    <SelectValue placeholder="Select generated content for ad" />
+                    <SelectValue placeholder="Select generated content or choose 'Custom'" />
                   </SelectTrigger>
                   <SelectContent>
                     {availableContent.length > 0 ? (
@@ -118,15 +124,18 @@ export default function CampaignManagerPage() {
                     <SelectItem value="Custom content for ad campaign">Custom (type below)</SelectItem>
                   </SelectContent>
                 </Select>
+                {selectedContentSource === "Custom content for ad campaign" && (
                  <Textarea
                     name="customGeneratedContent" 
-                    placeholder="If 'Custom' selected above, paste or write your ad copy here. Otherwise, this can be left blank."
-                    rows={3}
-                    className="mt-2"
+                    placeholder="Paste or write your ad copy here for the custom campaign."
+                    rows={4}
+                    className="mt-3" // Added margin top for separation
+                    required
                   />
+                )}
               </div>
               <div>
-                <Label htmlFor="adTargetKeywords" className="flex items-center mb-1"><Target className="w-4 h-4 mr-2 text-primary" />Target Keywords</Label>
+                <Label htmlFor="adTargetKeywords" className="flex items-center mb-2 text-base"><Target className="w-5 h-5 mr-2 text-primary" />Target Keywords</Label>
                 <Input
                   id="adTargetKeywords"
                   name="targetKeywords"
@@ -136,7 +145,7 @@ export default function CampaignManagerPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="adBudget" className="flex items-center mb-1"><DollarSign className="w-4 h-4 mr-2 text-primary" />Budget ($)</Label>
+                <Label htmlFor="adBudget" className="flex items-center mb-2 text-base"><DollarSign className="w-5 h-5 mr-2 text-primary" />Budget ($)</Label>
                 <Input
                   id="adBudget"
                   name="budget"
@@ -146,11 +155,11 @@ export default function CampaignManagerPage() {
                 />
               </div>
               <div>
-                <Label className="flex items-center mb-2"><CheckSquare className="w-4 h-4 mr-2 text-primary" />Platforms</Label>
+                <Label className="flex items-center mb-3 text-base"><CheckSquare className="w-5 h-5 mr-2 text-primary" />Platforms</Label> {/* Increased margin bottom */}
                 <input type="hidden" name="platforms" value={selectedPlatforms.join(',')} />
-                <div className="space-y-2">
+                <div className="space-y-3"> {/* Increased spacing */}
                   {platforms.map((item) => (
-                    <div key={item.id} className="flex items-center space-x-2">
+                    <div key={item.id} className="flex items-center space-x-3 p-3 border rounded-md hover:bg-secondary/50 transition-colors"> {/* Added padding and border */}
                       <Checkbox
                         id={item.id}
                         checked={selectedPlatforms.includes(item.id)}
@@ -159,46 +168,47 @@ export default function CampaignManagerPage() {
                             ? setSelectedPlatforms((prev) => [...prev, item.id])
                             : setSelectedPlatforms((prev) => prev.filter((value) => value !== item.id))
                         }}
+                        className="h-5 w-5" // Slightly larger checkbox
                       />
                       <label
                         htmlFor={item.id}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
                       >
                         {item.label}
                       </label>
                     </div>
                   ))}
                 </div>
-                 {selectedPlatforms.length === 0 && <p className="text-destructive text-xs mt-1">Please select at least one platform.</p>}
+                 {selectedPlatforms.length === 0 && <p className="text-destructive text-xs mt-2">Please select at least one platform.</p>}
               </div>
             </CardContent>
-            <CardFooter>
-              <SubmitButton className="w-full" loadingText="Generating Campaign..." disabled={selectedPlatforms.length === 0}>Generate Ad Campaign</SubmitButton>
+            <CardFooter className="pt-4"> {/* Added top padding */}
+              <SubmitButton className="w-full" size="lg" loadingText="Generating Campaign..." disabled={selectedPlatforms.length === 0}>Generate Ad Campaign</SubmitButton>
             </CardFooter>
           </form>
           {generatedCampaign && (
-            <CardContent className="mt-6 space-y-4">
+            <CardContent className="mt-8 space-y-6 border-t pt-6"> {/* Added border-t and more spacing */}
               <div>
-                <h3 className="mb-1 text-lg font-semibold">Campaign Summary:</h3>
-                 <div className="p-3 prose border rounded-md bg-secondary max-w-none max-h-60 overflow-y-auto">
+                <h3 className="mb-2 text-xl font-semibold flex items-center"><Info className="w-5 h-5 mr-2 text-primary"/>Campaign Summary</h3>
+                 <div className="p-4 prose border rounded-md bg-muted/50 max-w-none max-h-60 overflow-y-auto text-sm"> {/* Adjusted background and padding */}
                     <p className="whitespace-pre-wrap">{generatedCampaign.campaignSummary}</p>
                   </div>
-                <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedCampaign.campaignSummary, "Summary")} className="mt-1">
-                  <Copy className="w-3 h-3 mr-1" /> Copy Summary
+                <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedCampaign.campaignSummary, "Summary")} className="mt-2 text-muted-foreground hover:text-primary">
+                  <Copy className="w-4 h-4 mr-2" /> Copy Summary
                 </Button>
               </div>
               <div>
-                <h3 className="mb-1 text-lg font-semibold">Platform Details:</h3>
-                <div className="p-3 border rounded-md bg-secondary">
+                <h3 className="mb-2 text-xl font-semibold flex items-center"><Briefcase className="w-5 h-5 mr-2 text-primary"/>Platform Details</h3>
+                <div className="p-4 border rounded-md bg-muted/50 space-y-3"> {/* Adjusted background, padding and added space-y */}
                   {Object.entries(generatedCampaign.platformDetails).map(([platform, details]) => (
-                    <div key={platform} className="mb-2">
-                      <strong className="capitalize">{platform.replace('_', ' ')}:</strong>
-                      <p className="text-sm whitespace-pre-wrap">{details}</p>
+                    <div key={platform}>
+                      <strong className="capitalize block mb-1 text-primary">{platform.replace('_', ' ')}:</strong>
+                      <p className="text-sm whitespace-pre-wrap text-foreground">{details}</p>
                     </div>
                   ))}
                 </div>
-                 <Button variant="ghost" size="sm" onClick={() => copyToClipboard(JSON.stringify(generatedCampaign.platformDetails, null, 2), "Details")} className="mt-1">
-                  <Copy className="w-3 h-3 mr-1" /> Copy Details
+                 <Button variant="ghost" size="sm" onClick={() => copyToClipboard(JSON.stringify(generatedCampaign.platformDetails, null, 2), "Details")} className="mt-2 text-muted-foreground hover:text-primary">
+                  <Copy className="w-4 h-4 mr-2" /> Copy Details
                 </Button>
               </div>
             </CardContent>
@@ -208,3 +218,5 @@ export default function CampaignManagerPage() {
     </AppShell>
   );
 }
+
+    
