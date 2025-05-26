@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
-import NextImage from 'next/image'; // Renamed to avoid conflict with HTMLImageElement
+import NextImage from 'next/image';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -156,12 +156,11 @@ export default function BrandProfilePage() {
       setIsUploading(true);
       setUploadProgress(0);
       
-      originalExampleImageUrlRef.current = form.getValues('exampleImage'); // Store current value before attempting upload
+      originalExampleImageUrlRef.current = form.getValues('exampleImage'); 
 
-      // Create a temporary URL for preview
       const tempPreviewUrl = URL.createObjectURL(file);
       setPreviewImage(tempPreviewUrl);
-      form.setValue('exampleImage', '', { shouldValidate: false }); // Temporarily clear form value
+      form.setValue('exampleImage', '', { shouldValidate: false }); 
 
       const imageFileName = `brand_example_images/${BRAND_PROFILE_DOC_ID}/${Date.now()}_${file.name}`;
       const imageRef = storageRef(storage, imageFileName);
@@ -176,22 +175,21 @@ export default function BrandProfilePage() {
           console.error("Firebase Storage Upload Error:", error);
           setIsUploading(false);
           setUploadProgress(null);
-          setFileName(null);
-          // Revert to original image URL if upload fails
+          // Don't setFileName(null) here, so user sees which file failed.
           form.setValue('exampleImage', originalExampleImageUrlRef.current || '', { shouldValidate: true });
           setPreviewImage(originalExampleImageUrlRef.current || null);
           
           toast({
             title: "Upload Error",
-            description: `Failed to upload image: ${error.message}. Check console and Firebase Storage rules.`,
+            description: `Failed to upload '${file.name}': ${error.message}. Check console, Firebase Storage rules, and ensure your storage bucket is correctly configured in .env.`,
             variant: "destructive",
           });
         },
         () => {
           getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
             form.setValue('exampleImage', downloadURL, { shouldValidate: true });
-            setPreviewImage(downloadURL); // Update preview to Storage URL
-            originalExampleImageUrlRef.current = downloadURL; // Update ref to new successful URL
+            setPreviewImage(downloadURL); 
+            originalExampleImageUrlRef.current = downloadURL; 
             setIsUploading(false);
             setUploadProgress(null);
             toast({
@@ -202,12 +200,12 @@ export default function BrandProfilePage() {
             console.error("Firebase Storage Get URL Error:", error);
             setIsUploading(false);
             setUploadProgress(null);
-            setFileName(null);
+            // Don't setFileName(null) here.
             form.setValue('exampleImage', originalExampleImageUrlRef.current || '', { shouldValidate: true });
             setPreviewImage(originalExampleImageUrlRef.current || null);
             toast({
               title: "Upload Finalization Error",
-              description: `Failed to get image URL: ${error.message}`,
+              description: `Failed to get URL for '${file.name}': ${error.message}`,
               variant: "destructive",
             });
           });
@@ -345,7 +343,7 @@ export default function BrandProfilePage() {
                         </Label>
                     </div> 
                    </FormControl>
-                  {fileName && !isUploading && <p className="mt-2 text-sm text-muted-foreground">Selected file: {fileName}</p>}
+                  {fileName && <p className="mt-2 text-sm text-muted-foreground">Selected file: {fileName}{isUploading ? "" : " (upload failed, try again or choose a different file)"}</p>}
                   {isUploading && uploadProgress !== null && (
                     <div className="mt-2">
                       <p className="text-sm text-muted-foreground">Uploading: {fileName} ({Math.round(uploadProgress)}%)...</p>
@@ -407,5 +405,7 @@ export default function BrandProfilePage() {
     </AppShell>
   );
 }
+
+    
 
     
