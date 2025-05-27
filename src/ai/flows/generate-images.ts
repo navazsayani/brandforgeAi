@@ -55,14 +55,14 @@ You will be asked to generate a *new image*.
 {{#if exampleImage}}
   An example image is provided. First, identify the main *category* of the item in the example image (e.g., 'a dress', 'a chair', 'a logo', 'a handbag').
   Your task is to generate a *new item* belonging to this *same category*.
-  The *design* (color, pattern, shape, specific features, overall aesthetic) of this new item MUST be primarily derived from the 'Brand Description' and 'Desired Image Style' provided below.
-  The example image should be used to understand the *type* of item to create. You may also take very subtle, high-level stylistic cues (like overall complexity or general aesthetic feel, if they align with the new design direction), but DO NOT replicate its specific design elements. The goal is a fresh interpretation and a new design.
+  The *design* (color, pattern, shape, specific features, overall aesthetic) of this new item MUST be primarily derived from the 'Brand Description' and 'Desired Image Style' provided below. The brand description should be the main source of inspiration for the new item's theme, specific characteristics, and any unique elements it should possess.
+  The example image should be used to understand the *type* of item to create. You may also take very subtle, high-level stylistic cues (like overall complexity or general aesthetic feel, if they align with the new design direction), but DO NOT replicate its specific design elements. The goal is a fresh interpretation and a new design deeply rooted in the brand's identity.
 
   Example Image (use this to identify item category): {{media url=exampleImage}}
   Brand Description (for the new item's core design, theme, and features): {{{brandDescription}}}
   Desired Image Style (for the new item's visual presentation and artistic rendering): {{{imageStyle}}}
 
-  Ensure the newly generated image is a *distinct, original design* of the same item category as the example, but reimagined according to the brand description and desired image style. For instance, if the example is a bright, casual t-shirt and the brand description is "elegant, formal evening wear", you should generate an elegant, formal t-shirt design, not a casual one.
+  Ensure the newly generated image is a *distinct, original design* of the same item category as the example, but reimagined according to the brand description and desired image style. For instance, if the example is a bright, casual t-shirt and the brand description is "elegant, formal evening wear with celestial motifs", you should generate an elegant, formal t-shirt design incorporating celestial motifs, not a casual one.
 {{else}}
   Generate a new image based on the following:
   Brand Description (for new image content and theme): {{{brandDescription}}}
@@ -96,7 +96,7 @@ Analyze the provided example image (sent first) to understand the main category 
 
 Your primary task is to generate a *new and unique item* belonging to that *same category*. This new item's design, aesthetics, and features should be predominantly inspired by the following 'Brand Description' and 'Desired Artistic Style'.
 
-Brand Description (this drives the core design, theme, and characteristics of the *new* item): "${brandDescription}"
+**Brand Description (this is the *primary driver* for the core design, theme, specific characteristics, and unique elements of the *new* item): "${brandDescription}"**
 Desired Artistic Style (this guides the visual rendering, mood, and artistic approach for the *new* item): "${imageStyle}"
 
 The example image serves these main purposes:
@@ -107,9 +107,9 @@ However, you MUST NOT:
 - Replicate the specific design, color, pattern, shape, or any distinct visual details of the item in the example image.
 - Create a minor variation of the item in the example image. Your output must be a significantly different design.
 
-The generated image should showcase a *fresh, original design* for an item of the same category, reflecting the new brand and desired style.
-For example, if the example image is a red, ornate, traditional evening gown, and the Brand Description is "minimalist, sustainable, futuristic, everyday wear" and Desired Artistic Style is "clean, vector art", you should generate a minimalist, futuristic everyday dress in a clean vector art style, NOT another red, ornate gown or a slight variation of it.
-Your goal is to create a *new design* for the *same type of object* shown in the example.
+The generated image should showcase a *fresh, original design* for an item of the same category, reflecting the new brand (as per Brand Description) and desired style.
+For example, if the example image is a red, ornate, traditional evening gown, and the Brand Description is "minimalist, sustainable, futuristic, everyday wear with subtle geometric patterns" and Desired Artistic Style is "clean, vector art", you should generate a minimalist, futuristic everyday dress incorporating subtle geometric patterns, rendered in a clean vector art style. It should NOT be another red, ornate gown or a slight variation of it.
+Your goal is to create a *new design* for the *same type of object* shown in the example, deeply infused with the concepts from the Brand Description.
 `.trim();
         finalPromptParts.push({ text: textForImageContextPrompt });
 
@@ -117,6 +117,14 @@ Your goal is to create a *new design* for the *same type of object* shown in the
         const textOnlyPrompt = `Generate a *new and unique* image primarily based on the following brand description: "${brandDescription}". The desired artistic style for this new image is: "${imageStyle}".`;
         finalPromptParts.push({ text: textOnlyPrompt });
     }
+
+    if (!brandDescription || !imageStyle) {
+        throw new Error("Brand description and image style are required for image generation.");
+    }
+    if (exampleImage && !exampleImage.startsWith('data:')) {
+        throw new Error("Example image was provided but is not a valid data URI.");
+    }
+
 
     const {media} = await ai.generate({
       model: 'googleai/gemini-2.0-flash-exp', // IMPORTANT: This specific model is for image generation
