@@ -15,7 +15,7 @@ import {z} from 'genkit';
 const GenerateImagesInputSchema = z.object({
   brandDescription: z
     .string()
-    .describe('A detailed description of the brand and its values. This will be the primary driver for the *subject matter* of the new image.'),
+    .describe('A detailed description of the brand and its values. This will guide the design of the new item.'),
   imageStyle: z
     .string()
     .describe(
@@ -24,7 +24,7 @@ const GenerateImagesInputSchema = z.object({
   exampleImage: z
     .string()
     .describe(
-      "An example image as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'. This image will inform the *abstract artistic style* of the generated images, not its content."
+      "An example image as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'. This image helps identify the *category* of item to be redesigned and can offer subtle style cues."
     )
     .optional(),
 });
@@ -44,25 +44,30 @@ export async function generateImages(input: GenerateImagesInput): Promise<Genera
 }
 
 // This prompt definition is for the ai.definePrompt object, which is not directly used
-// for the image generation in this flow, but kept for consistency or potential future use.
+// for the image generation in this flow, but kept for conceptual consistency.
 const textGenerationOrientedPrompt = ai.definePrompt({
-  name: 'generateImagesTextPrompt', // Renamed to clarify its nature
+  name: 'generateImagesTextPrompt',
   input: {schema: GenerateImagesInputSchema},
-  output: {schema: GenerateImagesOutputSchema}, // This output schema still applies to the flow's return
-  prompt: `You are an AI image generation expert specializing in creating images that align with brand aesthetics.
-
-You will be asked to generate a new image based on a brand description and a desired image style.
-If an example image is provided, you should analyze it for its abstract artistic qualities (like color palette, lighting, texture, mood, overall artistic style e.g. 'photorealistic', 'minimalist') and use these qualities as *inspiration* for the *new* image. The subject matter of the new image must come from the brand description.
-
-Brand Description (for new image content): {{{brandDescription}}}
-Image Style (for new image aesthetics): {{{imageStyle}}}
+  output: {schema: GenerateImagesOutputSchema},
+  prompt: `You are an AI image generation expert and creative designer.
+You will be asked to generate a *new image*.
 
 {{#if exampleImage}}
-  The following example image should be used *only* to extract abstract stylistic elements (color palette, mood, lighting, artistic technique). DO NOT replicate the objects, people, or scene from this example.
-  Example Image (for style reference only): {{media url=exampleImage}}
-{{/if}}
+  An example image is provided. First, identify the main *category* of the item in the example image (e.g., 'a dress', 'a chair', 'a logo', 'a handbag').
+  Your task is to generate a *new item* belonging to this *same category*.
+  The *design* (color, pattern, shape, specific features, overall aesthetic) of this new item MUST be primarily derived from the 'Brand Description' and 'Desired Image Style' provided below.
+  The example image should be used to understand the *type* of item to create. You may also take very subtle, high-level stylistic cues (like overall complexity or general aesthetic feel, if they align with the new design direction), but DO NOT replicate its specific design elements. The goal is a fresh interpretation and a new design.
 
-Ensure the *newly generated* image primarily reflects the 'Brand Description' for its content and the 'Image Style' for its overall look, drawing stylistic inspiration (but not content) from the example image if provided. The new image must be distinct in its subject matter from any example image.
+  Example Image (use this to identify item category): {{media url=exampleImage}}
+  Brand Description (for the new item's core design, theme, and features): {{{brandDescription}}}
+  Desired Image Style (for the new item's visual presentation and artistic rendering): {{{imageStyle}}}
+
+  Ensure the newly generated image is a *distinct, original design* of the same item category as the example, but reimagined according to the brand description and desired image style. For instance, if the example is a bright, casual t-shirt and the brand description is "elegant, formal evening wear", you should generate an elegant, formal t-shirt design, not a casual one.
+{{else}}
+  Generate a new image based on the following:
+  Brand Description (for new image content and theme): {{{brandDescription}}}
+  Desired Image Style (for new image aesthetics): {{{imageStyle}}}
+{{/if}}
 `,
 });
 
@@ -79,23 +84,43 @@ const generateImagesFlow = ai.defineFlow(
       exampleImage,
     } = input;
 
-    // Construct the prompt for the image generation model (Gemini 2.0 Flash Exp)
-    const baseTextPrompt = `Generate a *new and unique* image. The primary subject matter and theme should be derived from the following brand description: "${brandDescription}". The desired overall artistic image style is: "${imageStyle}".`;
-    
-    const imageGenerationPromptParts: ({text: string} | {media: {url: string}})[] = [];
+    const finalPromptParts: ({text: string} | {media: {url: string}})[] = [];
 
-    if (exampleImage && exampleImage.startsWith('data:')) { // Ensure exampleImage is a valid data URI
-      imageGenerationPromptParts.push({media: {url: exampleImage}});
-      imageGenerationPromptParts.push({
-        text: `${baseTextPrompt} Critically, the provided example image should be used *only* as a reference for its abstract artistic qualities. Analyze it for its color palette, lighting style, common textures, overall mood, and artistic rendering style (e.g., 'photorealistic', 'painterly', 'graphic'). Apply these *abstracted stylistic elements* to the *new* image you create based on the brand description. The subject matter, specific objects, figures, and scene composition of the newly generated image *must be entirely different* from the example image. The goal is to achieve a similar artistic *feel* or *vibe* in a completely fresh visual, not to recreate, adapt, or modify the example image's content.`
-      });
-    } else {
-      imageGenerationPromptParts.push({text: baseTextPrompt});
+    if (exampleImage && exampleImage.startsWith('data:')) {
+        // Add the example image first in the parts array for the model to reference
+        finalPromptParts.push({ media: { url: exampleImage } });
+
+        // Construct the detailed text prompt
+        const textForImageContextPrompt = `
+Analyze the provided example image (sent first) to understand the main category of the item depicted (e.g., 'a dress', 'a handbag', 'a piece of furniture', 'a logo').
+
+Your primary task is to generate a *new and unique item* belonging to that *same category*. This new item's design, aesthetics, and features should be predominantly inspired by the following 'Brand Description' and 'Desired Artistic Style'.
+
+Brand Description (this drives the core design, theme, and characteristics of the *new* item): "${brandDescription}"
+Desired Artistic Style (this guides the visual rendering, mood, and artistic approach for the *new* item): "${imageStyle}"
+
+The example image serves these main purposes:
+1.  To clearly identify the *category* of the item you need to create and redesign (e.g., if the example shows a dress, you will design a new dress).
+2.  It may offer very subtle, high-level stylistic cues (like overall complexity, or a general aesthetic direction) ONLY IF they align with and enhance the new design direction set by the Brand Description and Desired Artistic Style.
+
+However, you MUST NOT:
+- Replicate the specific design, color, pattern, shape, or any distinct visual details of the item in the example image.
+- Create a minor variation of the item in the example image. Your output must be a significantly different design.
+
+The generated image should showcase a *fresh, original design* for an item of the same category, reflecting the new brand and desired style.
+For example, if the example image is a red, ornate, traditional evening gown, and the Brand Description is "minimalist, sustainable, futuristic, everyday wear" and Desired Artistic Style is "clean, vector art", you should generate a minimalist, futuristic everyday dress in a clean vector art style, NOT another red, ornate gown or a slight variation of it.
+Your goal is to create a *new design* for the *same type of object* shown in the example.
+`.trim();
+        finalPromptParts.push({ text: textForImageContextPrompt });
+
+    } else { // No example image, so a simpler prompt
+        const textOnlyPrompt = `Generate a *new and unique* image primarily based on the following brand description: "${brandDescription}". The desired artistic style for this new image is: "${imageStyle}".`;
+        finalPromptParts.push({ text: textOnlyPrompt });
     }
 
     const {media} = await ai.generate({
       model: 'googleai/gemini-2.0-flash-exp', // IMPORTANT: This specific model is for image generation
-      prompt: imageGenerationPromptParts,
+      prompt: finalPromptParts,
       config: {
         responseModalities: ['TEXT', 'IMAGE'], // Must include IMAGE
       },
