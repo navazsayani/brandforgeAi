@@ -57,10 +57,9 @@ You will be asked to generate a *new image*.
 
 If an exampleImage is provided:
 1.  Identify the main *category* of the item in the exampleImage (e.g., 'a dress', 'a chair', 'a logo').
-2.  The exampleImage is the *primary reference* for the visual style, colors, and overall aesthetic of the newly generated image.
-3.  The 'Desired Image Style' input (e.g., "photorealistic") acts as a critical instruction for the rendering. Prioritize realism if "photorealistic" or similar terms are used.
-4.  The 'Brand Description' input is the **primary driver** for the core design, theme, specific characteristics, and unique elements of the *new* item. It should provide substantial conceptual input. For example, if the item category from the example image is 'sneakers' and the brand description is 'eco-friendly, minimalist, inspired by forest textures,' you should generate new sneakers that embody these eco-friendly and minimalist forest-inspired themes, not just subtly tweak the example sneakers.
-5.  Goal: A high-quality, visually appealing image of the *same type of item* as the example, but as a *new, distinct version or variation* that heavily incorporates the brand themes and is rendered in the specified 'Desired Image Style'. Ensure the image is suitable for social media like Instagram.
+2.  The 'Desired Image Style' input (e.g., "photorealistic") acts as a critical instruction for the rendering. Prioritize realism if "photorealistic" or similar terms are used.
+3.  The 'Brand Description' input is the **primary driver** for the core design, theme, specific characteristics, and unique elements of the *new* item. It should provide substantial conceptual input. For example, if the item category from the example image is 'sneakers' and the brand description is 'eco-friendly, minimalist, inspired by forest textures,' you should generate new sneakers that embody these eco-friendly and minimalist forest-inspired themes, not just subtly tweak the example sneakers.
+4.  Goal: A high-quality, visually appealing image of the *same type of item* as the example, but as a *new, distinct version or variation* that heavily incorporates the brand themes and is rendered in the specified 'Desired Image Style'. Ensure the image is suitable for social media like Instagram.
 
 If no exampleImage is provided:
 1.  The 'Brand Description' provides the *concept* for the image.
@@ -99,10 +98,9 @@ Generate a new, high-quality, visually appealing image suitable for social media
 
 The provided example image (sent first) is a reference.
 1.  Identify the main *category* of the item in the example image (e.g., 'a handbag', 'a t-shirt', 'a piece of furniture').
-2.  The example image provides *strong visual style cues* (like color palette, general aesthetic mood).
-3.  The "Desired Artistic Style" input is: "${imageStyle}". This is a critical instruction for the final rendering. If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic.
-4.  The "Brand Description" is: "${brandDescription}". This description is the **primary driver** for the core design, theme, specific characteristics, and unique elements of the *new* item. It should provide substantial conceptual input. For instance, if the example is a 'minimalist white sneaker' and the brand is 'eco-friendly, nature-inspired, with subtle leaf motifs', you should generate new minimalist white sneakers that prominently feature these eco-friendly and nature-inspired themes, perhaps with visible leaf motifs or textures derived from nature.
-5.  The final image must be of the *same type of item* as the example image but should appear as a *new, distinct version or variation*. It should be clearly different from the example image while still being recognizable as belonging to the same category, now heavily infused with brand-thematic elements.
+2.  The "Desired Artistic Style" input is: "${imageStyle}". This is a critical instruction for the final rendering. If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic.
+3.  The "Brand Description" is: "${brandDescription}". This description is the **primary driver** for the core design, theme, specific characteristics, and unique elements of the *new* item. It should provide substantial conceptual input. For instance, if the example is a 'minimalist white sneaker' and the brand is 'eco-friendly, nature-inspired, with subtle leaf motifs', you should generate new minimalist white sneakers that prominently feature these eco-friendly and nature-inspired themes, perhaps with visible leaf motifs or textures derived from nature.
+4.  The final image must be of the *same type of item* as the example image but should appear as a *new, distinct version or variation*. It should be clearly different from the example image while still being recognizable as belonging to the same category, now heavily infused with brand-thematic elements.
 
 Do NOT simply replicate the example image. Create a new iteration that looks realistic (if implied by the style) and compelling.
 `.trim();
