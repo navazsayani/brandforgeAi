@@ -124,17 +124,23 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
       prompt: finalPromptParts,
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
-         safetySettings: [ // Added to potentially reduce blocking for artistic content
+         safetySettings: [
             { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
             { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
             { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+            // You could add HARM_CATEGORY_CIVIC_INTEGRITY with a threshold if needed.
         ],
       },
     });
 
     if (!media || !media.url) {
-        throw new Error("AI failed to generate an image or returned an invalid image format.");
+        console.error("AI image generation failed. Media object or URL is missing. Response media:", media);
+        throw new Error("AI failed to generate an image or returned an invalid image format. This might be due to safety filters, an issue with the generation service, or the prompt being too restrictive.");
+    }
+    if (typeof media.url !== 'string' || !media.url.startsWith('data:')) {
+        console.error("AI image generation failed. Media URL is not a valid data URI. Received URL:", media.url);
+        throw new Error("AI returned an image, but its format (URL) is invalid. Expected a data URI.");
     }
 
     return {generatedImage: media.url};
