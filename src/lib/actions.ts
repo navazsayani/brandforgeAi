@@ -6,6 +6,7 @@ import { generateSocialMediaCaption, type GenerateSocialMediaCaptionInput } from
 import { generateBlogContent, type GenerateBlogContentInput } from '@/ai/flows/generate-blog-content';
 import { generateAdCampaign, type GenerateAdCampaignInput } from '@/ai/flows/generate-ad-campaign';
 import { extractBrandInfoFromUrl, type ExtractBrandInfoFromUrlInput, type ExtractBrandInfoFromUrlOutput } from '@/ai/flows/extract-brand-info-from-url-flow';
+import { describeImage, type DescribeImageInput, type DescribeImageOutput } from '@/ai/flows/describe-image-flow';
 
 
 // Generic type for form state with error
@@ -45,25 +46,48 @@ export async function handleGenerateImagesAction(
   }
 }
 
+export async function handleDescribeImageAction(
+  prevState: FormState,
+  formData: FormData
+): Promise<FormState<DescribeImageOutput>> {
+  try {
+    const imageDataUri = formData.get("imageDataUri") as string;
+    if (!imageDataUri) {
+      return { error: "Image data URI is required to generate a description." };
+    }
+    const input: DescribeImageInput = { imageDataUri };
+    const result = await describeImage(input);
+    return { data: result, message: "Image description generated!" };
+  } catch (e: any) {
+    console.error("Error in handleDescribeImageAction:", e);
+    return { error: e.message || "Failed to generate image description." };
+  }
+}
+
 export async function handleGenerateSocialMediaCaptionAction(
   prevState: FormState,
   formData: FormData
-): Promise<FormState<{ caption: string; hashtags: string; imageSrc: string }>> {
+): Promise<FormState<{ caption: string; hashtags: string; imageSrc: string | null }>> {
   try {
-    const imageSrc = formData.get("selectedImageSrcForSocialPost") as string;
+    const imageSrc = formData.get("selectedImageSrcForSocialPost") as string | null;
+    const imageDescription = formData.get("imageDescription") as string;
+
     const input: GenerateSocialMediaCaptionInput = {
       brandDescription: formData.get("brandDescription") as string,
-      imageDescription: formData.get("imageDescription") as string,
+      // Image description is optional if no image is used
+      imageDescription: imageSrc ? imageDescription : undefined,
       tone: formData.get("tone") as string,
     };
-    if (!input.brandDescription || !input.imageDescription || !input.tone) {
-      return { error: "Brand description, image description, and tone are required." };
+
+    if (!input.brandDescription || !input.tone) {
+      return { error: "Brand description and tone are required." };
     }
-    if (!imageSrc) {
-      return { error: "An image must be selected or available for the social post." };
+    if (imageSrc && !imageDescription) {
+        return { error: "Image description is required if an image is selected for the post."}
     }
+    
     const result = await generateSocialMediaCaption(input);
-    return { data: { ...result, imageSrc }, message: "Social media content generated!" };
+    return { data: { ...result, imageSrc: imageSrc || null }, message: "Social media content generated!" };
   } catch (e: any) {
     console.error("Error in handleGenerateSocialMediaCaptionAction:", e);
     return { error: e.message || "Failed to generate social media caption." };
