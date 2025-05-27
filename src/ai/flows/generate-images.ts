@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -42,22 +43,26 @@ export async function generateImages(input: GenerateImagesInput): Promise<Genera
   return generateImagesFlow(input);
 }
 
-const prompt = ai.definePrompt({
-  name: 'generateImagesPrompt',
+// This prompt definition is for the ai.definePrompt object, which is not directly used
+// for the image generation in this flow, but kept for consistency or potential future use.
+const textGenerationOrientedPrompt = ai.definePrompt({
+  name: 'generateImagesTextPrompt', // Renamed to clarify its nature
   input: {schema: GenerateImagesInputSchema},
-  output: {schema: GenerateImagesOutputSchema},
+  output: {schema: GenerateImagesOutputSchema}, // This output schema still applies to the flow's return
   prompt: `You are an AI image generation expert specializing in creating images that align with brand aesthetics.
 
-You will generate an image based on the brand description and desired style.
+You will be asked to generate an image based on a brand description and a desired style.
+If an example image is provided, use it as a strong stylistic reference for the new image.
 
 Brand Description: {{{brandDescription}}}
 Image Style: {{{imageStyle}}}
 
 {{#if exampleImage}}
+  The following example image should heavily influence the style, color palette, and mood of the *new* image you generate:
   Example Image: {{media url=exampleImage}}
 {{/if}}
 
-Ensure the generated image reflects the brand's values and the specified style.
+Ensure the *newly generated* image reflects the brand's values and the specified style, drawing inspiration from the example if provided, but creating a distinct piece.
 `,
 });
 
@@ -67,30 +72,40 @@ const generateImagesFlow = ai.defineFlow(
     inputSchema: GenerateImagesInputSchema,
     outputSchema: GenerateImagesOutputSchema,
   },
-  async input => {
+  async (input) => {
     const {
       brandDescription,
       imageStyle,
       exampleImage,
     } = input;
 
-    const imagePrompt = [
-      {text: `Generate an image that embodies the following brand description: ${brandDescription}. The image style should be ${imageStyle}.`},
-    ];
+    // Construct the prompt for the image generation model (Gemini 2.0 Flash Exp)
+    const baseTextPrompt = `Generate a *new* and *unique* image that embodies the following brand description: "${brandDescription}". The desired artistic image style is "${imageStyle}".`;
+    
+    const imageGenerationPromptParts: ({text: string} | {media: {url: string}})[] = [];
 
-    if (exampleImage) {
-      imagePrompt.unshift({media: {url: exampleImage}});
-      imagePrompt.push({text: 'Adhere to the style of the example image.'});
+    if (exampleImage && exampleImage.startsWith('data:')) { // Ensure exampleImage is a valid data URI
+      imageGenerationPromptParts.push({media: {url: exampleImage}});
+      imageGenerationPromptParts.push({
+        text: `${baseTextPrompt} Use the provided example image *only* as a strong reference for the artistic style, color palette, and overall mood. Do NOT replicate the example image's subject matter or composition directly. The new image must be clearly different in content but stylistically similar to the example.`
+      });
+    } else {
+      imageGenerationPromptParts.push({text: baseTextPrompt});
     }
 
     const {media} = await ai.generate({
-      model: 'googleai/gemini-2.0-flash-exp',
-      prompt: imagePrompt,
+      model: 'googleai/gemini-2.0-flash-exp', // IMPORTANT: This specific model is for image generation
+      prompt: imageGenerationPromptParts,
       config: {
-        responseModalities: ['TEXT', 'IMAGE'],
+        responseModalities: ['TEXT', 'IMAGE'], // Must include IMAGE
       },
     });
 
-    return {generatedImage: media.url!};
+    if (!media || !media.url) {
+        throw new Error("AI failed to generate an image or returned an invalid image format.");
+    }
+
+    return {generatedImage: media.url};
   }
 );
+
