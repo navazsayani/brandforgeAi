@@ -17,15 +17,19 @@ export interface FormState<T = any> {
 }
 
 export async function handleGenerateImagesAction(
-  prevState: FormState,
+  prevState: FormState<string[]>, // Expecting an array of image URLs
   formData: FormData
-): Promise<FormState<string>> {
+): Promise<FormState<string[]>> {
   try {
+    const numberOfImagesStr = formData.get("numberOfImages") as string;
+    const numberOfImages = parseInt(numberOfImagesStr, 10) || 1;
+
     const input: GenerateImagesInput = {
       brandDescription: formData.get("brandDescription") as string,
       imageStyle: formData.get("imageStyle") as string,
       exampleImage: formData.get("exampleImage") as string | undefined,
       aspectRatio: formData.get("aspectRatio") as string | undefined,
+      numberOfImages: numberOfImages,
     };
 
     if (!input.brandDescription || !input.imageStyle) {
@@ -39,10 +43,13 @@ export async function handleGenerateImagesAction(
     }
     
     const result = await generateImages(input);
-    return { data: result.generatedImage, message: "Image generated successfully!" };
+    const message = result.generatedImages.length > 1 
+        ? `${result.generatedImages.length} images generated successfully!` 
+        : "Image generated successfully!";
+    return { data: result.generatedImages, message: message };
   } catch (e: any) {
     console.error("Error in handleGenerateImagesAction:", e);
-    return { error: e.message || "Failed to generate image." };
+    return { error: e.message || "Failed to generate image(s)." };
   }
 }
 
@@ -74,20 +81,19 @@ export async function handleGenerateSocialMediaCaptionAction(
 
     const input: GenerateSocialMediaCaptionInput = {
       brandDescription: formData.get("brandDescription") as string,
-      // Image description is optional if no image is used
-      imageDescription: imageSrc ? imageDescription : undefined,
+      imageDescription: (imageSrc && imageSrc !== "") ? imageDescription : undefined,
       tone: formData.get("tone") as string,
     };
 
     if (!input.brandDescription || !input.tone) {
       return { error: "Brand description and tone are required." };
     }
-    if (imageSrc && !imageDescription) {
+    if ((imageSrc && imageSrc !== "") && !imageDescription) {
         return { error: "Image description is required if an image is selected for the post."}
     }
     
     const result = await generateSocialMediaCaption(input);
-    return { data: { ...result, imageSrc: imageSrc || null }, message: "Social media content generated!" };
+    return { data: { ...result, imageSrc: (imageSrc && imageSrc !== "") ? imageSrc : null }, message: "Social media content generated!" };
   } catch (e: any) {
     console.error("Error in handleGenerateSocialMediaCaptionAction:", e);
     return { error: e.message || "Failed to generate social media caption." };
@@ -104,9 +110,10 @@ export async function handleGenerateBlogContentAction(
       brandDescription: formData.get("brandDescription") as string,
       keywords: formData.get("keywords") as string,
       targetPlatform: formData.get("targetPlatform") as "Medium" | "Other",
+      websiteUrl: formData.get("blogWebsiteUrl") as string || undefined,
     };
      if (!input.brandName || !input.brandDescription || !input.keywords || !input.targetPlatform) {
-      return { error: "All fields are required for blog content generation." };
+      return { error: "All fields (except optional website URL) are required for blog content generation." };
     }
     const result = await generateBlogContent(input);
     return { data: result, message: "Blog content generated!" };
