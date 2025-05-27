@@ -75,7 +75,7 @@ export default function CampaignManagerPage() {
             </div>
           </CardHeader>
           <form action={formAction}>
-            <CardContent className="space-y-8"> {/* Increased spacing */}
+            <CardContent className="space-y-8">
               <div>
                 <Label htmlFor="adBrandName" className="flex items-center mb-2 text-base"><Edit3 className="w-5 h-5 mr-2 text-primary" />Brand Name</Label>
                 <Input
@@ -93,7 +93,7 @@ export default function CampaignManagerPage() {
                   name="brandDescription"
                   defaultValue={brandData?.brandDescription || ""}
                   placeholder="Detailed brand description, values, and target audience"
-                  rows={4} // Slightly more rows
+                  rows={4} 
                   required
                 />
               </div>
@@ -129,7 +129,7 @@ export default function CampaignManagerPage() {
                     name="customGeneratedContent" 
                     placeholder="Paste or write your ad copy here for the custom campaign."
                     rows={4}
-                    className="mt-3" // Added margin top for separation
+                    className="mt-3" 
                     required
                   />
                 )}
@@ -155,11 +155,11 @@ export default function CampaignManagerPage() {
                 />
               </div>
               <div>
-                <Label className="flex items-center mb-3 text-base"><CheckSquare className="w-5 h-5 mr-2 text-primary" />Platforms</Label> {/* Increased margin bottom */}
+                <Label className="flex items-center mb-3 text-base"><CheckSquare className="w-5 h-5 mr-2 text-primary" />Platforms</Label>
                 <input type="hidden" name="platforms" value={selectedPlatforms.join(',')} />
-                <div className="space-y-3"> {/* Increased spacing */}
+                <div className="space-y-3"> 
                   {platforms.map((item) => (
-                    <div key={item.id} className="flex items-center space-x-3 p-3 border rounded-md hover:bg-secondary/50 transition-colors"> {/* Added padding and border */}
+                    <div key={item.id} className="flex items-center space-x-3 p-3 border rounded-md hover:bg-secondary/50 transition-colors"> 
                       <Checkbox
                         id={item.id}
                         checked={selectedPlatforms.includes(item.id)}
@@ -168,7 +168,7 @@ export default function CampaignManagerPage() {
                             ? setSelectedPlatforms((prev) => [...prev, item.id])
                             : setSelectedPlatforms((prev) => prev.filter((value) => value !== item.id))
                         }}
-                        className="h-5 w-5" // Slightly larger checkbox
+                        className="h-5 w-5"
                       />
                       <label
                         htmlFor={item.id}
@@ -182,15 +182,15 @@ export default function CampaignManagerPage() {
                  {selectedPlatforms.length === 0 && <p className="text-destructive text-xs mt-2">Please select at least one platform.</p>}
               </div>
             </CardContent>
-            <CardFooter className="pt-4"> {/* Added top padding */}
+            <CardFooter className="pt-4"> 
               <SubmitButton className="w-full" size="lg" loadingText="Generating Campaign..." disabled={selectedPlatforms.length === 0}>Generate Ad Campaign</SubmitButton>
             </CardFooter>
           </form>
           {generatedCampaign && (
-            <CardContent className="mt-8 space-y-6 border-t pt-6"> {/* Added border-t and more spacing */}
+            <CardContent className="mt-8 space-y-6 border-t pt-6">
               <div>
                 <h3 className="mb-2 text-xl font-semibold flex items-center"><Info className="w-5 h-5 mr-2 text-primary"/>Campaign Summary</h3>
-                 <div className="p-4 prose border rounded-md bg-muted/50 max-w-none max-h-60 overflow-y-auto text-sm"> {/* Adjusted background and padding */}
+                 <div className="p-4 prose border rounded-md bg-muted/50 max-w-none max-h-60 overflow-y-auto text-sm">
                     <p className="whitespace-pre-wrap">{generatedCampaign.campaignSummary}</p>
                   </div>
                 <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedCampaign.campaignSummary, "Summary")} className="mt-2 text-muted-foreground hover:text-primary">
@@ -199,7 +199,7 @@ export default function CampaignManagerPage() {
               </div>
               <div>
                 <h3 className="mb-2 text-xl font-semibold flex items-center"><Briefcase className="w-5 h-5 mr-2 text-primary"/>Platform Details</h3>
-                <div className="p-4 border rounded-md bg-muted/50 space-y-3"> {/* Adjusted background, padding and added space-y */}
+                <div className="p-4 border rounded-md bg-muted/50 space-y-3">
                   {Object.entries(generatedCampaign.platformDetails).map(([platform, details]) => (
                     <div key={platform}>
                       <strong className="capitalize block mb-1 text-primary">{platform.replace('_', ' ')}:</strong>
@@ -218,5 +218,3 @@ export default function CampaignManagerPage() {
     </AppShell>
   );
 }
-
-    

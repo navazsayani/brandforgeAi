@@ -2,8 +2,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useActionState } from "react"; // Changed from react-dom
-import Image from 'next/image';
+import { useActionState } from "react";
+import NextImage from 'next/image'; // Renamed to avoid conflict with lucide-react Image icon
 import { AppShell } from '@/components/AppShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,9 +25,9 @@ export default function ContentStudioPage() {
   const { brandData, addGeneratedImage, addGeneratedSocialPost, addGeneratedBlogPost, generatedImages } = useBrand();
   const { toast } = useToast();
 
-  const [imageState, imageAction] = useActionState(handleGenerateImagesAction, initialFormState); // Changed from useFormState
-  const [socialState, socialAction] = useActionState(handleGenerateSocialMediaCaptionAction, initialFormState); // Changed from useFormState
-  const [blogState, blogAction] = useActionState(handleGenerateBlogContentAction, initialFormState); // Changed from useFormState
+  const [imageState, imageAction] = useActionState(handleGenerateImagesAction, initialFormState);
+  const [socialState, socialAction] = useActionState(handleGenerateSocialMediaCaptionAction, initialFormState);
+  const [blogState, blogAction] = useActionState(handleGenerateBlogContentAction, initialFormState);
   
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [generatedSocialPost, setGeneratedSocialPost] = useState<{caption: string, hashtags: string} | null>(null);
@@ -155,7 +155,7 @@ export default function ContentStudioPage() {
                     {brandData?.exampleImage && (
                         <div className="mt-2">
                             <p className="text-xs text-muted-foreground">Preview of example image from profile:</p>
-                            <Image src={brandData.exampleImage} alt="Example image from profile" width={80} height={80} className="rounded border object-contain" data-ai-hint="style example"/>
+                            <NextImage src={brandData.exampleImage} alt="Example image from profile" width={80} height={80} className="rounded border object-contain" data-ai-hint="style example"/>
                         </div>
                     )}
                   </div>
@@ -168,7 +168,7 @@ export default function ContentStudioPage() {
                 <CardContent className="mt-6">
                   <h3 className="mb-2 text-lg font-semibold">Generated Image:</h3>
                   <div className="relative w-full overflow-hidden border rounded-md aspect-video bg-muted">
-                    <Image src={generatedImageUrl} alt="Generated brand image" layout="fill" objectFit="contain" data-ai-hint="brand marketing" />
+                    <NextImage src={generatedImageUrl} alt="Generated brand image" layout="fill" objectFit="contain" data-ai-hint="brand marketing" />
                   </div>
                    <Button variant="outline" className="mt-2" onClick={() => {
                        setSelectedImageForSocial(generatedImageUrl);
@@ -213,7 +213,7 @@ export default function ContentStudioPage() {
                      {selectedImageForSocial && 
                         <div className="mt-2">
                             <p className="text-xs text-muted-foreground">Selected image for post:</p>
-                            <Image src={selectedImageForSocial} alt="Selected image for social post" width={80} height={80} className="rounded border object-contain" data-ai-hint="social content"/>
+                            <NextImage src={selectedImageForSocial} alt="Selected image for social post" width={80} height={80} className="rounded border object-contain" data-ai-hint="social content"/>
                         </div>
                      }
                   </div>
@@ -357,4 +357,3 @@ export default function ContentStudioPage() {
     </AppShell>
   );
 }
-

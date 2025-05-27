@@ -15,7 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-import { UserCircle, LinkIcon, FileText, Palette, UploadCloud, Tag, Image as ImageIconLucide, Brain, Loader2, AlertTriangle } from 'lucide-react';
+import { UserCircle, LinkIcon, FileText, Palette, UploadCloud, Tag, Brain, Loader2, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { handleExtractBrandInfoFromUrlAction, type FormState as ExtractFormState } from '@/lib/actions';
 import { Alert, AlertTitle as AlertTitleShadcn, AlertDescription as AlertDescriptionShadcn } from "@/components/ui/alert";
@@ -147,7 +147,7 @@ export default function BrandProfilePage() {
   const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
-      setSelectedFileName(file.name); // Keep track of the file name
+      setSelectedFileName(file.name); 
 
       if (file.size > MAX_FILE_SIZE_BYTES) {
         toast({
@@ -156,12 +156,11 @@ export default function BrandProfilePage() {
           variant: "destructive",
         });
         if (fileInputRef.current) {
-            fileInputRef.current.value = ""; // Reset file input
+            fileInputRef.current.value = ""; 
         }
-        // Clear related form field and preview if file is too large
         form.setValue('exampleImage', brandData?.exampleImage || '', { shouldValidate: true });
         setPreviewImage(brandData?.exampleImage || null);
-        setSelectedFileName(null);
+        setSelectedFileName(null); // Clear selected file name if too large
         return;
       }
 
@@ -174,7 +173,7 @@ export default function BrandProfilePage() {
         setIsProcessingImage(false);
         toast({
           title: "Image Ready",
-          description: "Image prepared as data. Save profile to persist.",
+          description: "Image prepared for profile. Save profile to persist.",
         });
       };
       reader.onerror = (error) => {
@@ -190,14 +189,13 @@ export default function BrandProfilePage() {
         }
         form.setValue('exampleImage', brandData?.exampleImage || '', { shouldValidate: true });
         setPreviewImage(brandData?.exampleImage || null);
-        setSelectedFileName(null);
+        setSelectedFileName(null); // Clear selected file name on error
       };
       reader.readAsDataURL(file);
     } else {
-        // No file selected, reset to original state if available
         form.setValue('exampleImage', brandData?.exampleImage || '', { shouldValidate: true });
         setPreviewImage(brandData?.exampleImage || null);
-        setSelectedFileName(null);
+        setSelectedFileName(null); // Clear selected file name if no file selected
     }
   };
   
@@ -322,8 +320,8 @@ export default function BrandProfilePage() {
                     <AlertTriangle className="h-4 w-4" />
                     <AlertTitleShadcn>Image Size Limit</AlertTitleShadcn>
                     <AlertDescriptionShadcn>
-                      Due to current limitations of storing images directly in the profile, please use very small images (under {MAX_FILE_SIZE_MB}MB).
-                      Larger images will cause errors when saving.
+                      Due to Firestore document size limits, please use very small images (under {MAX_FILE_SIZE_MB}MB).
+                      Larger images will cause errors when saving. This is a temporary workaround.
                     </AlertDescriptionShadcn>
                   </Alert>
                    <FormControl>
@@ -350,12 +348,11 @@ export default function BrandProfilePage() {
                    </FormControl>
                 </FormItem>
 
-                {/* This field holds the base64 data URI and is submitted with the form */}
                 <FormField
                   control={form.control}
                   name="exampleImage"
                   render={({ field }) => ( 
-                    <FormItem className="hidden"> {/* Hidden as it's a long string */}
+                    <FormItem className="hidden"> 
                        <FormControl>
                          <Input type="text" {...field} />
                        </FormControl>
@@ -363,7 +360,6 @@ export default function BrandProfilePage() {
                     </FormItem>
                   )}
                 />
-                {/* Preview logic remains visible */}
                 {previewImage && (
                   <div className="mt-2">
                       <p className="text-xs text-muted-foreground mb-1">Preview:</p>
