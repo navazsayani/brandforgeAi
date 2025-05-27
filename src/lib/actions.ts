@@ -24,6 +24,7 @@ export async function handleGenerateImagesAction(
       brandDescription: formData.get("brandDescription") as string,
       imageStyle: formData.get("imageStyle") as string,
       exampleImage: formData.get("exampleImage") as string | undefined,
+      // @ts-ignore - aspectRatio is an expected field even if not explicitly in GenerateImagesInput yet in flow
       aspectRatio: formData.get("aspectRatio") as string | undefined,
     };
 
@@ -34,13 +35,16 @@ export async function handleGenerateImagesAction(
     if (input.exampleImage === "") {
       delete input.exampleImage;
     }
-    if (input.aspectRatio === "") {
+    // @ts-ignore
+    if (input.aspectRatio === "" || input.aspectRatio === undefined) {
+        // @ts-ignore
         delete input.aspectRatio;
     }
     
     const result = await generateImages(input);
     return { data: result.generatedImage, message: "Image generated successfully!" };
   } catch (e: any) {
+    console.error("Error in handleGenerateImagesAction:", e);
     return { error: e.message || "Failed to generate image." };
   }
 }
@@ -61,6 +65,7 @@ export async function handleGenerateSocialMediaCaptionAction(
     const result = await generateSocialMediaCaption(input);
     return { data: result, message: "Social media content generated!" };
   } catch (e: any) {
+    console.error("Error in handleGenerateSocialMediaCaptionAction:", e);
     return { error: e.message || "Failed to generate social media caption." };
   }
 }
@@ -81,4 +86,61 @@ export async function handleGenerateBlogContentAction(
     }
     const result = await generateBlogContent(input);
     return { data: result, message: "Blog content generated!" };
-  } catch (e: any)
+  } catch (e: any) {
+    console.error("Error in handleGenerateBlogContentAction:", e);
+    return { error: e.message || "Failed to generate blog content." };
+  }
+}
+
+export async function handleGenerateAdCampaignAction(
+  prevState: FormState,
+  formData: FormData
+): Promise<FormState<{ campaignSummary: string; platformDetails: Record<string, string> }>> {
+  try {
+    const platformsString = formData.get("platforms") as string;
+    const platformsArray = platformsString ? platformsString.split(',') as ('google_ads' | 'meta')[] : [];
+
+    let generatedContent = formData.get("generatedContent") as string;
+    if (generatedContent === "Custom content for ad campaign") {
+        generatedContent = formData.get("customGeneratedContent") as string;
+    }
+
+    const input: GenerateAdCampaignInput = {
+      brandName: formData.get("brandName") as string,
+      brandDescription: formData.get("brandDescription") as string,
+      generatedContent: generatedContent,
+      targetKeywords: formData.get("targetKeywords") as string,
+      budget: Number(formData.get("budget")),
+      platforms: platformsArray,
+    };
+
+    if (!input.brandName || !input.brandDescription || !input.generatedContent || !input.targetKeywords || isNaN(input.budget) || input.platforms.length === 0) {
+        return { error: "All fields are required and budget must be a number. At least one platform must be selected." };
+    }
+
+    const result = await generateAdCampaign(input);
+    return { data: result, message: "Ad campaign details generated successfully!" };
+  } catch (e: any) {
+    console.error("Error in handleGenerateAdCampaignAction:", e);
+    return { error: e.message || "Failed to generate ad campaign details." };
+  }
+}
+
+
+export async function handleExtractBrandInfoFromUrlAction(
+  prevState: FormState,
+  formData: FormData
+): Promise<FormState<ExtractBrandInfoFromUrlOutput>> {
+    const websiteUrl = formData.get("websiteUrl") as string;
+    if (!websiteUrl) {
+        return { error: "Website URL is required." };
+    }
+    try {
+        const input: ExtractBrandInfoFromUrlInput = { websiteUrl };
+        const result = await extractBrandInfoFromUrl(input);
+        return { data: result, message: "Brand information extracted successfully." };
+    } catch (e: any) {
+        console.error("Error in handleExtractBrandInfoFromUrlAction:", e);
+        return { error: e.message || "Failed to extract brand information from URL." };
+    }
+}

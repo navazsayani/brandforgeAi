@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -13,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, AspectRatio } from 'lucide-react';
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio } from 'lucide-react';
 import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
@@ -39,10 +40,10 @@ export default function ContentStudioPage() {
 
   useEffect(() => {
     if (imageState.data) {
-      setGeneratedImageUrl(imageState.data);
+      setGeneratedImageUrl(imageState.data as string);
       const newImage: GeneratedImage = {
         id: new Date().toISOString(),
-        src: imageState.data,
+        src: imageState.data as string,
         // Using querySelector might be brittle. Consider passing form values if needed for context.
         prompt: (document.querySelector('form[action^="/content-studio"] textarea[name="brandDescription"]') as HTMLTextAreaElement)?.value || "",
         style: (document.querySelector('form[action^="/content-studio"] input[name="imageStyle"]') as HTMLInputElement)?.value || ""
@@ -55,14 +56,15 @@ export default function ContentStudioPage() {
 
   useEffect(() => {
     if (socialState.data) {
-      setGeneratedSocialPost(socialState.data);
+      const socialData = socialState.data as { caption: string; hashtags: string };
+      setGeneratedSocialPost(socialData);
        const newPost: GeneratedSocialMediaPost = {
         id: new Date().toISOString(),
         platform: 'Instagram', 
         imageSrc: selectedImageForSocial, 
         imageDescription: (document.querySelector('form[action^="/content-studio"] textarea[name="imageDescription"]') as HTMLTextAreaElement)?.value || "",
-        caption: socialState.data.caption,
-        hashtags: socialState.data.hashtags,
+        caption: socialData.caption,
+        hashtags: socialData.hashtags,
         tone: socialToneValue,
       };
       addGeneratedSocialPost(newPost);
@@ -73,12 +75,13 @@ export default function ContentStudioPage() {
 
   useEffect(() => {
     if (blogState.data) {
-      setGeneratedBlogPost(blogState.data);
+      const blogData = blogState.data as { title: string; content: string; tags: string };
+      setGeneratedBlogPost(blogData);
       const newPost: GeneratedBlogPost = {
         id: new Date().toISOString(),
-        title: blogState.data.title,
-        content: blogState.data.content,
-        tags: blogState.data.tags,
+        title: blogData.title,
+        content: blogData.content,
+        tags: blogData.tags,
         platform: blogPlatformValue,
       };
       addGeneratedBlogPost(newPost);
@@ -161,7 +164,7 @@ export default function ContentStudioPage() {
                     )}
                   </div>
                   <div>
-                    <Label htmlFor="imageGenAspectRatio" className="flex items-center mb-1"><AspectRatio className="w-4 h-4 mr-2 text-primary" />Aspect Ratio</Label>
+                    <Label htmlFor="imageGenAspectRatio" className="flex items-center mb-1"><Ratio className="w-4 h-4 mr-2 text-primary" />Aspect Ratio</Label>
                     <Select name="aspectRatio" required value={selectedAspectRatio} onValueChange={setSelectedAspectRatio}>
                       <SelectTrigger id="imageGenAspectRatioSelect">
                         <SelectValue placeholder="Select aspect ratio" />
@@ -373,3 +376,5 @@ export default function ContentStudioPage() {
     </AppShell>
   );
 }
+
+    
