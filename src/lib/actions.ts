@@ -24,20 +24,16 @@ export async function handleGenerateImagesAction(
       brandDescription: formData.get("brandDescription") as string,
       imageStyle: formData.get("imageStyle") as string,
       exampleImage: formData.get("exampleImage") as string | undefined,
-      // @ts-ignore - aspectRatio is an expected field even if not explicitly in GenerateImagesInput yet in flow
       aspectRatio: formData.get("aspectRatio") as string | undefined,
     };
 
     if (!input.brandDescription || !input.imageStyle) {
       return { error: "Brand description and image style are required." };
     }
-    // Ensure exampleImage is not an empty string if provided
     if (input.exampleImage === "") {
       delete input.exampleImage;
     }
-    // @ts-ignore
     if (input.aspectRatio === "" || input.aspectRatio === undefined) {
-        // @ts-ignore
         delete input.aspectRatio;
     }
     
@@ -52,8 +48,9 @@ export async function handleGenerateImagesAction(
 export async function handleGenerateSocialMediaCaptionAction(
   prevState: FormState,
   formData: FormData
-): Promise<FormState<{ caption: string; hashtags: string }>> {
+): Promise<FormState<{ caption: string; hashtags: string; imageSrc: string }>> {
   try {
+    const imageSrc = formData.get("selectedImageSrcForSocialPost") as string;
     const input: GenerateSocialMediaCaptionInput = {
       brandDescription: formData.get("brandDescription") as string,
       imageDescription: formData.get("imageDescription") as string,
@@ -62,8 +59,11 @@ export async function handleGenerateSocialMediaCaptionAction(
     if (!input.brandDescription || !input.imageDescription || !input.tone) {
       return { error: "Brand description, image description, and tone are required." };
     }
+    if (!imageSrc) {
+      return { error: "An image must be selected or available for the social post." };
+    }
     const result = await generateSocialMediaCaption(input);
-    return { data: result, message: "Social media content generated!" };
+    return { data: { ...result, imageSrc }, message: "Social media content generated!" };
   } catch (e: any) {
     console.error("Error in handleGenerateSocialMediaCaptionAction:", e);
     return { error: e.message || "Failed to generate social media caption." };

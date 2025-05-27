@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useActionState } from "react";
-import NextImage from 'next/image'; // Renamed to avoid conflict with lucide-react Image icon
+import NextImage from 'next/image';
 import { AppShell } from '@/components/AppShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,14 +12,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio } from 'lucide-react';
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare } from 'lucide-react';
 import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
 
 const initialFormState: FormState = { error: undefined, data: undefined, message: undefined };
+
+type SocialImageChoice = 'generated' | 'profile';
 
 export default function ContentStudioPage() {
   const { brandData, addGeneratedImage, addGeneratedSocialPost, addGeneratedBlogPost } = useBrand();
@@ -29,22 +32,24 @@ export default function ContentStudioPage() {
   const [socialState, socialAction] = useActionState(handleGenerateSocialMediaCaptionAction, initialFormState);
   const [blogState, blogAction] = useActionState(handleGenerateBlogContentAction, initialFormState);
   
-  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [lastSuccessfulGeneratedImageUrl, setLastSuccessfulGeneratedImageUrl] = useState<string | null>(null);
   const [generatedSocialPost, setGeneratedSocialPost] = useState<{caption: string, hashtags: string} | null>(null);
   const [generatedBlogPost, setGeneratedBlogPost] = useState<{title: string, content: string, tags: string} | null>(null);
-  const [selectedImageForSocial, setSelectedImageForSocial] = useState<string>("");
+  
+  const [socialImageChoice, setSocialImageChoice] = useState<SocialImageChoice>('generated');
   const [socialToneValue, setSocialToneValue] = useState<string>("professional");
   const [blogPlatformValue, setBlogPlatformValue] = useState<"Medium" | "Other">("Medium");
   const [selectedAspectRatio, setSelectedAspectRatio] = useState<string>("1:1");
+  const [activeTab, setActiveTab] = useState<string>("image");
 
 
   useEffect(() => {
     if (imageState.data) {
-      setGeneratedImageUrl(imageState.data as string);
+      const newImageUrl = imageState.data as string;
+      setLastSuccessfulGeneratedImageUrl(newImageUrl);
       const newImage: GeneratedImage = {
         id: new Date().toISOString(),
-        src: imageState.data as string,
-        // Using querySelector might be brittle. Consider passing form values if needed for context.
+        src: newImageUrl,
         prompt: (document.querySelector('form[action^="/content-studio"] textarea[name="brandDescription"]') as HTMLTextAreaElement)?.value || "",
         style: (document.querySelector('form[action^="/content-studio"] input[name="imageStyle"]') as HTMLInputElement)?.value || ""
       };
@@ -56,12 +61,12 @@ export default function ContentStudioPage() {
 
   useEffect(() => {
     if (socialState.data) {
-      const socialData = socialState.data as { caption: string; hashtags: string };
-      setGeneratedSocialPost(socialData);
+      const socialData = socialState.data as { caption: string; hashtags: string; imageSrc: string };
+      setGeneratedSocialPost({ caption: socialData.caption, hashtags: socialData.hashtags });
        const newPost: GeneratedSocialMediaPost = {
         id: new Date().toISOString(),
         platform: 'Instagram', 
-        imageSrc: selectedImageForSocial, 
+        imageSrc: socialData.imageSrc, 
         imageDescription: (document.querySelector('form[action^="/content-studio"] textarea[name="imageDescription"]') as HTMLTextAreaElement)?.value || "",
         caption: socialData.caption,
         hashtags: socialData.hashtags,
@@ -71,7 +76,7 @@ export default function ContentStudioPage() {
       toast({ title: "Success", description: socialState.message });
     }
     if (socialState.error) toast({ title: "Error", description: socialState.error, variant: "destructive" });
-  }, [socialState, toast, addGeneratedSocialPost, selectedImageForSocial, socialToneValue]);
+  }, [socialState, toast, addGeneratedSocialPost, socialToneValue]);
 
   useEffect(() => {
     if (blogState.data) {
@@ -96,6 +101,20 @@ export default function ContentStudioPage() {
     toast({ title: `${type} Copied!`, description: "Content copied to clipboard." });
   };
 
+  const handleUseGeneratedImageForSocial = () => {
+    if (lastSuccessfulGeneratedImageUrl) {
+      setSocialImageChoice('generated');
+      setActiveTab('social'); // Switch to social media tab
+      toast({title: "Image Selected", description: "Last generated image selected for social post."});
+    } else {
+      toast({title: "No Image", description: "Please generate an image first.", variant: "destructive"});
+    }
+  };
+
+  const currentSocialImagePreviewUrl = socialImageChoice === 'generated' 
+    ? lastSuccessfulGeneratedImageUrl 
+    : brandData?.exampleImage || null;
+
   return (
     <AppShell>
       <div className="max-w-4xl mx-auto">
@@ -111,7 +130,7 @@ export default function ContentStudioPage() {
             </div>
         </CardHeader>
 
-        <Tabs defaultValue="image" className="w-full">
+        <Tabs defaultValue="image" value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="image"><ImageIcon className="w-4 h-4 mr-2" />Image Generation</TabsTrigger>
             <TabsTrigger value="social"><MessageSquareText className="w-4 h-4 mr-2" />Social Media Post</TabsTrigger>
@@ -123,7 +142,7 @@ export default function ContentStudioPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>Generate Brand Images</CardTitle>
-                <CardDescription>Create unique images based on your brand's aesthetics. Uses brand description and style. Optionally provide an example image Data URI.</CardDescription>
+                <CardDescription>Create unique images based on your brand's aesthetics. Uses brand description and style. Optionally provide an example image Data URI from your Brand Profile.</CardDescription>
               </CardHeader>
               <form action={imageAction}>
                 <CardContent className="space-y-6">
@@ -182,18 +201,14 @@ export default function ContentStudioPage() {
                   <SubmitButton className="w-full" loadingText="Generating Image...">Generate Image</SubmitButton>
                 </CardFooter>
               </form>
-              {generatedImageUrl && (
+              {lastSuccessfulGeneratedImageUrl && (
                 <CardContent className="mt-6">
                   <h3 className="mb-2 text-lg font-semibold">Generated Image:</h3>
                   <div className="relative w-full overflow-hidden border rounded-md bg-muted">
-                    {/* We remove aspect-video to let the image dictate its own aspect ratio, contained by parent width */}
-                    <NextImage src={generatedImageUrl} alt="Generated brand image" width={500} height={500} style={{width: '100%', height: 'auto', objectFit: 'contain'}} data-ai-hint="brand marketing" />
+                    <NextImage src={lastSuccessfulGeneratedImageUrl} alt="Generated brand image" width={500} height={500} style={{width: '100%', height: 'auto', objectFit: 'contain'}} data-ai-hint="brand marketing" />
                   </div>
-                   <Button variant="outline" className="mt-2" onClick={() => {
-                       setSelectedImageForSocial(generatedImageUrl);
-                       toast({title: "Image Selected", description: "This image will be used for the next social post."});
-                    }}>
-                        Use for Social Post
+                   <Button variant="outline" className="mt-2" onClick={handleUseGeneratedImageForSocial}>
+                        <ImageUp className="mr-2 h-4 w-4" /> Use for Social Post
                     </Button>
                 </CardContent>
               )}
@@ -210,6 +225,39 @@ export default function ContentStudioPage() {
               <form action={socialAction}>
                 <CardContent className="space-y-6">
                   <div>
+                    <Label className="flex items-center mb-2 text-base"><ImageIcon className="w-5 h-5 mr-2 text-primary"/>Image for Post</Label>
+                    <RadioGroup 
+                        value={socialImageChoice} 
+                        onValueChange={(value) => setSocialImageChoice(value as SocialImageChoice)}
+                        className="mb-3"
+                    >
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="generated" id="social-generated" disabled={!lastSuccessfulGeneratedImageUrl}/>
+                            <Label htmlFor="social-generated" className={!lastSuccessfulGeneratedImageUrl ? "text-muted-foreground" : ""}>
+                                Use Last Generated Image {lastSuccessfulGeneratedImageUrl ? "" : "(None available)"}
+                            </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="profile" id="social-profile" disabled={!brandData?.exampleImage} />
+                            <Label htmlFor="social-profile" className={!brandData?.exampleImage ? "text-muted-foreground" : ""}>
+                                Use Brand Profile Example Image {brandData?.exampleImage ? "" : "(None available)"}
+                            </Label>
+                        </div>
+                    </RadioGroup>
+
+                    {currentSocialImagePreviewUrl && (
+                        <div className="mb-3">
+                            <p className="text-xs text-muted-foreground">Selected image for post:</p>
+                            <NextImage src={currentSocialImagePreviewUrl} alt="Selected image for social post" width={100} height={100} className="rounded border object-contain" data-ai-hint="social media content"/>
+                        </div>
+                     )}
+                     {!currentSocialImagePreviewUrl && (
+                        <p className="text-xs text-muted-foreground mb-3">No image selected or available for the social post.</p>
+                     )}
+                    <input type="hidden" name="selectedImageSrcForSocialPost" value={currentSocialImagePreviewUrl || ""} />
+                  </div>
+
+                  <div>
                     <Label htmlFor="socialBrandDescription" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
                     <Textarea
                       id="socialBrandDescription"
@@ -221,7 +269,7 @@ export default function ContentStudioPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="socialImageDescription" className="flex items-center mb-1"><ImageIcon className="w-4 h-4 mr-2 text-primary" />Image Description</Label>
+                    <Label htmlFor="socialImageDescription" className="flex items-center mb-1"><UserSquare className="w-4 h-4 mr-2 text-primary" />Image Description</Label>
                     <Textarea
                       id="socialImageDescription"
                       name="imageDescription"
@@ -229,12 +277,6 @@ export default function ContentStudioPage() {
                       rows={3}
                       required
                     />
-                     {selectedImageForSocial && 
-                        <div className="mt-2">
-                            <p className="text-xs text-muted-foreground">Selected image for post:</p>
-                            <NextImage src={selectedImageForSocial} alt="Selected image for social post" width={80} height={80} className="rounded border object-contain" data-ai-hint="social content"/>
-                        </div>
-                     }
                   </div>
                    <div>
                     <Label htmlFor="socialTone" className="flex items-center mb-1"><ThumbsUp className="w-4 h-4 mr-2 text-primary" />Tone</Label>
@@ -253,7 +295,7 @@ export default function ContentStudioPage() {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <SubmitButton className="w-full" loadingText="Generating Content...">Generate Social Post</SubmitButton>
+                  <SubmitButton className="w-full" loadingText="Generating Content..." disabled={!currentSocialImagePreviewUrl}>Generate Social Post</SubmitButton>
                 </CardFooter>
               </form>
               {generatedSocialPost && (
@@ -376,5 +418,3 @@ export default function ContentStudioPage() {
     </AppShell>
   );
 }
-
-    
