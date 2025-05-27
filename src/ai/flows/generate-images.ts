@@ -100,9 +100,13 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
         }
 
         if (aspectRatio) {
-          textPromptContent += ` The final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
+          textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
         }
         
+        if (numberOfImages > 1) {
+            textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
+        }
+
         finalPromptParts.push({ text: textPromptContent });
 
         console.log(`Attempting image generation ${i+1} of ${numberOfImages} with prompt parts:`, JSON.stringify(finalPromptParts, null, 2));
@@ -124,8 +128,6 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
 
             if (!media || !media.url) {
                 console.error(`AI image generation failed for image ${i+1}. Media object or URL is missing. Response media:`, JSON.stringify(media, null, 2));
-                // Optionally, decide if one failure should stop the whole batch or just skip this image
-                // For now, we'll throw, which stops the batch.
                 throw new Error(`AI failed to generate image ${i+1} or returned an invalid image format. Check server logs.`);
             }
             if (typeof media.url !== 'string' || !media.url.startsWith('data:')) {
