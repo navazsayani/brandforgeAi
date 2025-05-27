@@ -58,6 +58,8 @@ async function _generateImageWithGemini(params: {
       { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
       { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
   ];
+  
+  console.log("Attempting Gemini image generation with prompt parts:", JSON.stringify(promptParts, null, 2));
 
   const {media} = await aiInstance.generate({
     model: 'googleai/gemini-2.0-flash-exp', // IMPORTANT: ONLY this model can generate images
@@ -93,16 +95,16 @@ async function _generateImageWithLeonardoAI_stub(params: {
   // For example: return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="; // 1x1 red pixel
 }
 
-// Stub for a generic ImageGen service
-async function _generateImageWithImageGen_stub(params: {
+// Stub for Google's Imagen models (e.g., via Vertex AI)
+async function _generateImageWithImagen_stub(params: {
   brandDescription: string;
   imageStyle: string;
   exampleImage?: string;
   aspectRatio?: string;
   textPrompt: string;
 }): Promise<string> {
-  console.warn("ImageGen provider is called but not implemented. Parameters:", params);
-  throw new Error("ImageGen provider is not implemented yet.");
+  console.warn("Imagen (e.g., via Vertex AI) provider is called but not implemented. Parameters:", params);
+  throw new Error("Imagen provider (e.g., via Vertex AI) is not implemented yet. This would typically involve a different Genkit plugin or direct API calls.");
 }
 
 
@@ -198,8 +200,8 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
                 case 'LEONARDO_AI':
                     imageUrl = await _generateImageWithLeonardoAI_stub(baseGenerationParams);
                     break;
-                case 'IMAGEGEN': // Example generic provider
-                    imageUrl = await _generateImageWithImageGen_stub(baseGenerationParams);
+                case 'IMAGEN': // Updated from IMAGEGEN
+                    imageUrl = await _generateImageWithImagen_stub(baseGenerationParams);
                     break;
                 default:
                     throw new Error(`Unsupported image generation provider: ${imageGenerationProvider}`);
