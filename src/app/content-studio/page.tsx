@@ -40,7 +40,7 @@ export default function ContentStudioPage() {
   const [describeImageState, describeImageAction] = useActionStateReact(handleDescribeImageAction, initialDescribeImageState);
   
   const [lastSuccessfulGeneratedImageUrls, setLastSuccessfulGeneratedImageUrls] = useState<string[]>([]);
-  const [generatedSocialPost, setGeneratedSocialPost] = useState<{caption: string, hashtags: string} | null>(null);
+  const [generatedSocialPost, setGeneratedSocialPost] = useState<{caption: string, hashtags: string, imageSrc: string | null} | null>(null);
   const [generatedBlogPost, setGeneratedBlogPost] = useState<{title: string, content: string, tags: string} | null>(null);
   
   const [useImageForSocialPost, setUseImageForSocialPost] = useState<boolean>(false);
@@ -63,7 +63,7 @@ export default function ContentStudioPage() {
 
       newImageUrls.forEach(url => {
         const newImage: GeneratedImage = {
-          id: `${new Date().toISOString()}-${Math.random().toString(36).substring(2, 9)}`, // Ensure unique ID
+          id: `${new Date().toISOString()}-${Math.random().toString(36).substring(2, 9)}`, 
           src: url,
           prompt: imageGenBrandDescription,
           style: imageGenImageStyle
@@ -78,7 +78,7 @@ export default function ContentStudioPage() {
   useEffect(() => {
     if (socialState.data) {
       const socialData = socialState.data;
-      setGeneratedSocialPost({ caption: socialData.caption, hashtags: socialData.hashtags });
+      setGeneratedSocialPost({ caption: socialData.caption, hashtags: socialData.hashtags, imageSrc: socialData.imageSrc });
        const newPost: GeneratedSocialMediaPost = {
         id: new Date().toISOString(),
         platform: 'Instagram', 
@@ -104,7 +104,7 @@ export default function ContentStudioPage() {
         content: blogData.content,
         tags: blogData.tags,
         platform: blogPlatformValue,
-        websiteUrl: (document.querySelector('form[action^="/content-studio"] input[name="blogWebsiteUrl"]') as HTMLInputElement)?.value || undefined,
+        // websiteUrl: (document.querySelector('form[action^="/content-studio"] input[name="blogWebsiteUrl"]') as HTMLInputElement)?.value || undefined,
       };
       addGeneratedBlogPost(newPost);
       toast({ title: "Success", description: blogState.message });
@@ -140,7 +140,7 @@ export default function ContentStudioPage() {
   const handleUseGeneratedImageForSocial = () => {
     if (lastSuccessfulGeneratedImageUrls.length > 0) {
       setUseImageForSocialPost(true);
-      setSocialImageChoice('generated'); // Default to using the (first) generated image
+      setSocialImageChoice('generated'); 
       setActiveTab('social'); 
       toast({title: "Image Selected", description: "First generated image selected for social post."});
     } else {
@@ -150,7 +150,7 @@ export default function ContentStudioPage() {
 
   const currentSocialImagePreviewUrl = useImageForSocialPost 
     ? (socialImageChoice === 'generated' 
-        ? (lastSuccessfulGeneratedImageUrls[0] || null) // Use first generated image, or null if array empty
+        ? (lastSuccessfulGeneratedImageUrls[0] || null) 
         : (socialImageChoice === 'profile' ? brandData?.exampleImage : null)) 
     : null;
 
@@ -275,13 +275,13 @@ export default function ContentStudioPage() {
               </form>
               {lastSuccessfulGeneratedImageUrls.length > 0 && (
                 <CardContent className="mt-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-lg font-semibold">Generated Image{lastSuccessfulGeneratedImageUrls.length > 1 ? 's' : ''}:</h3>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-semibold">Generated Image{lastSuccessfulGeneratedImageUrls.length > 1 ? 's' : ''}</h3>
                     <Button variant="outline" size="sm" onClick={handleClearGeneratedImages}>
                         <Trash2 className="mr-2 h-4 w-4" /> Clear Image{lastSuccessfulGeneratedImageUrls.length > 1 ? 's' : ''}
                     </Button>
                   </div>
-                  <div className={`grid gap-4 ${lastSuccessfulGeneratedImageUrls.length > 1 ? (lastSuccessfulGeneratedImageUrls.length > 2 ? 'grid-cols-2 md:grid-cols-3' : 'grid-cols-2') : 'grid-cols-1'}`}>
+                  <div className={`grid gap-4 ${lastSuccessfulGeneratedImageUrls.length > 1 ? (lastSuccessfulGeneratedImageUrls.length > 2 ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'grid-cols-2') : 'grid-cols-1'}`}>
                     {lastSuccessfulGeneratedImageUrls.map((url, index) => (
                         <div key={index} className="relative w-full overflow-hidden border rounded-md bg-muted aspect-square">
                             <NextImage src={url} alt={`Generated brand image ${index + 1}`} fill style={{objectFit: 'contain'}} data-ai-hint="brand marketing"/>
@@ -417,26 +417,42 @@ export default function ContentStudioPage() {
                 </CardFooter>
               </form>
               {generatedSocialPost && (
-                <CardContent className="mt-6 space-y-4">
-                  <div>
-                    <h3 className="mb-1 text-lg font-semibold">Generated Caption:</h3>
-                    <div className="p-3 border rounded-md bg-secondary">
-                      <p className="text-sm whitespace-pre-wrap">{generatedSocialPost.caption}</p>
-                    </div>
-                    <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedSocialPost.caption, "Caption")} className="mt-1">
-                      <Copy className="w-3 h-3 mr-1" /> Copy Caption
-                    </Button>
-                  </div>
-                  <div>
-                    <h3 className="mb-1 text-lg font-semibold">Generated Hashtags:</h3>
-                    <div className="p-3 border rounded-md bg-secondary">
-                      <p className="text-sm">{generatedSocialPost.hashtags}</p>
-                    </div>
-                     <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedSocialPost.hashtags, "Hashtags")} className="mt-1">
-                      <Copy className="w-3 h-3 mr-1" /> Copy Hashtags
-                    </Button>
-                  </div>
-                </CardContent>
+                 <Card className="mt-6 mx-6 mb-6 shadow-sm">
+                    <CardHeader>
+                        <CardTitle className="text-xl flex items-center">
+                            <MessageSquareText className="w-5 h-5 mr-2 text-primary" />
+                            Generated Social Post
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {generatedSocialPost.imageSrc && (
+                             <div className="mb-4">
+                                <p className="text-sm font-medium mb-1 text-muted-foreground">Associated Image:</p>
+                                <div className="relative w-32 h-32 border rounded-md overflow-hidden">
+                                    <NextImage src={generatedSocialPost.imageSrc} alt="Social post image" layout="fill" objectFit="cover" data-ai-hint="social content" />
+                                </div>
+                            </div>
+                        )}
+                        <div>
+                            <h4 className="text-sm font-medium mb-1 text-muted-foreground">Caption:</h4>
+                            <div className="p-3 border rounded-md bg-muted/50">
+                                <p className="text-sm whitespace-pre-wrap">{generatedSocialPost.caption}</p>
+                            </div>
+                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedSocialPost.caption, "Caption")} className="mt-1 text-muted-foreground hover:text-primary">
+                                <Copy className="w-3 h-3 mr-1" /> Copy Caption
+                            </Button>
+                        </div>
+                        <div>
+                            <h4 className="text-sm font-medium mb-1 text-muted-foreground">Hashtags:</h4>
+                            <div className="p-3 border rounded-md bg-muted/50">
+                                <p className="text-sm">{generatedSocialPost.hashtags}</p>
+                            </div>
+                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedSocialPost.hashtags, "Hashtags")} className="mt-1 text-muted-foreground hover:text-primary">
+                                <Copy className="w-3 h-3 mr-1" /> Copy Hashtags
+                            </Button>
+                        </div>
+                    </CardContent>
+                 </Card>
               )}
             </Card>
           </TabsContent>
@@ -482,7 +498,7 @@ export default function ContentStudioPage() {
                     />
                   </div>
                   <div>
-                      <Label htmlFor="blogWebsiteUrl" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Website URL (Optional, for SEO insights)</Label>
+                      <Label htmlFor="blogWebsiteUrl" className="flex items-center mb-1"><Link className="w-4 h-4 mr-2 text-primary" />Website URL (Optional, for SEO insights)</Label>
                       <Input
                         id="blogWebsiteUrl"
                         name="blogWebsiteUrl" // Unique name for this form
@@ -508,35 +524,43 @@ export default function ContentStudioPage() {
                 </CardFooter>
               </form>
               {generatedBlogPost && (
-                <CardContent className="mt-6 space-y-4">
-                  <div>
-                    <h3 className="mb-1 text-lg font-semibold">Generated Title:</h3>
-                    <div className="p-3 border rounded-md bg-secondary">
-                      <p className="text-xl font-medium">{generatedBlogPost.title}</p>
-                    </div>
-                     <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedBlogPost.title, "Title")} className="mt-1">
-                      <Copy className="w-3 h-3 mr-1" /> Copy Title
-                    </Button>
-                  </div>
-                  <div>
-                    <h3 className="mb-1 text-lg font-semibold">Generated Content:</h3>
-                    <div className="p-3 prose border rounded-md bg-secondary max-w-none max-h-96 overflow-y-auto">
-                      <p className="whitespace-pre-wrap">{generatedBlogPost.content}</p>
-                    </div>
-                    <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedBlogPost.content, "Content")} className="mt-1">
-                      <Copy className="w-3 h-3 mr-1" /> Copy Content
-                    </Button>
-                  </div>
-                  <div>
-                    <h3 className="mb-1 text-lg font-semibold">Generated Tags:</h3>
-                     <div className="p-3 border rounded-md bg-secondary">
-                      <p className="text-sm">{generatedBlogPost.tags}</p>
-                    </div>
-                    <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedBlogPost.tags, "Tags")} className="mt-1">
-                      <Copy className="w-3 h-3 mr-1" /> Copy Tags
-                    </Button>
-                  </div>
-                </CardContent>
+                 <Card className="mt-6 mx-6 mb-6 shadow-sm">
+                    <CardHeader>
+                        <CardTitle className="text-xl flex items-center">
+                            <Newspaper className="w-5 h-5 mr-2 text-primary" />
+                            Generated Blog Post
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div>
+                            <h4 className="text-sm font-medium mb-1 text-muted-foreground">Title:</h4>
+                            <div className="p-3 border rounded-md bg-muted/50">
+                                <p className="text-lg font-medium">{generatedBlogPost.title}</p>
+                            </div>
+                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedBlogPost.title, "Title")} className="mt-1 text-muted-foreground hover:text-primary">
+                                <Copy className="w-3 h-3 mr-1" /> Copy Title
+                            </Button>
+                        </div>
+                        <div>
+                            <h4 className="text-sm font-medium mb-1 text-muted-foreground">Content:</h4>
+                            <div className="p-3 prose border rounded-md bg-muted/50 max-w-none max-h-96 overflow-y-auto">
+                                <p className="whitespace-pre-wrap">{generatedBlogPost.content}</p>
+                            </div>
+                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedBlogPost.content, "Content")} className="mt-1 text-muted-foreground hover:text-primary">
+                                <Copy className="w-3 h-3 mr-1" /> Copy Content
+                            </Button>
+                        </div>
+                        <div>
+                            <h4 className="text-sm font-medium mb-1 text-muted-foreground">Tags:</h4>
+                            <div className="p-3 border rounded-md bg-muted/50">
+                                <p className="text-sm">{generatedBlogPost.tags}</p>
+                            </div>
+                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedBlogPost.tags, "Tags")} className="mt-1 text-muted-foreground hover:text-primary">
+                                <Copy className="w-3 h-3 mr-1" /> Copy Tags
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
               )}
             </Card>
           </TabsContent>
@@ -545,3 +569,7 @@ export default function ContentStudioPage() {
     </AppShell>
   );
 }
+
+// Added Link import for blog section
+import Link from 'next/link';
+
