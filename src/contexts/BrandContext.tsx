@@ -2,7 +2,7 @@
 "use client";
 
 import type { ReactNode } from 'react';
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebaseConfig';
 import type { BrandData, GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign } from '@/types';
@@ -11,7 +11,7 @@ const BRAND_PROFILE_DOC_ID = "defaultBrandProfile"; // Using a fixed ID for simp
 
 interface BrandContextType {
   brandData: BrandData | null;
-  setBrandData: (data: BrandData) => Promise<void>; // Now returns a Promise
+  setBrandData: (data: BrandData) => Promise<void>;
   isLoading: boolean;
   error: string | null;
   generatedImages: GeneratedImage[];
@@ -28,7 +28,7 @@ const BrandContext = createContext<BrandContextType | undefined>(undefined);
 
 export const BrandProvider = ({ children }: { children: ReactNode }) => {
   const [brandData, setBrandDataState] = useState<BrandData | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true); // Start loading true for initial fetch
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
@@ -46,7 +46,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         if (docSnap.exists()) {
           setBrandDataState(docSnap.data() as BrandData);
         } else {
-          setBrandDataState(null); // Or initialize with default empty object
+          setBrandDataState(null);
         }
       } catch (e) {
         console.error("Error fetching brand data:", e);
@@ -59,47 +59,61 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
     fetchBrandData();
   }, []);
 
-  const setBrandData = async (data: BrandData) => {
+  const setBrandData = useCallback(async (data: BrandData) => {
     setIsLoading(true);
     setError(null);
     try {
       const brandDocRef = doc(db, "brandProfiles", BRAND_PROFILE_DOC_ID);
-      await setDoc(brandDocRef, data, { merge: true }); // Use merge: true to update or create
+      await setDoc(brandDocRef, data, { merge: true });
       setBrandDataState(data);
-    } catch (e) {
+    } catch (e: any) {
       console.error("Error saving brand data:", e);
       setError("Failed to save brand data.");
-      throw e; // Re-throw to allow page component to handle toast
+      throw e;
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []); // No dependencies from BrandProvider's scope
 
-  const addGeneratedImage = (image: GeneratedImage) => {
+  const addGeneratedImage = useCallback((image: GeneratedImage) => {
     setGeneratedImages(prev => [...prev, image]);
-  }
+  }, []);
 
-  const addGeneratedSocialPost = (post: GeneratedSocialMediaPost) => {
+  const addGeneratedSocialPost = useCallback((post: GeneratedSocialMediaPost) => {
     setGeneratedSocialPosts(prev => [...prev, post]);
-  }
+  }, []);
 
-  const addGeneratedBlogPost = (post: GeneratedBlogPost) => {
+  const addGeneratedBlogPost = useCallback((post: GeneratedBlogPost) => {
     setGeneratedBlogPosts(prev => [...prev, post]);
-  }
+  }, []);
 
-  const addGeneratedAdCampaign = (campaign: GeneratedAdCampaign) => {
+  const addGeneratedAdCampaign = useCallback((campaign: GeneratedAdCampaign) => {
     setGeneratedAdCampaigns(prev => [...prev, campaign]);
-  }
+  }, []);
+
+  const contextValue = useMemo(() => ({
+    brandData,
+    setBrandData,
+    isLoading,
+    error,
+    generatedImages,
+    addGeneratedImage,
+    generatedSocialPosts,
+    addGeneratedSocialPost,
+    generatedBlogPosts,
+    addGeneratedBlogPost,
+    generatedAdCampaigns,
+    addGeneratedAdCampaign
+  }), [
+    brandData, setBrandData, isLoading, error,
+    generatedImages, addGeneratedImage,
+    generatedSocialPosts, addGeneratedSocialPost,
+    generatedBlogPosts, addGeneratedBlogPost,
+    generatedAdCampaigns, addGeneratedAdCampaign
+  ]);
 
   return (
-    <BrandContext.Provider value={{ 
-      brandData, setBrandData,
-      isLoading, error,
-      generatedImages, addGeneratedImage,
-      generatedSocialPosts, addGeneratedSocialPost,
-      generatedBlogPosts, addGeneratedBlogPost,
-      generatedAdCampaigns, addGeneratedAdCampaign
-    }}>
+    <BrandContext.Provider value={contextValue}>
       {children}
     </BrandContext.Provider>
   );
