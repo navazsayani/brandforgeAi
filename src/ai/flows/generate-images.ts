@@ -46,6 +46,66 @@ const GenerateImagesOutputSchema = z.object({
 });
 export type GenerateImagesOutput = z.infer<typeof GenerateImagesOutputSchema>;
 
+// Helper function for Gemini image generation
+async function _generateImageWithGemini(params: {
+  aiInstance: typeof ai;
+  promptParts: ({text: string} | {media: {url: string}})[];
+}): Promise<string> {
+  const { aiInstance, promptParts } = params;
+  const safetySettingsConfig = [
+      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+  ];
+
+  const {media} = await aiInstance.generate({
+    model: 'googleai/gemini-2.0-flash-exp', // IMPORTANT: ONLY this model can generate images
+    prompt: promptParts,
+    config: {
+      responseModalities: ['TEXT', 'IMAGE'], // MUST provide both TEXT and IMAGE
+      safetySettings: safetySettingsConfig,
+    },
+  });
+
+  if (!media || !media.url) {
+    console.error(`AI image generation failed. Media object or URL is missing. Response media:`, JSON.stringify(media, null, 2));
+    throw new Error(`AI failed to generate image or returned an invalid image format. Check server logs.`);
+  }
+  if (typeof media.url !== 'string' || !media.url.startsWith('data:')) {
+    console.error(`AI image generation failed. Media URL is not a valid data URI. Received URL:`, media.url);
+    throw new Error(`AI returned image, but its format (URL) is invalid. Expected a data URI.`);
+  }
+  return media.url;
+}
+
+// Stub for Leonardo.ai
+async function _generateImageWithLeonardoAI_stub(params: {
+  brandDescription: string;
+  imageStyle: string;
+  exampleImage?: string;
+  aspectRatio?: string;
+  textPrompt: string; // The fully constructed text part of the prompt
+}): Promise<string> {
+  console.warn("Leonardo.ai image generation is called but not implemented. Parameters:", params);
+  throw new Error("Leonardo.ai provider is not implemented yet.");
+  // To return a placeholder, you'd need a way to generate/fetch a data URI here.
+  // For example: return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="; // 1x1 red pixel
+}
+
+// Stub for a generic ImageGen service
+async function _generateImageWithImageGen_stub(params: {
+  brandDescription: string;
+  imageStyle: string;
+  exampleImage?: string;
+  aspectRatio?: string;
+  textPrompt: string;
+}): Promise<string> {
+  console.warn("ImageGen provider is called but not implemented. Parameters:", params);
+  throw new Error("ImageGen provider is not implemented yet.");
+}
+
+
 export async function generateImages(input: GenerateImagesInput): Promise<GenerateImagesOutput> {
   return generateImagesFlow(input);
 }
@@ -62,24 +122,24 @@ const generateImagesFlow = ai.defineFlow(
       imageStyle,
       exampleImage,
       aspectRatio,
-      numberOfImages = 1, // Default to 1 if not provided
+      numberOfImages = 1,
     } = input;
 
     if (!brandDescription || !imageStyle) {
         throw new Error("Brand description and image style are required for image generation.");
     }
     if (exampleImage && !exampleImage.startsWith('data:')) {
+        // This case should ideally be caught by Zod schema validation if format is strict enough
         throw new Error("Example image was provided but is not a valid data URI.");
     }
 
     const generatedImageUrls: string[] = [];
+    const imageGenerationProvider = process.env.IMAGE_GENERATION_PROVIDER || 'GEMINI';
 
     for (let i = 0; i < numberOfImages; i++) {
-        const finalPromptParts: ({text: string} | {media: {url: string}})[] = [];
         let textPromptContent = "";
 
         if (exampleImage && exampleImage.startsWith('data:')) {
-            finalPromptParts.push({ media: { url: exampleImage } });
             textPromptContent = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
 
@@ -110,39 +170,44 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
         if (numberOfImages > 1) {
             textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
         }
-
-        finalPromptParts.push({ text: textPromptContent });
-
-        console.log(`Attempting image generation ${i+1} of ${numberOfImages} with prompt parts:`, JSON.stringify(finalPromptParts, null, 2));
+        
+        console.log(`Attempting image generation ${i+1} of ${numberOfImages} using provider: ${imageGenerationProvider}. Text prompt: ${textPromptContent}`);
 
         try {
-            const {media} = await ai.generate({
-              model: 'googleai/gemini-2.0-flash-exp',
-              prompt: finalPromptParts,
-              config: {
-                responseModalities: ['TEXT', 'IMAGE'],
-                 safetySettings: [
-                    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-                    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-                    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-                    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-                ],
-              },
-            });
+            let imageUrl = "";
+            const baseGenerationParams = {
+                brandDescription,
+                imageStyle,
+                exampleImage,
+                aspectRatio,
+                textPrompt: textPromptContent,
+            };
 
-            if (!media || !media.url) {
-                console.error(`AI image generation failed for image ${i+1}. Media object or URL is missing. Response media:`, JSON.stringify(media, null, 2));
-                throw new Error(`AI failed to generate image ${i+1} or returned an invalid image format. Check server logs.`);
+            switch (imageGenerationProvider.toUpperCase()) {
+                case 'GEMINI':
+                    const finalPromptParts: ({text: string} | {media: {url: string}})[] = [];
+                    if (exampleImage && exampleImage.startsWith('data:')) {
+                        finalPromptParts.push({ media: { url: exampleImage } });
+                    }
+                    finalPromptParts.push({ text: textPromptContent });
+                    imageUrl = await _generateImageWithGemini({
+                        aiInstance: ai,
+                        promptParts: finalPromptParts
+                    });
+                    break;
+                case 'LEONARDO_AI':
+                    imageUrl = await _generateImageWithLeonardoAI_stub(baseGenerationParams);
+                    break;
+                case 'IMAGEGEN': // Example generic provider
+                    imageUrl = await _generateImageWithImageGen_stub(baseGenerationParams);
+                    break;
+                default:
+                    throw new Error(`Unsupported image generation provider: ${imageGenerationProvider}`);
             }
-            if (typeof media.url !== 'string' || !media.url.startsWith('data:')) {
-                console.error(`AI image generation failed for image ${i+1}. Media URL is not a valid data URI. Received URL:`, media.url);
-                throw new Error(`AI returned image ${i+1}, but its format (URL) is invalid. Expected a data URI.`);
-            }
-            generatedImageUrls.push(media.url);
+            generatedImageUrls.push(imageUrl);
         } catch (error: any) {
-             console.error(`Error during generation of image ${i+1}/${numberOfImages}:`, error);
-             // Re-throw to let the action handler catch it, or decide on partial success strategy
-             throw new Error(`Failed to generate image ${i+1} of ${numberOfImages}. Error: ${error.message}`);
+             console.error(`Error during generation of image ${i+1}/${numberOfImages} with provider ${imageGenerationProvider}:`, error);
+             throw new Error(`Failed to generate image ${i+1} of ${numberOfImages} with provider ${imageGenerationProvider}. Error: ${error.message}`);
         }
     }
 
@@ -153,3 +218,4 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
     return {generatedImages: generatedImageUrls};
   }
 );
+
