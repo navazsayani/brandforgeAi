@@ -83,13 +83,17 @@ const generateImagesFlow = ai.defineFlow(
             textPromptContent = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
 
-The provided example image (sent first) is a reference.
-1.  Identify the main *category* of the item in the example image (e.g., 'a handbag', 'a t-shirt', 'a piece of furniture').
-3.  The "Desired Artistic Style" input is: "${imageStyle}". This is a critical instruction for the final rendering. If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic.
-4.  The "Brand Description" is: "${brandDescription}". This description is the **primary driver** for the core design, theme, specific characteristics, and unique elements of the *new* item. It should provide substantial conceptual input. For instance, if the example is a 'minimalist white sneaker' and the brand is 'eco-friendly, nature-inspired, with subtle leaf motifs', you should generate new minimalist white sneakers that prominently feature these eco-friendly and nature-inspired themes, perhaps with visible leaf motifs or textures derived from nature.
-5.  The final image must be of the *same type of item* as the example image but should appear as a *new, distinct version or variation*. It should be clearly different from the example image while still being recognizable as belonging to the same category, now heavily infused with brand-thematic elements.
+The provided example image (sent first) serves ONE primary purpose: to identify the *category* of the item depicted (e.g., 'a handbag', 'a t-shirt', 'a piece of furniture', 'a pair of shoes').
 
-Do NOT simply replicate the example image. Create a new iteration that looks realistic (if implied by the style) and compelling.
+Your task is to generate a *completely new item* belonging to this *same category*.
+
+The *design, appearance, theme, specific characteristics, and unique elements* of this NEW item must be **primarily and heavily derived** from the following inputs:
+1.  **Brand Description**: "${brandDescription}" - Use this for the conceptual basis, thematic elements, and defining features of the new item.
+2.  **Desired Artistic Style**: "${imageStyle}" - This dictates the rendering style of the new item. If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic and look like a real product photo.
+
+**Crucially, do NOT replicate or closely imitate the visual design details (color, pattern, specific shape elements beyond the basic category identification, embellishments) of the provided example image.** The example image is *only* for determining the item category. The new image should look like a distinct product that fits the brand description and desired artistic style.
+
+For instance, if the example image is a 'simple blue cotton t-shirt' (category: t-shirt), and the Brand Description is 'luxury, silk, minimalist, black and gold accents' and the Desired Artistic Style is 'high-fashion product shot', you should generate an image of a *luxury black silk t-shirt with gold accents, shot in a high-fashion product style*. It should *not* look like the original blue cotton t-shirt.
 `.trim();
         } else { // No example image
             textPromptContent = `
