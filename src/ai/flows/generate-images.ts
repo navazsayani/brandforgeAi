@@ -15,16 +15,16 @@ import {z} from 'genkit';
 const GenerateImagesInputSchema = z.object({
   brandDescription: z
     .string()
-    .describe('A detailed description of the brand and its values.'),
+    .describe('A detailed description of the brand and its values. This will be the primary driver for the *subject matter* of the new image.'),
   imageStyle: z
     .string()
     .describe(
-      'A description of the desired style for the generated images, e.g., minimalist, vibrant, professional.'
+      'A description of the desired artistic style for the generated images, e.g., minimalist, vibrant, professional, photorealistic, impressionistic.'
     ),
   exampleImage: z
     .string()
     .describe(
-      "An example image as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'. This image will inform the style of the generated images."
+      "An example image as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'. This image will inform the *abstract artistic style* of the generated images, not its content."
     )
     .optional(),
 });
@@ -51,18 +51,18 @@ const textGenerationOrientedPrompt = ai.definePrompt({
   output: {schema: GenerateImagesOutputSchema}, // This output schema still applies to the flow's return
   prompt: `You are an AI image generation expert specializing in creating images that align with brand aesthetics.
 
-You will be asked to generate an image based on a brand description and a desired style.
-If an example image is provided, use it as a strong stylistic reference for the new image.
+You will be asked to generate a new image based on a brand description and a desired image style.
+If an example image is provided, you should analyze it for its abstract artistic qualities (like color palette, lighting, texture, mood, overall artistic style e.g. 'photorealistic', 'minimalist') and use these qualities as *inspiration* for the *new* image. The subject matter of the new image must come from the brand description.
 
-Brand Description: {{{brandDescription}}}
-Image Style: {{{imageStyle}}}
+Brand Description (for new image content): {{{brandDescription}}}
+Image Style (for new image aesthetics): {{{imageStyle}}}
 
 {{#if exampleImage}}
-  The following example image should heavily influence the style, color palette, and mood of the *new* image you generate:
-  Example Image: {{media url=exampleImage}}
+  The following example image should be used *only* to extract abstract stylistic elements (color palette, mood, lighting, artistic technique). DO NOT replicate the objects, people, or scene from this example.
+  Example Image (for style reference only): {{media url=exampleImage}}
 {{/if}}
 
-Ensure the *newly generated* image reflects the brand's values and the specified style, drawing inspiration from the example if provided, but creating a distinct piece.
+Ensure the *newly generated* image primarily reflects the 'Brand Description' for its content and the 'Image Style' for its overall look, drawing stylistic inspiration (but not content) from the example image if provided. The new image must be distinct in its subject matter from any example image.
 `,
 });
 
@@ -80,14 +80,14 @@ const generateImagesFlow = ai.defineFlow(
     } = input;
 
     // Construct the prompt for the image generation model (Gemini 2.0 Flash Exp)
-    const baseTextPrompt = `Generate a *new* and *unique* image that embodies the following brand description: "${brandDescription}". The desired artistic image style is "${imageStyle}".`;
+    const baseTextPrompt = `Generate a *new and unique* image. The primary subject matter and theme should be derived from the following brand description: "${brandDescription}". The desired overall artistic image style is: "${imageStyle}".`;
     
     const imageGenerationPromptParts: ({text: string} | {media: {url: string}})[] = [];
 
     if (exampleImage && exampleImage.startsWith('data:')) { // Ensure exampleImage is a valid data URI
       imageGenerationPromptParts.push({media: {url: exampleImage}});
       imageGenerationPromptParts.push({
-        text: `${baseTextPrompt} Use the provided example image *only* as a strong reference for the artistic style, color palette, and overall mood. Do NOT replicate the example image's subject matter or composition directly. The new image must be clearly different in content but stylistically similar to the example.`
+        text: `${baseTextPrompt} Critically, the provided example image should be used *only* as a reference for its abstract artistic qualities. Analyze it for its color palette, lighting style, common textures, overall mood, and artistic rendering style (e.g., 'photorealistic', 'painterly', 'graphic'). Apply these *abstracted stylistic elements* to the *new* image you create based on the brand description. The subject matter, specific objects, figures, and scene composition of the newly generated image *must be entirely different* from the example image. The goal is to achieve a similar artistic *feel* or *vibe* in a completely fresh visual, not to recreate, adapt, or modify the example image's content.`
       });
     } else {
       imageGenerationPromptParts.push({text: baseTextPrompt});
