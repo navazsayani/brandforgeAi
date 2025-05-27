@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -14,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy } from 'lucide-react';
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, AspectRatio } from 'lucide-react';
 import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
@@ -22,7 +21,7 @@ import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from
 const initialFormState: FormState = { error: undefined, data: undefined, message: undefined };
 
 export default function ContentStudioPage() {
-  const { brandData, addGeneratedImage, addGeneratedSocialPost, addGeneratedBlogPost, generatedImages } = useBrand();
+  const { brandData, addGeneratedImage, addGeneratedSocialPost, addGeneratedBlogPost } = useBrand();
   const { toast } = useToast();
 
   const [imageState, imageAction] = useActionState(handleGenerateImagesAction, initialFormState);
@@ -35,6 +34,7 @@ export default function ContentStudioPage() {
   const [selectedImageForSocial, setSelectedImageForSocial] = useState<string>("");
   const [socialToneValue, setSocialToneValue] = useState<string>("professional");
   const [blogPlatformValue, setBlogPlatformValue] = useState<"Medium" | "Other">("Medium");
+  const [selectedAspectRatio, setSelectedAspectRatio] = useState<string>("1:1");
 
 
   useEffect(() => {
@@ -43,6 +43,7 @@ export default function ContentStudioPage() {
       const newImage: GeneratedImage = {
         id: new Date().toISOString(),
         src: imageState.data,
+        // Using querySelector might be brittle. Consider passing form values if needed for context.
         prompt: (document.querySelector('form[action^="/content-studio"] textarea[name="brandDescription"]') as HTMLTextAreaElement)?.value || "",
         style: (document.querySelector('form[action^="/content-studio"] input[name="imageStyle"]') as HTMLInputElement)?.value || ""
       };
@@ -57,7 +58,7 @@ export default function ContentStudioPage() {
       setGeneratedSocialPost(socialState.data);
        const newPost: GeneratedSocialMediaPost = {
         id: new Date().toISOString(),
-        platform: 'Instagram', // Assuming Instagram for now
+        platform: 'Instagram', 
         imageSrc: selectedImageForSocial, 
         imageDescription: (document.querySelector('form[action^="/content-studio"] textarea[name="imageDescription"]') as HTMLTextAreaElement)?.value || "",
         caption: socialState.data.caption,
@@ -159,6 +160,20 @@ export default function ContentStudioPage() {
                         </div>
                     )}
                   </div>
+                  <div>
+                    <Label htmlFor="imageGenAspectRatio" className="flex items-center mb-1"><AspectRatio className="w-4 h-4 mr-2 text-primary" />Aspect Ratio</Label>
+                    <Select name="aspectRatio" required value={selectedAspectRatio} onValueChange={setSelectedAspectRatio}>
+                      <SelectTrigger id="imageGenAspectRatioSelect">
+                        <SelectValue placeholder="Select aspect ratio" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1:1">Square (1:1)</SelectItem>
+                        <SelectItem value="4:5">Portrait (4:5)</SelectItem>
+                        <SelectItem value="16:9">Landscape (16:9)</SelectItem>
+                        <SelectItem value="9:16">Story/Reel (9:16)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </CardContent>
                 <CardFooter>
                   <SubmitButton className="w-full" loadingText="Generating Image...">Generate Image</SubmitButton>
@@ -167,8 +182,9 @@ export default function ContentStudioPage() {
               {generatedImageUrl && (
                 <CardContent className="mt-6">
                   <h3 className="mb-2 text-lg font-semibold">Generated Image:</h3>
-                  <div className="relative w-full overflow-hidden border rounded-md aspect-video bg-muted">
-                    <NextImage src={generatedImageUrl} alt="Generated brand image" layout="fill" objectFit="contain" data-ai-hint="brand marketing" />
+                  <div className="relative w-full overflow-hidden border rounded-md bg-muted">
+                    {/* We remove aspect-video to let the image dictate its own aspect ratio, contained by parent width */}
+                    <NextImage src={generatedImageUrl} alt="Generated brand image" width={500} height={500} style={{width: '100%', height: 'auto', objectFit: 'contain'}} data-ai-hint="brand marketing" />
                   </div>
                    <Button variant="outline" className="mt-2" onClick={() => {
                        setSelectedImageForSocial(generatedImageUrl);

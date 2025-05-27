@@ -24,6 +24,7 @@ export async function handleGenerateImagesAction(
       brandDescription: formData.get("brandDescription") as string,
       imageStyle: formData.get("imageStyle") as string,
       exampleImage: formData.get("exampleImage") as string | undefined,
+      aspectRatio: formData.get("aspectRatio") as string | undefined,
     };
 
     if (!input.brandDescription || !input.imageStyle) {
@@ -32,6 +33,9 @@ export async function handleGenerateImagesAction(
     // Ensure exampleImage is not an empty string if provided
     if (input.exampleImage === "") {
       delete input.exampleImage;
+    }
+    if (input.aspectRatio === "") {
+        delete input.aspectRatio;
     }
     
     const result = await generateImages(input);
@@ -77,68 +81,4 @@ export async function handleGenerateBlogContentAction(
     }
     const result = await generateBlogContent(input);
     return { data: result, message: "Blog content generated!" };
-  } catch (e: any) {
-    return { error: e.message || "Failed to generate blog content." };
-  }
-}
-
-export async function handleGenerateAdCampaignAction(
-  prevState: FormState,
-  formData: FormData
-): Promise<FormState<{ campaignSummary: string; platformDetails: Record<string, string> }>> {
-  try {
-    const platformsValue = formData.get("platforms") as string;
-    const platforms = platformsValue ? platformsValue.split(',') as ('google_ads' | 'meta')[] : [];
-    
-    const generatedContentValue = formData.get("generatedContent") as string;
-    const customGeneratedContentValue = formData.get("customGeneratedContent") as string;
-
-    let finalGeneratedContent = generatedContentValue;
-    if (generatedContentValue === "Custom content for ad campaign" && customGeneratedContentValue) {
-      finalGeneratedContent = customGeneratedContentValue;
-    } else if (generatedContentValue === "Custom content for ad campaign" && !customGeneratedContentValue) {
-       return { error: "Custom content was selected but not provided." };
-    }
-
-
-    const input: GenerateAdCampaignInput = {
-      brandName: formData.get("brandName") as string,
-      brandDescription: formData.get("brandDescription") as string,
-      generatedContent: finalGeneratedContent,
-      targetKeywords: formData.get("targetKeywords") as string,
-      budget: parseFloat(formData.get("budget") as string),
-      platforms: platforms,
-    };
-
-    if (!input.brandName || !input.brandDescription || !input.generatedContent || !input.targetKeywords || isNaN(input.budget) || input.platforms.length === 0) {
-      return { error: "All fields are required and budget must be a valid number for ad campaign generation." };
-    }
-    const result = await generateAdCampaign(input);
-    return { data: result, message: "Ad campaign generated!" };
-  } catch (e: any) {
-    return { error: e.message || "Failed to generate ad campaign." };
-  }
-}
-
-export async function handleExtractBrandInfoFromUrlAction(
-  prevState: FormState,
-  formData: FormData
-): Promise<FormState<ExtractBrandInfoFromUrlOutput>> {
-  try {
-    const websiteUrl = formData.get("websiteUrl") as string;
-    if (!websiteUrl) {
-      return { error: "Website URL is required." };
-    }
-
-    const input: ExtractBrandInfoFromUrlInput = { websiteUrl };
-    const result = await extractBrandInfoFromUrl(input);
-    
-    if (!result.brandDescription && !result.targetKeywords) {
-        return { error: "Could not extract sufficient information from the website. Please fill manually or try a different URL." };
-    }
-    return { data: result, message: "Brand information extracted successfully!" };
-  } catch (e: any) {
-    console.error("Extraction action error:", e);
-    return { error: e.message || "Failed to extract brand information from URL." };
-  }
-}
+  } catch (e: any)
