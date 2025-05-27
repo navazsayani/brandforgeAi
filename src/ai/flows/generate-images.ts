@@ -115,7 +115,7 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
     }
 
     if (aspectRatio) {
-      textPromptContent += ` Please generate this image with an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9).`;
+      textPromptContent += ` The final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
     }
     
     finalPromptParts.push({ text: textPromptContent });
@@ -140,7 +140,6 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
             { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
             { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            // Consider 'BLOCK_NONE' for some categories during deep debugging if necessary, but be mindful of content.
         ],
       },
     });
