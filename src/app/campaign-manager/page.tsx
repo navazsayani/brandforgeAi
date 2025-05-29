@@ -1,8 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { useActionState } from "react";
+import React, { useState, useEffect, useActionState as useActionStateReact } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,12 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSe
 import { Checkbox } from "@/components/ui/checkbox"
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { Briefcase, Type, DollarSign, Target, CheckSquare, Copy, Info, Edit3, AlignLeft, MessageSquare } from 'lucide-react';
+import { Briefcase, Type, DollarSign, Target, CheckSquare, Copy, Info, Edit3, AlignLeft, MessageSquare, ListChecks, Megaphone, FileText } from 'lucide-react';
 import { handleGenerateAdCampaignAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedAdCampaign } from '@/types';
+import type { GenerateAdCampaignOutput } from '@/ai/flows/generate-ad-campaign';
 
-const initialFormState: FormState = { error: undefined, data: undefined, message: undefined };
+const initialFormState: FormState<GenerateAdCampaignOutput> = { error: undefined, data: undefined, message: undefined };
 
 const platforms = [
   { id: "google_ads", label: "Google Ads" },
@@ -29,21 +29,23 @@ const platforms = [
 export default function CampaignManagerPage() {
   const { brandData, addGeneratedAdCampaign, generatedBlogPosts, generatedSocialPosts } = useBrand();
   const { toast } = useToast();
-  const [state, formAction] = useActionState(handleGenerateAdCampaignAction, initialFormState);
-  const [generatedCampaign, setGeneratedCampaign] = useState<{campaignSummary: string; platformDetails: Record<string, string>} | null>(null);
+  const [state, formAction] = useActionStateReact(handleGenerateAdCampaignAction, initialFormState);
+  const [generatedCampaign, setGeneratedCampaign] = useState<GenerateAdCampaignOutput | null>(null);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [selectedContentSource, setSelectedContentSource] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (state.data) {
       setGeneratedCampaign(state.data);
-      const newCampaign: GeneratedAdCampaign = {
+      const newCampaignData: GeneratedAdCampaign = {
         id: new Date().toISOString(),
-        summary: state.data.campaignSummary,
-        platformDetails: state.data.platformDetails,
+        campaignConcept: state.data.campaignConcept,
+        headlines: state.data.headlines,
+        bodyTexts: state.data.bodyTexts,
+        platformGuidance: state.data.platformGuidance,
         targetPlatforms: selectedPlatforms as ('google_ads' | 'meta')[],
       };
-      addGeneratedAdCampaign(newCampaign);
+      addGeneratedAdCampaign(newCampaignData);
       toast({ title: "Success", description: state.message });
     }
     if (state.error) toast({ title: "Error", description: state.error, variant: "destructive" });
@@ -69,7 +71,7 @@ export default function CampaignManagerPage() {
                 <div>
                     <CardTitle className="text-3xl font-bold">Ad Campaign Manager</CardTitle>
                     <CardDescription className="text-lg">
-                    Automatically generate and configure ad campaigns for Google Ads and Meta.
+                    Generate ad creative variations for Google Ads and Meta.
                     </CardDescription>
                 </div>
             </div>
@@ -87,7 +89,7 @@ export default function CampaignManagerPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="adBrandDescription" className="flex items-center mb-2 text-base"><AlignLeft className="w-5 h-5 mr-2 text-primary" />Brand Description</Label>
+                <Label htmlFor="adBrandDescription" className="flex items-center mb-2 text-base"><FileText className="w-5 h-5 mr-2 text-primary" />Brand Description</Label>
                 <Textarea
                   id="adBrandDescription"
                   name="brandDescription"
@@ -98,7 +100,7 @@ export default function CampaignManagerPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="adGeneratedContent" className="flex items-center mb-2 text-base"><MessageSquare className="w-5 h-5 mr-2 text-primary" />Ad Content Source</Label>
+                <Label htmlFor="adGeneratedContent" className="flex items-center mb-2 text-base"><MessageSquare className="w-5 h-5 mr-2 text-primary" />Inspirational Content Source</Label>
                 <Select 
                   name="generatedContent" 
                   required 
@@ -116,7 +118,7 @@ export default function CampaignManagerPage() {
                         </SelectItem>
                       ))
                     ) : (
-                      <div className="px-2 py-1.5 text-sm text-muted-foreground text-center">
+                       <div className="px-2 py-1.5 text-sm text-muted-foreground text-center">
                         No pre-generated content available.
                       </div>
                     )}
@@ -127,7 +129,7 @@ export default function CampaignManagerPage() {
                 {selectedContentSource === "Custom content for ad campaign" && (
                  <Textarea
                     name="customGeneratedContent" 
-                    placeholder="Paste or write your ad copy here for the custom campaign."
+                    placeholder="Paste or write your inspirational ad copy/concept here."
                     rows={4}
                     className="mt-3" 
                     required
@@ -145,12 +147,12 @@ export default function CampaignManagerPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="adBudget" className="flex items-center mb-2 text-base"><DollarSign className="w-5 h-5 mr-2 text-primary" />Budget ($)</Label>
+                <Label htmlFor="adBudget" className="flex items-center mb-2 text-base"><DollarSign className="w-5 h-5 mr-2 text-primary" />Budget Context ($)</Label>
                 <Input
                   id="adBudget"
                   name="budget"
                   type="number"
-                  placeholder="E.g., 500"
+                  placeholder="E.g., 500 (used for AI context)"
                   required
                 />
               </div>
@@ -183,32 +185,56 @@ export default function CampaignManagerPage() {
               </div>
             </CardContent>
             <CardFooter className="pt-4"> 
-              <SubmitButton className="w-full" size="lg" loadingText="Generating Campaign..." disabled={selectedPlatforms.length === 0}>Generate Ad Campaign</SubmitButton>
+              <SubmitButton className="w-full" size="lg" loadingText="Generating Campaign Variations..." disabled={selectedPlatforms.length === 0}>Generate Ad Variations</SubmitButton>
             </CardFooter>
           </form>
           {generatedCampaign && (
             <CardContent className="mt-8 space-y-6 border-t pt-6">
               <div>
-                <h3 className="mb-2 text-xl font-semibold flex items-center"><Info className="w-5 h-5 mr-2 text-primary"/>Campaign Summary</h3>
-                 <div className="p-4 prose border rounded-md bg-muted/50 max-w-none max-h-60 overflow-y-auto text-sm">
-                    <p className="whitespace-pre-wrap">{generatedCampaign.campaignSummary}</p>
+                <h3 className="mb-2 text-xl font-semibold flex items-center"><Info className="w-5 h-5 mr-2 text-primary"/>Campaign Concept</h3>
+                 <div className="p-4 prose border rounded-md bg-muted/50 max-w-none text-sm">
+                    <p className="whitespace-pre-wrap">{generatedCampaign.campaignConcept}</p>
                   </div>
-                <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedCampaign.campaignSummary, "Summary")} className="mt-2 text-muted-foreground hover:text-primary">
-                  <Copy className="w-4 h-4 mr-2" /> Copy Summary
+                <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedCampaign.campaignConcept, "Campaign Concept")} className="mt-2 text-muted-foreground hover:text-primary">
+                  <Copy className="w-4 h-4 mr-2" /> Copy Concept
                 </Button>
               </div>
+              
               <div>
-                <h3 className="mb-2 text-xl font-semibold flex items-center"><Briefcase className="w-5 h-5 mr-2 text-primary"/>Platform Details</h3>
-                <div className="p-4 border rounded-md bg-muted/50 space-y-3">
-                  {Object.entries(generatedCampaign.platformDetails).map(([platform, details]) => (
-                    <div key={platform}>
-                      <strong className="capitalize block mb-1 text-primary">{platform.replace('_', ' ')}:</strong>
-                      <p className="text-sm whitespace-pre-wrap text-foreground">{details}</p>
+                <h3 className="mb-3 text-xl font-semibold flex items-center"><Megaphone className="w-5 h-5 mr-2 text-primary"/>Headline Variations</h3>
+                <div className="space-y-3">
+                  {generatedCampaign.headlines.map((headline, index) => (
+                    <div key={`headline-${index}`} className="p-3 border rounded-md bg-muted/50">
+                      <p className="text-sm whitespace-pre-wrap">{headline}</p>
+                      <Button variant="ghost" size="xs" onClick={() => copyToClipboard(headline, `Headline ${index+1}`)} className="mt-1 text-xs text-muted-foreground hover:text-primary">
+                        <Copy className="w-3 h-3 mr-1" /> Copy Headline
+                      </Button>
                     </div>
                   ))}
                 </div>
-                 <Button variant="ghost" size="sm" onClick={() => copyToClipboard(JSON.stringify(generatedCampaign.platformDetails, null, 2), "Details")} className="mt-2 text-muted-foreground hover:text-primary">
-                  <Copy className="w-4 h-4 mr-2" /> Copy Details
+              </div>
+
+              <div>
+                <h3 className="mb-3 text-xl font-semibold flex items-center"><ListChecks className="w-5 h-5 mr-2 text-primary"/>Body Text Variations</h3>
+                <div className="space-y-3">
+                  {generatedCampaign.bodyTexts.map((body, index) => (
+                    <div key={`body-${index}`} className="p-3 border rounded-md bg-muted/50">
+                      <p className="text-sm whitespace-pre-wrap">{body}</p>
+                      <Button variant="ghost" size="xs" onClick={() => copyToClipboard(body, `Body Text ${index+1}`)} className="mt-1 text-xs text-muted-foreground hover:text-primary">
+                        <Copy className="w-3 h-3 mr-1" /> Copy Body Text
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="mb-2 text-xl font-semibold flex items-center"><Briefcase className="w-5 h-5 mr-2 text-primary"/>Platform Guidance</h3>
+                 <div className="p-4 prose border rounded-md bg-muted/50 max-w-none max-h-60 overflow-y-auto text-sm">
+                    <p className="whitespace-pre-wrap">{generatedCampaign.platformGuidance}</p>
+                  </div>
+                <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedCampaign.platformGuidance, "Platform Guidance")} className="mt-2 text-muted-foreground hover:text-primary">
+                  <Copy className="w-4 h-4 mr-2" /> Copy Guidance
                 </Button>
               </div>
             </CardContent>

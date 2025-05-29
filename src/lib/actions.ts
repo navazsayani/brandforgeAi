@@ -4,7 +4,7 @@
 import { generateImages, type GenerateImagesInput } from '@/ai/flows/generate-images';
 import { generateSocialMediaCaption, type GenerateSocialMediaCaptionInput } from '@/ai/flows/generate-social-media-caption';
 import { generateBlogContent, type GenerateBlogContentInput } from '@/ai/flows/generate-blog-content';
-import { generateAdCampaign, type GenerateAdCampaignInput } from '@/ai/flows/generate-ad-campaign';
+import { generateAdCampaign, type GenerateAdCampaignInput, type GenerateAdCampaignOutput } from '@/ai/flows/generate-ad-campaign';
 import { extractBrandInfoFromUrl, type ExtractBrandInfoFromUrlInput, type ExtractBrandInfoFromUrlOutput } from '@/ai/flows/extract-brand-info-from-url-flow';
 import { describeImage, type DescribeImageInput, type DescribeImageOutput } from '@/ai/flows/describe-image-flow';
 import { generateBlogOutline, type GenerateBlogOutlineInput, type GenerateBlogOutlineOutput } from '@/ai/flows/generate-blog-outline-flow';
@@ -85,7 +85,8 @@ export async function handleGenerateSocialMediaCaptionAction(
   try {
     const selectedImageSrc = formData.get("selectedImageSrcForSocialPost") as string;
     const imageSrc = selectedImageSrc && selectedImageSrc !== "" ? selectedImageSrc : null;
-    const imageDescription = formData.get("imageDescription") as string;
+    const imageDescription = formData.get("socialImageDescription") as string;
+
 
     const input: GenerateSocialMediaCaptionInput = {
       brandDescription: formData.get("brandDescription") as string,
@@ -115,9 +116,9 @@ export async function handleGenerateBlogOutlineAction(
     try {
         const input: GenerateBlogOutlineInput = {
             brandName: formData.get("brandName") as string,
-            brandDescription: formData.get("brandDescription") as string,
-            keywords: formData.get("keywords") as string,
-            websiteUrl: (formData.get("websiteUrl") as string) || undefined,
+            brandDescription: formData.get("blogBrandDescription") as string, // Ensure correct name from form
+            keywords: formData.get("blogKeywords") as string, // Ensure correct name from form
+            websiteUrl: (formData.get("blogWebsiteUrl") as string) || undefined, // Ensure correct name from form
         };
 
         if (!input.brandName || !input.brandDescription || !input.keywords) {
@@ -140,10 +141,10 @@ export async function handleGenerateBlogContentAction(
   try {
     const input: GenerateBlogContentInput = {
       brandName: formData.get("brandName") as string,
-      brandDescription: formData.get("brandDescription") as string,
-      keywords: formData.get("keywords") as string,
+      brandDescription: formData.get("blogBrandDescription") as string, // Ensure correct name from form
+      keywords: formData.get("blogKeywords") as string, // Ensure correct name from form
       targetPlatform: formData.get("targetPlatform") as "Medium" | "Other",
-      websiteUrl: formData.get("websiteUrl") as string || undefined,
+      websiteUrl: formData.get("blogWebsiteUrl") as string || undefined, // Ensure correct name from form
       blogOutline: formData.get("blogOutline") as string,
       blogTone: formData.get("blogTone") as string,
     };
@@ -161,17 +162,18 @@ export async function handleGenerateBlogContentAction(
 }
 
 export async function handleGenerateAdCampaignAction(
-  prevState: FormState<{ campaignSummary: string; platformDetails: Record<string, string> }>,
+  prevState: FormState<GenerateAdCampaignOutput>,
   formData: FormData
-): Promise<FormState<{ campaignSummary: string; platformDetails: Record<string, string> }>> {
+): Promise<FormState<GenerateAdCampaignOutput>> {
   try {
     const platformsString = formData.get("platforms") as string;
     const platformsArray = platformsString ? platformsString.split(',') as ('google_ads' | 'meta')[] : [];
 
     let generatedContent = formData.get("generatedContent") as string;
-    if (generatedContent === "Custom content for ad campaign") {
+    if (generatedContent === "Custom content for ad campaign") { // Check against the specific value
         generatedContent = formData.get("customGeneratedContent") as string;
     }
+
 
     const input: GenerateAdCampaignInput = {
       brandName: formData.get("brandName") as string,
@@ -183,14 +185,18 @@ export async function handleGenerateAdCampaignAction(
     };
 
     if (!input.brandName || !input.brandDescription || !input.generatedContent || !input.targetKeywords || isNaN(input.budget) || input.platforms.length === 0) {
-        return { error: "All fields are required and budget must be a number. At least one platform must be selected." };
+        return { error: "All fields are required, budget must be a number, and at least one platform must be selected." };
+    }
+    if (!generatedContent.trim()) {
+        return { error: "Ad content (selected or custom) cannot be empty."};
     }
 
+
     const result = await generateAdCampaign(input);
-    return { data: result, message: "Ad campaign details generated successfully!" };
+    return { data: result, message: "Ad campaign variations generated successfully!" };
   } catch (e: any) {
     console.error("Error in handleGenerateAdCampaignAction:", e);
-    return { error: e.message || "Failed to generate ad campaign details." };
+    return { error: e.message || "Failed to generate ad campaign variations." };
   }
 }
 

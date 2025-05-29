@@ -18,7 +18,7 @@ export interface GeneratedImage {
 export interface GeneratedSocialMediaPost {
   id: string;
   platform: 'Instagram'; // Example, could be extended
-  imageSrc: string; // reference to a generated image or uploaded one
+  imageSrc: string | null; // reference to a generated image or uploaded one
   imageDescription: string;
   caption: string;
   hashtags: string;
@@ -35,7 +35,10 @@ export interface GeneratedBlogPost {
 
 export interface GeneratedAdCampaign {
   id: string;
-  summary: string;
-  platformDetails: Record<string, string>;
+  campaignConcept: string;
+  headlines: string[];
+  bodyTexts: string[];
+  platformGuidance: string;
   targetPlatforms: ('google_ads' | 'meta')[];
+  // platformDetails might be re-introduced if AI provides structured setup data
 }

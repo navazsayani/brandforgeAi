@@ -69,7 +69,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
     fetchBrandData();
   }, []);
 
-  const setBrandData = useCallback(async (data: BrandData) => {
+  const setBrandDataCB = useCallback(async (data: BrandData) => {
     setIsLoading(true);
     setError(null);
     try {
@@ -85,49 +85,47 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setError(`Failed to save brand profile: ${e.message || "Unknown error. Check console."}`);
       }
-      // Re-throw the error if you want calling components to be able to catch it too
-      // Or handle it fully here by not re-throwing and relying on the `error` state
       throw e; 
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const addGeneratedImage = useCallback((image: GeneratedImage) => {
+  const addGeneratedImageCB = useCallback((image: GeneratedImage) => {
     setGeneratedImages(prev => [image, ...prev.slice(0,19)]); // Keep latest 20
   }, []);
 
-  const addGeneratedSocialPost = useCallback((post: GeneratedSocialMediaPost) => {
+  const addGeneratedSocialPostCB = useCallback((post: GeneratedSocialMediaPost) => {
     setGeneratedSocialPosts(prev => [post, ...prev.slice(0,19)]); // Keep latest 20
   }, []);
 
-  const addGeneratedBlogPost = useCallback((post: GeneratedBlogPost) => {
+  const addGeneratedBlogPostCB = useCallback((post: GeneratedBlogPost) => {
     setGeneratedBlogPosts(prev => [post, ...prev.slice(0,19)]); // Keep latest 20
   }, []);
 
-  const addGeneratedAdCampaign = useCallback((campaign: GeneratedAdCampaign) => {
+  const addGeneratedAdCampaignCB = useCallback((campaign: GeneratedAdCampaign) => {
     setGeneratedAdCampaigns(prev => [campaign, ...prev.slice(0,19)]); // Keep latest 20
   }, []);
   
   const contextValue = useMemo(() => ({
     brandData,
-    setBrandData,
+    setBrandData: setBrandDataCB,
     isLoading,
     error,
     generatedImages,
-    addGeneratedImage,
+    addGeneratedImage: addGeneratedImageCB,
     generatedSocialPosts,
-    addGeneratedSocialPost,
+    addGeneratedSocialPost: addGeneratedSocialPostCB,
     generatedBlogPosts,
-    addGeneratedBlogPost,
+    addGeneratedBlogPost: addGeneratedBlogPostCB,
     generatedAdCampaigns,
-    addGeneratedAdCampaign
+    addGeneratedAdCampaign: addGeneratedAdCampaignCB
   }), [
-    brandData, setBrandData, isLoading, error,
-    generatedImages, addGeneratedImage,
-    generatedSocialPosts, addGeneratedSocialPost,
-    generatedBlogPosts, addGeneratedBlogPost,
-    generatedAdCampaigns, addGeneratedAdCampaign
+    brandData, setBrandDataCB, isLoading, error,
+    generatedImages, addGeneratedImageCB,
+    generatedSocialPosts, addGeneratedSocialPostCB,
+    generatedBlogPosts, addGeneratedBlogPostCB,
+    generatedAdCampaigns, addGeneratedAdCampaignCB
   ]);
 
   return (
