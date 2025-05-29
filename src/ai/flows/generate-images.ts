@@ -133,10 +133,10 @@ const generateImagesFlow = ai.defineFlow(
       industry,
       imageStyle,
       exampleImage,
-      aspectRatio, // Still needed for stubs and if finalizedTextPrompt is NOT used
+      aspectRatio,
       numberOfImages = 1,
-      negativePrompt, // Still needed if finalizedTextPrompt is NOT used
-      seed, // Still needed if finalizedTextPrompt is NOT used
+      negativePrompt,
+      seed,
       finalizedTextPrompt,
     } = input;
 
@@ -151,17 +151,12 @@ const generateImagesFlow = ai.defineFlow(
         if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
             console.log(`Using finalized text prompt for image ${i+1}: "${finalizedTextPrompt}"`);
             textPromptContent = finalizedTextPrompt;
-            // If finalizedTextPrompt is used, we assume it contains all necessary textual instructions.
-            // Structural elements like `exampleImage` are handled when building `finalPromptParts`.
-            // `aspectRatio` and `seed` might be ignored here if user is expected to put them in `finalizedTextPrompt`.
-            // However, for Gemini, if `exampleImage` is present, it MUST be part of the prompt array.
         } else {
-            // Construct prompt if no finalized prompt is given
+            console.log(`Constructing prompt for image ${i+1} as no finalized prompt was provided or it was empty.`);
             if (!brandDescription || !imageStyle) {
-                // This check is important if finalizedTextPrompt is allowed to be empty but wasn't provided from client
                 throw new Error("Brand description and image style are required if not providing/using a finalized text prompt.");
             }
-            console.log(`Constructing prompt for image ${i+1} as no finalized prompt was provided or it was empty.`);
+            
             if (exampleImage) {
                 textPromptContent = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
@@ -171,18 +166,23 @@ The provided example image (sent first) serves ONE primary purpose: to identify 
 Your task is to generate a *completely new item* belonging to this *same category*.
 
 The *design, appearance, theme, specific characteristics, and unique elements* of this NEW item must be **primarily and heavily derived** from the following inputs:
-1.  **Brand Description**: "${brandDescription}"${industryContext} - This is the primary driver for the core design, theme, specific characteristics, and unique elements of the new item.
-2.  **Desired Artistic Style**: "${imageStyle}" - This dictates the rendering style of the new item. If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic and look like a real product photo.
+1.  **Brand Description**: "${brandDescription}"${industryContext}. This description informs the *theme, conceptual elements, and unique characteristics* of the new item.
+2.  **Desired Artistic Style**: "${imageStyle}". This dictates the overall visual execution, including aspects like color palette (unless the brand description very strongly and specifically dictates a color scheme), lighting, and rendering style. If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic and look like a real product photo.
+
+**Important Note on Color and Style**: While the brand description provides thematic guidance, strive for visual variety and avoid over-relying on a narrow color palette (like exclusively black and gold) unless the brand description *and* desired artistic style overwhelmingly and explicitly demand it. The goal is a fresh interpretation that fits the brand's *overall essence* and the *chosen artistic style*.
 
 **Crucially, do NOT replicate or closely imitate the visual design details (color, pattern, specific shape elements beyond the basic category identification, embellishments) of the provided example image.** The example image is *only* for determining the item category. The new image should look like a distinct product that fits the brand description and desired artistic style.
 
-For instance, if the example image is a 'simple blue cotton t-shirt' (category: t-shirt), and the Brand Description is 'luxury, silk, minimalist, black and gold accents for a high-end fashion brand' and the Desired Artistic Style is 'high-fashion product shot', you should generate an image of a *luxury black silk t-shirt with gold accents, shot in a high-fashion product style*. It should *not* look like the original blue cotton t-shirt.
+**Example of Interaction:**
+If the example image is a 'simple blue cotton t-shirt' (category: t-shirt), the Brand Description is 'luxury brand, minimalist ethos, inspired by serene nature, prefers organic materials', and the Desired Artistic Style is 'high-fashion product shot, muted earthy tones'.
+You should generate an image of a *luxury t-shirt made from organic-looking material, in muted earthy tones (e.g., moss green, stone grey, soft beige), shot in a high-fashion product style*. It should evoke serenity and minimalism. It should NOT be the original blue cotton t-shirt, nor should it default to a generic "luxury" color scheme like black and gold unless those colors are specifically requested or strongly implied by the *combination* of inputs.
 `.trim();
             } else { // No example image
                 textPromptContent = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
 The image should be based on the following concept: "${brandDescription}".${industryContext}
 The desired artistic style for this new image is: "${imageStyle}". If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic.
+**Important Note on Color and Style**: Strive for visual variety that aligns with the brand description and artistic style. Avoid defaulting to a narrow or stereotypical color palette unless the inputs strongly and explicitly demand it.
 `.trim();
             }
 
@@ -190,29 +190,31 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
             if (negativePrompt) {
                 textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
             }
-            if (aspectRatio) {
-              textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
-            }
-            if (seed !== undefined) {
-              textPromptContent += `\n\nUse seed: ${seed}.`;
-            }
+        }
+
+        // These are appended regardless of whether finalizedTextPrompt was used or not,
+        // as they are structural/control parameters rather than purely stylistic.
+        // User can still manage these in their finalizedTextPrompt if they are very specific.
+        if (aspectRatio) {
+          textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
+        }
+        if (seed !== undefined) {
+          textPromptContent += `\n\nUse seed: ${seed}.`;
         }
 
         if (numberOfImages > 1 && (!finalizedTextPrompt || !finalizedTextPrompt.toLowerCase().includes("batch generation")) && (!finalizedTextPrompt || !finalizedTextPrompt.toLowerCase().includes(`image ${i+1}`))) {
-          // This instruction is appended even to finalizedTextPrompt if it doesn't seem to handle batching,
-          // but user could explicitly manage this in their finalizedTextPrompt too.
             textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
         }
 
         if (i === 0) {
             actualPromptUsedForFirstImage = textPromptContent;
         }
-
+        
         console.log(`Text component of prompt for image ${i+1}/${numberOfImages} (Provider: ${imageGenerationProvider}): "${textPromptContent}"`);
 
         try {
             let imageUrl = "";
-            const baseGenerationParamsForStubs = { // For non-Gemini stubs
+            const baseGenerationParamsForStubs = { // For non-Leonardo stubs
                 brandDescription: brandDescription || "",
                 industry,
                 imageStyle: imageStyle || "",
@@ -226,11 +228,12 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
             switch (imageGenerationProvider.toUpperCase()) {
                 case 'GEMINI':
                     const finalPromptParts: ({text: string} | {media: {url: string}})[] = [];
-                    if (exampleImage) { // exampleImage is from the input to the flow
+                    if (exampleImage) { 
                         finalPromptParts.push({ media: { url: exampleImage } });
                     }
-                    finalPromptParts.push({ text: textPromptContent }); // textPromptContent is either finalized or constructed
+                    finalPromptParts.push({ text: textPromptContent }); 
 
+                    console.log("Attempting Gemini image generation with prompt parts:", JSON.stringify(finalPromptParts, null, 2));
                     imageUrl = await _generateImageWithGemini({
                         aiInstance: ai,
                         promptParts: finalPromptParts
@@ -239,8 +242,8 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
                 case 'LEONARDO_AI':
                     imageUrl = await _generateImageWithLeonardoAI_stub(baseGenerationParamsForStubs);
                     break;
-                case 'IMAGEN':
-                    imageUrl = await _generateImageWithImagen_stub(baseGenerationParamsForStubs);
+                case 'IMAGEN': // Changed from ImageGen
+                    imageUrl = await _generateImageWithImagen_stub(baseGenerationParamsForStubs); // Changed from ImageGen
                     break;
                 default:
                     throw new Error(`Unsupported image generation provider: ${imageGenerationProvider}`);
@@ -260,4 +263,3 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
     return {generatedImages: generatedImageUrls, promptUsed: actualPromptUsedForFirstImage };
   }
 );
-    
