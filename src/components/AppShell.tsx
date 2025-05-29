@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, UserCircle, ImageIcon, MessageSquare, BarChart2, Send, Settings, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'; // Added SheetHeader, SheetTitle
 import { cn } from '@/lib/utils';
 
 interface NavItem {
@@ -31,6 +31,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="p-4 border-b border-sidebar-border">
         <Link href="/" className="flex items-center gap-2 text-sidebar-foreground hover:text-sidebar-primary-foreground">
           <BarChart2 className="w-8 h-8 text-primary" />
+          {/* This h1 is the visible title. The SheetTitle below will be for accessibility. */}
           <h1 className="text-xl font-bold">BrandForge AI</h1>
         </Link>
       </div>
@@ -76,6 +77,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="p-0 w-64 bg-sidebar text-sidebar-foreground border-r-0">
+                {/* Add a SheetTitle for accessibility, visually hidden */}
+                <SheetHeader className="sr-only">
+                  <SheetTitle>Main Navigation Menu</SheetTitle>
+                </SheetHeader>
                 <SidebarContent />
               </SheetContent>
             </Sheet>
@@ -100,3 +105,4 @@ function UserMenu() {
   );
 }
 
+    
