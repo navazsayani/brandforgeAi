@@ -151,19 +151,24 @@ const generateImagesFlow = ai.defineFlow(
     for (let i = 0; i < numberOfImages; i++) {
         let textPromptContent = "";
         const industryContext = industry ? ` The brand operates in the ${industry} industry.` : "";
+        const compositionGuidance = "When depicting human figures as the primary subject, aim for a well-composed shot. Avoid unintentional or awkward cropping of faces or key body parts, ensuring the figure is presented naturally within the frame, unless the prompt specifically requests a close-up, a specific framing (e.g., 'headshot', 'upper body shot'), or artistic cropping.";
+
 
         if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
             console.log(`Using finalized text prompt for image ${i+1}: "${finalizedTextPrompt.substring(0,100)}..."`);
             textPromptContent = finalizedTextPrompt;
             // When finalizedTextPrompt is used, we assume it contains all necessary textual instructions.
-            // However, we still apply structural/control parameters like aspectRatio and seed if provided,
-            // unless the user has explicitly included them in their finalized prompt.
+            // Structural/control parameters like aspectRatio and seed are still applied by the system IF NOT explicitly mentioned in the finalized prompt.
             if (aspectRatio && !finalizedTextPrompt.toLowerCase().includes("aspect ratio")) {
               textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
             }
             if (seed !== undefined && !finalizedTextPrompt.toLowerCase().includes("seed:")) {
               textPromptContent += `\n\nUse seed: ${seed}.`;
             }
+            if (!finalizedTextPrompt.toLowerCase().includes("human figure") && !finalizedTextPrompt.toLowerCase().includes("crop")) { // Basic check
+                textPromptContent += `\n\n${compositionGuidance}`;
+            }
+
         } else {
             console.log(`Constructing prompt for image ${i+1} as no finalized prompt was provided or it was empty.`);
             if (!brandDescription || !imageStyle) {
@@ -189,6 +194,8 @@ The *design, appearance, theme, specific characteristics, and unique elements* o
 **Example of Interaction:**
 If the example image is a 'simple blue cotton t-shirt' (category: t-shirt), the Brand Description is 'luxury brand, minimalist ethos, inspired by serene nature, prefers organic materials', and the Desired Artistic Style is 'high-fashion product shot, muted earthy tones'.
 You should generate an image of a *luxury t-shirt made from organic-looking material, in muted earthy tones (e.g., moss green, stone grey, soft beige), shot in a high-fashion product style*. It should evoke serenity and minimalism. It should NOT be the original blue cotton t-shirt, nor should it default to a generic "luxury" color scheme like black and gold unless those colors are specifically requested or strongly implied by the *combination* of inputs.
+
+${compositionGuidance}
 `.trim();
             } else { // No example image
                 textPromptContent = `
@@ -196,6 +203,8 @@ Generate a new, high-quality, visually appealing image suitable for social media
 The image should be based on the following concept: "${brandDescription}".${industryContext}
 The desired artistic style for this new image is: "${imageStyle}". If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic.
 **Important Note on Color and Style**: Strive for visual variety that aligns with the brand description and artistic style. Avoid defaulting to a narrow or stereotypical color palette unless the inputs strongly and explicitly demand it.
+
+${compositionGuidance}
 `.trim();
             }
 
@@ -235,14 +244,15 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
                 textPrompt: textPromptContent,
             };
 
+            const finalPromptParts: ({text: string} | {media: {url: string}})[] = [];
+            if (exampleImage) { 
+                finalPromptParts.push({ media: { url: exampleImage } });
+            }
+            finalPromptParts.push({ text: textPromptContent }); 
+
             switch (imageGenerationProvider.toUpperCase()) {
                 case 'GEMINI':
-                    const finalPromptParts: ({text: string} | {media: {url: string}})[] = [];
-                    if (exampleImage) { 
-                        finalPromptParts.push({ media: { url: exampleImage } });
-                    }
-                    finalPromptParts.push({ text: textPromptContent }); 
-
+                    console.log("Attempting Gemini image generation with prompt parts:", JSON.stringify(finalPromptParts, null, 2));
                     imageUrl = await _generateImageWithGemini({
                         aiInstance: ai,
                         promptParts: finalPromptParts
@@ -251,8 +261,8 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
                 case 'LEONARDO_AI':
                     imageUrl = await _generateImageWithLeonardoAI_stub(baseGenerationParamsForStubs);
                     break;
-                case 'IMAGEN':
-                    imageUrl = await _generateImageWithImagen_stub(baseGenerationParamsForStubs);
+                case 'IMAGEN': // Changed from IMAGEGEN
+                    imageUrl = await _generateImageWithImagen_stub(baseGenerationParamsForStubs); // Changed from IMAGEGEN_stub
                     break;
                 default:
                     throw new Error(`Unsupported image generation provider: ${imageGenerationProvider}`);
@@ -273,3 +283,4 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
     return {generatedImages: generatedImageUrls, promptUsed: actualPromptUsedForFirstImage };
   }
 );
+
