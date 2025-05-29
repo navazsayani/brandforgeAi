@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FormDescription } from "@/components/ui/form"; // Added missing import
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2 } from 'lucide-react';
@@ -54,7 +55,7 @@ const blogTones = [
     { value: "Informative", label: "Informative" },
     { value: "Conversational", label: "Conversational" },
     { value: "Professional", label: "Professional" },
-    { value: "Witty", label: "Witty/Humorous" },
+    { value: "Witty/Humorous", label: "Witty/Humorous" },
     { value: "Persuasive", label: "Persuasive" },
     { value: "Storytelling", label: "Storytelling" },
     { value: "Technical", label: "Technical" },
@@ -100,7 +101,6 @@ export default function ContentStudioPage() {
           setSelectedImageStyle(brandData.imageStyle);
         }
       } else if (artisticStyles.length > 0 && selectedImageStyle !== artisticStyles[0].value) {
-        // If profile style is custom and not in presets, default to first preset
         setSelectedImageStyle(artisticStyles[0].value);
       }
     } else if (artisticStyles.length > 0 && selectedImageStyle !== artisticStyles[0].value) {
@@ -118,7 +118,7 @@ export default function ContentStudioPage() {
         const newImage: GeneratedImage = {
           id: `${new Date().toISOString()}-${Math.random().toString(36).substring(2, 9)}`, 
           src: url,
-          prompt: (document.querySelector('form textarea[name="brandDescription"]') as HTMLTextAreaElement)?.value || "", // Consider a more reliable way to get this
+          prompt: (document.querySelector('form textarea[name="brandDescription"]') as HTMLTextAreaElement)?.value || "",
           style: selectedImageStyle 
         };
         addGeneratedImage(newImage);
@@ -238,7 +238,6 @@ export default function ContentStudioPage() {
 
     const formData = new FormData(form);
     
-    // We only need specific fields for outline generation
     const outlineFormData = new FormData();
     outlineFormData.append("brandName", formData.get("brandName") || brandData?.brandName || "");
     outlineFormData.append("brandDescription", formData.get("blogBrandDescription") || brandData?.brandDescription || "");
@@ -438,7 +437,7 @@ export default function ContentStudioPage() {
                                     setSocialImageChoice('generated'); 
                                 } else if (!socialImageChoice && brandData?.exampleImage) {
                                     setSocialImageChoice('profile'); 
-                                } else if (!socialImageChoice) { // If no images available, default to null
+                                } else if (!socialImageChoice) { 
                                      setSocialImageChoice(null); 
                                 }
                             }}
@@ -495,7 +494,7 @@ export default function ContentStudioPage() {
                   
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                        <Label htmlFor="socialImageDescription" className="flex items-center"><UserSquare className="w-4 h-4 mr-2 text-primary" />Image Description {useImageForSocialPost ? '(Required if using image)' : '(Optional)'}</Label>
+                        <Label htmlFor="socialImageDescription" className="flex items-center"><UserSquare className="w-4 h-4 mr-2 text-primary" />Image Description {useImageForSocialPost ? '' : '(Optional)'}</Label>
                         {useImageForSocialPost && currentSocialImagePreviewUrl && (
                             <Button 
                                 type="button" 
@@ -512,7 +511,7 @@ export default function ContentStudioPage() {
                     <Textarea
                       id="socialImageDescription"
                       name="imageDescription"
-                      placeholder={useImageForSocialPost && currentSocialImagePreviewUrl ? "Describe the image you're posting (e.g., 'A vibrant photo of our new product'). Required if using an image." : "Optionally describe the theme or topic if not using an image."}
+                      placeholder={useImageForSocialPost && currentSocialImagePreviewUrl ? "Describe the image you're posting or use AI. Required if image used." : "Optionally describe the theme if not using an image."}
                       rows={3}
                       required={useImageForSocialPost && !!currentSocialImagePreviewUrl} 
                     />
@@ -538,7 +537,7 @@ export default function ContentStudioPage() {
                   <SubmitButton className="w-full" loadingText="Generating Content..." disabled={socialSubmitDisabled}>Generate Social Post</SubmitButton>
                 </CardFooter>
               </form>
-              {generatedSocialPost && (
+                {generatedSocialPost && (
                  <Card className="mt-6 mx-4 mb-4 shadow-sm">
                     <CardHeader>
                         <CardTitle className="text-xl flex items-center">
@@ -551,7 +550,7 @@ export default function ContentStudioPage() {
                              <div className="mb-4">
                                 <p className="text-sm font-medium mb-1 text-muted-foreground">Associated Image:</p>
                                 <div className="relative w-32 h-32 border rounded-md overflow-hidden">
-                                    <NextImage src={generatedSocialPost.imageSrc} alt="Social post image" layout="fill" objectFit="cover" data-ai-hint="social content" />
+                                    <NextImage src={generatedSocialPost.imageSrc} alt="Social post image" fill style={{objectFit: 'cover'}} data-ai-hint="social content" />
                                 </div>
                             </div>
                         )}
@@ -602,7 +601,7 @@ export default function ContentStudioPage() {
                     <Label htmlFor="blogBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
                     <Textarea
                       id="blogBrandDescription"
-                      name="blogBrandDescription" // Ensure distinct name if using for outline too
+                      name="blogBrandDescription" 
                       defaultValue={brandData?.brandDescription || ""}
                       placeholder="Detailed brand description"
                       rows={3}
@@ -613,7 +612,7 @@ export default function ContentStudioPage() {
                     <Label htmlFor="blogKeywords" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Keywords (from Profile)</Label>
                     <Input
                       id="blogKeywords"
-                      name="blogKeywords" // Ensure distinct name
+                      name="blogKeywords" 
                       defaultValue={brandData?.targetKeywords || ""}
                       placeholder="Comma-separated keywords (e.g., AI, marketing, branding)"
                       required
@@ -623,7 +622,7 @@ export default function ContentStudioPage() {
                       <Label htmlFor="blogWebsiteUrl" className="flex items-center mb-1"><Globe className="w-4 h-4 mr-2 text-primary" />Website URL (Optional, for SEO & Outline)</Label>
                       <Input
                         id="blogWebsiteUrl"
-                        name="blogWebsiteUrl" // Ensure distinct name
+                        name="blogWebsiteUrl" 
                         defaultValue={brandData?.websiteUrl || ""}
                         placeholder="https://www.example.com"
                       />
@@ -689,7 +688,7 @@ export default function ContentStudioPage() {
                   <SubmitButton className="w-full" loadingText="Generating Blog..." disabled={isGeneratingOutline || !generatedBlogOutline.trim()}>Generate Blog Post</SubmitButton>
                 </CardFooter>
               </form>
-              {generatedBlogPost && (
+               {generatedBlogPost && (
                  <Card className="mt-6 mx-4 mb-4 shadow-sm">
                     <CardHeader>
                         <CardTitle className="text-xl flex items-center">
@@ -735,3 +734,6 @@ export default function ContentStudioPage() {
     </AppShell>
   );
 }
+
+
+    
