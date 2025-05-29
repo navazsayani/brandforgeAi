@@ -16,7 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { FormDescription } from "@/components/ui/form";
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2 } from 'lucide-react';
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Tag } from 'lucide-react';
 import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
@@ -118,7 +118,7 @@ export default function ContentStudioPage() {
         const newImage: GeneratedImage = {
           id: `${new Date().toISOString()}-${Math.random().toString(36).substring(2, 9)}`, 
           src: url,
-          prompt: (document.querySelector('form textarea[name="brandDescription"]') as HTMLTextAreaElement)?.value || "", // Consider passing prompt explicitly from form
+          prompt: (document.querySelector('form textarea[name="brandDescription"]') as HTMLTextAreaElement)?.value || "", 
           style: selectedImageStyle 
         };
         addGeneratedImage(newImage);
@@ -298,7 +298,7 @@ export default function ContentStudioPage() {
                   </div>
                   <div>
                     <Label htmlFor="imageGenImageStyleSelect" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Image Style</Label>
-                     <Select name="imageStyle" required value={selectedImageStyle} onValueChange={setSelectedImageStyle}>
+                     <Select name="imageStyle" required value={selectedImageStyle} onValueChange={setSelectedImageStyle} >
                         <SelectTrigger id="imageGenImageStyleSelect">
                             <SelectValue placeholder="Select image style" />
                         </SelectTrigger>
@@ -736,3 +736,4 @@ export default function ContentStudioPage() {
     </AppShell>
   );
 }
+
