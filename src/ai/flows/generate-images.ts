@@ -37,6 +37,7 @@ const GenerateImagesInputSchema = z.object({
     .describe("The number of images to generate in this batch (1-4)."),
   negativePrompt: z.string().optional().describe("Elements to avoid in the generated image."),
   seed: z.number().int().optional().describe("An optional seed for image generation to promote reproducibility."),
+  finalizedTextPrompt: z.string().optional().describe("A complete, user-edited text prompt that should be used directly for image generation, potentially overriding constructed prompts."),
 });
 export type GenerateImagesInput = z.infer<typeof GenerateImagesInputSchema>;
 
@@ -135,11 +136,8 @@ const generateImagesFlow = ai.defineFlow(
       numberOfImages = 1,
       negativePrompt,
       seed,
+      finalizedTextPrompt,
     } = input;
-
-    if (!brandDescription || !imageStyle) {
-        throw new Error("Brand description and image style are required for image generation.");
-    }
     
     const generatedImageUrls: string[] = [];
     const imageGenerationProvider = process.env.IMAGE_GENERATION_PROVIDER || 'GEMINI';
@@ -147,10 +145,16 @@ const generateImagesFlow = ai.defineFlow(
 
     for (let i = 0; i < numberOfImages; i++) {
         let textPromptContent = "";
-        let industryContext = industry ? ` The brand operates in the ${industry} industry.` : "";
+        const industryContext = industry ? ` The brand operates in the ${industry} industry.` : "";
 
-        if (exampleImage) { 
-            textPromptContent = `
+        if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
+            textPromptContent = finalizedTextPrompt;
+        } else {
+            if (!brandDescription || !imageStyle) {
+                throw new Error("Brand description and image style are required if not providing a finalized text prompt.");
+            }
+            if (exampleImage) { 
+                textPromptContent = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
 
 The provided example image (sent first) serves ONE primary purpose: to identify the *category* of the item depicted (e.g., 'a handbag', 'a t-shirt', 'a piece of furniture', 'a pair of shoes').
@@ -165,27 +169,30 @@ The *design, appearance, theme, specific characteristics, and unique elements* o
 
 For instance, if the example image is a 'simple blue cotton t-shirt' (category: t-shirt), and the Brand Description is 'luxury, silk, minimalist, black and gold accents for a high-end fashion brand' and the Desired Artistic Style is 'high-fashion product shot', you should generate an image of a *luxury black silk t-shirt with gold accents, shot in a high-fashion product style*. It should *not* look like the original blue cotton t-shirt.
 `.trim();
-        } else { 
-            textPromptContent = `
+            } else { 
+                textPromptContent = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
 The image should be based on the following concept: "${brandDescription}".${industryContext}
 The desired artistic style for this new image is: "${imageStyle}". If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic.
 `.trim();
+            }
+            // Append negative prompt only if not using a finalized prompt (as it might already be included)
+            if (negativePrompt) {
+                textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
+            }
         }
-
+        
+        // Aspect ratio and seed are structural, append them even if finalizedTextPrompt is used,
+        // assuming the user might not have added these specifically or wants them enforced.
         if (aspectRatio) {
           textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
         }
-        
         if (seed !== undefined) {
           textPromptContent += `\n\nUse seed: ${seed}.`;
         }
-
-        if (negativePrompt) {
-            textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
-        }
         
-        if (numberOfImages > 1) {
+        if (numberOfImages > 1 && (!finalizedTextPrompt || !finalizedTextPrompt.toLowerCase().includes("batch generation"))) {
+            // Add batch instruction if multiple images and not already in a custom prompt
             textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
         }
 
@@ -198,9 +205,9 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
         try {
             let imageUrl = "";
             const baseGenerationParams = {
-                brandDescription,
+                brandDescription: brandDescription || "", // Ensure it's not undefined
                 industry,
-                imageStyle,
+                imageStyle: imageStyle || "", // Ensure it's not undefined
                 exampleImage,
                 aspectRatio,
                 negativePrompt,
@@ -244,3 +251,4 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
   }
 );
 
+    

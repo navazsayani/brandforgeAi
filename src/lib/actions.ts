@@ -27,24 +27,27 @@ export async function handleGenerateImagesAction(
     const negativePrompt = formData.get("negativePrompt") as string | undefined;
     const seedStr = formData.get("seed") as string | undefined;
     const seed = seedStr && !isNaN(parseInt(seedStr, 10)) ? parseInt(seedStr, 10) : undefined;
+    const finalizedTextPrompt = formData.get("finalizedTextPrompt") as string | undefined;
 
 
     const input: GenerateImagesInput = {
       brandDescription: formData.get("brandDescription") as string,
       industry: formData.get("industry") as string | undefined,
-      imageStyle: formData.get("imageStyle") as string,
+      imageStyle: formData.get("imageStyle") as string, // This is expected to be preset + custom notes combined by client
       exampleImage: formData.get("exampleImage") as string | undefined,
       aspectRatio: formData.get("aspectRatio") as string | undefined,
       numberOfImages: numberOfImages,
       negativePrompt: negativePrompt === "" ? undefined : negativePrompt,
       seed: seed,
+      finalizedTextPrompt: finalizedTextPrompt === "" ? undefined : finalizedTextPrompt,
     };
 
-    if (!input.brandDescription || !input.imageStyle) {
-      return { error: "Brand description and image style are required." };
+    // Basic validation for core fields if no finalized prompt is given
+    if (!input.finalizedTextPrompt && (!input.brandDescription || !input.imageStyle)) {
+      return { error: "Brand description and image style are required if not providing a finalized text prompt." };
     }
     if (input.exampleImage === "") delete input.exampleImage;
-    if (input.aspectRatio === "" || input.aspectRatio === undefined) delete input.aspectRatio;
+    if (input.aspectRatio === "" || input.aspectRatio === undefined) delete input.aspectRatio; // Ensure undefined if empty
     if (input.industry === "") delete input.industry;
     
     const result = await generateImages(input);
@@ -159,7 +162,8 @@ export async function handleGenerateBlogContentAction(
 
     const result = await generateBlogContent(input);
     return { data: result, message: "Blog content generated!" };
-  } catch (e: any) {
+  } catch (e: any)
+ {
     console.error("Error in handleGenerateBlogContentAction:", e);
     return { error: e.message || "Failed to generate blog content." };
   }
@@ -225,3 +229,4 @@ export async function handleExtractBrandInfoFromUrlAction(
     }
 }
 
+    

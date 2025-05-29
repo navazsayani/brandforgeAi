@@ -16,12 +16,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { FormDescription } from "@/components/ui/form";
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Tag, Edit, Briefcase } from 'lucide-react';
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Tag, Edit, Briefcase, Eye } from 'lucide-react';
 import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
 import type { DescribeImageOutput } from "@/ai/flows/describe-image-flow";
 import type { GenerateBlogOutlineOutput } from "@/ai/flows/generate-blog-outline-flow";
+import type { GenerateImagesInput } from '@/ai/flows/generate-images';
 import { cn } from '@/lib/utils';
 
 const initialImageFormState: FormState<{ generatedImages: string[]; promptUsed: string; }> = { error: undefined, data: undefined, message: undefined };
@@ -98,6 +99,12 @@ export default function ContentStudioPage() {
     return brandData?.imageStyleNotes || "";
   });
 
+  // State for prompt preview
+  const [isPreviewingPrompt, setIsPreviewingPrompt] = useState<boolean>(false);
+  const [currentTextPromptForEditing, setCurrentTextPromptForEditing] = useState<string>("");
+  const [formSnapshot, setFormSnapshot] = useState<Partial<GenerateImagesInput> | null>(null);
+
+
   useEffect(() => {
     if (brandData) {
         setSelectedImageStylePreset(brandData.imageStyle || (artisticStyles.length > 0 ? artisticStyles[0].value : ""));
@@ -129,8 +136,12 @@ export default function ContentStudioPage() {
         addGeneratedImage(newImage);
       });
       toast({ title: "Success", description: imageState.message });
+      setIsPreviewingPrompt(false); // Hide prompt preview after successful generation
     }
-    if (imageState.error) toast({ title: "Error", description: imageState.error, variant: "destructive" });
+    if (imageState.error) {
+      toast({ title: "Error", description: imageState.error, variant: "destructive" });
+      // Optionally keep prompt preview open on error: setIsPreviewingPrompt(true);
+    }
   }, [imageState, toast, addGeneratedImage, selectedImageStylePreset, customStyleNotesInput]);
 
   useEffect(() => {
@@ -265,21 +276,108 @@ export default function ContentStudioPage() {
     });
   };
 
-  const handleImageGenerationSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handlePreviewPromptClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    
-    let combinedStyle = selectedImageStylePreset;
-    if (customStyleNotesInput.trim()) {
-        combinedStyle += ". " + customStyleNotesInput.trim();
-    }
-    formData.set("imageStyle", combinedStyle); 
-    formData.set("industry", brandData?.industry || "");
-    formData.set("exampleImage", currentExampleImageForGen);
+    const formElement = document.getElementById('imageGenerationForm') as HTMLFormElement;
+    if (!formElement) return;
 
+    const formData = new FormData(formElement);
+    const brandDesc = formData.get("brandDescription") as string || brandData?.brandDescription || "";
+    const imgStylePreset = selectedImageStylePreset;
+    const customNotes = customStyleNotesInput;
+    const negPrompt = formData.get("negativePrompt") as string || "";
+    const aspect = selectedAspectRatio;
+    const numImages = parseInt(numberOfImagesToGenerate, 10);
+    const seedValueStr = formData.get("seed") as string;
+    const seedValue = seedValueStr ? parseInt(seedValueStr, 10) : undefined;
+    const industryValue = brandData?.industry || "";
+    const exampleImg = currentExampleImageForGen;
+
+    let combinedStyle = imgStylePreset;
+    if (customNotes.trim()) {
+        combinedStyle += ". " + customNotes.trim();
+    }
+
+    // Client-side prompt construction (simplified version of backend logic)
+    let textPrompt = "";
+    const industryContext = industryValue ? ` The brand operates in the ${industryValue} industry.` : "";
+
+    if (exampleImg) {
+        textPrompt = `
+Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
+
+The provided example image (sent first) serves ONE primary purpose: to identify the *category* of the item depicted (e.g., 'a handbag', 'a t-shirt', 'a piece of furniture', 'a pair of shoes').
+
+Your task is to generate a *completely new item* belonging to this *same category*.
+
+The *design, appearance, theme, specific characteristics, and unique elements* of this NEW item must be **primarily and heavily derived** from the following inputs:
+1.  **Brand Description**: "${brandDesc}"${industryContext} - This is the primary driver for the core design, theme, specific characteristics, and unique elements of the new item.
+2.  **Desired Artistic Style**: "${combinedStyle}" - This dictates the rendering style of the new item. If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic and look like a real product photo.
+
+**Crucially, do NOT replicate or closely imitate the visual design details (color, pattern, specific shape elements beyond the basic category identification, embellishments) of the provided example image.** The example image is *only* for determining the item category. The new image should look like a distinct product that fits the brand description and desired artistic style.
+
+For instance, if the example image is a 'simple blue cotton t-shirt' (category: t-shirt), and the Brand Description is 'luxury, silk, minimalist, black and gold accents for a high-end fashion brand' and the Desired Artistic Style is 'high-fashion product shot', you should generate an image of a *luxury black silk t-shirt with gold accents, shot in a high-fashion product style*. It should *not* look like the original blue cotton t-shirt.
+`.trim();
+    } else {
+        textPrompt = `
+Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
+The image should be based on the following concept: "${brandDesc}".${industryContext}
+The desired artistic style for this new image is: "${combinedStyle}". If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic.
+`.trim();
+    }
+
+    if (aspect) {
+        textPrompt += `\n\nThe final image should have an aspect ratio of ${aspect} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
+    }
+    if (seedValue !== undefined) {
+        textPrompt += `\n\nUse seed: ${seedValue}.`;
+    }
+    if (negPrompt) {
+        textPrompt += `\n\nAvoid the following elements or characteristics in the image: ${negPrompt}.`;
+    }
+    if (numImages > 1) {
+        textPrompt += `\n\nImportant for batch generation: You are generating image 1 of a set of ${numImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (1/${numImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
+    }
+    
+    setCurrentTextPromptForEditing(textPrompt);
+    setFormSnapshot({
+        brandDescription: brandDesc,
+        industry: industryValue,
+        imageStyle: combinedStyle, // Send combined style as the primary style
+        exampleImage: exampleImg,
+        aspectRatio: aspect,
+        numberOfImages: numImages,
+        negativePrompt: negPrompt,
+        seed: seedValue,
+    });
+    setIsPreviewingPrompt(true);
+  };
+
+  const handleGenerateWithEditedPrompt = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData();
+
+    if (!formSnapshot) {
+        toast({ title: "Error", description: "Form data snapshot is missing. Please prepare prompt again.", variant: "destructive"});
+        return;
+    }
+
+    // Pass the potentially edited prompt
+    formData.append("finalizedTextPrompt", currentTextPromptForEditing);
+    
+    // Pass other necessary fields from the snapshot
+    formData.append("brandDescription", formSnapshot.brandDescription || "");
+    formData.append("industry", formSnapshot.industry || "");
+    // imageStyle from formSnapshot already contains preset + notes, but we send finalizedTextPrompt which might override this usage in backend
+    formData.append("imageStyle", formSnapshot.imageStyle || selectedImageStylePreset); // Fallback to preset if snapshot is weird
+    if (formSnapshot.exampleImage) formData.append("exampleImage", formSnapshot.exampleImage);
+    if (formSnapshot.aspectRatio) formData.append("aspectRatio", formSnapshot.aspectRatio);
+    formData.append("numberOfImages", String(formSnapshot.numberOfImages || 1));
+    if (formSnapshot.negativePrompt) formData.append("negativePrompt", formSnapshot.negativePrompt);
+    if (formSnapshot.seed !== undefined) formData.append("seed", String(formSnapshot.seed));
 
     startTransition(() => {
-      imageAction(formData);
+        imageAction(formData);
     });
   };
 
@@ -313,149 +411,177 @@ export default function ContentStudioPage() {
                 <CardTitle>Generate Brand Images</CardTitle>
                 <CardDescription>Create unique images based on your brand's aesthetics. Uses brand description, industry, and style. Optionally use an example image from your Brand Profile.</CardDescription>
               </CardHeader>
-              <form onSubmit={handleImageGenerationSubmit} id="imageGenerationForm">
-                <input type="hidden" name="industry" value={brandData?.industry || ""} />
-                <input type="hidden" name="exampleImage" value={currentExampleImageForGen} />
-                <CardContent className="space-y-6">
-                  <div>
-                    <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
-                    <Textarea
-                      id="imageGenBrandDescription"
-                      name="brandDescription"
-                      defaultValue={brandData?.brandDescription || ""}
-                      placeholder="Detailed description of the brand and its values."
-                      rows={3}
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="imageGenImageStylePresetSelect" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Image Style Preset</Label>
-                     <Select value={selectedImageStylePreset} onValueChange={setSelectedImageStylePreset} name="imageStylePreset">
-                        <SelectTrigger id="imageGenImageStylePresetSelect">
-                            <SelectValue placeholder="Select image style preset" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectGroup>
-                                <SelectLabel>Artistic Styles</SelectLabel>
-                                {artisticStyles.map(style => (
-                                    <SelectItem key={style.value} value={style.value}>{style.label}</SelectItem>
-                                ))}
-                            </SelectGroup>
-                        </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Current profile preset: {brandData?.imageStyle ? (artisticStyles.find(s => s.value === brandData.imageStyle)?.label || `Custom: ${brandData.imageStyle}`) : 'Not set'}
-                    </p>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="imageGenCustomStyleNotes" className="flex items-center mb-1"><Edit className="w-4 h-4 mr-2 text-primary" />Custom Style Notes/Overrides (Optional)</Label>
-                    <Textarea
-                      id="imageGenCustomStyleNotes"
-                      name="imageStyleNotes" // Ensure this name is unique if used directly in form data, or handle combination manually
-                      value={customStyleNotesInput}
-                      onChange={(e) => setCustomStyleNotesInput(e.target.value)}
-                      placeholder="E.g., 'add a touch of vintage', 'focus on metallic textures', 'use a desaturated color palette'."
-                      rows={2}
-                    />
-                     <p className="text-xs text-muted-foreground mt-1">
-                      Current profile notes: {brandData?.imageStyleNotes || 'None'}
-                    </p>
-                  </div>
-                  <input type="hidden" name="imageStyle" />
-
-
-                  <div>
-                    <Label htmlFor="imageGenExampleImageSelector" className="flex items-center mb-1"><ImageIcon className="w-4 h-4 mr-2 text-primary" />Example Image from Profile (Optional)</Label>
-                    {brandData?.exampleImages && brandData.exampleImages.length > 0 ? (
-                        <div className="mt-2">
-                            <p className="text-xs text-muted-foreground mb-1">
-                                {brandData.exampleImages.length > 1 ? "Select Profile Image to Use as Reference:" : "Using Profile Image as Reference:"}
-                            </p>
-                            <div className="flex space-x-2 overflow-x-auto pb-2">
-                                {brandData.exampleImages.map((imgSrc, index) => (
-                                    <button
-                                        type="button"
-                                        key={`gen-profile-${index}`}
-                                        onClick={() => setSelectedProfileImageIndexForGen(index)}
-                                        disabled={brandData.exampleImages && brandData.exampleImages.length <=1 && selectedProfileImageIndexForGen === index}
-                                        className={cn(
-                                            "w-20 h-20 rounded border-2 p-0.5 flex-shrink-0 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring",
-                                            selectedProfileImageIndexForGen === index ? "border-primary ring-2 ring-primary" : "border-border",
-                                            brandData.exampleImages && brandData.exampleImages.length <=1 ? "cursor-default opacity-70" : ""
-                                        )}
-                                    >
-                                        <NextImage src={imgSrc} alt={`Example ${index + 1}`} width={76} height={76} className="object-contain w-full h-full rounded-sm" data-ai-hint="style example"/>
-                                    </button>
-                                ))}
-                            </div>
-                            {currentExampleImageForGen ? (
-                                <p className="text-xs text-muted-foreground mt-1">Using image {selectedProfileImageIndexForGen !== null ? selectedProfileImageIndexForGen + 1 : '1'} as reference.</p>
-                            ): (
-                                <p className="text-xs text-muted-foreground mt-1">Click an image above to select it as reference.</p>
-                            )}
-                        </div>
-                    ) : (
-                        <p className="text-xs text-muted-foreground mt-1">No example images in Brand Profile to select.</p>
-                    )}
-                  </div>
-
-                   <div>
-                    <Label htmlFor="imageGenNegativePrompt" className="flex items-center mb-1"><CircleSlash className="w-4 h-4 mr-2 text-primary" />Negative Prompt (Optional)</Label>
-                    <Textarea
-                      id="imageGenNegativePrompt"
-                      name="negativePrompt"
-                      placeholder="E.g., avoid text, ugly, disfigured, low quality"
-                      rows={2}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
+              {!isPreviewingPrompt ? (
+                <form id="imageGenerationForm"> {/* No action prop here, onSubmit handled by button */}
+                  <CardContent className="space-y-6">
                     <div>
-                        <Label htmlFor="imageGenAspectRatioSelect" className="flex items-center mb-1"><Ratio className="w-4 h-4 mr-2 text-primary" />Aspect Ratio</Label>
-                        <Select name="aspectRatio" required value={selectedAspectRatio} onValueChange={setSelectedAspectRatio}>
-                        <SelectTrigger id="imageGenAspectRatioSelect">
-                            <SelectValue placeholder="Select aspect ratio" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="1:1">Square (1:1)</SelectItem>
-                            <SelectItem value="4:5">Portrait (4:5)</SelectItem>
-                            <SelectItem value="16:9">Landscape (16:9)</SelectItem>
-                            <SelectItem value="9:16">Story/Reel (9:16)</SelectItem>
-                        </SelectContent>
-                        </Select>
+                      <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
+                      <Textarea
+                        id="imageGenBrandDescription"
+                        name="brandDescription"
+                        defaultValue={brandData?.brandDescription || ""}
+                        placeholder="Detailed description of the brand and its values."
+                        rows={3}
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="imageGenImageStylePresetSelect" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Image Style Preset</Label>
+                      <Select value={selectedImageStylePreset} onValueChange={setSelectedImageStylePreset} name="imageStylePreset">
+                          <SelectTrigger id="imageGenImageStylePresetSelect">
+                              <SelectValue placeholder="Select image style preset" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              <SelectGroup>
+                                  <SelectLabel>Artistic Styles</SelectLabel>
+                                  {artisticStyles.map(style => (
+                                      <SelectItem key={style.value} value={style.value}>{style.label}</SelectItem>
+                                  ))}
+                              </SelectGroup>
+                          </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Current profile preset: {brandData?.imageStyle ? (artisticStyles.find(s => s.value === brandData.imageStyle)?.label || `Custom: ${brandData.imageStyle}`) : 'Not set'}
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="imageGenCustomStyleNotes" className="flex items-center mb-1"><Edit className="w-4 h-4 mr-2 text-primary" />Custom Style Notes/Overrides (Optional)</Label>
+                      <Textarea
+                        id="imageGenCustomStyleNotes"
+                        name="imageStyleNotes"
+                        value={customStyleNotesInput}
+                        onChange={(e) => setCustomStyleNotesInput(e.target.value)}
+                        placeholder="E.g., 'add a touch of vintage', 'focus on metallic textures', 'use a desaturated color palette'."
+                        rows={2}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Current profile notes: {brandData?.imageStyleNotes || 'None'}
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="imageGenExampleImageSelector" className="flex items-center mb-1"><ImageIcon className="w-4 h-4 mr-2 text-primary" />Example Image from Profile (Optional)</Label>
+                      {brandData?.exampleImages && brandData.exampleImages.length > 0 ? (
+                          <div className="mt-2">
+                              <p className="text-xs text-muted-foreground mb-1">
+                                  {brandData.exampleImages.length > 1 ? "Select Profile Image to Use as Reference:" : "Using Profile Image as Reference:"}
+                              </p>
+                              <div className="flex space-x-2 overflow-x-auto pb-2">
+                                  {brandData.exampleImages.map((imgSrc, index) => (
+                                      <button
+                                          type="button"
+                                          key={`gen-profile-${index}`}
+                                          onClick={() => setSelectedProfileImageIndexForGen(index)}
+                                          disabled={brandData.exampleImages && brandData.exampleImages.length <=1 && selectedProfileImageIndexForGen === index}
+                                          className={cn(
+                                              "w-20 h-20 rounded border-2 p-0.5 flex-shrink-0 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring",
+                                              selectedProfileImageIndexForGen === index ? "border-primary ring-2 ring-primary" : "border-border",
+                                              brandData.exampleImages && brandData.exampleImages.length <=1 ? "cursor-default opacity-70" : ""
+                                          )}
+                                      >
+                                          <NextImage src={imgSrc} alt={`Example ${index + 1}`} width={76} height={76} className="object-contain w-full h-full rounded-sm" data-ai-hint="style example"/>
+                                      </button>
+                                  ))}
+                              </div>
+                              {currentExampleImageForGen ? (
+                                  <p className="text-xs text-muted-foreground mt-1">Using image {selectedProfileImageIndexForGen !== null ? selectedProfileImageIndexForGen + 1 : '1'} as reference.</p>
+                              ): (
+                                  <p className="text-xs text-muted-foreground mt-1">Click an image above to select it as reference.</p>
+                              )}
+                          </div>
+                      ) : (
+                          <p className="text-xs text-muted-foreground mt-1">No example images in Brand Profile to select.</p>
+                      )}
+                       {/* Hidden input for exampleImage, value set by currentExampleImageForGen */}
+                      <input type="hidden" name="exampleImage" value={currentExampleImageForGen} />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="imageGenNegativePrompt" className="flex items-center mb-1"><CircleSlash className="w-4 h-4 mr-2 text-primary" />Negative Prompt (Optional)</Label>
+                      <Textarea
+                        id="imageGenNegativePrompt"
+                        name="negativePrompt"
+                        placeholder="E.g., avoid text, ugly, disfigured, low quality"
+                        rows={2}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                          <Label htmlFor="imageGenAspectRatioSelect" className="flex items-center mb-1"><Ratio className="w-4 h-4 mr-2 text-primary" />Aspect Ratio</Label>
+                          <Select name="aspectRatio" required value={selectedAspectRatio} onValueChange={setSelectedAspectRatio}>
+                          <SelectTrigger id="imageGenAspectRatioSelect">
+                              <SelectValue placeholder="Select aspect ratio" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="1:1">Square (1:1)</SelectItem>
+                              <SelectItem value="4:5">Portrait (4:5)</SelectItem>
+                              <SelectItem value="16:9">Landscape (16:9)</SelectItem>
+                              <SelectItem value="9:16">Story/Reel (9:16)</SelectItem>
+                          </SelectContent>
+                          </Select>
+                      </div>
+                      <div>
+                          <Label htmlFor="numberOfImagesSelect" className="flex items-center mb-1"><Images className="w-4 h-4 mr-2 text-primary" />Number of Images</Label>
+                          <Select name="numberOfImages" value={numberOfImagesToGenerate} onValueChange={setNumberOfImagesToGenerate}>
+                              <SelectTrigger id="numberOfImagesSelect">
+                                  <SelectValue placeholder="Select number" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  {[1, 2, 3, 4].map(num => (
+                                      <SelectItem key={num} value={String(num)}>{num}</SelectItem>
+                                  ))}
+                              </SelectContent>
+                          </Select>
+                      </div>
                     </div>
                     <div>
-                        <Label htmlFor="numberOfImagesSelect" className="flex items-center mb-1"><Images className="w-4 h-4 mr-2 text-primary" />Number of Images</Label>
-                        <Select name="numberOfImages" value={numberOfImagesToGenerate} onValueChange={setNumberOfImagesToGenerate}>
-                            <SelectTrigger id="numberOfImagesSelect">
-                                <SelectValue placeholder="Select number" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {[1, 2, 3, 4].map(num => (
-                                    <SelectItem key={num} value={String(num)}>{num}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                      <Label htmlFor="imageGenSeed" className="flex items-center mb-1"><Pipette className="w-4 h-4 mr-2 text-primary" />Seed (Optional)</Label>
+                      <Input
+                        id="imageGenSeed"
+                        name="seed"
+                        type="number"
+                        placeholder="Enter a number for reproducible results"
+                        min="0"
+                      />
                     </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="imageGenSeed" className="flex items-center mb-1"><Pipette className="w-4 h-4 mr-2 text-primary" />Seed (Optional)</Label>
-                    <Input
-                      id="imageGenSeed"
-                      name="seed"
-                      type="number"
-                      placeholder="Enter a number for reproducible results"
-                      min="0"
-                    />
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <SubmitButton className="w-full" loadingText={parseInt(numberOfImagesToGenerate) > 1 ? "Generating Images..." : "Generating Image..."}>
-                    Generate {parseInt(numberOfImagesToGenerate) > 1 ? `${numberOfImagesToGenerate} Images` : "Image"}
-                  </SubmitButton>
-                </CardFooter>
-              </form>
+                  </CardContent>
+                  <CardFooter>
+                    <Button type="button" onClick={handlePreviewPromptClick} className="w-full">
+                        <Eye className="mr-2 h-4 w-4" /> Preview Prompt
+                    </Button>
+                  </CardFooter>
+                </form>
+              ) : (
+                <form onSubmit={handleGenerateWithEditedPrompt}>
+                  <CardContent className="space-y-6">
+                    <div>
+                      <Label htmlFor="editablePromptTextarea" className="flex items-center mb-1"><Edit className="w-4 h-4 mr-2 text-primary" />Final Prompt (Editable)</Label>
+                      <Textarea
+                        id="editablePromptTextarea"
+                        value={currentTextPromptForEditing}
+                        onChange={(e) => setCurrentTextPromptForEditing(e.target.value)}
+                        rows={10}
+                        className="font-mono text-sm"
+                        placeholder="The constructed prompt will appear here. You can edit it before generation."
+                      />
+                       <p className="text-xs text-muted-foreground mt-1">
+                        Note: Aspect ratio, seed, and negative prompt instructions are appended by the system if not already part of your edited prompt.
+                       </p>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex flex-col sm:flex-row gap-2">
+                    <Button type="button" variant="outline" onClick={() => setIsPreviewingPrompt(false)} className="w-full sm:w-auto">
+                        Back to Edit Fields
+                    </Button>
+                    <SubmitButton className="w-full sm:flex-1" loadingText={parseInt(formSnapshot?.numberOfImages?.toString() || "1") > 1 ? "Generating Images..." : "Generating Image..."}>
+                        Generate {parseInt(formSnapshot?.numberOfImages?.toString() || "1") > 1 ? `${formSnapshot?.numberOfImages} Images` : "Image"} with This Prompt
+                    </SubmitButton>
+                  </CardFooter>
+                </form>
+              )}
+
               {lastSuccessfulGeneratedImageUrls.length > 0 && (
                 <Card className="mt-6 mx-4 mb-4 shadow-sm">
                     <CardHeader>
@@ -479,13 +605,13 @@ export default function ContentStudioPage() {
                       </div>
                       {lastUsedImageGenPrompt && (
                         <div className="mt-4">
-                            <Label htmlFor="usedImagePromptDisplay" className="flex items-center mb-1 text-sm font-medium"><FileText className="w-4 h-4 mr-2 text-primary" />Prompt Used (Editable for Reference):</Label>
+                            <Label htmlFor="usedImagePromptDisplay" className="flex items-center mb-1 text-sm font-medium"><FileText className="w-4 h-4 mr-2 text-primary" />Prompt Used:</Label>
                             <Textarea
                                 id="usedImagePromptDisplay"
                                 value={lastUsedImageGenPrompt}
                                 onChange={(e) => setLastUsedImageGenPrompt(e.target.value)}
-                                rows={Math.min(10, lastUsedImageGenPrompt.split('\n').length + 1)}
-                                className="text-xs bg-muted/50"
+                                rows={Math.min(10, (lastUsedImageGenPrompt.match(/\n/g) || []).length + 2)}
+                                className="text-xs bg-muted/50 font-mono"
                                 placeholder="The prompt used for generation will appear here. You can edit it for your reference or to copy elsewhere."
                             />
                              <Button variant="ghost" size="sm" onClick={() => copyToClipboard(lastUsedImageGenPrompt, "Prompt")} className="mt-1 text-muted-foreground hover:text-primary">
@@ -580,7 +706,7 @@ export default function ContentStudioPage() {
                                         </button>
                                     ))}
                                 </div>
-                                {selectedProfileImageIndexForSocial !== null && (
+                                {selectedProfileImageIndexForSocial !== null && brandData.exampleImages[selectedProfileImageIndexForSocial] && (
                                   <p className="text-xs text-muted-foreground mt-1">Using image {selectedProfileImageIndexForSocial + 1} from profile.</p>
                                 )}
                              </div>
@@ -705,9 +831,7 @@ export default function ContentStudioPage() {
                 <CardDescription>Generate SEO-friendly blog posts. Define an outline, choose a tone, and let AI write the content. Uses brand description and industry.</CardDescription>
               </CardHeader>
               <form action={blogAction}>
-                {/* Hidden inputs to pass brand data to the action */}
                 <input type="hidden" name="industry" value={brandData?.industry || ""} />
-
                 <CardContent className="space-y-6">
                   <div>
                     <Label htmlFor="blogBrandName" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Name (from Profile)</Label>
@@ -856,5 +980,6 @@ export default function ContentStudioPage() {
     </AppShell>
   );
 }
+    
 
     
