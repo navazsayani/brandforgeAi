@@ -22,6 +22,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
 import type { DescribeImageOutput } from "@/ai/flows/describe-image-flow";
 import type { GenerateBlogOutlineOutput } from "@/ai/flows/generate-blog-outline-flow";
+import { cn } from '@/lib/utils';
 
 
 const initialImageFormState: FormState<string[]> = { error: undefined, data: undefined, message: undefined };
@@ -87,6 +88,21 @@ export default function ContentStudioPage() {
   const [isGeneratingDescription, setIsGeneratingDescription] = useState<boolean>(false);
   const [isGeneratingOutline, setIsGeneratingOutline] = useState<boolean>(false);
   
+  const [selectedProfileImageIndexForGen, setSelectedProfileImageIndexForGen] = useState<number | null>(null);
+  const [selectedProfileImageIndexForSocial, setSelectedProfileImageIndexForSocial] = useState<number | null>(null);
+
+
+  useEffect(() => {
+    if (brandData?.exampleImages && brandData.exampleImages.length > 0) {
+      setSelectedProfileImageIndexForGen(0);
+      setSelectedProfileImageIndexForSocial(0);
+    } else {
+      setSelectedProfileImageIndexForGen(null);
+      setSelectedProfileImageIndexForSocial(null);
+    }
+  }, [brandData?.exampleImages]);
+
+
   const [selectedImageStyle, setSelectedImageStyle] = useState<string>(() => {
     if (brandData?.imageStyle && artisticStyles.some(style => style.value === brandData.imageStyle)) {
       return brandData.imageStyle;
@@ -211,11 +227,16 @@ export default function ContentStudioPage() {
     }
   };
 
-  const currentSocialImagePreviewUrl = useImageForSocialPost 
-    ? (socialImageChoice === 'generated' 
-        ? (lastSuccessfulGeneratedImageUrls[0] || null) 
-        : (socialImageChoice === 'profile' ? brandData?.exampleImages?.[0] : null)) 
+  const currentExampleImageForGen = (brandData?.exampleImages && selectedProfileImageIndexForGen !== null && brandData.exampleImages[selectedProfileImageIndexForGen]) || "";
+
+  const currentSocialImagePreviewUrl = useImageForSocialPost
+    ? (socialImageChoice === 'generated'
+        ? (lastSuccessfulGeneratedImageUrls[0] || null)
+        : (socialImageChoice === 'profile'
+            ? (brandData?.exampleImages && selectedProfileImageIndexForSocial !== null && brandData.exampleImages[selectedProfileImageIndexForSocial]) || null
+            : null))
     : null;
+
 
   const handleAIDescribeImage = () => {
     if (!currentSocialImagePreviewUrl) {
@@ -281,7 +302,7 @@ export default function ContentStudioPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>Generate Brand Images</CardTitle>
-                <CardDescription>Create unique images based on your brand's aesthetics. Uses brand description and style. Optionally use the first example image from your Brand Profile.</CardDescription>
+                <CardDescription>Create unique images based on your brand's aesthetics. Uses brand description and style. Optionally use an example image from your Brand Profile.</CardDescription>
               </CardHeader>
               <form action={imageAction}>
                 <CardContent className="space-y-6">
@@ -315,23 +336,44 @@ export default function ContentStudioPage() {
                       Current style from profile: {brandData?.imageStyle ? (artisticStyles.find(s => s.value === brandData.imageStyle)?.label || `Custom: ${brandData.imageStyle}`) : 'Not set in profile'}
                     </p>
                   </div>
+                  
                   <div>
-                    <Label htmlFor="imageGenExampleImage" className="flex items-center mb-1"><ImageIcon className="w-4 h-4 mr-2 text-primary" />Example Image (First from Profile, Optional)</Label>
+                    <Label htmlFor="imageGenExampleImage" className="flex items-center mb-1"><ImageIcon className="w-4 h-4 mr-2 text-primary" />Example Image from Profile (Optional)</Label>
                     <Input
                       id="imageGenExampleImage"
                       name="exampleImage"
-                      defaultValue={brandData?.exampleImages?.[0] || ""}
-                      placeholder="Uses the first example image from your Brand Profile if available"
+                      value={currentExampleImageForGen}
+                      placeholder="Select an example image from profile below if available"
                       readOnly 
-                      className="bg-muted/50"
+                      className="bg-muted/50 hidden" // Hidden as visual selection is done below
                     />
-                    {brandData?.exampleImages?.[0] && (
+                    {brandData?.exampleImages && brandData.exampleImages.length > 0 ? (
                         <div className="mt-2">
-                            <p className="text-xs text-muted-foreground">Preview of example image from profile:</p>
-                            <NextImage src={brandData.exampleImages[0]} alt="Example image from profile" width={80} height={80} className="rounded border object-contain" data-ai-hint="style example"/>
+                            <p className="text-xs text-muted-foreground mb-1">Select Profile Image to Use as Reference:</p>
+                            <div className="flex space-x-2 overflow-x-auto pb-2">
+                                {brandData.exampleImages.map((imgSrc, index) => (
+                                    <button
+                                        type="button"
+                                        key={index}
+                                        onClick={() => setSelectedProfileImageIndexForGen(index)}
+                                        className={cn(
+                                            "w-20 h-20 rounded border-2 p-0.5 flex-shrink-0 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring",
+                                            selectedProfileImageIndexForGen === index ? "border-primary ring-2 ring-primary" : "border-border"
+                                        )}
+                                    >
+                                        <NextImage src={imgSrc} alt={`Example ${index + 1}`} width={76} height={76} className="object-contain w-full h-full rounded-sm" data-ai-hint="style example"/>
+                                    </button>
+                                ))}
+                            </div>
+                            {selectedProfileImageIndexForGen !== null && (
+                                <p className="text-xs text-muted-foreground mt-1">Using image {selectedProfileImageIndexForGen + 1} as reference.</p>
+                            )}
                         </div>
+                    ) : (
+                        <p className="text-xs text-muted-foreground mt-1">No example images in Brand Profile to select.</p>
                     )}
                   </div>
+
                    <div>
                     <Label htmlFor="imageGenNegativePrompt" className="flex items-center mb-1"><CircleSlash className="w-4 h-4 mr-2 text-primary" />Negative Prompt (Optional)</Label>
                     <Textarea
@@ -450,10 +492,11 @@ export default function ContentStudioPage() {
                     </div>
 
                     {useImageForSocialPost && (
+                      <div className="pl-6 space-y-4">
                         <RadioGroup 
                             value={socialImageChoice || ""} 
                             onValueChange={(value) => setSocialImageChoice(value as 'generated' | 'profile' | null)}
-                            className="pl-6 space-y-2"
+                            className="space-y-2"
                         >
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="generated" id="social-generated" disabled={lastSuccessfulGeneratedImageUrls.length === 0}/>
@@ -462,12 +505,34 @@ export default function ContentStudioPage() {
                                 </Label>
                             </div>
                             <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="profile" id="social-profile" disabled={!brandData?.exampleImages?.[0]} />
-                                <Label htmlFor="social-profile" className={!brandData?.exampleImages?.[0] ? "text-muted-foreground" : ""}>
-                                    Use Brand Profile Example Image {brandData?.exampleImages?.[0] ? "(First image)" : "(None available)"}
+                                <RadioGroupItem value="profile" id="social-profile" disabled={!brandData?.exampleImages || brandData.exampleImages.length === 0} />
+                                <Label htmlFor="social-profile" className={(!brandData?.exampleImages || brandData.exampleImages.length === 0) ? "text-muted-foreground" : ""}>
+                                    Use Brand Profile Example Image {!brandData?.exampleImages || brandData.exampleImages.length === 0 ? "(None available)" : ""}
                                 </Label>
                             </div>
                         </RadioGroup>
+
+                        {socialImageChoice === 'profile' && brandData?.exampleImages && brandData.exampleImages.length > 1 && (
+                             <div className="mt-2">
+                                <p className="text-xs text-muted-foreground mb-1">Select Profile Image for Social Post:</p>
+                                <div className="flex space-x-2 overflow-x-auto pb-2">
+                                    {brandData.exampleImages.map((imgSrc, index) => (
+                                        <button
+                                            type="button"
+                                            key={`social-profile-${index}`}
+                                            onClick={() => setSelectedProfileImageIndexForSocial(index)}
+                                            className={cn(
+                                                "w-16 h-16 rounded border-2 p-0.5 flex-shrink-0 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring",
+                                                selectedProfileImageIndexForSocial === index ? "border-primary ring-2 ring-primary" : "border-border"
+                                            )}
+                                        >
+                                            <NextImage src={imgSrc} alt={`Profile Example ${index + 1}`} width={60} height={60} className="object-contain w-full h-full rounded-sm" data-ai-hint="social media reference"/>
+                                        </button>
+                                    ))}
+                                </div>
+                             </div>
+                        )}
+                      </div>
                     )}
 
                     {currentSocialImagePreviewUrl && (
@@ -539,7 +604,7 @@ export default function ContentStudioPage() {
                   <SubmitButton className="w-full" loadingText="Generating Content..." disabled={socialSubmitDisabled}>Generate Social Post</SubmitButton>
                 </CardFooter>
               </form>
-                {generatedSocialPost && (
+               {generatedSocialPost && (
                  <Card className="mt-6 mx-4 mb-4 shadow-sm">
                     <CardHeader>
                         <CardTitle className="text-xl flex items-center">
@@ -736,4 +801,3 @@ export default function ContentStudioPage() {
     </AppShell>
   );
 }
-
