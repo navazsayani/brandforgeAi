@@ -4,9 +4,9 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, UserCircle, ImageIcon, MessageSquare, BarChart2, Send, Settings, Briefcase } from 'lucide-react';
+import { Home, UserCircle, ImageIcon, MessageSquare, BarChart2, Send, Settings, Briefcase, Images } from 'lucide-react'; // Added Images
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'; // Added SheetHeader, SheetTitle
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
@@ -19,6 +19,7 @@ const navItems: NavItem[] = [
   { href: '/', label: 'Dashboard', icon: Home },
   { href: '/brand-profile', label: 'Brand Profile', icon: UserCircle },
   { href: '/content-studio', label: 'Content Studio', icon: ImageIcon },
+  { href: '/image-library', label: 'Image Library', icon: Images }, // Added Image Library
   { href: '/campaign-manager', label: 'Campaign Manager', icon: Briefcase },
   { href: '/deployment-hub', label: 'Deployment Hub', icon: Send },
 ];
@@ -31,7 +32,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="p-4 border-b border-sidebar-border">
         <Link href="/" className="flex items-center gap-2 text-sidebar-foreground hover:text-sidebar-primary-foreground">
           <BarChart2 className="w-8 h-8 text-primary" />
-          {/* This h1 is the visible title. The SheetTitle below will be for accessibility. */}
           <h1 className="text-xl font-bold">BrandForge AI</h1>
         </Link>
       </div>
@@ -73,11 +73,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="outline" size="icon">
-                  <Home className="w-6 h-6" /> {/* Using Home as a generic menu icon */}
+                  <Home className="w-6 h-6" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="p-0 w-64 bg-sidebar text-sidebar-foreground border-r-0">
-                {/* Add a SheetTitle for accessibility, visually hidden */}
                 <SheetHeader className="sr-only">
                   <SheetTitle>Main Navigation Menu</SheetTitle>
                 </SheetHeader>
@@ -96,7 +95,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 }
 
 function UserMenu() {
-  // Placeholder for user menu - add DropdownMenu if auth is implemented
   return (
     <div className="flex items-center gap-2 p-2 rounded-full cursor-pointer hover:bg-accent">
       <UserCircle className="w-8 h-8 text-primary" />
@@ -104,5 +102,3 @@ function UserMenu() {
     </div>
   );
 }
-
-    
