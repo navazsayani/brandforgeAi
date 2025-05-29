@@ -151,21 +151,21 @@ const generateImagesFlow = ai.defineFlow(
     for (let i = 0; i < numberOfImages; i++) {
         let textPromptContent = "";
         const industryContext = industry ? ` The brand operates in the ${industry} industry.` : "";
-        const compositionGuidance = "When depicting human figures as the primary subject, aim for a well-composed shot. Avoid unintentional or awkward cropping of faces or key body parts, ensuring the figure is presented naturally within the frame, unless the prompt specifically requests a close-up, a specific framing (e.g., 'headshot', 'upper body shot'), or artistic cropping.";
-
+        const compositionGuidance = "IMPORTANT COMPOSITION RULE: When depicting human figures as the primary subject, the image *must* be well-composed. Avoid awkward or unintentional cropping of faces or key body parts. Ensure the figure is presented naturally and fully within the frame, unless the prompt *explicitly* requests a specific framing like 'close-up', 'headshot', 'upper body shot', or an artistic crop. Prioritize showing the entire subject if it's a person.";
 
         if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
             console.log(`Using finalized text prompt for image ${i+1}: "${finalizedTextPrompt.substring(0,100)}..."`);
             textPromptContent = finalizedTextPrompt;
-            // When finalizedTextPrompt is used, we assume it contains all necessary textual instructions.
+            // When finalizedTextPrompt is used, user is assumed to have full control.
             // Structural/control parameters like aspectRatio and seed are still applied by the system IF NOT explicitly mentioned in the finalized prompt.
-            if (aspectRatio && !finalizedTextPrompt.toLowerCase().includes("aspect ratio")) {
+             if (aspectRatio && !finalizedTextPrompt.toLowerCase().includes("aspect ratio")) {
               textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
             }
             if (seed !== undefined && !finalizedTextPrompt.toLowerCase().includes("seed:")) {
               textPromptContent += `\n\nUse seed: ${seed}.`;
             }
-            if (!finalizedTextPrompt.toLowerCase().includes("human figure") && !finalizedTextPrompt.toLowerCase().includes("crop")) { // Basic check
+             // Add composition guidance if not explicitly handled in finalized prompt
+            if (!finalizedTextPrompt.toLowerCase().includes("crop") && !finalizedTextPrompt.toLowerCase().includes("close-up") && !finalizedTextPrompt.toLowerCase().includes("headshot") && !finalizedTextPrompt.toLowerCase().includes("portrait") && !finalizedTextPrompt.toLowerCase().includes("figure framing")) {
                 textPromptContent += `\n\n${compositionGuidance}`;
             }
 
@@ -261,8 +261,8 @@ ${compositionGuidance}
                 case 'LEONARDO_AI':
                     imageUrl = await _generateImageWithLeonardoAI_stub(baseGenerationParamsForStubs);
                     break;
-                case 'IMAGEN': // Changed from IMAGEGEN
-                    imageUrl = await _generateImageWithImagen_stub(baseGenerationParamsForStubs); // Changed from IMAGEGEN_stub
+                case 'IMAGEN':
+                    imageUrl = await _generateImageWithImagen_stub(baseGenerationParamsForStubs);
                     break;
                 default:
                     throw new Error(`Unsupported image generation provider: ${imageGenerationProvider}`);
