@@ -3,24 +3,33 @@ export interface BrandData {
   brandName?: string;
   websiteUrl?: string;
   brandDescription?: string;
-  industry?: string; // Added industry
+  industry?: string;
   imageStyle?: string; // For preset style
   imageStyleNotes?: string; // For custom free-text style notes
   targetKeywords?: string;
-  exampleImages?: string[];
+  exampleImages?: string[]; // URLs from Firebase Storage
 }
 
 export interface GeneratedImage {
   id: string;
-  src: string; // Data URI
+  src: string; // Data URI from AI generation, or Firebase Storage URL if saved
   prompt: string;
   style: string;
 }
 
+// New type for images saved to the user's library
+export interface SavedGeneratedImage {
+  id: string; // Firestore document ID
+  storageUrl: string; // Firebase Storage URL
+  prompt: string;
+  style: string;
+  createdAt: any; // Firestore Timestamp
+}
+
 export interface GeneratedSocialMediaPost {
   id: string;
-  platform: 'Instagram'; // Example, could be extended
-  imageSrc: string | null; // reference to a generated image or uploaded one
+  platform: 'Instagram';
+  imageSrc: string | null;
   imageDescription: string;
   caption: string;
   hashtags: string;
@@ -40,6 +49,6 @@ export interface GeneratedAdCampaign {
   campaignConcept: string;
   headlines: string[];
   bodyTexts: string[];
-  platformGuidance: string; 
+  platformGuidance: string;
   targetPlatforms: ('google_ads' | 'meta')[];
 }

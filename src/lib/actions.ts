@@ -8,6 +8,9 @@ import { generateAdCampaign, type GenerateAdCampaignInput, type GenerateAdCampai
 import { extractBrandInfoFromUrl, type ExtractBrandInfoFromUrlInput, type ExtractBrandInfoFromUrlOutput } from '@/ai/flows/extract-brand-info-from-url-flow';
 import { describeImage, type DescribeImageInput, type DescribeImageOutput } from '@/ai/flows/describe-image-flow';
 import { generateBlogOutline, type GenerateBlogOutlineInput, type GenerateBlogOutlineOutput } from '@/ai/flows/generate-blog-outline-flow';
+import { storage, db } from '@/lib/firebaseConfig';
+import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
+import { collection, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 
 
 // Generic type for form state with error
@@ -25,23 +28,23 @@ export async function handleGenerateImagesAction(
     const numberOfImagesStr = formData.get("numberOfImages") as string;
     const numberOfImages = parseInt(numberOfImagesStr, 10) || 1;
     
-    const negativePromptValue = formData.get("negativePrompt") as string | null; // Can be null if field is empty
+    const negativePromptValue = formData.get("negativePrompt") as string | null;
     const seedStr = formData.get("seed") as string | undefined;
     const seed = seedStr && !isNaN(parseInt(seedStr, 10)) ? parseInt(seedStr, 10) : undefined;
     
-    let finalizedTextPromptValue = formData.get("finalizedTextPrompt") as string | undefined;
-    if (finalizedTextPromptValue === "") {
+    let finalizedTextPromptValue = formData.get("finalizedTextPrompt") as string | undefined | null;
+    if (finalizedTextPromptValue === "" || finalizedTextPromptValue === null) {
       finalizedTextPromptValue = undefined;
     }
 
     const input: GenerateImagesInput = {
       brandDescription: formData.get("brandDescription") as string,
       industry: formData.get("industry") as string | undefined,
-      imageStyle: formData.get("imageStyle") as string,
+      imageStyle: formData.get("imageStyle") as string, 
       exampleImage: formData.get("exampleImage") as string | undefined,
       aspectRatio: formData.get("aspectRatio") as string | undefined,
       numberOfImages: numberOfImages,
-      negativePrompt: negativePromptValue === null || negativePromptValue === "" ? undefined : negativePromptValue, // Ensure undefined if empty/null
+      negativePrompt: negativePromptValue === null || negativePromptValue === "" ? undefined : negativePromptValue,
       seed: seed,
       finalizedTextPrompt: finalizedTextPromptValue,
     };
@@ -124,10 +127,10 @@ export async function handleGenerateBlogOutlineAction(
     try {
         const input: GenerateBlogOutlineInput = {
             brandName: formData.get("brandName") as string,
-            brandDescription: formData.get("blogBrandDescription") as string,
-            industry: formData.get("industry") as string | undefined,
-            keywords: formData.get("blogKeywords") as string,
-            websiteUrl: (formData.get("blogWebsiteUrl") as string) || undefined,
+            brandDescription: formData.get("blogBrandDescription") as string, 
+            industry: formData.get("industry") as string | undefined, 
+            keywords: formData.get("blogKeywords") as string, 
+            websiteUrl: (formData.get("blogWebsiteUrl") as string) || undefined, 
         };
 
         if (!input.brandName || !input.brandDescription || !input.keywords) {
@@ -182,9 +185,9 @@ export async function handleGenerateAdCampaignAction(
     const platformsString = formData.get("platforms") as string;
     const platformsArray = platformsString ? platformsString.split(',') as ('google_ads' | 'meta')[] : [];
 
-    let generatedContent = formData.get("generatedContent") as string;
-    if (generatedContent === "Custom content for ad campaign") {
-        generatedContent = formData.get("customGeneratedContent") as string;
+    let generatedContent = formData.get("generatedContent") as string; 
+    if (generatedContent === "Custom content for ad campaign") { 
+        generatedContent = formData.get("customGeneratedContent") as string; 
     }
 
 
@@ -201,7 +204,7 @@ export async function handleGenerateAdCampaignAction(
     if (!input.brandName || !input.brandDescription || !input.generatedContent || !input.targetKeywords || isNaN(input.budget) || input.platforms.length === 0) {
         return { error: "All fields are required, budget must be a number, and at least one platform must be selected." };
     }
-    if (!generatedContent.trim()) {
+    if (!input.generatedContent || !input.generatedContent.trim()) { 
         return { error: "Ad content (selected or custom) cannot be empty."};
     }
     if (input.industry === "") delete input.industry;
@@ -234,5 +237,69 @@ export async function handleExtractBrandInfoFromUrlAction(
     }
 }
 
+const generateFilenamePart = () => Math.random().toString(36).substring(2, 10);
 
-    
+export async function handleSaveGeneratedImagesAction(
+  prevState: FormState<{savedCount: number}>,
+  formData: FormData
+): Promise<FormState<{savedCount: number}>> {
+  const imagesToSaveJson = formData.get('imagesToSaveJson') as string;
+  const brandProfileDocId = formData.get('brandProfileDocId') as string || 'defaultBrandProfile';
+
+  if (!imagesToSaveJson) {
+    return { error: "No image data received." };
+  }
+
+  let imagesToSave: { dataUri: string; prompt: string; style: string; }[];
+  try {
+    imagesToSave = JSON.parse(imagesToSaveJson);
+  } catch (e) {
+    console.error("Failed to parse imagesToSaveJson", e);
+    return { error: "Invalid image data format." };
+  }
+
+  if (!Array.isArray(imagesToSave) || imagesToSave.length === 0) {
+    return { error: "No images selected to save." };
+  }
+
+  let savedCount = 0;
+  const saveErrors: string[] = [];
+
+  for (const image of imagesToSave) {
+    if (!image.dataUri || !image.dataUri.startsWith('data:image')) {
+      saveErrors.push(`Invalid data URI for one of the images. URI: ${image.dataUri?.substring(0,30)}...`);
+      continue;
+    }
+    try {
+      const fileExtensionMatch = image.dataUri.match(/^data:image\/([a-zA-Z+]+);base64,/);
+      const fileExtension = fileExtensionMatch ? fileExtensionMatch[1] : 'png';
+      const filePath = `generatedLibraryImages/${brandProfileDocId}/${Date.now()}_${generateFilenamePart()}.${fileExtension}`;
+      const imageStorageRef = storageRef(storage, filePath);
+      
+      const snapshot = await uploadString(imageStorageRef, image.dataUri, 'data_url');
+      const downloadURL = await getDownloadURL(snapshot.ref);
+
+      const firestoreCollectionRef = collection(db, `brandProfiles/${brandProfileDocId}/savedLibraryImages`);
+      await addDoc(firestoreCollectionRef, {
+        storageUrl: downloadURL,
+        prompt: image.prompt,
+        style: image.style,
+        createdAt: serverTimestamp(),
+      });
+      savedCount++;
+    } catch (e: any) {
+      console.error(`Failed to save image: ${e.message}`, e);
+      saveErrors.push(`Failed to save one image: ${e.message?.substring(0,100)}`);
+    }
+  }
+
+  if (savedCount > 0 && saveErrors.length > 0) {
+    return { data: {savedCount}, message: `Successfully saved ${savedCount} image(s). Some errors occurred: ${saveErrors.join(', ')}` };
+  } else if (savedCount > 0) {
+    return { data: {savedCount}, message: `${savedCount} image(s) saved successfully to your library!` };
+  } else if (saveErrors.length > 0) {
+    return { error: `Failed to save any images. Errors: ${saveErrors.join(', ')}` };
+  } else {
+     return { error: "No images were processed or saved. Unknown error."};
+  }
+}
