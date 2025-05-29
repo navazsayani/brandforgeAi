@@ -44,23 +44,23 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         const brandDocRef = doc(db, "brandProfiles", BRAND_PROFILE_DOC_ID);
         const docSnap = await getDoc(brandDocRef);
         if (docSnap.exists()) {
-          setBrandDataState(docSnap.data() as BrandData);
+          const fetchedData = docSnap.data() as BrandData;
+          // Ensure exampleImages is always an array
+          setBrandDataState({ ...fetchedData, exampleImages: fetchedData.exampleImages || [] });
         } else {
-          // No existing profile, not an error.
-          setBrandDataState(null);
+          setBrandDataState({ exampleImages: [] }); // Initialize with empty array if no profile
         }
       } catch (e: any) {
         console.error("Error fetching brand data:", e);
+        let specificError = `Failed to fetch brand data: ${e.message || "Unknown error. Check console."}`;
         if (e.message && e.message.toLowerCase().includes("client is offline")) {
-          setError("Failed to connect to the database. Please check your internet connection and Firebase project configuration (e.g., correct Project ID in .env).");
+          specificError = "Failed to connect to the database. Please check your internet connection and Firebase project configuration (e.g., correct Project ID in .env).";
         } else if (e.message && e.message.toLowerCase().includes("missing or insufficient permissions")) {
-          setError("Database permission error. Please check your Firestore security rules in the Firebase console.");
+          specificError = "Database permission error. Please check your Firestore security rules in the Firebase console.";
         } else if (e.code && e.code === "unavailable") {
-           setError("The Firebase service is temporarily unavailable. Please try again later.");
+           specificError = "The Firebase service is temporarily unavailable. Please try again later.";
         }
-        else {
-          setError(`Failed to fetch brand data: ${e.message || "Unknown error. Check console."}`);
-        }
+        setError(specificError);
         setBrandDataState(null);
       } finally {
         setIsLoading(false);
@@ -73,18 +73,19 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     setError(null);
     try {
+      const dataToSave = { ...data, exampleImages: data.exampleImages || [] }; // Ensure exampleImages is an array
       const brandDocRef = doc(db, "brandProfiles", BRAND_PROFILE_DOC_ID);
-      await setDoc(brandDocRef, data, { merge: true });
-      setBrandDataState(data);
+      await setDoc(brandDocRef, dataToSave, { merge: true });
+      setBrandDataState(dataToSave);
     } catch (e: any) {
       console.error("Error saving brand data:", e);
+      let specificError = `Failed to save brand profile: ${e.message || "Unknown error. Check console."}`;
       if (e.message && e.message.toLowerCase().includes("client is offline")) {
-        setError("Failed to save data. Client is offline. Check your internet connection.");
+        specificError = "Failed to save data. Client is offline. Check your internet connection.";
       } else if (e.message && e.message.toLowerCase().includes("missing or insufficient permissions")) {
-          setError("Failed to save data due to database permission error. Check Firestore security rules.");
-      } else {
-        setError(`Failed to save brand profile: ${e.message || "Unknown error. Check console."}`);
+          specificError = "Failed to save data due to database permission error. Check Firestore security rules.";
       }
+      setError(specificError);
       throw e; 
     } finally {
       setIsLoading(false);
@@ -92,19 +93,19 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const addGeneratedImageCB = useCallback((image: GeneratedImage) => {
-    setGeneratedImages(prev => [image, ...prev.slice(0,19)]); // Keep latest 20
+    setGeneratedImages(prev => [image, ...prev.slice(0,19)]);
   }, []);
 
   const addGeneratedSocialPostCB = useCallback((post: GeneratedSocialMediaPost) => {
-    setGeneratedSocialPosts(prev => [post, ...prev.slice(0,19)]); // Keep latest 20
+    setGeneratedSocialPosts(prev => [post, ...prev.slice(0,19)]);
   }, []);
 
   const addGeneratedBlogPostCB = useCallback((post: GeneratedBlogPost) => {
-    setGeneratedBlogPosts(prev => [post, ...prev.slice(0,19)]); // Keep latest 20
+    setGeneratedBlogPosts(prev => [post, ...prev.slice(0,19)]);
   }, []);
 
   const addGeneratedAdCampaignCB = useCallback((campaign: GeneratedAdCampaign) => {
-    setGeneratedAdCampaigns(prev => [campaign, ...prev.slice(0,19)]); // Keep latest 20
+    setGeneratedAdCampaigns(prev => [campaign, ...prev.slice(0,19)]);
   }, []);
   
   const contextValue = useMemo(() => ({

@@ -5,7 +5,7 @@ export interface BrandData {
   brandDescription?: string;
   imageStyle?: string;
   targetKeywords?: string;
-  exampleImage?: string; // URL or Data URI
+  exampleImages?: string[]; // Changed from exampleImage: string
 }
 
 export interface GeneratedImage {
@@ -40,5 +40,4 @@ export interface GeneratedAdCampaign {
   bodyTexts: string[];
   platformGuidance: string;
   targetPlatforms: ('google_ads' | 'meta')[];
-  // platformDetails might be re-introduced if AI provides structured setup data
 }

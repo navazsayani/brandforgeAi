@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useActionState as useActionStateReact, startTransition } from 'react';
+import React, { useState, useEffect, useActionState, startTransition } from 'react';
 import NextImage from 'next/image';
 import { AppShell } from '@/components/AppShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
-import { FormDescription } from "@/components/ui/form"; // Added missing import
+import { FormDescription } from "@/components/ui/form";
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2 } from 'lucide-react';
@@ -65,11 +65,11 @@ export default function ContentStudioPage() {
   const { brandData, addGeneratedImage, addGeneratedSocialPost, addGeneratedBlogPost } = useBrand();
   const { toast } = useToast();
 
-  const [imageState, imageAction] = useActionStateReact(handleGenerateImagesAction, initialImageFormState);
-  const [socialState, socialAction] = useActionStateReact(handleGenerateSocialMediaCaptionAction, initialSocialFormState);
-  const [blogState, blogAction] = useActionStateReact(handleGenerateBlogContentAction, initialBlogFormState);
-  const [describeImageState, describeImageAction] = useActionStateReact(handleDescribeImageAction, initialDescribeImageState);
-  const [blogOutlineState, blogOutlineAction] = useActionStateReact(handleGenerateBlogOutlineAction, initialBlogOutlineState);
+  const [imageState, imageAction] = useActionState(handleGenerateImagesAction, initialImageFormState);
+  const [socialState, socialAction] = useActionState(handleGenerateSocialMediaCaptionAction, initialSocialFormState);
+  const [blogState, blogAction] = useActionState(handleGenerateBlogContentAction, initialBlogFormState);
+  const [describeImageState, describeImageAction] = useActionState(handleDescribeImageAction, initialDescribeImageState);
+  const [blogOutlineState, blogOutlineAction] = useActionState(handleGenerateBlogOutlineAction, initialBlogOutlineState);
   
   const [lastSuccessfulGeneratedImageUrls, setLastSuccessfulGeneratedImageUrls] = useState<string[]>([]);
   const [generatedSocialPost, setGeneratedSocialPost] = useState<{caption: string, hashtags: string, imageSrc: string | null} | null>(null);
@@ -118,7 +118,7 @@ export default function ContentStudioPage() {
         const newImage: GeneratedImage = {
           id: `${new Date().toISOString()}-${Math.random().toString(36).substring(2, 9)}`, 
           src: url,
-          prompt: (document.querySelector('form textarea[name="brandDescription"]') as HTMLTextAreaElement)?.value || "",
+          prompt: (document.querySelector('form textarea[name="brandDescription"]') as HTMLTextAreaElement)?.value || "", // Consider passing prompt explicitly from form
           style: selectedImageStyle 
         };
         addGeneratedImage(newImage);
@@ -135,7 +135,7 @@ export default function ContentStudioPage() {
        const newPost: GeneratedSocialMediaPost = {
         id: new Date().toISOString(),
         platform: 'Instagram', 
-        imageSrc: socialData.imageSrc || "", 
+        imageSrc: socialData.imageSrc || null, 
         imageDescription: (document.getElementById('socialImageDescription') as HTMLTextAreaElement)?.value || "",
         caption: socialData.caption,
         hashtags: socialData.hashtags,
@@ -214,7 +214,7 @@ export default function ContentStudioPage() {
   const currentSocialImagePreviewUrl = useImageForSocialPost 
     ? (socialImageChoice === 'generated' 
         ? (lastSuccessfulGeneratedImageUrls[0] || null) 
-        : (socialImageChoice === 'profile' ? brandData?.exampleImage : null)) 
+        : (socialImageChoice === 'profile' ? brandData?.exampleImages?.[0] : null)) 
     : null;
 
   const handleAIDescribeImage = () => {
@@ -281,7 +281,7 @@ export default function ContentStudioPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>Generate Brand Images</CardTitle>
-                <CardDescription>Create unique images based on your brand's aesthetics. Uses brand description and style. Optionally provide an example image Data URI from your Brand Profile.</CardDescription>
+                <CardDescription>Create unique images based on your brand's aesthetics. Uses brand description and style. Optionally use the first example image from your Brand Profile.</CardDescription>
               </CardHeader>
               <form action={imageAction}>
                 <CardContent className="space-y-6">
@@ -316,17 +316,19 @@ export default function ContentStudioPage() {
                     </p>
                   </div>
                   <div>
-                    <Label htmlFor="imageGenExampleImage" className="flex items-center mb-1"><ImageIcon className="w-4 h-4 mr-2 text-primary" />Example Image Data URI (from Profile, Optional)</Label>
+                    <Label htmlFor="imageGenExampleImage" className="flex items-center mb-1"><ImageIcon className="w-4 h-4 mr-2 text-primary" />Example Image (First from Profile, Optional)</Label>
                     <Input
                       id="imageGenExampleImage"
                       name="exampleImage"
-                      defaultValue={brandData?.exampleImage || ""}
-                      placeholder="Paste a Data URI of an image to inform the style"
+                      defaultValue={brandData?.exampleImages?.[0] || ""}
+                      placeholder="Uses the first example image from your Brand Profile if available"
+                      readOnly 
+                      className="bg-muted/50"
                     />
-                    {brandData?.exampleImage && (
+                    {brandData?.exampleImages?.[0] && (
                         <div className="mt-2">
                             <p className="text-xs text-muted-foreground">Preview of example image from profile:</p>
-                            <NextImage src={brandData.exampleImage} alt="Example image from profile" width={80} height={80} className="rounded border object-contain" data-ai-hint="style example"/>
+                            <NextImage src={brandData.exampleImages[0]} alt="Example image from profile" width={80} height={80} className="rounded border object-contain" data-ai-hint="style example"/>
                         </div>
                     )}
                   </div>
@@ -435,7 +437,7 @@ export default function ContentStudioPage() {
                                     setSocialImageChoice(null); 
                                 } else if (!socialImageChoice && lastSuccessfulGeneratedImageUrls.length > 0) {
                                     setSocialImageChoice('generated'); 
-                                } else if (!socialImageChoice && brandData?.exampleImage) {
+                                } else if (!socialImageChoice && brandData?.exampleImages?.[0]) {
                                     setSocialImageChoice('profile'); 
                                 } else if (!socialImageChoice) { 
                                      setSocialImageChoice(null); 
@@ -460,9 +462,9 @@ export default function ContentStudioPage() {
                                 </Label>
                             </div>
                             <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="profile" id="social-profile" disabled={!brandData?.exampleImage} />
-                                <Label htmlFor="social-profile" className={!brandData?.exampleImage ? "text-muted-foreground" : ""}>
-                                    Use Brand Profile Example Image {brandData?.exampleImage ? "" : "(None available)"}
+                                <RadioGroupItem value="profile" id="social-profile" disabled={!brandData?.exampleImages?.[0]} />
+                                <Label htmlFor="social-profile" className={!brandData?.exampleImages?.[0] ? "text-muted-foreground" : ""}>
+                                    Use Brand Profile Example Image {brandData?.exampleImages?.[0] ? "(First image)" : "(None available)"}
                                 </Label>
                             </div>
                         </RadioGroup>
@@ -609,7 +611,7 @@ export default function ContentStudioPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="blogKeywords" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Keywords (from Profile)</Label>
+                    <Label htmlFor="blogKeywords" className="flex items-center mb-1"><Tag className="w-4 h-4 mr-2 text-primary" />Keywords (from Profile)</Label>
                     <Input
                       id="blogKeywords"
                       name="blogKeywords" 
@@ -629,9 +631,9 @@ export default function ContentStudioPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="blogTone" className="flex items-center mb-1"><Mic2 className="w-4 h-4 mr-2 text-primary" />Tone/Style for Blog</Label>
-                    <Select name="blogTone" required value={selectedBlogTone} onValueChange={setSelectedBlogTone}>
-                        <SelectTrigger id="blogTone">
+                    <Label htmlFor="blogToneSelect" className="flex items-center mb-1"><Mic2 className="w-4 h-4 mr-2 text-primary" />Tone/Style for Blog</Label>
+                    <Select name="blogTone" required value={selectedBlogTone} onValueChange={setSelectedBlogTone}  id="blogToneSelect">
+                        <SelectTrigger>
                             <SelectValue placeholder="Select a tone/style" />
                         </SelectTrigger>
                         <SelectContent>
@@ -673,8 +675,8 @@ export default function ContentStudioPage() {
 
                   <div>
                     <Label htmlFor="blogTargetPlatformSelect" className="flex items-center mb-1"><Newspaper className="w-4 h-4 mr-2 text-primary" />Target Platform</Label>
-                    <Select name="targetPlatform" required value={blogPlatformValue} onValueChange={(value) => setBlogPlatformValue(value as "Medium" | "Other")}>
-                      <SelectTrigger id="blogTargetPlatformSelect">
+                    <Select name="targetPlatform" required value={blogPlatformValue} onValueChange={(value) => setBlogPlatformValue(value as "Medium" | "Other")} id="blogTargetPlatformSelect">
+                      <SelectTrigger>
                         <SelectValue placeholder="Select platform" />
                       </SelectTrigger>
                       <SelectContent>
@@ -734,6 +736,3 @@ export default function ContentStudioPage() {
     </AppShell>
   );
 }
-
-
-    

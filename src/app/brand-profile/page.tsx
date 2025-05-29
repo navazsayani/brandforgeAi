@@ -17,13 +17,12 @@ import { Progress } from '@/components/ui/progress';
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-import { UserCircle, LinkIcon, FileText, Palette, UploadCloud, Tag, Brain, Loader2 } from 'lucide-react';
+import { UserCircle, LinkIcon, FileText, Palette, UploadCloud, Tag, Brain, Loader2, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { handleExtractBrandInfoFromUrlAction, type FormState as ExtractFormState } from '@/lib/actions';
 import { storage } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 
-// Define artisticStyles array (should be defined outside if used in multiple places or made a shared constant)
 const artisticStyles = [
   { value: "photorealistic", label: "Photorealistic" },
   { value: "minimalist", label: "Minimalist" },
@@ -42,13 +41,12 @@ const artisticStyles = [
   { value: "cel shaded", label: "Cel Shaded" },
 ];
 
-
 const brandProfileSchema = z.object({
   brandName: z.string().min(2, { message: "Brand name must be at least 2 characters." }),
   websiteUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   brandDescription: z.string().min(10, { message: "Description must be at least 10 characters." }),
   imageStyle: z.string().min(3, { message: "Please select or enter an image style." }),
-  exampleImage: z.string().url({ message: "Must be a valid URL." }).optional().or(z.literal('')), // Will store URL from Firebase Storage
+  exampleImages: z.array(z.string().url({ message: "Each image must be a valid URL." })).optional(),
   targetKeywords: z.string().optional(),
 });
 
@@ -59,22 +57,23 @@ const defaultFormValues: BrandProfileFormData = {
   websiteUrl: "",
   brandDescription: "",
   imageStyle: artisticStyles.length > 0 ? artisticStyles[0].value : "",
-  exampleImage: "",
+  exampleImages: [],
   targetKeywords: "",
 };
 
 const initialExtractState: ExtractFormState<{ brandDescription: string; targetKeywords: string; }> = { error: undefined, data: undefined, message: undefined };
-const BRAND_PROFILE_DOC_ID = "defaultBrandProfile"; // Used for consistent storage path
+const BRAND_PROFILE_DOC_ID = "defaultBrandProfile";
 
 export default function BrandProfilePage() {
   const { brandData, setBrandData, isLoading: isBrandContextLoading, error: brandContextError } = useBrand();
   const { toast } = useToast();
   
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewImages, setPreviewImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadProgress, setUploadProgress] = useState(0); // For overall progress, or individual if needed
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [selectedFileNames, setSelectedFileNames] = useState<string[]>([]);
+
 
   const [extractState, extractAction] = useActionState(handleExtractBrandInfoFromUrlAction, initialExtractState);
   const [isExtracting, setIsExtracting] = useState(false);
@@ -86,18 +85,18 @@ export default function BrandProfilePage() {
 
   useEffect(() => {
     if (brandData) {
-      form.reset(brandData);
-      if (brandData.exampleImage) {
-        setPreviewImage(brandData.exampleImage);
-        setSelectedFileName("Previously saved image");
+      const currentData = { ...defaultFormValues, ...brandData, exampleImages: brandData.exampleImages || [] };
+      form.reset(currentData);
+      setPreviewImages(currentData.exampleImages);
+      if (currentData.exampleImages.length > 0) {
+        setSelectedFileNames(currentData.exampleImages.map((_,i) => `Saved image ${i+1}`));
       } else {
-        setPreviewImage(null);
-        setSelectedFileName(null);
+        setSelectedFileNames([]);
       }
     } else if (!isBrandContextLoading) {
       form.reset(defaultFormValues);
-      setPreviewImage(null);
-      setSelectedFileName(null);
+      setPreviewImages([]);
+      setSelectedFileNames([]);
     }
   }, [brandData, form, isBrandContextLoading]);
   
@@ -142,7 +141,7 @@ export default function BrandProfilePage() {
     });
   };
 
-  const uploadImageToStorage = async (file: File): Promise<string> => {
+  const uploadImageToStorage = async (file: File, index: number, totalFiles: number): Promise<string> => {
     return new Promise((resolve, reject) => {
       const filePath = `brand_example_images/${BRAND_PROFILE_DOC_ID}/${Date.now()}_${file.name}`;
       const imageStorageRef = storageRef(storage, filePath);
@@ -151,7 +150,9 @@ export default function BrandProfilePage() {
       uploadTask.on('state_changed',
         (snapshot) => {
           const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setUploadProgress(progress);
+          // For simplicity, we'll set overall progress based on the current file's progress
+          // A more sophisticated approach would average progress across all concurrent uploads
+          setUploadProgress( (index / totalFiles) * 100 + (progress / totalFiles) );
         },
         (error) => {
           console.error("Firebase Storage Upload Error Object:", error);
@@ -167,7 +168,7 @@ export default function BrandProfilePage() {
               errorMessage = "An unknown error occurred during upload.";
               break;
           }
-          toast({ title: "Upload Error", description: errorMessage, variant: "destructive" });
+          toast({ title: `Upload Error: ${file.name}`, description: errorMessage, variant: "destructive" });
           reject(error);
         },
         async () => {
@@ -185,58 +186,67 @@ export default function BrandProfilePage() {
   };
 
   const handleImageFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      const file = event.target.files[0];
-      setSelectedFileName(file.name);
+    if (event.target.files && event.target.files.length > 0) {
+      const files = Array.from(event.target.files);
+      setSelectedFileNames(files.map(file => file.name));
       setIsUploading(true);
       setUploadProgress(0);
 
-      // Show local preview immediately
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      const newLocalPreviews = files.map(file => URL.createObjectURL(file));
+      setPreviewImages(prev => [...prev, ...newLocalPreviews]); // Show local previews immediately
 
+      const uploadPromises = files.map((file, index) => uploadImageToStorage(file, index, files.length));
+      
       try {
-        // If there was a previous image URL, attempt to delete it from storage
-        const previousImageUrl = form.getValues("exampleImage");
-        if (previousImageUrl && previousImageUrl.includes("firebasestorage.googleapis.com")) {
-            try {
-                const oldImageRef = storageRef(storage, previousImageUrl);
-                await deleteObject(oldImageRef);
-                console.log("Previous image deleted from Firebase Storage.");
-            } catch (deleteError: any) {
-                // Non-critical error, log it but don't block new upload
-                if (deleteError.code !== 'storage/object-not-found') {
-                    console.warn("Could not delete previous image from Firebase Storage:", deleteError);
-                }
-            }
-        }
-
-        const downloadURL = await uploadImageToStorage(file);
-        form.setValue('exampleImage', downloadURL, { shouldValidate: true });
-        setPreviewImage(downloadURL); // Update preview to Firebase URL
-        toast({ title: "Image Uploaded", description: "Image uploaded successfully. Save profile to persist change." });
+        const downloadURLs = await Promise.all(uploadPromises);
+        const currentImages = form.getValues("exampleImages") || [];
+        const updatedImages = [...currentImages, ...downloadURLs];
+        form.setValue('exampleImages', updatedImages, { shouldValidate: true });
+        setPreviewImages(updatedImages); // Update previews to Firebase URLs
+        toast({ title: "Images Uploaded", description: `${files.length} image(s) uploaded successfully. Save profile to persist changes.` });
       } catch (error) {
-        // Error toast is handled in uploadImageToStorage
-        // Revert to previous state if upload fails
-        form.setValue('exampleImage', brandData?.exampleImage || '', { shouldValidate: true });
-        setPreviewImage(brandData?.exampleImage || null);
-        setSelectedFileName(brandData?.exampleImage ? "Previous image" : null);
+        toast({ title: "Some Uploads Failed", description: "Not all images were uploaded successfully. Check individual error messages.", variant: "destructive" });
+        // Revert previews if any upload fails for simplicity, or handle partial success
+        setPreviewImages(form.getValues("exampleImages") || []);
       } finally {
         setIsUploading(false);
         setUploadProgress(0);
+        setSelectedFileNames([]);
         if (fileInputRef.current) {
-          fileInputRef.current.value = ""; // Reset file input
+          fileInputRef.current.value = ""; 
         }
+        newLocalPreviews.forEach(url => URL.revokeObjectURL(url)); // Clean up local object URLs
       }
     }
   };
 
+  const handleDeleteImage = async (imageUrlToDelete: string, indexToDelete: number) => {
+    const currentImages = form.getValues("exampleImages") || [];
+    
+    // Optimistically update UI
+    const updatedFormImages = currentImages.filter((_, index) => index !== indexToDelete);
+    form.setValue("exampleImages", updatedFormImages, { shouldValidate: true });
+    setPreviewImages(updatedFormImages);
+
+    try {
+      if (imageUrlToDelete.includes("firebasestorage.googleapis.com")) {
+        const imageRef = storageRef(storage, imageUrlToDelete);
+        await deleteObject(imageRef);
+      }
+      toast({ title: "Image Deleted", description: "Image removed. Save profile to persist this change." });
+    } catch (error: any) {
+      console.error("Error deleting image from Firebase Storage:", error);
+      toast({ title: "Deletion Error", description: `Failed to delete image from storage: ${error.message}. Reverting UI.`, variant: "destructive" });
+      // Revert UI if deletion fails
+      form.setValue("exampleImages", currentImages, { shouldValidate: true });
+      setPreviewImages(currentImages);
+    }
+  };
+
+
   const onSubmit: SubmitHandler<BrandProfileFormData> = async (data) => {
     try {
-      await setBrandData(data);
+      await setBrandData({...data, exampleImages: data.exampleImages || []});
       toast({
         title: "Brand Profile Saved",
         description: "Your brand information has been saved successfully.",
@@ -358,7 +368,7 @@ export default function BrandProfilePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><Palette className="w-5 h-5 mr-2 text-primary"/>Desired Image Style</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isBrandContextLoading || isUploading || isExtracting}>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isBrandContextLoading || isUploading || isExtracting}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select an artistic style" />
@@ -382,20 +392,21 @@ export default function BrandProfilePage() {
                 />
                 
                 <FormItem>
-                  <FormLabel className="flex items-center text-base"><UploadCloud className="w-5 h-5 mr-2 text-primary"/>Upload Example Image (Optional)</FormLabel>
+                  <FormLabel className="flex items-center text-base"><UploadCloud className="w-5 h-5 mr-2 text-primary"/>Upload Example Images (Optional)</FormLabel>
                    <FormControl>
                     <div className="flex items-center justify-center w-full">
                         <Label htmlFor="dropzone-file" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer border-border bg-card hover:bg-secondary ${isBrandContextLoading || isUploading || isExtracting ? 'opacity-50 cursor-not-allowed' : ''}`}>
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                 {isUploading ? <Loader2 className="w-8 h-8 mb-2 text-muted-foreground animate-spin" /> : <UploadCloud className="w-8 h-8 mb-2 text-muted-foreground" />}
                                 <p className="mb-1 text-sm text-muted-foreground">
-                                  {isUploading ? `Uploading: ${selectedFileName || 'file'}...` : (selectedFileName ? selectedFileName : <><span className="font-semibold">Click to upload</span> or drag and drop</>)}
+                                  {isUploading ? `Uploading ${selectedFileNames.length > 0 ? selectedFileNames.join(', ').substring(0,30)+'...' : 'files'}...` : (selectedFileNames.length > 0 ? selectedFileNames.join(', ') : <><span className="font-semibold">Click to upload</span> or drag and drop</>)}
                                 </p>
-                                {!selectedFileName && !isUploading && <p className="text-xs text-muted-foreground">SVG, PNG, JPG, GIF (Max 5MB recommended)</p>}
+                                {!selectedFileNames.length && !isUploading && <p className="text-xs text-muted-foreground">SVG, PNG, JPG, GIF (Max 5MB per file recommended)</p>}
                             </div>
                             <Input 
                                 id="dropzone-file" 
                                 type="file" 
+                                multiple // Allow multiple file selection
                                 className="hidden" 
                                 onChange={handleImageFileChange} 
                                 accept="image/*" 
@@ -408,29 +419,35 @@ export default function BrandProfilePage() {
                   {isUploading && (
                     <Progress value={uploadProgress} className="w-full h-2 mt-2" />
                   )}
+                  <FormField
+                    control={form.control}
+                    name="exampleImages"
+                    render={() => ( <FormMessage /> )} // To display validation errors for the array if any
+                   />
                 </FormItem>
 
-                {/* Hidden input to store the image URL from Firebase Storage */}
-                <FormField
-                  control={form.control}
-                  name="exampleImage"
-                  render={({ field }) => ( 
-                    <FormItem className="hidden"> 
-                       <FormControl>
-                         <Input type="text" {...field} />
-                       </FormControl>
-                       <FormMessage /> 
-                    </FormItem>
-                  )}
-                />
-                {previewImage && !isUploading && (
-                  <div className="mt-2">
-                      <p className="text-xs text-muted-foreground mb-1">Current Example Image Preview:</p>
-                      <NextImage src={previewImage} alt="Example image preview" width={100} height={100} className="rounded border object-contain" data-ai-hint="brand example"/>
+                {previewImages.length > 0 && !isUploading && (
+                  <div className="mt-2 space-y-3">
+                      <p className="text-sm text-muted-foreground mb-1">Current Example Image Previews:</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        {previewImages.map((src, index) => (
+                          <div key={index} className="relative group aspect-square">
+                            <NextImage src={src} alt={`Example image preview ${index + 1}`} fill style={{objectFit: 'contain'}} className="rounded border" data-ai-hint="brand example"/>
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => handleDeleteImage(src, index)}
+                                disabled={isUploading || isExtracting}
+                                title="Delete this image"
+                            >
+                                <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
                   </div>
-                )}
-                {!previewImage && form.getValues("exampleImage") && !form.getFieldState("exampleImage").error && (
-                    <p className="text-xs text-destructive mt-1">Could not load preview for current image URL. It might be an invalid URL.</p>
                 )}
 
                 <FormField
@@ -456,7 +473,7 @@ export default function BrandProfilePage() {
                   size="lg" 
                   disabled={isBrandContextLoading || form.formState.isSubmitting || isUploading || isExtracting}
                 >
-                  {isUploading ? 'Uploading Image...' : (isBrandContextLoading ? 'Loading Profile...' : (form.formState.isSubmitting ? 'Saving...' : (isExtracting ? 'Extracting Info...' : 'Save Brand Profile')))}
+                  {isUploading ? 'Uploading Image(s)...' : (isBrandContextLoading ? 'Loading Profile...' : (form.formState.isSubmitting ? 'Saving...' : (isExtracting ? 'Extracting Info...' : 'Save Brand Profile')))}
                 </Button>
               </form>
             </Form>
@@ -466,4 +483,3 @@ export default function BrandProfilePage() {
     </AppShell>
   );
 }
-    
