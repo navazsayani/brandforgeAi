@@ -36,49 +36,52 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
   const [generatedBlogPosts, setGeneratedBlogPosts] = useState<GeneratedBlogPost[]>([]);
   const [generatedAdCampaigns, setGeneratedAdCampaigns] = useState<GeneratedAdCampaign[]>([]);
 
-  useEffect(() => {
-    const fetchBrandData = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const brandDocRef = doc(db, "brandProfiles", BRAND_PROFILE_DOC_ID);
-        const docSnap = await getDoc(brandDocRef);
-        if (docSnap.exists()) {
-          const fetchedData = docSnap.data() as BrandData;
-          setBrandDataState({ 
-            ...fetchedData, 
-            exampleImages: fetchedData.exampleImages || [],
-            imageStyle: fetchedData.imageStyle || "",
-            imageStyleNotes: fetchedData.imageStyleNotes || "",
-          });
-        } else {
-          setBrandDataState({ exampleImages: [] , imageStyle: "", imageStyleNotes: ""});
-        }
-      } catch (e: any) {
-        console.error("Error fetching brand data:", e);
-        let specificError = `Failed to fetch brand data: ${e.message || "Unknown error. Check console."}`;
-        if (e.message && e.message.toLowerCase().includes("client is offline")) {
-          specificError = "Failed to connect to the database. Please check your internet connection and Firebase project configuration (e.g., correct Project ID in .env).";
-        } else if (e.message && e.message.toLowerCase().includes("missing or insufficient permissions")) {
-          specificError = "Database permission error. Please check your Firestore security rules in the Firebase console.";
-        } else if (e.code && e.code === "unavailable") {
-           specificError = "The Firebase service is temporarily unavailable. Please try again later.";
-        }
-        setError(specificError);
-        setBrandDataState(null);
-      } finally {
-        setIsLoading(false);
+  const fetchBrandDataCB = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const brandDocRef = doc(db, "brandProfiles", BRAND_PROFILE_DOC_ID);
+      const docSnap = await getDoc(brandDocRef);
+      if (docSnap.exists()) {
+        const fetchedData = docSnap.data() as BrandData;
+        setBrandDataState({ 
+          ...fetchedData, 
+          industry: fetchedData.industry || "",
+          exampleImages: fetchedData.exampleImages || [],
+          imageStyle: fetchedData.imageStyle || "",
+          imageStyleNotes: fetchedData.imageStyleNotes || "",
+        });
+      } else {
+        setBrandDataState({ industry: "", exampleImages: [] , imageStyle: "", imageStyleNotes: ""}); // Ensure all fields are initialized
       }
-    };
-    fetchBrandData();
+    } catch (e: any) {
+      console.error("Error fetching brand data:", e);
+      let specificError = `Failed to fetch brand data: ${e.message || "Unknown error. Check console."}`;
+      if (e.message && (e.message.toLowerCase().includes("client is offline") || e.message.toLowerCase().includes("failed to get document because the client is offline"))) {
+        specificError = "Failed to connect to the database. Client is offline. Please check your internet connection and Firebase project configuration.";
+      } else if (e.message && e.message.toLowerCase().includes("missing or insufficient permissions")) {
+        specificError = "Database permission error. Please check your Firestore security rules in the Firebase console.";
+      } else if (e.code && e.code === "unavailable") {
+         specificError = "The Firebase service is temporarily unavailable. Please try again later.";
+      }
+      setError(specificError);
+      setBrandDataState(null);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchBrandDataCB();
+  }, [fetchBrandDataCB]);
 
   const setBrandDataCB = useCallback(async (data: BrandData) => {
     setIsLoading(true);
     setError(null);
     try {
-      const dataToSave = { 
+      const dataToSave: BrandData = { 
         ...data, 
+        industry: data.industry || "",
         exampleImages: data.exampleImages || [],
         imageStyle: data.imageStyle || "",
         imageStyleNotes: data.imageStyleNotes || "",

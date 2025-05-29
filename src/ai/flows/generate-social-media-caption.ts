@@ -14,6 +14,7 @@ import {z} from 'genkit';
 
 const GenerateSocialMediaCaptionInputSchema = z.object({
   brandDescription: z.string().describe('The description of the brand.'),
+  industry: z.string().optional().describe('The industry of the brand (e.g., Fashion, Technology). This helps tailor the tone and hashtags.'),
   imageDescription: z.string().optional().describe('The description of the image to be posted. Only provided if an image is associated with the post.'),
   tone: z.string().describe('The desired tone of the caption (e.g., professional, funny, informative).'),
 });
@@ -35,18 +36,24 @@ const prompt = ai.definePrompt({
   output: {schema: GenerateSocialMediaCaptionOutputSchema},
   prompt: `You are an expert social media manager.
 
-You will generate an engaging caption and relevant hashtags for a social media post based on the brand description, the desired tone, and an optional image description.
+You will generate an engaging caption and relevant hashtags for a social media post.
+Consider the brand's description, its industry (if provided), the desired tone, and an optional image description.
 
 Brand Description: {{{brandDescription}}}
+{{#if industry}}
+Industry: {{{industry}}}
+Tailor the language, examples, and hashtags to be relevant to the {{{industry}}} sector.
+{{/if}}
 {{#if imageDescription}}
 Image Description: {{{imageDescription}}}
 Based on the image and brand, create a caption.
 {{else}}
-Based on the brand description, create a caption. No image is associated with this post, so focus on a text-only message.
+Based on the brand description (and industry, if provided), create a caption. No image is associated with this post, so focus on a text-only message.
 {{/if}}
 Desired Tone: {{{tone}}}
 
 Generate a suitable caption and a comma-separated list of 3-5 relevant hashtags.
+The hashtags should be optimized for the brand's industry and target audience.
 
 Caption:
 Hashtags:`,

@@ -31,6 +31,7 @@ export async function handleGenerateImagesAction(
 
     const input: GenerateImagesInput = {
       brandDescription: formData.get("brandDescription") as string,
+      industry: formData.get("industry") as string | undefined,
       imageStyle: formData.get("imageStyle") as string,
       exampleImage: formData.get("exampleImage") as string | undefined,
       aspectRatio: formData.get("aspectRatio") as string | undefined,
@@ -42,12 +43,9 @@ export async function handleGenerateImagesAction(
     if (!input.brandDescription || !input.imageStyle) {
       return { error: "Brand description and image style are required." };
     }
-    if (input.exampleImage === "") {
-      delete input.exampleImage;
-    }
-    if (input.aspectRatio === "" || input.aspectRatio === undefined) {
-        delete input.aspectRatio;
-    }
+    if (input.exampleImage === "") delete input.exampleImage;
+    if (input.aspectRatio === "" || input.aspectRatio === undefined) delete input.aspectRatio;
+    if (input.industry === "") delete input.industry;
     
     const result = await generateImages(input);
     const message = result.generatedImages.length > 1 
@@ -90,6 +88,7 @@ export async function handleGenerateSocialMediaCaptionAction(
 
     const input: GenerateSocialMediaCaptionInput = {
       brandDescription: formData.get("brandDescription") as string,
+      industry: formData.get("industry") as string | undefined,
       imageDescription: imageSrc ? imageDescription : undefined,
       tone: formData.get("tone") as string,
     };
@@ -100,6 +99,7 @@ export async function handleGenerateSocialMediaCaptionAction(
     if (imageSrc && (!imageDescription || imageDescription.trim() === "")) {
         return { error: "Image description is required if an image is selected for the post."}
     }
+    if (input.industry === "") delete input.industry;
     
     const result = await generateSocialMediaCaption(input);
     return { data: { ...result, imageSrc: imageSrc }, message: "Social media content generated!" };
@@ -116,15 +116,17 @@ export async function handleGenerateBlogOutlineAction(
     try {
         const input: GenerateBlogOutlineInput = {
             brandName: formData.get("brandName") as string,
-            brandDescription: formData.get("blogBrandDescription") as string, // Ensure correct name from form
-            keywords: formData.get("blogKeywords") as string, // Ensure correct name from form
-            websiteUrl: (formData.get("blogWebsiteUrl") as string) || undefined, // Ensure correct name from form
+            brandDescription: formData.get("blogBrandDescription") as string, 
+            industry: formData.get("industry") as string | undefined,
+            keywords: formData.get("blogKeywords") as string, 
+            websiteUrl: (formData.get("blogWebsiteUrl") as string) || undefined, 
         };
 
         if (!input.brandName || !input.brandDescription || !input.keywords) {
             return { error: "Brand name, description, and keywords are required for outline generation." };
         }
         if (input.websiteUrl === "") delete input.websiteUrl;
+        if (input.industry === "") delete input.industry;
 
         const result = await generateBlogOutline(input);
         return { data: result, message: "Blog outline generated successfully!" };
@@ -141,17 +143,19 @@ export async function handleGenerateBlogContentAction(
   try {
     const input: GenerateBlogContentInput = {
       brandName: formData.get("brandName") as string,
-      brandDescription: formData.get("blogBrandDescription") as string, // Ensure correct name from form
-      keywords: formData.get("blogKeywords") as string, // Ensure correct name from form
+      brandDescription: formData.get("blogBrandDescription") as string, 
+      industry: formData.get("industry") as string | undefined,
+      keywords: formData.get("blogKeywords") as string, 
       targetPlatform: formData.get("targetPlatform") as "Medium" | "Other",
-      websiteUrl: formData.get("blogWebsiteUrl") as string || undefined, // Ensure correct name from form
+      websiteUrl: formData.get("blogWebsiteUrl") as string || undefined, 
       blogOutline: formData.get("blogOutline") as string,
       blogTone: formData.get("blogTone") as string,
     };
      if (!input.brandName || !input.brandDescription || !input.keywords || !input.targetPlatform || !input.blogOutline || !input.blogTone) {
-      return { error: "All fields (except optional website URL) including outline and tone are required for blog content generation." };
+      return { error: "All fields (except optional website URL and industry) including outline and tone are required for blog content generation." };
     }
     if (input.websiteUrl === "") delete input.websiteUrl;
+    if (input.industry === "") delete input.industry;
 
     const result = await generateBlogContent(input);
     return { data: result, message: "Blog content generated!" };
@@ -170,7 +174,7 @@ export async function handleGenerateAdCampaignAction(
     const platformsArray = platformsString ? platformsString.split(',') as ('google_ads' | 'meta')[] : [];
 
     let generatedContent = formData.get("generatedContent") as string;
-    if (generatedContent === "Custom content for ad campaign") { // Check against the specific value
+    if (generatedContent === "Custom content for ad campaign") { 
         generatedContent = formData.get("customGeneratedContent") as string;
     }
 
@@ -178,6 +182,7 @@ export async function handleGenerateAdCampaignAction(
     const input: GenerateAdCampaignInput = {
       brandName: formData.get("brandName") as string,
       brandDescription: formData.get("brandDescription") as string,
+      industry: formData.get("industry") as string | undefined,
       generatedContent: generatedContent,
       targetKeywords: formData.get("targetKeywords") as string,
       budget: Number(formData.get("budget")),
@@ -190,6 +195,7 @@ export async function handleGenerateAdCampaignAction(
     if (!generatedContent.trim()) {
         return { error: "Ad content (selected or custom) cannot be empty."};
     }
+    if (input.industry === "") delete input.industry;
 
 
     const result = await generateAdCampaign(input);

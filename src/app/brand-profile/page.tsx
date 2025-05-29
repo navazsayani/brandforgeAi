@@ -17,7 +17,7 @@ import { Progress } from '@/components/ui/progress';
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-import { UserCircle, LinkIcon, FileText, Palette, UploadCloud, Tag, Brain, Loader2, Trash2, Edit } from 'lucide-react';
+import { UserCircle, LinkIcon, FileText, Palette, UploadCloud, Tag, Brain, Loader2, Trash2, Edit, Briefcase } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { handleExtractBrandInfoFromUrlAction, type FormState as ExtractFormState } from '@/lib/actions';
 import { storage } from '@/lib/firebaseConfig';
@@ -41,10 +41,28 @@ const artisticStyles = [
   { value: "cel shaded", label: "Cel Shaded" },
 ];
 
+const industries = [
+  { value: "fashion_apparel", label: "Fashion & Apparel" },
+  { value: "beauty_cosmetics", label: "Beauty & Cosmetics" },
+  { value: "food_beverage", label: "Food & Beverage" },
+  { value: "health_wellness", label: "Health & Wellness" },
+  { value: "technology_saas", label: "Technology & SaaS" },
+  { value: "travel_hospitality", label: "Travel & Hospitality" },
+  { value: "ecommerce_retail", label: "E-commerce & Retail" },
+  { value: "education", label: "Education" },
+  { value: "finance_fintech", label: "Finance & Fintech" },
+  { value: "real_estate", label: "Real Estate" },
+  { value: "arts_entertainment", label: "Arts & Entertainment" },
+  { value: "automotive", label: "Automotive" },
+  { value: "non_profit", label: "Non-profit" },
+  { value: "other", label: "Other" },
+];
+
 const brandProfileSchema = z.object({
   brandName: z.string().min(2, { message: "Brand name must be at least 2 characters." }),
   websiteUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   brandDescription: z.string().min(10, { message: "Description must be at least 10 characters." }),
+  industry: z.string().optional(),
   imageStyle: z.string().min(1, { message: "Please select an image style preset." }).optional(),
   imageStyleNotes: z.string().optional(),
   exampleImages: z.array(z.string().url({ message: "Each image must be a valid URL." })).optional(),
@@ -57,6 +75,7 @@ const defaultFormValues: BrandProfileFormData = {
   brandName: "",
   websiteUrl: "",
   brandDescription: "",
+  industry: "",
   imageStyle: artisticStyles.length > 0 ? artisticStyles[0].value : "",
   imageStyleNotes: "",
   exampleImages: [],
@@ -188,23 +207,22 @@ export default function BrandProfilePage() {
   const handleImageFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
       const files = Array.from(event.target.files);
-      setSelectedFileNames(files.map(file => file.name));
+      setSelectedFileNames(files.map(file => file.name)); // Keep this for immediate feedback on selected files
       setIsUploading(true);
       setUploadProgress(0);
 
       const newLocalPreviews = files.map(file => URL.createObjectURL(file));
-      // Temporarily add local previews for immediate feedback
-      setPreviewImages(prev => [...(form.getValues("exampleImages") || []), ...newLocalPreviews]);
+      const currentSavedImages = form.getValues("exampleImages") || [];
+      setPreviewImages([...currentSavedImages, ...newLocalPreviews]);
 
 
       const uploadPromises = files.map((file, index) => uploadImageToStorage(file, index, files.length));
       
       try {
         const downloadURLs = await Promise.all(uploadPromises);
-        const currentImages = form.getValues("exampleImages") || [];
-        const updatedImages = [...currentImages, ...downloadURLs];
+        const updatedImages = [...currentSavedImages, ...downloadURLs];
         form.setValue('exampleImages', updatedImages, { shouldValidate: true });
-        setPreviewImages(updatedImages); 
+        setPreviewImages(updatedImages); // Now set the final list with actual storage URLs
         toast({ title: "Images Uploaded", description: `${files.length} image(s) uploaded successfully. Save profile to persist changes.` });
       } catch (error) {
         toast({ title: "Some Uploads Failed", description: "Not all images were uploaded successfully. Check individual error messages.", variant: "destructive" });
@@ -212,7 +230,7 @@ export default function BrandProfilePage() {
       } finally {
         setIsUploading(false);
         setUploadProgress(0);
-        setSelectedFileNames([]);
+        setSelectedFileNames([]); // Clear selected file names after attempting upload
         if (fileInputRef.current) {
           fileInputRef.current.value = ""; 
         }
@@ -270,10 +288,10 @@ export default function BrandProfilePage() {
               <Skeleton className="h-6 w-3/4" />
             </CardHeader>
             <CardContent className="space-y-8">
-              {[...Array(6)].map((_, i) => (
+              {[...Array(7)].map((_, i) => ( // Increased array size for new field
                 <div key={i} className="space-y-2">
                   <Skeleton className="h-5 w-1/4" />
-                  <Skeleton className={i === 2 || i === 4 ? "h-24 w-full" : "h-10 w-full"} />
+                  <Skeleton className={i === 2 || i === 5 ? "h-24 w-full" : "h-10 w-full"} />
                 </div>
               ))}
               <Skeleton className="h-12 w-full" />
@@ -356,6 +374,32 @@ export default function BrandProfilePage() {
                           disabled={isBrandContextLoading || isUploading || isExtracting}
                         />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="industry"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center text-base"><Briefcase className="w-5 h-5 mr-2 text-primary"/>Industry / Brand Type</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ""} disabled={isBrandContextLoading || isUploading || isExtracting}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select your industry" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectLabel>Industries</SelectLabel>
+                            {industries.map(industry => (
+                              <SelectItem key={industry.value} value={industry.value}>{industry.label}</SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

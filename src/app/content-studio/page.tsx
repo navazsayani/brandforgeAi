@@ -16,7 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { FormDescription } from "@/components/ui/form";
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Tag, Edit } from 'lucide-react';
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Tag, Edit, Briefcase } from 'lucide-react';
 import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
@@ -110,7 +110,7 @@ export default function ContentStudioPage() {
             setSelectedProfileImageIndexForSocial(null);
         }
     }
-  }, [brandData, selectedProfileImageIndexForGen, selectedProfileImageIndexForSocial]);
+  }, [brandData]);
 
 
   useEffect(() => {
@@ -118,26 +118,19 @@ export default function ContentStudioPage() {
       const newImageUrls = imageState.data;
       setLastSuccessfulGeneratedImageUrls(newImageUrls);
       
-      const imageForm = document.getElementById('imageGenerationForm') as HTMLFormElement;
-      let combinedStyleForPrompt = "";
-      if (imageForm) {
-        const formData = new FormData(imageForm);
-        combinedStyleForPrompt = formData.get("imageStyle") as string; 
-      }
-
       newImageUrls.forEach(url => {
         const newImage: GeneratedImage = {
           id: `${new Date().toISOString()}-${Math.random().toString(36).substring(2, 9)}`, 
           src: url,
           prompt: (document.querySelector('#imageGenBrandDescription') as HTMLTextAreaElement)?.value || "", 
-          style: combinedStyleForPrompt
+          style: selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")
         };
         addGeneratedImage(newImage);
       });
       toast({ title: "Success", description: imageState.message });
     }
     if (imageState.error) toast({ title: "Error", description: imageState.error, variant: "destructive" });
-  }, [imageState, toast, addGeneratedImage]);
+  }, [imageState, toast, addGeneratedImage, selectedImageStylePreset, customStyleNotesInput]);
 
   useEffect(() => {
     if (socialState.data) {
@@ -257,6 +250,7 @@ export default function ContentStudioPage() {
     const outlineFormData = new FormData();
     outlineFormData.append("brandName", formData.get("brandName") || brandData?.brandName || "");
     outlineFormData.append("brandDescription", formData.get("blogBrandDescription") || brandData?.brandDescription || "");
+    outlineFormData.append("industry", formData.get("industry") || brandData?.industry || "");
     outlineFormData.append("keywords", formData.get("blogKeywords") || brandData?.targetKeywords || "");
     const websiteUrl = formData.get("blogWebsiteUrl") as string;
     if (websiteUrl) {
@@ -277,7 +271,10 @@ export default function ContentStudioPage() {
     if (customStyleNotesInput.trim()) {
         combinedStyle += ". " + customStyleNotesInput.trim();
     }
-    formData.set("imageStyle", combinedStyle); // Set the combined style for the action
+    formData.set("imageStyle", combinedStyle); 
+    formData.set("industry", brandData?.industry || "");
+    formData.set("exampleImage", currentExampleImageForGen);
+
 
     startTransition(() => {
       imageAction(formData);
@@ -312,9 +309,11 @@ export default function ContentStudioPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>Generate Brand Images</CardTitle>
-                <CardDescription>Create unique images based on your brand's aesthetics. Uses brand description and style. Optionally use an example image from your Brand Profile.</CardDescription>
+                <CardDescription>Create unique images based on your brand's aesthetics. Uses brand description, industry, and style. Optionally use an example image from your Brand Profile.</CardDescription>
               </CardHeader>
               <form onSubmit={handleImageGenerationSubmit} id="imageGenerationForm">
+                <input type="hidden" name="industry" value={brandData?.industry || ""} />
+                <input type="hidden" name="exampleImage" value={currentExampleImageForGen} />
                 <CardContent className="space-y-6">
                   <div>
                     <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
@@ -330,7 +329,7 @@ export default function ContentStudioPage() {
                   
                   <div>
                     <Label htmlFor="imageGenImageStylePresetSelect" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Image Style Preset</Label>
-                     <Select name="imageStylePreset" required value={selectedImageStylePreset} onValueChange={setSelectedImageStylePreset} >
+                     <Select value={selectedImageStylePreset} onValueChange={setSelectedImageStylePreset} >
                         <SelectTrigger id="imageGenImageStylePresetSelect">
                             <SelectValue placeholder="Select image style preset" />
                         </SelectTrigger>
@@ -344,7 +343,7 @@ export default function ContentStudioPage() {
                         </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Default from profile: {brandData?.imageStyle ? (artisticStyles.find(s => s.value === brandData.imageStyle)?.label || `Custom: ${brandData.imageStyle}`) : 'Not set'}
+                      Current profile preset: {brandData?.imageStyle ? (artisticStyles.find(s => s.value === brandData.imageStyle)?.label || `Custom: ${brandData.imageStyle}`) : 'Not set'}
                     </p>
                   </div>
 
@@ -352,29 +351,20 @@ export default function ContentStudioPage() {
                     <Label htmlFor="imageGenCustomStyleNotes" className="flex items-center mb-1"><Edit className="w-4 h-4 mr-2 text-primary" />Custom Style Notes/Overrides (Optional)</Label>
                     <Textarea
                       id="imageGenCustomStyleNotes"
-                      name="customStyleNotes" 
                       value={customStyleNotesInput}
                       onChange={(e) => setCustomStyleNotesInput(e.target.value)}
                       placeholder="E.g., 'add a touch of vintage', 'focus on metallic textures', 'use a desaturated color palette'."
                       rows={2}
                     />
                      <p className="text-xs text-muted-foreground mt-1">
-                      Default from profile: {brandData?.imageStyleNotes || 'None'}
+                      Current profile notes: {brandData?.imageStyleNotes || 'None'}
                     </p>
                   </div>
                   <input type="hidden" name="imageStyle" />
 
 
                   <div>
-                    <Label htmlFor="imageGenExampleImage" className="flex items-center mb-1"><ImageIcon className="w-4 h-4 mr-2 text-primary" />Example Image from Profile (Optional)</Label>
-                    <Input
-                      id="imageGenExampleImage"
-                      name="exampleImage"
-                      value={currentExampleImageForGen}
-                      placeholder="Select an example image from profile below if available"
-                      readOnly 
-                      className="bg-muted/50 hidden" 
-                    />
+                    <Label htmlFor="imageGenExampleImageSelector" className="flex items-center mb-1"><ImageIcon className="w-4 h-4 mr-2 text-primary" />Example Image from Profile (Optional)</Label>
                     {brandData?.exampleImages && brandData.exampleImages.length > 0 ? (
                         <div className="mt-2">
                             <p className="text-xs text-muted-foreground mb-1">
@@ -386,7 +376,7 @@ export default function ContentStudioPage() {
                                         type="button"
                                         key={`gen-profile-${index}`}
                                         onClick={() => setSelectedProfileImageIndexForGen(index)}
-                                        disabled={brandData.exampleImages && brandData.exampleImages.length <=1}
+                                        disabled={brandData.exampleImages && brandData.exampleImages.length <=1 && selectedProfileImageIndexForGen === index}
                                         className={cn(
                                             "w-20 h-20 rounded border-2 p-0.5 flex-shrink-0 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring",
                                             selectedProfileImageIndexForGen === index ? "border-primary ring-2 ring-primary" : "border-border",
@@ -397,8 +387,8 @@ export default function ContentStudioPage() {
                                     </button>
                                 ))}
                             </div>
-                            {selectedProfileImageIndexForGen !== null ? (
-                                <p className="text-xs text-muted-foreground mt-1">Using image {selectedProfileImageIndexForGen + 1} as reference.</p>
+                            {currentExampleImageForGen ? (
+                                <p className="text-xs text-muted-foreground mt-1">Using image {selectedProfileImageIndexForGen !== null ? selectedProfileImageIndexForGen + 1 : '1'} as reference. Clear selection by re-clicking if needed.</p>
                             ): (
                                 <p className="text-xs text-muted-foreground mt-1">Click an image above to select it as reference.</p>
                             )}
@@ -498,9 +488,11 @@ export default function ContentStudioPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>Create Social Media Post</CardTitle>
-                <CardDescription>Generate engaging captions and hashtags. Uses brand description, image description (optional), and selected tone.</CardDescription>
+                <CardDescription>Generate engaging captions and hashtags. Uses brand description, industry, image description (optional), and selected tone.</CardDescription>
               </CardHeader>
               <form action={socialAction}>
+                <input type="hidden" name="industry" value={brandData?.industry || ""} />
+                <input type="hidden" name="selectedImageSrcForSocialPost" value={currentSocialImagePreviewUrl || ""} />
                 <CardContent className="space-y-6">
                   <div className="space-y-3">
                     <div className="flex items-center space-x-2">
@@ -515,6 +507,7 @@ export default function ContentStudioPage() {
                                     setSocialImageChoice('generated'); 
                                 } else if (!socialImageChoice && brandData?.exampleImages?.[0]) {
                                     setSocialImageChoice('profile'); 
+                                    if(selectedProfileImageIndexForSocial === null && brandData?.exampleImages?.length > 0) setSelectedProfileImageIndexForSocial(0);
                                 } else if (!socialImageChoice) { 
                                      setSocialImageChoice(null); 
                                 }
@@ -557,7 +550,7 @@ export default function ContentStudioPage() {
                                             type="button"
                                             key={`social-profile-${index}`}
                                             onClick={() => setSelectedProfileImageIndexForSocial(index)}
-                                            disabled={brandData.exampleImages && brandData.exampleImages.length <=1}
+                                            disabled={brandData.exampleImages && brandData.exampleImages.length <=1 && selectedProfileImageIndexForSocial === index}
                                             className={cn(
                                                 "w-16 h-16 rounded border-2 p-0.5 flex-shrink-0 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring",
                                                 selectedProfileImageIndexForSocial === index ? "border-primary ring-2 ring-primary" : "border-border",
@@ -585,7 +578,6 @@ export default function ContentStudioPage() {
                      {useImageForSocialPost && !currentSocialImagePreviewUrl && (
                         <p className="pl-6 text-xs text-muted-foreground mb-3">No image selected or available for the social post.</p>
                      )}
-                    <input type="hidden" name="selectedImageSrcForSocialPost" value={currentSocialImagePreviewUrl || ""} />
                   </div>
 
                   <div>
@@ -618,7 +610,7 @@ export default function ContentStudioPage() {
                     </div>
                     <Textarea
                       id="socialImageDescription"
-                      name="imageDescription"
+                      name="socialImageDescription" // Corrected name
                       placeholder={useImageForSocialPost && currentSocialImagePreviewUrl ? "Describe the image you're posting or use AI. Required if image used." : "Optionally describe the theme if not using an image."}
                       rows={3}
                       required={useImageForSocialPost && !!currentSocialImagePreviewUrl} 
@@ -691,9 +683,10 @@ export default function ContentStudioPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>Create Blog Content</CardTitle>
-                <CardDescription>Generate SEO-friendly blog posts. Define an outline, choose a tone, and let AI write the content.</CardDescription>
+                <CardDescription>Generate SEO-friendly blog posts. Define an outline, choose a tone, and let AI write the content. Uses brand description and industry.</CardDescription>
               </CardHeader>
               <form action={blogAction}>
+                <input type="hidden" name="industry" value={brandData?.industry || ""} />
                 <CardContent className="space-y-6">
                   <div>
                     <Label htmlFor="blogBrandName" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Name (from Profile)</Label>
@@ -842,4 +835,3 @@ export default function ContentStudioPage() {
     </AppShell>
   );
 }
-

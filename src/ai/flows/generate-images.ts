@@ -16,6 +16,7 @@ const GenerateImagesInputSchema = z.object({
   brandDescription: z
     .string()
     .describe('A detailed description of the brand and its values. This will be used for subtle thematic influence on the new item.'),
+  industry: z.string().optional().describe('The industry or type of the brand, e.g., "Fashion & Apparel", "Technology".'),
   imageStyle: z
     .string()
     .describe(
@@ -24,7 +25,7 @@ const GenerateImagesInputSchema = z.object({
   exampleImage: z
     .string()
     .describe(
-      "An example image as a URL or data URI. This image primarily defines the *item category*."
+      "An example image as a URL. This image primarily defines the *item category*."
     )
     .optional(),
   aspectRatio: z
@@ -64,10 +65,10 @@ async function _generateImageWithGemini(params: {
   console.log("Attempting Gemini image generation with prompt parts:", JSON.stringify(promptParts, null, 2));
 
   const {media} = await aiInstance.generate({
-    model: 'googleai/gemini-2.0-flash-exp', // IMPORTANT: ONLY this model can generate images
+    model: 'googleai/gemini-2.0-flash-exp', 
     prompt: promptParts,
     config: {
-      responseModalities: ['TEXT', 'IMAGE'], // MUST provide both TEXT and IMAGE
+      responseModalities: ['TEXT', 'IMAGE'], 
       safetySettings: safetySettingsConfig,
     },
   });
@@ -83,23 +84,23 @@ async function _generateImageWithGemini(params: {
   return media.url;
 }
 
-// Stub for Leonardo.ai
 async function _generateImageWithLeonardoAI_stub(params: {
   brandDescription: string;
+  industry?: string;
   imageStyle: string;
   exampleImage?: string;
   aspectRatio?: string;
   negativePrompt?: string;
   seed?: number;
-  textPrompt: string; // The fully constructed text part of the prompt
+  textPrompt: string; 
 }): Promise<string> {
   console.warn("Leonardo.ai image generation is called but not implemented. Parameters:", params);
   throw new Error("Leonardo.ai provider is not implemented yet.");
 }
 
-// Stub for Google's Imagen models (e.g., via Vertex AI)
 async function _generateImageWithImagen_stub(params: {
   brandDescription: string;
+  industry?: string;
   imageStyle: string;
   exampleImage?: string;
   aspectRatio?: string;
@@ -125,6 +126,7 @@ const generateImagesFlow = ai.defineFlow(
   async (input) => {
     const {
       brandDescription,
+      industry,
       imageStyle,
       exampleImage,
       aspectRatio,
@@ -136,15 +138,15 @@ const generateImagesFlow = ai.defineFlow(
     if (!brandDescription || !imageStyle) {
         throw new Error("Brand description and image style are required for image generation.");
     }
-    // The problematic check for data URI on exampleImage has been REMOVED here.
-
+    
     const generatedImageUrls: string[] = [];
     const imageGenerationProvider = process.env.IMAGE_GENERATION_PROVIDER || 'GEMINI';
 
     for (let i = 0; i < numberOfImages; i++) {
         let textPromptContent = "";
+        let industryContext = industry ? ` The brand operates in the ${industry} industry.` : "";
 
-        if (exampleImage) { // Check if exampleImage exists
+        if (exampleImage) { 
             textPromptContent = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
 
@@ -153,17 +155,17 @@ The provided example image (sent first) serves ONE primary purpose: to identify 
 Your task is to generate a *completely new item* belonging to this *same category*.
 
 The *design, appearance, theme, specific characteristics, and unique elements* of this NEW item must be **primarily and heavily derived** from the following inputs:
-1.  **Brand Description**: "${brandDescription}" - This is the primary driver for the core design, theme, specific characteristics, and unique elements of the new item.
+1.  **Brand Description**: "${brandDescription}"${industryContext} - This is the primary driver for the core design, theme, specific characteristics, and unique elements of the new item.
 2.  **Desired Artistic Style**: "${imageStyle}" - This dictates the rendering style of the new item. If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic and look like a real product photo.
 
 **Crucially, do NOT replicate or closely imitate the visual design details (color, pattern, specific shape elements beyond the basic category identification, embellishments) of the provided example image.** The example image is *only* for determining the item category. The new image should look like a distinct product that fits the brand description and desired artistic style.
 
-For instance, if the example image is a 'simple blue cotton t-shirt' (category: t-shirt), and the Brand Description is 'luxury, silk, minimalist, black and gold accents' and the Desired Artistic Style is 'high-fashion product shot', you should generate an image of a *luxury black silk t-shirt with gold accents, shot in a high-fashion product style*. It should *not* look like the original blue cotton t-shirt.
+For instance, if the example image is a 'simple blue cotton t-shirt' (category: t-shirt), and the Brand Description is 'luxury, silk, minimalist, black and gold accents for a high-end fashion brand' and the Desired Artistic Style is 'high-fashion product shot', you should generate an image of a *luxury black silk t-shirt with gold accents, shot in a high-fashion product style*. It should *not* look like the original blue cotton t-shirt.
 `.trim();
-        } else { // No example image
+        } else { 
             textPromptContent = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
-The image should be based on the following concept: "${brandDescription}".
+The image should be based on the following concept: "${brandDescription}".${industryContext}
 The desired artistic style for this new image is: "${imageStyle}". If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic.
 `.trim();
         }
@@ -190,6 +192,7 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
             let imageUrl = "";
             const baseGenerationParams = {
                 brandDescription,
+                industry,
                 imageStyle,
                 exampleImage,
                 aspectRatio,
@@ -201,7 +204,7 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
             switch (imageGenerationProvider.toUpperCase()) {
                 case 'GEMINI':
                     const finalPromptParts: ({text: string} | {media: {url: string}})[] = [];
-                    if (exampleImage) { // Only add if exampleImage is provided
+                    if (exampleImage) { 
                         finalPromptParts.push({ media: { url: exampleImage } });
                     }
                     finalPromptParts.push({ text: textPromptContent });
