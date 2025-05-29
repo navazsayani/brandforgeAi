@@ -24,6 +24,7 @@ const GenerateImagesInputSchema = z.object({
     ),
   exampleImage: z
     .string()
+    .url()
     .describe(
       "An example image as a URL. This image primarily defines the *item category*."
     )
@@ -46,6 +47,7 @@ const GenerateImagesOutputSchema = z.object({
       "A generated image as a data URI that includes a MIME type and uses Base64 encoding. The format will be: 'data:<mimetype>;base64,<encoded_data>'."
     )
   ),
+  promptUsed: z.string().describe("The text prompt that was used to generate the first image in the batch."),
 });
 export type GenerateImagesOutput = z.infer<typeof GenerateImagesOutputSchema>;
 
@@ -141,6 +143,7 @@ const generateImagesFlow = ai.defineFlow(
     
     const generatedImageUrls: string[] = [];
     const imageGenerationProvider = process.env.IMAGE_GENERATION_PROVIDER || 'GEMINI';
+    let firstPromptUsed = "";
 
     for (let i = 0; i < numberOfImages; i++) {
         let textPromptContent = "";
@@ -184,6 +187,10 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
         
         if (numberOfImages > 1) {
             textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
+        }
+
+        if (i === 0) {
+            firstPromptUsed = textPromptContent;
         }
         
         console.log(`Attempting image generation ${i+1} of ${numberOfImages} using provider: ${imageGenerationProvider}. Text prompt: ${textPromptContent}`);
@@ -233,6 +240,7 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
         throw new Error("AI failed to generate any images for the batch.");
     }
     
-    return {generatedImages: generatedImageUrls};
+    return {generatedImages: generatedImageUrls, promptUsed: firstPromptUsed };
   }
 );
+

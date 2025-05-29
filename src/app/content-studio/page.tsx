@@ -25,7 +25,7 @@ import type { GenerateBlogOutlineOutput } from "@/ai/flows/generate-blog-outline
 import { cn } from '@/lib/utils';
 
 
-const initialImageFormState: FormState<string[]> = { error: undefined, data: undefined, message: undefined };
+const initialImageFormState: FormState<{ generatedImages: string[]; promptUsed: string; }> = { error: undefined, data: undefined, message: undefined };
 const initialSocialFormState: FormState<{ caption: string; hashtags: string; imageSrc: string | null }> = { error: undefined, data: undefined, message: undefined };
 const initialBlogFormState: FormState<{ title: string; content: string; tags: string }> = { error: undefined, data: undefined, message: undefined };
 const initialDescribeImageState: FormState<DescribeImageOutput> = { error: undefined, data: undefined, message: undefined };
@@ -73,6 +73,7 @@ export default function ContentStudioPage() {
   const [blogOutlineState, blogOutlineAction] = useActionState(handleGenerateBlogOutlineAction, initialBlogOutlineState);
   
   const [lastSuccessfulGeneratedImageUrls, setLastSuccessfulGeneratedImageUrls] = useState<string[]>([]);
+  const [lastUsedImageGenPrompt, setLastUsedImageGenPrompt] = useState<string | null>(null);
   const [generatedSocialPost, setGeneratedSocialPost] = useState<{caption: string, hashtags: string, imageSrc: string | null} | null>(null);
   const [generatedBlogPost, setGeneratedBlogPost] = useState<{title: string, content: string, tags: string} | null>(null);
   const [generatedBlogOutline, setGeneratedBlogOutline] = useState<string>("");
@@ -115,14 +116,15 @@ export default function ContentStudioPage() {
 
   useEffect(() => {
     if (imageState.data) {
-      const newImageUrls = imageState.data;
+      const newImageUrls = imageState.data.generatedImages;
       setLastSuccessfulGeneratedImageUrls(newImageUrls);
+      setLastUsedImageGenPrompt(imageState.data.promptUsed);
       
       newImageUrls.forEach(url => {
         const newImage: GeneratedImage = {
           id: `${new Date().toISOString()}-${Math.random().toString(36).substring(2, 9)}`, 
           src: url,
-          prompt: (document.querySelector('#imageGenBrandDescription') as HTMLTextAreaElement)?.value || "", 
+          prompt: imageState.data.promptUsed || (document.querySelector('#imageGenBrandDescription') as HTMLTextAreaElement)?.value || "", 
           style: selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")
         };
         addGeneratedImage(newImage);
@@ -201,7 +203,8 @@ export default function ContentStudioPage() {
 
   const handleClearGeneratedImages = () => {
     setLastSuccessfulGeneratedImageUrls([]);
-    toast({title: "Cleared", description: "Generated images cleared."});
+    setLastUsedImageGenPrompt(null);
+    toast({title: "Cleared", description: "Generated images and prompt cleared."});
   };
 
   const handleUseGeneratedImageForSocial = () => {
@@ -388,7 +391,7 @@ export default function ContentStudioPage() {
                                 ))}
                             </div>
                             {currentExampleImageForGen ? (
-                                <p className="text-xs text-muted-foreground mt-1">Using image {selectedProfileImageIndexForGen !== null ? selectedProfileImageIndexForGen + 1 : '1'} as reference. Clear selection by re-clicking if needed.</p>
+                                <p className="text-xs text-muted-foreground mt-1">Using image {selectedProfileImageIndexForGen !== null ? selectedProfileImageIndexForGen + 1 : '1'} as reference.</p>
                             ): (
                                 <p className="text-xs text-muted-foreground mt-1">Click an image above to select it as reference.</p>
                             )}
@@ -474,6 +477,18 @@ export default function ContentStudioPage() {
                             </div>
                         ))}
                       </div>
+                      {lastUsedImageGenPrompt && (
+                        <div className="mt-4">
+                            <Label htmlFor="usedImagePromptDisplay" className="flex items-center mb-1 text-sm font-medium"><FileText className="w-4 h-4 mr-2 text-primary" />Prompt Used:</Label>
+                            <Textarea
+                                id="usedImagePromptDisplay"
+                                value={lastUsedImageGenPrompt}
+                                readOnly
+                                rows={Math.min(10, lastUsedImageGenPrompt.split('\n').length + 1)}
+                                className="text-xs bg-muted/50"
+                            />
+                        </div>
+                      )}
                       <Button variant="outline" className="mt-4" onClick={handleUseGeneratedImageForSocial} disabled={lastSuccessfulGeneratedImageUrls.length === 0}>
                         <ImageUp className="mr-2 h-4 w-4" /> Use First Image for Social Post
                       </Button>
@@ -505,7 +520,7 @@ export default function ContentStudioPage() {
                                     setSocialImageChoice(null); 
                                 } else if (!socialImageChoice && lastSuccessfulGeneratedImageUrls.length > 0) {
                                     setSocialImageChoice('generated'); 
-                                } else if (!socialImageChoice && brandData?.exampleImages?.[0]) {
+                                } else if (!socialImageChoice && brandData?.exampleImages?.[selectedProfileImageIndexForSocial !== null ? selectedProfileImageIndexForSocial : 0]) {
                                     setSocialImageChoice('profile'); 
                                     if(selectedProfileImageIndexForSocial === null && brandData?.exampleImages?.length > 0) setSelectedProfileImageIndexForSocial(0);
                                 } else if (!socialImageChoice) { 
@@ -594,7 +609,7 @@ export default function ContentStudioPage() {
                   
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                        <Label htmlFor="socialImageDescription" className="flex items-center"><UserSquare className="w-4 h-4 mr-2 text-primary" />Image Description {useImageForSocialPost ? '' : '(Optional)'}</Label>
+                        <Label htmlFor="socialImageDescription" className="flex items-center"><UserSquare className="w-4 h-4 mr-2 text-primary" />Image Description {useImageForSocialPost && currentSocialImagePreviewUrl ? '' : '(Optional)'}</Label>
                         {useImageForSocialPost && currentSocialImagePreviewUrl && (
                             <Button 
                                 type="button" 
@@ -610,7 +625,7 @@ export default function ContentStudioPage() {
                     </div>
                     <Textarea
                       id="socialImageDescription"
-                      name="socialImageDescription" // Corrected name
+                      name="socialImageDescription" 
                       placeholder={useImageForSocialPost && currentSocialImagePreviewUrl ? "Describe the image you're posting or use AI. Required if image used." : "Optionally describe the theme if not using an image."}
                       rows={3}
                       required={useImageForSocialPost && !!currentSocialImagePreviewUrl} 
@@ -686,7 +701,9 @@ export default function ContentStudioPage() {
                 <CardDescription>Generate SEO-friendly blog posts. Define an outline, choose a tone, and let AI write the content. Uses brand description and industry.</CardDescription>
               </CardHeader>
               <form action={blogAction}>
+                {/* Hidden inputs to pass brand data to the action */}
                 <input type="hidden" name="industry" value={brandData?.industry || ""} />
+
                 <CardContent className="space-y-6">
                   <div>
                     <Label htmlFor="blogBrandName" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Name (from Profile)</Label>
@@ -835,3 +852,4 @@ export default function ContentStudioPage() {
     </AppShell>
   );
 }
+

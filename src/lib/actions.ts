@@ -18,9 +18,9 @@ export interface FormState<T = any> {
 }
 
 export async function handleGenerateImagesAction(
-  prevState: FormState<string[]>, 
+  prevState: FormState<{ generatedImages: string[]; promptUsed: string; }>, 
   formData: FormData
-): Promise<FormState<string[]>> {
+): Promise<FormState<{ generatedImages: string[]; promptUsed: string; }>> {
   try {
     const numberOfImagesStr = formData.get("numberOfImages") as string;
     const numberOfImages = parseInt(numberOfImagesStr, 10) || 1;
@@ -51,7 +51,7 @@ export async function handleGenerateImagesAction(
     const message = result.generatedImages.length > 1 
         ? `${result.generatedImages.length} images generated successfully!` 
         : "Image generated successfully!";
-    return { data: result.generatedImages, message: message };
+    return { data: { generatedImages: result.generatedImages, promptUsed: result.promptUsed }, message: message };
   } catch (e: any) {
     console.error("Error in handleGenerateImagesAction:", e);
     return { error: e.message || "Failed to generate image(s)." };
@@ -82,14 +82,14 @@ export async function handleGenerateSocialMediaCaptionAction(
 ): Promise<FormState<{ caption: string; hashtags: string; imageSrc: string | null }>> {
   try {
     const selectedImageSrc = formData.get("selectedImageSrcForSocialPost") as string;
-    const imageSrc = selectedImageSrc && selectedImageSrc !== "" ? selectedImageSrc : null;
+    const imageSrc = selectedImageSrc && selectedImageSrc.trim() !== "" ? selectedImageSrc : null;
     const imageDescription = formData.get("socialImageDescription") as string;
 
 
     const input: GenerateSocialMediaCaptionInput = {
       brandDescription: formData.get("brandDescription") as string,
       industry: formData.get("industry") as string | undefined,
-      imageDescription: imageSrc ? imageDescription : undefined,
+      imageDescription: imageSrc ? imageDescription : undefined, // Only pass if imageSrc is present
       tone: formData.get("tone") as string,
     };
 
@@ -224,3 +224,4 @@ export async function handleExtractBrandInfoFromUrlAction(
         return { error: e.message || "Failed to extract brand information from URL." };
     }
 }
+
