@@ -64,25 +64,25 @@ async function _generateImageWithGemini(params: {
       { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
       { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
   ];
-  
+
   console.log("Attempting Gemini image generation with prompt parts:", JSON.stringify(promptParts, null, 2));
 
   const {media} = await aiInstance.generate({
-    model: 'googleai/gemini-2.0-flash-exp', 
+    model: 'googleai/gemini-2.0-flash-exp',
     prompt: promptParts,
     config: {
-      responseModalities: ['TEXT', 'IMAGE'], 
+      responseModalities: ['TEXT', 'IMAGE'],
       safetySettings: safetySettingsConfig,
     },
   });
 
   if (!media || !media.url) {
     console.error(`AI image generation failed. Media object or URL is missing. Response media:`, JSON.stringify(media, null, 2));
-    throw new Error(`AI failed to generate image or returned an invalid image format. Check server logs.`);
+    throw new Error(`AI failed to generate image or returned an invalid image format. Check server logs for details.`);
   }
   if (typeof media.url !== 'string' || !media.url.startsWith('data:')) {
     console.error(`AI image generation failed. Media URL is not a valid data URI. Received URL:`, media.url);
-    throw new Error(`AI returned image, but its format (URL) is invalid. Expected a data URI.`);
+    throw new Error(`AI returned image, but its format (URL) is invalid. Expected a data URI. Check server logs for details.`);
   }
   return media.url;
 }
@@ -95,7 +95,7 @@ async function _generateImageWithLeonardoAI_stub(params: {
   aspectRatio?: string;
   negativePrompt?: string;
   seed?: number;
-  textPrompt: string; 
+  textPrompt: string;
 }): Promise<string> {
   console.warn("Leonardo.ai image generation is called but not implemented. Parameters:", params);
   throw new Error("Leonardo.ai provider is not implemented yet.");
@@ -136,9 +136,9 @@ const generateImagesFlow = ai.defineFlow(
       numberOfImages = 1,
       negativePrompt,
       seed,
-      finalizedTextPrompt,
+      finalizedTextPrompt, // User-edited full prompt
     } = input;
-    
+
     const generatedImageUrls: string[] = [];
     const imageGenerationProvider = process.env.IMAGE_GENERATION_PROVIDER || 'GEMINI';
     let firstPromptUsed = "";
@@ -149,11 +149,12 @@ const generateImagesFlow = ai.defineFlow(
 
         if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
             textPromptContent = finalizedTextPrompt;
+            console.log(`Using finalized text prompt for image ${i+1}: ${textPromptContent}`);
         } else {
             if (!brandDescription || !imageStyle) {
                 throw new Error("Brand description and image style are required if not providing a finalized text prompt.");
             }
-            if (exampleImage) { 
+            if (exampleImage) {
                 textPromptContent = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
 
@@ -169,7 +170,7 @@ The *design, appearance, theme, specific characteristics, and unique elements* o
 
 For instance, if the example image is a 'simple blue cotton t-shirt' (category: t-shirt), and the Brand Description is 'luxury, silk, minimalist, black and gold accents for a high-end fashion brand' and the Desired Artistic Style is 'high-fashion product shot', you should generate an image of a *luxury black silk t-shirt with gold accents, shot in a high-fashion product style*. It should *not* look like the original blue cotton t-shirt.
 `.trim();
-            } else { 
+            } else { // No example image
                 textPromptContent = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
 The image should be based on the following concept: "${brandDescription}".${industryContext}
@@ -180,8 +181,9 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
             if (negativePrompt) {
                 textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
             }
+            console.log(`Constructed text prompt for image ${i+1} (no finalized prompt given): ${textPromptContent}`);
         }
-        
+
         // Aspect ratio and seed are structural, append them even if finalizedTextPrompt is used,
         // assuming the user might not have added these specifically or wants them enforced.
         if (aspectRatio) {
@@ -190,7 +192,7 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
         if (seed !== undefined) {
           textPromptContent += `\n\nUse seed: ${seed}.`;
         }
-        
+
         if (numberOfImages > 1 && (!finalizedTextPrompt || !finalizedTextPrompt.toLowerCase().includes("batch generation"))) {
             textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
         }
@@ -198,15 +200,15 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
         if (i === 0) {
             firstPromptUsed = textPromptContent;
         }
-        
-        console.log(`Attempting image generation ${i+1} of ${numberOfImages} using provider: ${imageGenerationProvider}. Text prompt: ${textPromptContent}`);
+
+        console.log(`Final text prompt being used for image ${i+1}/${numberOfImages} using provider: ${imageGenerationProvider}: ${textPromptContent}`);
 
         try {
             let imageUrl = "";
             const baseGenerationParams = {
-                brandDescription: brandDescription || "", 
+                brandDescription: brandDescription || "",
                 industry,
-                imageStyle: imageStyle || "", 
+                imageStyle: imageStyle || "",
                 exampleImage,
                 aspectRatio,
                 negativePrompt,
@@ -217,10 +219,15 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
             switch (imageGenerationProvider.toUpperCase()) {
                 case 'GEMINI':
                     const finalPromptParts: ({text: string} | {media: {url: string}})[] = [];
-                    if (exampleImage) { 
+                    if (exampleImage) {
+                        // No longer throwing an error for non-data URI
+                        // The _generateImageWithGemini helper itself expects a URL string that Gemini can process.
                         finalPromptParts.push({ media: { url: exampleImage } });
                     }
                     finalPromptParts.push({ text: textPromptContent });
+
+                    console.log("Final prompt parts for Gemini:", JSON.stringify(finalPromptParts, null, 2));
+
                     imageUrl = await _generateImageWithGemini({
                         aiInstance: ai,
                         promptParts: finalPromptParts
@@ -229,7 +236,7 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
                 case 'LEONARDO_AI':
                     imageUrl = await _generateImageWithLeonardoAI_stub(baseGenerationParams);
                     break;
-                case 'IMAGEN': 
+                case 'IMAGEN':
                     imageUrl = await _generateImageWithImagen_stub(baseGenerationParams);
                     break;
                 default:
@@ -245,11 +252,7 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
     if (generatedImageUrls.length === 0 && numberOfImages > 0) {
         throw new Error("AI failed to generate any images for the batch.");
     }
-    
+
     return {generatedImages: generatedImageUrls, promptUsed: firstPromptUsed };
   }
 );
-
-    
-
-    

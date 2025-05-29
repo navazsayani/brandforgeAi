@@ -18,28 +18,32 @@ export interface FormState<T = any> {
 }
 
 export async function handleGenerateImagesAction(
-  prevState: FormState<{ generatedImages: string[]; promptUsed: string; }>, 
+  prevState: FormState<{ generatedImages: string[]; promptUsed: string; }>,
   formData: FormData
 ): Promise<FormState<{ generatedImages: string[]; promptUsed: string; }>> {
   try {
     const numberOfImagesStr = formData.get("numberOfImages") as string;
     const numberOfImages = parseInt(numberOfImagesStr, 10) || 1;
-    const negativePrompt = formData.get("negativePrompt") as string | undefined;
+    const negativePromptValue = formData.get("negativePrompt") as string | undefined;
     const seedStr = formData.get("seed") as string | undefined;
     const seed = seedStr && !isNaN(parseInt(seedStr, 10)) ? parseInt(seedStr, 10) : undefined;
-    const finalizedTextPrompt = formData.get("finalizedTextPrompt") as string | undefined;
+    let finalizedTextPromptValue = formData.get("finalizedTextPrompt") as string | undefined;
 
+    // If finalizedTextPrompt is an empty string, treat it as undefined so the flow reconstructs the prompt
+    if (finalizedTextPromptValue === "") {
+      finalizedTextPromptValue = undefined;
+    }
 
     const input: GenerateImagesInput = {
       brandDescription: formData.get("brandDescription") as string,
       industry: formData.get("industry") as string | undefined,
-      imageStyle: formData.get("imageStyle") as string, // This is expected to be preset + custom notes combined by client
+      imageStyle: formData.get("imageStyle") as string, // This is preset + custom notes combined by client
       exampleImage: formData.get("exampleImage") as string | undefined,
       aspectRatio: formData.get("aspectRatio") as string | undefined,
       numberOfImages: numberOfImages,
-      negativePrompt: negativePrompt === "" ? undefined : negativePrompt,
+      negativePrompt: negativePromptValue === "" ? undefined : negativePromptValue,
       seed: seed,
-      finalizedTextPrompt: finalizedTextPrompt === "" ? undefined : finalizedTextPrompt,
+      finalizedTextPrompt: finalizedTextPromptValue,
     };
 
     // Basic validation for core fields if no finalized prompt is given
@@ -47,12 +51,12 @@ export async function handleGenerateImagesAction(
       return { error: "Brand description and image style are required if not providing a finalized text prompt." };
     }
     if (input.exampleImage === "") delete input.exampleImage;
-    if (input.aspectRatio === "" || input.aspectRatio === undefined) delete input.aspectRatio; // Ensure undefined if empty
+    if (input.aspectRatio === "" || input.aspectRatio === undefined) delete input.aspectRatio;
     if (input.industry === "") delete input.industry;
-    
+
     const result = await generateImages(input);
-    const message = result.generatedImages.length > 1 
-        ? `${result.generatedImages.length} images generated successfully!` 
+    const message = result.generatedImages.length > 1
+        ? `${result.generatedImages.length} images generated successfully!`
         : "Image generated successfully!";
     return { data: { generatedImages: result.generatedImages, promptUsed: result.promptUsed }, message: message };
   } catch (e: any) {
@@ -103,7 +107,7 @@ export async function handleGenerateSocialMediaCaptionAction(
         return { error: "Image description is required if an image is selected for the post."}
     }
     if (input.industry === "") delete input.industry;
-    
+
     const result = await generateSocialMediaCaption(input);
     return { data: { ...result, imageSrc: imageSrc }, message: "Social media content generated!" };
   } catch (e: any) {
@@ -119,10 +123,10 @@ export async function handleGenerateBlogOutlineAction(
     try {
         const input: GenerateBlogOutlineInput = {
             brandName: formData.get("brandName") as string,
-            brandDescription: formData.get("blogBrandDescription") as string, 
+            brandDescription: formData.get("blogBrandDescription") as string,
             industry: formData.get("industry") as string | undefined,
-            keywords: formData.get("blogKeywords") as string, 
-            websiteUrl: (formData.get("blogWebsiteUrl") as string) || undefined, 
+            keywords: formData.get("blogKeywords") as string,
+            websiteUrl: (formData.get("blogWebsiteUrl") as string) || undefined,
         };
 
         if (!input.brandName || !input.brandDescription || !input.keywords) {
@@ -146,11 +150,11 @@ export async function handleGenerateBlogContentAction(
   try {
     const input: GenerateBlogContentInput = {
       brandName: formData.get("brandName") as string,
-      brandDescription: formData.get("blogBrandDescription") as string, 
+      brandDescription: formData.get("blogBrandDescription") as string,
       industry: formData.get("industry") as string | undefined,
-      keywords: formData.get("blogKeywords") as string, 
+      keywords: formData.get("blogKeywords") as string,
       targetPlatform: formData.get("targetPlatform") as "Medium" | "Other",
-      websiteUrl: formData.get("blogWebsiteUrl") as string || undefined, 
+      websiteUrl: formData.get("blogWebsiteUrl") as string || undefined,
       blogOutline: formData.get("blogOutline") as string,
       blogTone: formData.get("blogTone") as string,
     };
@@ -162,8 +166,7 @@ export async function handleGenerateBlogContentAction(
 
     const result = await generateBlogContent(input);
     return { data: result, message: "Blog content generated!" };
-  } catch (e: any)
- {
+  } catch (e: any) {
     console.error("Error in handleGenerateBlogContentAction:", e);
     return { error: e.message || "Failed to generate blog content." };
   }
@@ -178,7 +181,7 @@ export async function handleGenerateAdCampaignAction(
     const platformsArray = platformsString ? platformsString.split(',') as ('google_ads' | 'meta')[] : [];
 
     let generatedContent = formData.get("generatedContent") as string;
-    if (generatedContent === "Custom content for ad campaign") { 
+    if (generatedContent === "Custom content for ad campaign") {
         generatedContent = formData.get("customGeneratedContent") as string;
     }
 
@@ -228,5 +231,3 @@ export async function handleExtractBrandInfoFromUrlAction(
         return { error: e.message || "Failed to extract brand information from URL." };
     }
 }
-
-    
