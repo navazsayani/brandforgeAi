@@ -192,7 +192,6 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
         }
         
         if (numberOfImages > 1 && (!finalizedTextPrompt || !finalizedTextPrompt.toLowerCase().includes("batch generation"))) {
-            // Add batch instruction if multiple images and not already in a custom prompt
             textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
         }
 
@@ -205,9 +204,9 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
         try {
             let imageUrl = "";
             const baseGenerationParams = {
-                brandDescription: brandDescription || "", // Ensure it's not undefined
+                brandDescription: brandDescription || "", 
                 industry,
-                imageStyle: imageStyle || "", // Ensure it's not undefined
+                imageStyle: imageStyle || "", 
                 exampleImage,
                 aspectRatio,
                 negativePrompt,
@@ -250,5 +249,7 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
     return {generatedImages: generatedImageUrls, promptUsed: firstPromptUsed };
   }
 );
+
+    
 
     

@@ -99,7 +99,6 @@ export default function ContentStudioPage() {
     return brandData?.imageStyleNotes || "";
   });
 
-  // State for prompt preview
   const [isPreviewingPrompt, setIsPreviewingPrompt] = useState<boolean>(false);
   const [currentTextPromptForEditing, setCurrentTextPromptForEditing] = useState<string>("");
   const [formSnapshot, setFormSnapshot] = useState<Partial<GenerateImagesInput> | null>(null);
@@ -136,11 +135,10 @@ export default function ContentStudioPage() {
         addGeneratedImage(newImage);
       });
       toast({ title: "Success", description: imageState.message });
-      setIsPreviewingPrompt(false); // Hide prompt preview after successful generation
+      setIsPreviewingPrompt(false); 
     }
     if (imageState.error) {
       toast({ title: "Error", description: imageState.error, variant: "destructive" });
-      // Optionally keep prompt preview open on error: setIsPreviewingPrompt(true);
     }
   }, [imageState, toast, addGeneratedImage, selectedImageStylePreset, customStyleNotesInput]);
 
@@ -276,15 +274,15 @@ export default function ContentStudioPage() {
     });
   };
 
-  const handlePreviewPromptClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+ const handlePreviewPromptClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     const formElement = document.getElementById('imageGenerationForm') as HTMLFormElement;
     if (!formElement) return;
 
     const formData = new FormData(formElement);
     const brandDesc = formData.get("brandDescription") as string || brandData?.brandDescription || "";
-    const imgStylePreset = selectedImageStylePreset;
-    const customNotes = customStyleNotesInput;
+    // selectedImageStylePreset is already the preset value
+    // customStyleNotesInput is already the custom notes
     const negPrompt = formData.get("negativePrompt") as string || "";
     const aspect = selectedAspectRatio;
     const numImages = parseInt(numberOfImagesToGenerate, 10);
@@ -293,17 +291,16 @@ export default function ContentStudioPage() {
     const industryValue = brandData?.industry || "";
     const exampleImg = currentExampleImageForGen;
 
-    let combinedStyle = imgStylePreset;
-    if (customNotes.trim()) {
-        combinedStyle += ". " + customNotes.trim();
+    let combinedStyle = selectedImageStylePreset;
+    if (customStyleNotesInput.trim()) {
+        combinedStyle += ". " + customStyleNotesInput.trim();
     }
 
-    // Client-side prompt construction (simplified version of backend logic)
     let textPrompt = "";
     const industryContext = industryValue ? ` The brand operates in the ${industryValue} industry.` : "";
 
     if (exampleImg) {
-        textPrompt = `
+      textPrompt = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
 
 The provided example image (sent first) serves ONE primary purpose: to identify the *category* of the item depicted (e.g., 'a handbag', 'a t-shirt', 'a piece of furniture', 'a pair of shoes').
@@ -325,15 +322,15 @@ The image should be based on the following concept: "${brandDesc}".${industryCon
 The desired artistic style for this new image is: "${combinedStyle}". If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic.
 `.trim();
     }
-
+    
+    if (negPrompt) {
+        textPrompt += `\n\nAvoid the following elements or characteristics in the image: ${negPrompt}.`;
+    }
     if (aspect) {
         textPrompt += `\n\nThe final image should have an aspect ratio of ${aspect} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
     }
     if (seedValue !== undefined) {
         textPrompt += `\n\nUse seed: ${seedValue}.`;
-    }
-    if (negPrompt) {
-        textPrompt += `\n\nAvoid the following elements or characteristics in the image: ${negPrompt}.`;
     }
     if (numImages > 1) {
         textPrompt += `\n\nImportant for batch generation: You are generating image 1 of a set of ${numImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (1/${numImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
@@ -343,33 +340,35 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
     setFormSnapshot({
         brandDescription: brandDesc,
         industry: industryValue,
-        imageStyle: combinedStyle, // Send combined style as the primary style
+        imageStyle: combinedStyle,
         exampleImage: exampleImg,
         aspectRatio: aspect,
         numberOfImages: numImages,
-        negativePrompt: negPrompt,
+        negativePrompt: negPrompt === "" ? undefined : negPrompt,
         seed: seedValue,
     });
     setIsPreviewingPrompt(true);
   };
 
-  const handleGenerateWithEditedPrompt = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleImageGenerationSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault(); // Prevent default form submission
     const formData = new FormData();
 
     if (!formSnapshot) {
         toast({ title: "Error", description: "Form data snapshot is missing. Please prepare prompt again.", variant: "destructive"});
         return;
     }
-
-    // Pass the potentially edited prompt
+    
     formData.append("finalizedTextPrompt", currentTextPromptForEditing);
     
-    // Pass other necessary fields from the snapshot
-    formData.append("brandDescription", formSnapshot.brandDescription || "");
-    formData.append("industry", formSnapshot.industry || "");
-    // imageStyle from formSnapshot already contains preset + notes, but we send finalizedTextPrompt which might override this usage in backend
-    formData.append("imageStyle", formSnapshot.imageStyle || selectedImageStylePreset); // Fallback to preset if snapshot is weird
+    // Essential fields for the backend, even if a finalized prompt is used.
+    // The backend flow will prioritize finalizedTextPrompt but might use others for context or if finalizedTextPrompt is unexpectedly empty.
+    formData.append("brandDescription", formSnapshot.brandDescription || brandData?.brandDescription || "");
+    formData.append("industry", formSnapshot.industry || brandData?.industry || "");
+    // Pass the original combined style, the backend will use finalizedTextPrompt for the text.
+    formData.append("imageStyle", formSnapshot.imageStyle || selectedImageStylePreset);
+
+
     if (formSnapshot.exampleImage) formData.append("exampleImage", formSnapshot.exampleImage);
     if (formSnapshot.aspectRatio) formData.append("aspectRatio", formSnapshot.aspectRatio);
     formData.append("numberOfImages", String(formSnapshot.numberOfImages || 1));
@@ -377,7 +376,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
     if (formSnapshot.seed !== undefined) formData.append("seed", String(formSnapshot.seed));
 
     startTransition(() => {
-        imageAction(formData);
+      imageAction(formData);
     });
   };
 
@@ -412,7 +411,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                 <CardDescription>Create unique images based on your brand's aesthetics. Uses brand description, industry, and style. Optionally use an example image from your Brand Profile.</CardDescription>
               </CardHeader>
               {!isPreviewingPrompt ? (
-                <form id="imageGenerationForm"> {/* No action prop here, onSubmit handled by button */}
+                <form id="imageGenerationForm">
                   <CardContent className="space-y-6">
                     <div>
                       <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
@@ -428,7 +427,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                     
                     <div>
                       <Label htmlFor="imageGenImageStylePresetSelect" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Image Style Preset</Label>
-                      <Select value={selectedImageStylePreset} onValueChange={setSelectedImageStylePreset} name="imageStylePreset">
+                      <Select value={selectedImageStylePreset} onValueChange={setSelectedImageStylePreset}>
                           <SelectTrigger id="imageGenImageStylePresetSelect">
                               <SelectValue placeholder="Select image style preset" />
                           </SelectTrigger>
@@ -462,41 +461,48 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                     </div>
                     
                     <div>
-                      <Label htmlFor="imageGenExampleImageSelector" className="flex items-center mb-1"><ImageIcon className="w-4 h-4 mr-2 text-primary" />Example Image from Profile (Optional)</Label>
-                      {brandData?.exampleImages && brandData.exampleImages.length > 0 ? (
-                          <div className="mt-2">
-                              <p className="text-xs text-muted-foreground mb-1">
-                                  {brandData.exampleImages.length > 1 ? "Select Profile Image to Use as Reference:" : "Using Profile Image as Reference:"}
-                              </p>
-                              <div className="flex space-x-2 overflow-x-auto pb-2">
-                                  {brandData.exampleImages.map((imgSrc, index) => (
-                                      <button
-                                          type="button"
-                                          key={`gen-profile-${index}`}
-                                          onClick={() => setSelectedProfileImageIndexForGen(index)}
-                                          disabled={brandData.exampleImages && brandData.exampleImages.length <=1 && selectedProfileImageIndexForGen === index}
-                                          className={cn(
-                                              "w-20 h-20 rounded border-2 p-0.5 flex-shrink-0 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring",
-                                              selectedProfileImageIndexForGen === index ? "border-primary ring-2 ring-primary" : "border-border",
-                                              brandData.exampleImages && brandData.exampleImages.length <=1 ? "cursor-default opacity-70" : ""
-                                          )}
-                                      >
-                                          <NextImage src={imgSrc} alt={`Example ${index + 1}`} width={76} height={76} className="object-contain w-full h-full rounded-sm" data-ai-hint="style example"/>
-                                      </button>
-                                  ))}
-                              </div>
-                              {currentExampleImageForGen ? (
-                                  <p className="text-xs text-muted-foreground mt-1">Using image {selectedProfileImageIndexForGen !== null ? selectedProfileImageIndexForGen + 1 : '1'} as reference.</p>
-                              ): (
-                                  <p className="text-xs text-muted-foreground mt-1">Click an image above to select it as reference.</p>
-                              )}
-                          </div>
-                      ) : (
-                          <p className="text-xs text-muted-foreground mt-1">No example images in Brand Profile to select.</p>
-                      )}
-                       {/* Hidden input for exampleImage, value set by currentExampleImageForGen */}
-                      <input type="hidden" name="exampleImage" value={currentExampleImageForGen} />
+                        <Label htmlFor="imageGenExampleImageSelector" className="flex items-center mb-1">
+                            <ImageIcon className="w-4 h-4 mr-2 text-primary" />Example Image from Profile (Optional)
+                        </Label>
+                        {brandData?.exampleImages && brandData.exampleImages.length > 0 ? (
+                            <div className="mt-2 space-y-2">
+                                {brandData.exampleImages.length > 1 && (
+                                    <>
+                                    <p className="text-xs text-muted-foreground">Select Profile Image to Use as Reference:</p>
+                                    <div className="flex space-x-2 overflow-x-auto pb-2">
+                                        {brandData.exampleImages.map((imgSrc, index) => (
+                                            <button
+                                                type="button"
+                                                key={`gen-profile-${index}`}
+                                                onClick={() => setSelectedProfileImageIndexForGen(index)}
+                                                className={cn(
+                                                    "w-20 h-20 rounded border-2 p-0.5 flex-shrink-0 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring",
+                                                    selectedProfileImageIndexForGen === index ? "border-primary ring-2 ring-primary" : "border-border"
+                                                )}
+                                            >
+                                                <NextImage src={imgSrc} alt={`Example ${index + 1}`} width={76} height={76} className="object-contain w-full h-full rounded-sm" data-ai-hint="style example"/>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    </>
+                                )}
+                                {currentExampleImageForGen ? (
+                                    <p className="text-xs text-muted-foreground">
+                                        Using image {selectedProfileImageIndexForGen !== null && brandData.exampleImages.length > 1 ? selectedProfileImageIndexForGen + 1 : '1'} as reference.
+                                    </p>
+                                ) : (
+                                     brandData.exampleImages.length > 0 && selectedProfileImageIndexForGen === null && (
+                                        <p className="text-xs text-muted-foreground">Click an image above to select it if you have multiple.</p>
+                                     )
+                                )}
+                            </div>
+                        ) : (
+                            <p className="text-xs text-muted-foreground mt-1">No example images in Brand Profile to select.</p>
+                        )}
+                        {/* Hidden input for exampleImage, value set by currentExampleImageForGen */}
+                        <input type="hidden" name="exampleImage" value={currentExampleImageForGen} />
                     </div>
+
 
                     <div>
                       <Label htmlFor="imageGenNegativePrompt" className="flex items-center mb-1"><CircleSlash className="w-4 h-4 mr-2 text-primary" />Negative Prompt (Optional)</Label>
@@ -554,7 +560,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                   </CardFooter>
                 </form>
               ) : (
-                <form onSubmit={handleGenerateWithEditedPrompt}>
+                <form onSubmit={handleImageGenerationSubmit}>
                   <CardContent className="space-y-6">
                     <div>
                       <Label htmlFor="editablePromptTextarea" className="flex items-center mb-1"><Edit className="w-4 h-4 mr-2 text-primary" />Final Prompt (Editable)</Label>
@@ -567,7 +573,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         placeholder="The constructed prompt will appear here. You can edit it before generation."
                       />
                        <p className="text-xs text-muted-foreground mt-1">
-                        Note: Aspect ratio, seed, and negative prompt instructions are appended by the system if not already part of your edited prompt.
+                        Note: Aspect ratio, seed, and negative prompt (if any from form) instructions are appended by the system if not already part of your edited prompt.
                        </p>
                     </div>
                   </CardContent>
@@ -685,29 +691,29 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         </RadioGroup>
 
                         {socialImageChoice === 'profile' && brandData?.exampleImages && brandData.exampleImages.length > 0 && (
-                             <div className="mt-2">
-                                 <p className="text-xs text-muted-foreground mb-1">
-                                    {brandData.exampleImages.length > 1 ? "Select Profile Image for Social Post:" : "Using Profile Image for Social Post:"}
-                                </p>
-                                <div className="flex space-x-2 overflow-x-auto pb-2">
-                                    {brandData.exampleImages.map((imgSrc, index) => (
-                                        <button
-                                            type="button"
-                                            key={`social-profile-${index}`}
-                                            onClick={() => setSelectedProfileImageIndexForSocial(index)}
-                                            disabled={brandData.exampleImages && brandData.exampleImages.length <=1 && selectedProfileImageIndexForSocial === index}
-                                            className={cn(
-                                                "w-16 h-16 rounded border-2 p-0.5 flex-shrink-0 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring",
-                                                selectedProfileImageIndexForSocial === index ? "border-primary ring-2 ring-primary" : "border-border",
-                                                brandData.exampleImages && brandData.exampleImages.length <=1 ? "cursor-default opacity-70" : ""
-                                            )}
-                                        >
-                                            <NextImage src={imgSrc} alt={`Profile Example ${index + 1}`} width={60} height={60} className="object-contain w-full h-full rounded-sm" data-ai-hint="social media reference"/>
-                                        </button>
-                                    ))}
-                                </div>
+                             <div className="mt-2 space-y-2">
+                                 {brandData.exampleImages.length > 1 && (
+                                    <>
+                                    <p className="text-xs text-muted-foreground mb-1">Select Profile Image for Social Post:</p>
+                                    <div className="flex space-x-2 overflow-x-auto pb-2">
+                                        {brandData.exampleImages.map((imgSrc, index) => (
+                                            <button
+                                                type="button"
+                                                key={`social-profile-${index}`}
+                                                onClick={() => setSelectedProfileImageIndexForSocial(index)}
+                                                className={cn(
+                                                    "w-16 h-16 rounded border-2 p-0.5 flex-shrink-0 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring",
+                                                    selectedProfileImageIndexForSocial === index ? "border-primary ring-2 ring-primary" : "border-border"
+                                                )}
+                                            >
+                                                <NextImage src={imgSrc} alt={`Profile Example ${index + 1}`} width={60} height={60} className="object-contain w-full h-full rounded-sm" data-ai-hint="social media reference"/>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    </>
+                                 )}
                                 {selectedProfileImageIndexForSocial !== null && brandData.exampleImages[selectedProfileImageIndexForSocial] && (
-                                  <p className="text-xs text-muted-foreground mt-1">Using image {selectedProfileImageIndexForSocial + 1} from profile.</p>
+                                  <p className="text-xs text-muted-foreground">Using image {brandData.exampleImages.length > 1 ? selectedProfileImageIndexForSocial + 1 : '1'} from profile.</p>
                                 )}
                              </div>
                         )}
