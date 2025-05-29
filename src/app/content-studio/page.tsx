@@ -15,7 +15,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash } from 'lucide-react';
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette } from 'lucide-react';
 import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
@@ -316,6 +316,16 @@ export default function ContentStudioPage() {
                             </SelectContent>
                         </Select>
                     </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="imageGenSeed" className="flex items-center mb-1"><Pipette className="w-4 h-4 mr-2 text-primary" />Seed (Optional)</Label>
+                    <Input
+                      id="imageGenSeed"
+                      name="seed"
+                      type="number"
+                      placeholder="Enter a number for reproducible results"
+                      min="0"
+                    />
                   </div>
                 </CardContent>
                 <CardFooter>

@@ -1,3 +1,4 @@
+
 "use server";
 
 import { generateImages, type GenerateImagesInput } from '@/ai/flows/generate-images';
@@ -23,6 +24,9 @@ export async function handleGenerateImagesAction(
     const numberOfImagesStr = formData.get("numberOfImages") as string;
     const numberOfImages = parseInt(numberOfImagesStr, 10) || 1;
     const negativePrompt = formData.get("negativePrompt") as string | undefined;
+    const seedStr = formData.get("seed") as string | undefined;
+    const seed = seedStr && !isNaN(parseInt(seedStr, 10)) ? parseInt(seedStr, 10) : undefined;
+
 
     const input: GenerateImagesInput = {
       brandDescription: formData.get("brandDescription") as string,
@@ -31,6 +35,7 @@ export async function handleGenerateImagesAction(
       aspectRatio: formData.get("aspectRatio") as string | undefined,
       numberOfImages: numberOfImages,
       negativePrompt: negativePrompt === "" ? undefined : negativePrompt,
+      seed: seed,
     };
 
     if (!input.brandDescription || !input.imageStyle) {
@@ -112,7 +117,7 @@ export async function handleGenerateBlogContentAction(
       brandDescription: formData.get("brandDescription") as string,
       keywords: formData.get("keywords") as string,
       targetPlatform: formData.get("targetPlatform") as "Medium" | "Other",
-      websiteUrl: formData.get("blogWebsiteUrl") as string || undefined,
+      websiteUrl: formData.get("websiteUrl") as string || undefined,
     };
      if (!input.brandName || !input.brandDescription || !input.keywords || !input.targetPlatform) {
       return { error: "All fields (except optional website URL) are required for blog content generation." };
@@ -179,3 +184,5 @@ export async function handleExtractBrandInfoFromUrlAction(
         return { error: e.message || "Failed to extract brand information from URL." };
     }
 }
+
+    

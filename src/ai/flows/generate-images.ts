@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -33,6 +34,7 @@ const GenerateImagesInputSchema = z.object({
   numberOfImages: z.number().int().min(1).max(4).optional().default(1)
     .describe("The number of images to generate in this batch (1-4)."),
   negativePrompt: z.string().optional().describe("Elements to avoid in the generated image."),
+  seed: z.number().int().optional().describe("An optional seed for image generation to promote reproducibility."),
 });
 export type GenerateImagesInput = z.infer<typeof GenerateImagesInputSchema>;
 
@@ -88,6 +90,7 @@ async function _generateImageWithLeonardoAI_stub(params: {
   exampleImage?: string;
   aspectRatio?: string;
   negativePrompt?: string;
+  seed?: number;
   textPrompt: string; // The fully constructed text part of the prompt
 }): Promise<string> {
   console.warn("Leonardo.ai image generation is called but not implemented. Parameters:", params);
@@ -101,6 +104,7 @@ async function _generateImageWithImagen_stub(params: {
   exampleImage?: string;
   aspectRatio?: string;
   negativePrompt?: string;
+  seed?: number;
   textPrompt: string;
 }): Promise<string> {
   console.warn("Imagen (e.g., via Vertex AI) provider is called but not implemented. Parameters:", params);
@@ -126,6 +130,7 @@ const generateImagesFlow = ai.defineFlow(
       aspectRatio,
       numberOfImages = 1,
       negativePrompt,
+      seed,
     } = input;
 
     if (!brandDescription || !imageStyle) {
@@ -168,6 +173,10 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
         if (aspectRatio) {
           textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
         }
+        
+        if (seed !== undefined) {
+          textPromptContent += `\n\nUse seed: ${seed}.`;
+        }
 
         if (negativePrompt) {
             textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
@@ -187,6 +196,7 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
                 exampleImage,
                 aspectRatio,
                 negativePrompt,
+                seed,
                 textPrompt: textPromptContent,
             };
 
@@ -225,3 +235,5 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
     return {generatedImages: generatedImageUrls};
   }
 );
+
+    
