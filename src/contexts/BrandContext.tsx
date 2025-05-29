@@ -52,20 +52,22 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
           imageStyleNotes: fetchedData.imageStyleNotes || "",
         });
       } else {
-        setBrandDataState({ industry: "", exampleImages: [] , imageStyle: "", imageStyleNotes: ""}); // Ensure all fields are initialized
+        setBrandDataState({ brandName: "", websiteUrl: "", brandDescription: "", industry: "", exampleImages: [] , imageStyle: "", imageStyleNotes: "", targetKeywords: ""});
       }
     } catch (e: any) {
-      console.error("Error fetching brand data:", e);
+      console.error("Error fetching brand data from Firestore:", e);
       let specificError = `Failed to fetch brand data: ${e.message || "Unknown error. Check console."}`;
-      if (e.message && (e.message.toLowerCase().includes("client is offline") || e.message.toLowerCase().includes("failed to get document because the client is offline"))) {
-        specificError = "Failed to connect to the database. Client is offline. Please check your internet connection and Firebase project configuration.";
+      if (e.message && (e.message.toLowerCase().includes("client is offline") || e.message.toLowerCase().includes("could not reach cloud firestore backend"))) {
+        specificError = "Connection Error: Unable to reach Firestore. Please check your internet connection. The app will operate in offline mode if data was previously loaded.";
+        console.warn("FIRESTORE OFFLINE: Could not reach Cloud Firestore backend. Client operating in offline mode.", e);
       } else if (e.message && e.message.toLowerCase().includes("missing or insufficient permissions")) {
         specificError = "Database permission error. Please check your Firestore security rules in the Firebase console.";
       } else if (e.code && e.code === "unavailable") {
          specificError = "The Firebase service is temporarily unavailable. Please try again later.";
       }
       setError(specificError);
-      setBrandDataState(null);
+      // Do not set brandDataState to null if offline, allow it to use cached data if available
+      // setBrandDataState(null); 
     } finally {
       setIsLoading(false);
     }
@@ -90,10 +92,11 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
       await setDoc(brandDocRef, dataToSave, { merge: true });
       setBrandDataState(dataToSave);
     } catch (e: any) {
-      console.error("Error saving brand data:", e);
+      console.error("Error saving brand data to Firestore:", e);
       let specificError = `Failed to save brand profile: ${e.message || "Unknown error. Check console."}`;
-      if (e.message && e.message.toLowerCase().includes("client is offline")) {
-        specificError = "Failed to save data. Client is offline. Check your internet connection.";
+      if (e.message && (e.message.toLowerCase().includes("client is offline") || e.message.toLowerCase().includes("could not reach cloud firestore backend"))) {
+        specificError = "Connection Error: Unable to save data to Firestore. Please check your internet connection.";
+         console.warn("FIRESTORE OFFLINE: Could not reach Cloud Firestore backend during save. Client operating in offline mode.", e);
       } else if (e.message && e.message.toLowerCase().includes("missing or insufficient permissions")) {
           specificError = "Failed to save data due to database permission error. Check Firestore security rules.";
       }
