@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useActionState as useActionStateReact } from 'react';
+import React, { useState, useEffect, useActionState as useActionStateReact, startTransition } from 'react';
 import NextImage from 'next/image';
 import { AppShell } from '@/components/AppShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -67,32 +67,40 @@ export default function ContentStudioPage() {
   const [numberOfImagesToGenerate, setNumberOfImagesToGenerate] = useState<string>("1");
   const [activeTab, setActiveTab] = useState<string>("image");
   const [isGeneratingDescription, setIsGeneratingDescription] = useState<boolean>(false);
-  const [selectedImageStyle, setSelectedImageStyle] = useState<string>(brandData?.imageStyle || (artisticStyles.length > 0 ? artisticStyles[0].value : ""));
-
+  
+  const [selectedImageStyle, setSelectedImageStyle] = useState<string>(() => {
+    if (brandData?.imageStyle && artisticStyles.some(style => style.value === brandData.imageStyle)) {
+      return brandData.imageStyle;
+    }
+    return artisticStyles.length > 0 ? artisticStyles[0].value : "";
+  });
 
   useEffect(() => {
-    if (brandData?.imageStyle && artisticStyles.some(style => style.value === brandData.imageStyle)) {
-        setSelectedImageStyle(brandData.imageStyle);
-    } else if (artisticStyles.length > 0) {
+    if (brandData?.imageStyle) {
+      if (artisticStyles.some(style => style.value === brandData.imageStyle)) {
+        if (selectedImageStyle !== brandData.imageStyle) {
+          setSelectedImageStyle(brandData.imageStyle);
+        }
+      } else if (artisticStyles.length > 0 && selectedImageStyle !== artisticStyles[0].value) {
         setSelectedImageStyle(artisticStyles[0].value);
+      }
+    } else if (artisticStyles.length > 0 && selectedImageStyle !== artisticStyles[0].value) {
+      setSelectedImageStyle(artisticStyles[0].value);
     }
-  }, [brandData?.imageStyle]);
+  }, [brandData?.imageStyle, selectedImageStyle]);
+
 
   useEffect(() => {
     if (imageState.data) {
       const newImageUrls = imageState.data;
       setLastSuccessfulGeneratedImageUrls(newImageUrls);
       
-      const imageGenBrandDescription = (document.querySelector('form[action^="/content-studio"] textarea[name="brandDescription"]') as HTMLTextAreaElement)?.value || "";
-      // const imageGenImageStyle = (document.querySelector('form[action^="/content-studio"] select[name="imageStyle"]') as HTMLSelectElement)?.value || "";
-
-
       newImageUrls.forEach(url => {
         const newImage: GeneratedImage = {
           id: `${new Date().toISOString()}-${Math.random().toString(36).substring(2, 9)}`, 
           src: url,
-          prompt: imageGenBrandDescription,
-          style: selectedImageStyle // Use state variable selectedImageStyle
+          prompt: (document.querySelector('form textarea[name="brandDescription"]') as HTMLTextAreaElement)?.value || "",
+          style: selectedImageStyle 
         };
         addGeneratedImage(newImage);
       });
@@ -109,7 +117,7 @@ export default function ContentStudioPage() {
         id: new Date().toISOString(),
         platform: 'Instagram', 
         imageSrc: socialData.imageSrc || "", 
-        imageDescription: (document.querySelector('form[action^="/content-studio"] textarea[name="imageDescription"]') as HTMLTextAreaElement)?.value || "",
+        imageDescription: (document.querySelector('form textarea[name="imageDescription"]') as HTMLTextAreaElement)?.value || "",
         caption: socialData.caption,
         hashtags: socialData.hashtags,
         tone: socialToneValue,
@@ -187,7 +195,7 @@ export default function ContentStudioPage() {
     setIsGeneratingDescription(true);
     const formData = new FormData();
     formData.append("imageDataUri", currentSocialImagePreviewUrl);
-    React.startTransition(() => {
+    startTransition(() => {
         describeImageAction(formData);
     });
   };
@@ -362,7 +370,7 @@ export default function ContentStudioPage() {
                                 } else if (!socialImageChoice && brandData?.exampleImage) {
                                     setSocialImageChoice('profile'); 
                                 } else if (!socialImageChoice) {
-                                     setSocialImageChoice(null); // Default to null if no other choice is viable
+                                     setSocialImageChoice(null); 
                                 }
                             }}
                         />
@@ -614,3 +622,5 @@ export default function ContentStudioPage() {
     </AppShell>
   );
 }
+
+    

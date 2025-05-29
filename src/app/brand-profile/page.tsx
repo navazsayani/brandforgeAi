@@ -49,10 +49,10 @@ const brandProfileSchema = z.object({
   brandDescription: z.string().min(10, { message: "Description must be at least 10 characters." }),
   imageStyle: z.string().min(3, { message: "Please select or enter an image style." }),
   exampleImage: z.string().optional().refine(value => {
-    if (!value) return true; // Allow empty string (no image)
-    if (!value.startsWith('data:image')) return true; // Allow non-data URIs (like URLs from storage, though current logic is for data URIs)
+    if (!value) return true; 
+    if (!value.startsWith('data:image')) return true; 
     return value.length < MAX_FILE_SIZE_BYTES; 
-  }, {message: `Image data is too large. Please use a smaller image (under ${MAX_FILE_SIZE_MB}MB) or a URL.`}),
+  }, {message: `Image data is too large. Please use a smaller image (under ${MAX_FILE_SIZE_MB}MB). Base64 encoded images are inefficient.`}),
   targetKeywords: z.string().optional(),
 });
 
@@ -91,17 +91,7 @@ export default function BrandProfilePage() {
       form.reset(brandData);
       if (brandData.exampleImage) {
         setPreviewImage(brandData.exampleImage);
-        // Attempt to set a meaningful filename if it's a data URI; might need better logic for URLs
-        if (brandData.exampleImage.startsWith("data:")) {
-            setSelectedFileName("Previously saved image");
-        } else {
-            try {
-                const url = new URL(brandData.exampleImage);
-                setSelectedFileName(url.pathname.split('/').pop() || "Previously saved image URL");
-            } catch (e) {
-                setSelectedFileName("Previously saved image data");
-            }
-        }
+        setSelectedFileName("Previously saved image");
       } else {
         setPreviewImage(null);
         setSelectedFileName(null);
@@ -178,8 +168,8 @@ export default function BrandProfilePage() {
 
       if (file.size > MAX_FILE_SIZE_BYTES) {
         toast({
-          title: "File Too Large",
-          description: `Please upload an image smaller than ${MAX_FILE_SIZE_MB}MB. This is a temporary limit for storing directly in the profile.`,
+          title: "File Too Large for Base64",
+          description: `Please upload an image smaller than ${MAX_FILE_SIZE_MB}MB to store as base64 in Firestore. Consider using a storage service for larger images.`,
           variant: "destructive",
         });
         if (fileInputRef.current) fileInputRef.current.value = ""; 
@@ -329,7 +319,7 @@ export default function BrandProfilePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><Palette className="w-5 h-5 mr-2 text-primary"/>Desired Image Style</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value} disabled={isBrandContextLoading || isProcessingImage}>
+                      <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isBrandContextLoading || isProcessingImage}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select an artistic style" />
@@ -356,10 +346,10 @@ export default function BrandProfilePage() {
                   <FormLabel className="flex items-center text-base"><UploadCloud className="w-5 h-5 mr-2 text-primary"/>Upload Example Image (Optional)</FormLabel>
                   <Alert variant="destructive" className="mb-2">
                     <AlertTriangle className="h-4 w-4" />
-                    <AlertTitleShadcn>Image Size Limit</AlertTitleShadcn>
+                    <AlertTitleShadcn>Image Size Limit for Base64</AlertTitleShadcn>
                     <AlertDescriptionShadcn>
-                      Due to Firestore document size limits, please use very small images (under {MAX_FILE_SIZE_MB}MB).
-                      Larger images will cause errors when saving.
+                      To store images directly in the profile (as base64), please use very small images (under {MAX_FILE_SIZE_MB}MB).
+                      Larger images will cause errors when saving to Firestore due to document size limits.
                     </AlertDescriptionShadcn>
                   </Alert>
                    <FormControl>
@@ -370,7 +360,7 @@ export default function BrandProfilePage() {
                                 <p className="mb-1 text-sm text-muted-foreground">
                                   {isProcessingImage ? "Processing..." : (selectedFileName ? selectedFileName : <><span className="font-semibold">Click to upload</span> or drag and drop</>)}
                                 </p>
-                                {!selectedFileName && !isProcessingImage && <p className="text-xs text-muted-foreground">SVG, PNG, JPG, GIF (Max {MAX_FILE_SIZE_MB}MB)</p>}
+                                {!selectedFileName && !isProcessingImage && <p className="text-xs text-muted-foreground">SVG, PNG, JPG, GIF (Max {MAX_FILE_SIZE_MB}MB for Base64)</p>}
                             </div>
                             <Input 
                                 id="dropzone-file" 
@@ -437,3 +427,5 @@ export default function BrandProfilePage() {
     </AppShell>
   );
 }
+
+    
