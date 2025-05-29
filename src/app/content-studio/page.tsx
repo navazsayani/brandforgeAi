@@ -16,7 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { FormDescription } from "@/components/ui/form";
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Tag } from 'lucide-react';
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Tag, Edit } from 'lucide-react';
 import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
@@ -91,6 +91,20 @@ export default function ContentStudioPage() {
   const [selectedProfileImageIndexForGen, setSelectedProfileImageIndexForGen] = useState<number | null>(null);
   const [selectedProfileImageIndexForSocial, setSelectedProfileImageIndexForSocial] = useState<number | null>(null);
 
+  const [selectedImageStylePreset, setSelectedImageStylePreset] = useState<string>(() => {
+    return brandData?.imageStyle || (artisticStyles.length > 0 ? artisticStyles[0].value : "");
+  });
+  const [customStyleNotesInput, setCustomStyleNotesInput] = useState<string>(() => {
+    return brandData?.imageStyleNotes || "";
+  });
+
+  useEffect(() => {
+    if (brandData) {
+        setSelectedImageStylePreset(brandData.imageStyle || (artisticStyles.length > 0 ? artisticStyles[0].value : ""));
+        setCustomStyleNotesInput(brandData.imageStyleNotes || "");
+    }
+  }, [brandData]);
+
 
   useEffect(() => {
     if (brandData?.exampleImages && brandData.exampleImages.length > 0) {
@@ -102,47 +116,32 @@ export default function ContentStudioPage() {
     }
   }, [brandData?.exampleImages]);
 
-
-  const [selectedImageStyle, setSelectedImageStyle] = useState<string>(() => {
-    if (brandData?.imageStyle && artisticStyles.some(style => style.value === brandData.imageStyle)) {
-      return brandData.imageStyle;
-    }
-    return artisticStyles.length > 0 ? artisticStyles[0].value : "";
-  });
-
-  useEffect(() => {
-    if (brandData?.imageStyle) {
-      if (artisticStyles.some(style => style.value === brandData.imageStyle)) {
-        if (selectedImageStyle !== brandData.imageStyle) {
-          setSelectedImageStyle(brandData.imageStyle);
-        }
-      } else if (artisticStyles.length > 0 && selectedImageStyle !== artisticStyles[0].value) {
-        setSelectedImageStyle(artisticStyles[0].value);
-      }
-    } else if (artisticStyles.length > 0 && selectedImageStyle !== artisticStyles[0].value) {
-      setSelectedImageStyle(artisticStyles[0].value);
-    }
-  }, [brandData?.imageStyle, selectedImageStyle]);
-
-
   useEffect(() => {
     if (imageState.data) {
       const newImageUrls = imageState.data;
       setLastSuccessfulGeneratedImageUrls(newImageUrls);
       
+      const imageForm = document.getElementById('imageGenerationForm') as HTMLFormElement;
+      let combinedStyleForPrompt = "";
+      if (imageForm) {
+        const formData = new FormData(imageForm);
+        combinedStyleForPrompt = formData.get("imageStyle") as string; // This will be the combined style
+      }
+
+
       newImageUrls.forEach(url => {
         const newImage: GeneratedImage = {
           id: `${new Date().toISOString()}-${Math.random().toString(36).substring(2, 9)}`, 
           src: url,
-          prompt: (document.querySelector('form textarea[name="brandDescription"]') as HTMLTextAreaElement)?.value || "", 
-          style: selectedImageStyle 
+          prompt: (document.querySelector('#imageGenBrandDescription') as HTMLTextAreaElement)?.value || "", 
+          style: combinedStyleForPrompt
         };
         addGeneratedImage(newImage);
       });
       toast({ title: "Success", description: imageState.message });
     }
     if (imageState.error) toast({ title: "Error", description: imageState.error, variant: "destructive" });
-  }, [imageState, toast, addGeneratedImage, selectedImageStyle]);
+  }, [imageState, toast, addGeneratedImage]);
 
   useEffect(() => {
     if (socialState.data) {
@@ -274,6 +273,19 @@ export default function ContentStudioPage() {
     });
   };
 
+  const handleImageGenerationSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    
+    let combinedStyle = selectedImageStylePreset;
+    if (customStyleNotesInput.trim()) {
+        combinedStyle += ". " + customStyleNotesInput.trim();
+    }
+    formData.set("imageStyle", combinedStyle); // Set the combined style for the action
+
+    imageAction(formData);
+  };
+
 
   return (
     <AppShell>
@@ -304,7 +316,7 @@ export default function ContentStudioPage() {
                 <CardTitle>Generate Brand Images</CardTitle>
                 <CardDescription>Create unique images based on your brand's aesthetics. Uses brand description and style. Optionally use an example image from your Brand Profile.</CardDescription>
               </CardHeader>
-              <form action={imageAction}>
+              <form onSubmit={handleImageGenerationSubmit} id="imageGenerationForm">
                 <CardContent className="space-y-6">
                   <div>
                     <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
@@ -317,11 +329,12 @@ export default function ContentStudioPage() {
                       required
                     />
                   </div>
+                  
                   <div>
-                    <Label htmlFor="imageGenImageStyleSelect" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Image Style</Label>
-                     <Select name="imageStyle" required value={selectedImageStyle} onValueChange={setSelectedImageStyle} >
-                        <SelectTrigger id="imageGenImageStyleSelect">
-                            <SelectValue placeholder="Select image style" />
+                    <Label htmlFor="imageGenImageStylePresetSelect" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Image Style Preset</Label>
+                     <Select name="imageStylePreset" required value={selectedImageStylePreset} onValueChange={setSelectedImageStylePreset} >
+                        <SelectTrigger id="imageGenImageStylePresetSelect">
+                            <SelectValue placeholder="Select image style preset" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectGroup>
@@ -333,10 +346,28 @@ export default function ContentStudioPage() {
                         </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Current style from profile: {brandData?.imageStyle ? (artisticStyles.find(s => s.value === brandData.imageStyle)?.label || `Custom: ${brandData.imageStyle}`) : 'Not set in profile'}
+                      Default from profile: {brandData?.imageStyle ? (artisticStyles.find(s => s.value === brandData.imageStyle)?.label || `Custom: ${brandData.imageStyle}`) : 'Not set'}
                     </p>
                   </div>
-                  
+
+                  <div>
+                    <Label htmlFor="imageGenCustomStyleNotes" className="flex items-center mb-1"><Edit className="w-4 h-4 mr-2 text-primary" />Custom Style Notes/Overrides (Optional)</Label>
+                    <Textarea
+                      id="imageGenCustomStyleNotes"
+                      name="customStyleNotes" 
+                      value={customStyleNotesInput}
+                      onChange={(e) => setCustomStyleNotesInput(e.target.value)}
+                      placeholder="E.g., 'add a touch of vintage', 'focus on metallic textures', 'use a desaturated color palette'."
+                      rows={2}
+                    />
+                     <p className="text-xs text-muted-foreground mt-1">
+                      Default from profile: {brandData?.imageStyleNotes || 'None'}
+                    </p>
+                  </div>
+                  {/* Hidden input to carry the combined style, value set in onSubmit handler */}
+                  <input type="hidden" name="imageStyle" />
+
+
                   <div>
                     <Label htmlFor="imageGenExampleImage" className="flex items-center mb-1"><ImageIcon className="w-4 h-4 mr-2 text-primary" />Example Image from Profile (Optional)</Label>
                     <Input
@@ -345,7 +376,7 @@ export default function ContentStudioPage() {
                       value={currentExampleImageForGen}
                       placeholder="Select an example image from profile below if available"
                       readOnly 
-                      className="bg-muted/50 hidden" // Hidden as visual selection is done below
+                      className="bg-muted/50 hidden" 
                     />
                     {brandData?.exampleImages && brandData.exampleImages.length > 0 ? (
                         <div className="mt-2">
@@ -365,8 +396,10 @@ export default function ContentStudioPage() {
                                     </button>
                                 ))}
                             </div>
-                            {selectedProfileImageIndexForGen !== null && (
+                            {selectedProfileImageIndexForGen !== null ? (
                                 <p className="text-xs text-muted-foreground mt-1">Using image {selectedProfileImageIndexForGen + 1} as reference.</p>
+                            ): (
+                                <p className="text-xs text-muted-foreground mt-1">Click an image above to select it as reference.</p>
                             )}
                         </div>
                     ) : (
@@ -507,12 +540,12 @@ export default function ContentStudioPage() {
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="profile" id="social-profile" disabled={!brandData?.exampleImages || brandData.exampleImages.length === 0} />
                                 <Label htmlFor="social-profile" className={(!brandData?.exampleImages || brandData.exampleImages.length === 0) ? "text-muted-foreground" : ""}>
-                                    Use Brand Profile Example Image {!brandData?.exampleImages || brandData.exampleImages.length === 0 ? "(None available)" : ""}
+                                    Use Brand Profile Example Image {!brandData?.exampleImages || brandData.exampleImages.length === 0 ? "(None available)" : `(${(brandData?.exampleImages?.length || 0)} available)`}
                                 </Label>
                             </div>
                         </RadioGroup>
 
-                        {socialImageChoice === 'profile' && brandData?.exampleImages && brandData.exampleImages.length > 1 && (
+                        {socialImageChoice === 'profile' && brandData?.exampleImages && brandData.exampleImages.length > 0 && (
                              <div className="mt-2">
                                 <p className="text-xs text-muted-foreground mb-1">Select Profile Image for Social Post:</p>
                                 <div className="flex space-x-2 overflow-x-auto pb-2">
@@ -530,6 +563,9 @@ export default function ContentStudioPage() {
                                         </button>
                                     ))}
                                 </div>
+                                {selectedProfileImageIndexForSocial !== null && (
+                                  <p className="text-xs text-muted-foreground mt-1">Using image {selectedProfileImageIndexForSocial + 1} from profile.</p>
+                                )}
                              </div>
                         )}
                       </div>

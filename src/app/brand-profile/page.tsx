@@ -17,7 +17,7 @@ import { Progress } from '@/components/ui/progress';
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-import { UserCircle, LinkIcon, FileText, Palette, UploadCloud, Tag, Brain, Loader2, Trash2 } from 'lucide-react';
+import { UserCircle, LinkIcon, FileText, Palette, UploadCloud, Tag, Brain, Loader2, Trash2, Edit } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { handleExtractBrandInfoFromUrlAction, type FormState as ExtractFormState } from '@/lib/actions';
 import { storage } from '@/lib/firebaseConfig';
@@ -45,7 +45,8 @@ const brandProfileSchema = z.object({
   brandName: z.string().min(2, { message: "Brand name must be at least 2 characters." }),
   websiteUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   brandDescription: z.string().min(10, { message: "Description must be at least 10 characters." }),
-  imageStyle: z.string().min(3, { message: "Please select or enter an image style." }),
+  imageStyle: z.string().min(1, { message: "Please select an image style preset." }).optional(),
+  imageStyleNotes: z.string().optional(),
   exampleImages: z.array(z.string().url({ message: "Each image must be a valid URL." })).optional(),
   targetKeywords: z.string().optional(),
 });
@@ -57,6 +58,7 @@ const defaultFormValues: BrandProfileFormData = {
   websiteUrl: "",
   brandDescription: "",
   imageStyle: artisticStyles.length > 0 ? artisticStyles[0].value : "",
+  imageStyleNotes: "",
   exampleImages: [],
   targetKeywords: "",
 };
@@ -70,7 +72,7 @@ export default function BrandProfilePage() {
   
   const [previewImages, setPreviewImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0); // For overall progress, or individual if needed
+  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFileNames, setSelectedFileNames] = useState<string[]>([]);
 
@@ -150,8 +152,6 @@ export default function BrandProfilePage() {
       uploadTask.on('state_changed',
         (snapshot) => {
           const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          // For simplicity, we'll set overall progress based on the current file's progress
-          // A more sophisticated approach would average progress across all concurrent uploads
           setUploadProgress( (index / totalFiles) * 100 + (progress / totalFiles) );
         },
         (error) => {
@@ -193,7 +193,9 @@ export default function BrandProfilePage() {
       setUploadProgress(0);
 
       const newLocalPreviews = files.map(file => URL.createObjectURL(file));
-      setPreviewImages(prev => [...prev, ...newLocalPreviews]); // Show local previews immediately
+      // Temporarily add local previews for immediate feedback
+      setPreviewImages(prev => [...(form.getValues("exampleImages") || []), ...newLocalPreviews]);
+
 
       const uploadPromises = files.map((file, index) => uploadImageToStorage(file, index, files.length));
       
@@ -202,12 +204,11 @@ export default function BrandProfilePage() {
         const currentImages = form.getValues("exampleImages") || [];
         const updatedImages = [...currentImages, ...downloadURLs];
         form.setValue('exampleImages', updatedImages, { shouldValidate: true });
-        setPreviewImages(updatedImages); // Update previews to Firebase URLs
+        setPreviewImages(updatedImages); 
         toast({ title: "Images Uploaded", description: `${files.length} image(s) uploaded successfully. Save profile to persist changes.` });
       } catch (error) {
         toast({ title: "Some Uploads Failed", description: "Not all images were uploaded successfully. Check individual error messages.", variant: "destructive" });
-        // Revert previews if any upload fails for simplicity, or handle partial success
-        setPreviewImages(form.getValues("exampleImages") || []);
+        setPreviewImages(form.getValues("exampleImages") || []); // Revert previews to currently saved URLs
       } finally {
         setIsUploading(false);
         setUploadProgress(0);
@@ -215,7 +216,7 @@ export default function BrandProfilePage() {
         if (fileInputRef.current) {
           fileInputRef.current.value = ""; 
         }
-        newLocalPreviews.forEach(url => URL.revokeObjectURL(url)); // Clean up local object URLs
+        newLocalPreviews.forEach(url => URL.revokeObjectURL(url));
       }
     }
   };
@@ -223,7 +224,6 @@ export default function BrandProfilePage() {
   const handleDeleteImage = async (imageUrlToDelete: string, indexToDelete: number) => {
     const currentImages = form.getValues("exampleImages") || [];
     
-    // Optimistically update UI
     const updatedFormImages = currentImages.filter((_, index) => index !== indexToDelete);
     form.setValue("exampleImages", updatedFormImages, { shouldValidate: true });
     setPreviewImages(updatedFormImages);
@@ -237,7 +237,6 @@ export default function BrandProfilePage() {
     } catch (error: any) {
       console.error("Error deleting image from Firebase Storage:", error);
       toast({ title: "Deletion Error", description: `Failed to delete image from storage: ${error.message}. Reverting UI.`, variant: "destructive" });
-      // Revert UI if deletion fails
       form.setValue("exampleImages", currentImages, { shouldValidate: true });
       setPreviewImages(currentImages);
     }
@@ -367,11 +366,11 @@ export default function BrandProfilePage() {
                   name="imageStyle"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center text-base"><Palette className="w-5 h-5 mr-2 text-primary"/>Desired Image Style</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} disabled={isBrandContextLoading || isUploading || isExtracting}>
+                      <FormLabel className="flex items-center text-base"><Palette className="w-5 h-5 mr-2 text-primary"/>Image Style Preset</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ""} disabled={isBrandContextLoading || isUploading || isExtracting}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select an artistic style" />
+                            <SelectValue placeholder="Select an artistic style preset" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -384,7 +383,29 @@ export default function BrandProfilePage() {
                         </SelectContent>
                       </Select>
                       <FormDescription>
-                        This style will be used for AI image generation.
+                        Choose a base style. Further refine with notes below.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="imageStyleNotes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center text-base"><Edit className="w-5 h-5 mr-2 text-primary"/>Custom Image Style Notes (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Add custom details, e.g., 'moody lighting, close-up shot, focus on texture', or override preset aspects."
+                          rows={3}
+                          {...field}
+                          disabled={isBrandContextLoading || isUploading || isExtracting}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        These notes will be combined with the preset style for AI image generation.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -406,7 +427,7 @@ export default function BrandProfilePage() {
                             <Input 
                                 id="dropzone-file" 
                                 type="file" 
-                                multiple // Allow multiple file selection
+                                multiple
                                 className="hidden" 
                                 onChange={handleImageFileChange} 
                                 accept="image/*" 
@@ -422,16 +443,16 @@ export default function BrandProfilePage() {
                   <FormField
                     control={form.control}
                     name="exampleImages"
-                    render={() => ( <FormMessage /> )} // To display validation errors for the array if any
+                    render={() => ( <FormMessage /> )}
                    />
                 </FormItem>
 
-                {previewImages.length > 0 && !isUploading && (
+                {previewImages.length > 0 && (
                   <div className="mt-2 space-y-3">
                       <p className="text-sm text-muted-foreground mb-1">Current Example Image Previews:</p>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                         {previewImages.map((src, index) => (
-                          <div key={index} className="relative group aspect-square">
+                          <div key={src || index} className="relative group aspect-square"> {/* Ensure key is unique */}
                             <NextImage src={src} alt={`Example image preview ${index + 1}`} fill style={{objectFit: 'contain'}} className="rounded border" data-ai-hint="brand example"/>
                             <Button
                                 type="button"
@@ -439,7 +460,7 @@ export default function BrandProfilePage() {
                                 size="icon"
                                 className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                                 onClick={() => handleDeleteImage(src, index)}
-                                disabled={isUploading || isExtracting}
+                                disabled={isUploading || isExtracting || isBrandContextLoading}
                                 title="Delete this image"
                             >
                                 <Trash2 className="h-3 w-3" />

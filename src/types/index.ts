@@ -3,9 +3,10 @@ export interface BrandData {
   brandName?: string;
   websiteUrl?: string;
   brandDescription?: string;
-  imageStyle?: string;
+  imageStyle?: string; // For preset style
+  imageStyleNotes?: string; // For custom free-text style notes
   targetKeywords?: string;
-  exampleImages?: string[]; // Changed from exampleImage: string
+  exampleImages?: string[];
 }
 
 export interface GeneratedImage {
@@ -38,6 +39,6 @@ export interface GeneratedAdCampaign {
   campaignConcept: string;
   headlines: string[];
   bodyTexts: string[];
-  platformGuidance: string;
+  platformGuidance: string; // Changed from platformDetails to match flow output
   targetPlatforms: ('google_ads' | 'meta')[];
 }

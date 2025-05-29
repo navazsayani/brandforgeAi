@@ -7,7 +7,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebaseConfig';
 import type { BrandData, GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign } from '@/types';
 
-const BRAND_PROFILE_DOC_ID = "defaultBrandProfile"; // Using a fixed ID for simplicity
+const BRAND_PROFILE_DOC_ID = "defaultBrandProfile"; 
 
 interface BrandContextType {
   brandData: BrandData | null;
@@ -45,10 +45,14 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         const docSnap = await getDoc(brandDocRef);
         if (docSnap.exists()) {
           const fetchedData = docSnap.data() as BrandData;
-          // Ensure exampleImages is always an array
-          setBrandDataState({ ...fetchedData, exampleImages: fetchedData.exampleImages || [] });
+          setBrandDataState({ 
+            ...fetchedData, 
+            exampleImages: fetchedData.exampleImages || [],
+            imageStyle: fetchedData.imageStyle || "",
+            imageStyleNotes: fetchedData.imageStyleNotes || "",
+          });
         } else {
-          setBrandDataState({ exampleImages: [] }); // Initialize with empty array if no profile
+          setBrandDataState({ exampleImages: [] , imageStyle: "", imageStyleNotes: ""});
         }
       } catch (e: any) {
         console.error("Error fetching brand data:", e);
@@ -73,7 +77,12 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     setError(null);
     try {
-      const dataToSave = { ...data, exampleImages: data.exampleImages || [] }; // Ensure exampleImages is an array
+      const dataToSave = { 
+        ...data, 
+        exampleImages: data.exampleImages || [],
+        imageStyle: data.imageStyle || "",
+        imageStyleNotes: data.imageStyleNotes || "",
+      };
       const brandDocRef = doc(db, "brandProfiles", BRAND_PROFILE_DOC_ID);
       await setDoc(brandDocRef, dataToSave, { merge: true });
       setBrandDataState(dataToSave);
