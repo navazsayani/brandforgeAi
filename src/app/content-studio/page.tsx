@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
-import { FormDescription } from "@/components/ui/form";
+// FormDescription removed from here if it was only used for these problematic instances
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag } from 'lucide-react';
@@ -97,7 +97,6 @@ export default function ContentStudioPage() {
   const [selectedImageStylePreset, setSelectedImageStylePreset] = useState<string>("");
   const [customStyleNotesInput, setCustomStyleNotesInput] = useState<string>("");
 
-  // State for controlled inputs in image generation form
   const [imageGenBrandDescription, setImageGenBrandDescription] = useState<string>("");
   const [imageGenIndustry, setImageGenIndustry] = useState<string>("");
   const [imageGenNegativePrompt, setImageGenNegativePrompt] = useState<string>("");
@@ -161,7 +160,7 @@ export default function ContentStudioPage() {
         id: new Date().toISOString(),
         platform: 'Instagram', 
         imageSrc: socialData.imageSrc || null, 
-        imageDescription: (document.getElementById('socialImageDescription') as HTMLTextAreaElement)?.value || "", // This might need adjustment if socialImageDescription is outside the form
+        imageDescription: (document.getElementById('socialImageDescription') as HTMLTextAreaElement)?.value || "",
         caption: socialData.caption,
         hashtags: socialData.hashtags,
         tone: socialToneValue,
@@ -294,11 +293,8 @@ export default function ContentStudioPage() {
     const formData = new FormData();
     
      if (currentSocialImagePreviewUrl.startsWith('http')) {
-       // For now, if it's an HTTPS URL, and describeImage expects data URI,
-       // show a message. A future enhancement could be to fetch and convert.
        if (!currentSocialImagePreviewUrl.startsWith('data:')) {
             toast({ title: "AI Describe Info", description: "AI description for profile images (non-data URI) uses the image URL directly. Generation for newly generated images uses data URI.", variant: "informative" });
-             // Allow to proceed if the backend can handle URLs
        }
     }
     formData.append("imageDataUri", currentSocialImagePreviewUrl); 
@@ -315,14 +311,14 @@ export default function ContentStudioPage() {
         toast({ title: "Error", description: "Could not find blog form data.", variant: "destructive"});
         return;
     }
-    const formData = new FormData(formElement);
+    const currentFormData = new FormData(formElement); // Use current form data
     
     const outlineFormData = new FormData();
-    outlineFormData.append("brandName", formData.get("brandName") as string || brandData?.brandName || "");
-    outlineFormData.append("blogBrandDescription", formData.get("blogBrandDescription") as string || brandData?.brandDescription || "");
-    outlineFormData.append("industry", formData.get("industry") as string || brandData?.industry || "");
-    outlineFormData.append("blogKeywords", formData.get("blogKeywords") as string || brandData?.targetKeywords || "");
-    const websiteUrl = formData.get("blogWebsiteUrl") as string;
+    outlineFormData.append("brandName", currentFormData.get("brandName") as string || brandData?.brandName || "");
+    outlineFormData.append("blogBrandDescription", currentFormData.get("blogBrandDescription") as string || brandData?.brandDescription || "");
+    outlineFormData.append("industry", currentFormData.get("industry") as string || brandData?.industry || "");
+    outlineFormData.append("blogKeywords", currentFormData.get("blogKeywords") as string || brandData?.targetKeywords || "");
+    const websiteUrl = currentFormData.get("blogWebsiteUrl") as string;
     if (websiteUrl) {
         outlineFormData.append("websiteUrl", websiteUrl);
     }
@@ -344,7 +340,7 @@ export default function ContentStudioPage() {
     const aspect = selectedAspectRatio;
     const numImages = parseInt(numberOfImagesToGenerate, 10);
     const seedValue = seedValueStr && !isNaN(parseInt(seedValueStr)) ? parseInt(seedValueStr, 10) : undefined;
-    const exampleImg = (brandData?.exampleImages && selectedProfileImageIndexForGen !== null && brandData.exampleImages[selectedProfileImageIndexForGen]) || "";
+    const exampleImg = currentExampleImageForGen;
 
     let combinedStyle = selectedImageStylePreset;
     if (customStyleNotesInput.trim()) {
@@ -418,7 +414,6 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
     
     formData.append("finalizedTextPrompt", currentTextPromptForEditing);
     
-    // Use values from formSnapshot or fall back to brandData or current state for other fields
     formData.append("brandDescription", formSnapshot?.brandDescription || imageGenBrandDescription || brandData?.brandDescription || "");
     formData.append("industry", formSnapshot?.industry || imageGenIndustry || brandData?.industry || "");
     formData.append("imageStyle", formSnapshot?.imageStyle || (selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")));
@@ -427,11 +422,12 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
     if (formSnapshot?.exampleImage) formData.append("exampleImage", formSnapshot.exampleImage);
     formData.append("aspectRatio", formSnapshot?.aspectRatio || selectedAspectRatio);
     formData.append("numberOfImages", String(formSnapshot?.numberOfImages || parseInt(numberOfImagesToGenerate,10)));
-    if (formSnapshot?.negativePrompt) formData.append("negativePrompt", formSnapshot.negativePrompt);
-    else if (imageGenNegativePrompt) formData.append("negativePrompt", imageGenNegativePrompt);
+    
+    const negPromptValue = formSnapshot?.negativePrompt || imageGenNegativePrompt;
+    if (negPromptValue) formData.append("negativePrompt", negPromptValue);
 
-    if (formSnapshot?.seed !== undefined) formData.append("seed", String(formSnapshot.seed));
-    else if (imageGenSeed && !isNaN(parseInt(imageGenSeed))) formData.append("seed", imageGenSeed);
+    const seedValue = formSnapshot?.seed !== undefined ? formSnapshot.seed : (imageGenSeed && !isNaN(parseInt(imageGenSeed)) ? parseInt(imageGenSeed) : undefined);
+    if (seedValue !== undefined) formData.append("seed", String(seedValue));
 
     startTransition(() => {
       imageAction(formData);
@@ -447,9 +443,9 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
               <Palette className="w-10 h-10 text-primary" />
               <div>
                 <CardTitle className="text-3xl font-bold">Content Studio</CardTitle>
-                <CardDescription className="text-lg">
+                <p className="text-lg text-muted-foreground">
                   Generate images, social media posts, and blog articles powered by AI.
-                </CardDescription>
+                </p>
               </div>
             </div>
         </CardHeader>
@@ -466,7 +462,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>Generate Brand Images</CardTitle>
-                <CardDescription>Create unique images based on your brand. Uses brand description, industry, and style. Optionally use an example image from your Brand Profile.</CardDescription>
+                <p className="text-sm text-muted-foreground">Create unique images based on your brand. Uses brand description, industry, and style. Optionally use an example image from your Brand Profile.</p>
               </CardHeader>
               {!isPreviewingPrompt ? (
                 <div id="imageGenerationFormFields"> {/* Wrapper for fields, not a form itself */}
@@ -482,7 +478,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         rows={3}
                         required
                       />
-                       <FormDescription>Using: {brandData?.brandDescription ? `"${brandData.brandDescription.substring(0,50)}..." (from Profile)` : "Enter description"}</FormDescription>
+                       <p className="text-sm text-muted-foreground">Using: {brandData?.brandDescription ? `"${brandData.brandDescription.substring(0,50)}..." (from Profile)` : "Enter description"}</p>
                     </div>
                      <div>
                         <Label htmlFor="imageGenIndustry" className="flex items-center mb-1"><Briefcase className="w-4 h-4 mr-2 text-primary" />Industry</Label>
@@ -493,7 +489,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                             onChange={(e) => setImageGenIndustry(e.target.value)}
                             placeholder="e.g., Fashion, Technology"
                         />
-                        <FormDescription>Using: {brandData?.industry || "Enter industry (or from Profile)"}</FormDescription>
+                        <p className="text-sm text-muted-foreground">Using: {brandData?.industry || "Enter industry (or from Profile)"}</p>
                     </div>
                     
                     <div>
@@ -511,9 +507,9 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                               </SelectGroup>
                           </SelectContent>
                       </Select>
-                      <FormDescription>
+                      <p className="text-sm text-muted-foreground">
                         Profile preset: {brandData?.imageStyle ? (artisticStyles.find(s => s.value === brandData.imageStyle)?.label || brandData.imageStyle) : 'Not set in profile'}
-                      </FormDescription>
+                      </p>
                     </div>
 
                     <div>
@@ -526,16 +522,17 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         placeholder="E.g., 'add a touch of vintage', 'focus on metallic textures', 'use a desaturated color palette'."
                         rows={2}
                       />
-                       <FormDescription>
+                       <p className="text-sm text-muted-foreground">
                         Profile notes: {brandData?.imageStyleNotes || 'None in profile'}
-                      </FormDescription>
+                       </p>
                     </div>
                     
                     <div>
                         <Label htmlFor="imageGenExampleImageSelector" className="flex items-center mb-1">
                             <ImageIcon className="w-4 h-4 mr-2 text-primary" />Example Image from Profile (Optional)
                         </Label>
-                        <input type="hidden" name="exampleImage" value={currentExampleImageForGen} />
+                        {/* Hidden input to carry the selected example image URL if needed by backend (though formSnapshot handles it better) */}
+                        {/* <input type="hidden" name="exampleImage" value={currentExampleImageForGen} /> */}
 
                         {brandData?.exampleImages && brandData.exampleImages.length > 0 ? (
                             <div className="mt-2 space-y-2">
@@ -647,9 +644,9 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         className="font-mono text-sm"
                         placeholder="The constructed prompt will appear here. You can edit it before generation."
                       />
-                       <FormDescription>
+                       <p className="text-sm text-muted-foreground">
                         Note: When using this finalized prompt, aspects like Negative Prompt from the form fields above are ignored (assume you've included them here if needed). Aspect Ratio and Seed will still be applied by the system based on your selections.
-                       </FormDescription>
+                       </p>
                     </div>
                   </CardContent>
                   <CardFooter className="flex flex-col sm:flex-row gap-2">
@@ -735,7 +732,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>Create Social Media Post</CardTitle>
-                <CardDescription>Generate engaging captions and hashtags. Uses brand description, industry, image description (optional), and selected tone.</CardDescription>
+                <p className="text-sm text-muted-foreground">Generate engaging captions and hashtags. Uses brand description, industry, image description (optional), and selected tone.</p>
               </CardHeader>
               <form action={socialAction}>
                 <input type="hidden" name="industry" value={brandData?.industry || ""} />
@@ -934,12 +931,12 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>Create Blog Content</CardTitle>
-                <CardDescription>Generate SEO-friendly blog posts. Define an outline, choose a tone, and let AI write the content. Uses brand description and industry.</CardDescription>
+                <p className="text-sm text-muted-foreground">Generate SEO-friendly blog posts. Define an outline, choose a tone, and let AI write the content. Uses brand description and industry.</p>
               </CardHeader>
               <form action={blogAction} className="w-full">
                 <CardContent className="space-y-6">
                   <div>
-                    <Label htmlFor="blogBrandName" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Name (from Profile)</Label>
+                    <Label htmlFor="blogBrandName" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Name</Label>
                     <Input
                       id="blogBrandName"
                       name="brandName" 
@@ -948,7 +945,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                     />
                   </div>
                   <div>
-                    <Label htmlFor="blogBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
+                    <Label htmlFor="blogBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description</Label>
                     <Textarea
                       id="blogBrandDescription"
                       name="blogBrandDescription" 
@@ -958,7 +955,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                     />
                   </div>
                    <div>
-                        <Label htmlFor="blogIndustry" className="flex items-center mb-1"><Briefcase className="w-4 h-4 mr-2 text-primary" />Industry (from Profile)</Label>
+                        <Label htmlFor="blogIndustry" className="flex items-center mb-1"><Briefcase className="w-4 h-4 mr-2 text-primary" />Industry</Label>
                         <Input
                             id="blogIndustry"
                             name="industry" 
@@ -967,7 +964,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         />
                     </div>
                   <div>
-                    <Label htmlFor="blogKeywords" className="flex items-center mb-1"><Tag className="w-4 h-4 mr-2 text-primary" />Keywords (from Profile)</Label>
+                    <Label htmlFor="blogKeywords" className="flex items-center mb-1"><Tag className="w-4 h-4 mr-2 text-primary" />Keywords</Label>
                     <Input
                       id="blogKeywords"
                       name="blogKeywords" 
@@ -1024,7 +1021,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                       value={generatedBlogOutline}
                       onChange={(e) => setGeneratedBlogOutline(e.target.value)}
                     />
-                    <FormDescription>AI will strictly follow this outline to generate the blog post.</FormDescription>
+                    <p className="text-sm text-muted-foreground">AI will strictly follow this outline to generate the blog post.</p>
                   </div>
 
                   <div>
