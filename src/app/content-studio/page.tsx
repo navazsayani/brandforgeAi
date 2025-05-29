@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useActionState, startTransition } from 'react';
+import React, { useState, useEffect, useActionState, startTransition, useRef } from 'react';
 import NextImage from 'next/image';
 import { AppShell } from '@/components/AppShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -18,11 +18,12 @@ import { useToast } from '@/hooks/use-toast';
 import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag } from 'lucide-react';
 import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
-import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage } from '@/types';
+import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
 import type { DescribeImageOutput } from "@/ai/flows/describe-image-flow";
 import type { GenerateBlogOutlineOutput } from "@/ai/flows/generate-blog-outline-flow";
 import type { GenerateImagesInput } from '@/ai/flows/generate-images';
 import { cn } from '@/lib/utils';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; // For base64 warning
 
 const initialImageFormState: FormState<{ generatedImages: string[]; promptUsed: string; }> = { error: undefined, data: undefined, message: undefined };
 const initialSocialFormState: FormState<{ caption: string; hashtags: string; imageSrc: string | null }> = { error: undefined, data: undefined, message: undefined };
@@ -219,6 +220,9 @@ export default function ContentStudioPage() {
     if (saveImagesState.error) {
       toast({ title: "Error Saving Images", description: saveImagesState.error, variant: "destructive"});
     }
+     if (saveImagesState.data?.savedCount !== undefined || saveImagesState.error) {
+        // Potentially reset button state or loading indicators here if saveImagesState also indicates completion/failure of the action
+    }
   }, [saveImagesState, toast]);
 
 
@@ -231,6 +235,8 @@ export default function ContentStudioPage() {
     setLastSuccessfulGeneratedImageUrls([]);
     setLastUsedImageGenPrompt(null);
     setSelectedGeneratedImageIndices([]);
+    setFormSnapshot(null); // Reset form snapshot
+    setIsPreviewingPrompt(false); // Go back to editing fields
     toast({title: "Cleared", description: "Generated images and prompt cleared."});
   };
 
@@ -328,29 +334,33 @@ export default function ContentStudioPage() {
     });
   };
 
+
   const handlePreviewPromptClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
 
     const brandDesc = imageGenBrandDescription;
     const industryValue = imageGenIndustry;
+    const stylePreset = selectedImageStylePreset;
+    const customNotes = customStyleNotesInput;
     const negPrompt = imageGenNegativePrompt;
     const seedValueStr = imageGenSeed;
-    
     const aspect = selectedAspectRatio;
     const numImages = parseInt(numberOfImagesToGenerate, 10);
     const seedValue = seedValueStr && !isNaN(parseInt(seedValueStr)) ? parseInt(seedValueStr, 10) : undefined;
     const exampleImg = currentExampleImageForGen;
 
-    let combinedStyle = selectedImageStylePreset;
-    if (customStyleNotesInput.trim()) {
-        combinedStyle += ". " + customStyleNotesInput.trim();
+    let combinedStyle = stylePreset;
+    if (customNotes.trim()) {
+        combinedStyle += ". " + customNotes.trim();
     }
 
-    let textPrompt = "";
+    let textPromptContent = "";
     const industryContext = industryValue ? ` The brand operates in the ${industryValue} industry.` : "";
+    const compositionGuidance = "When depicting human figures as the primary subject, aim for a well-composed shot. Avoid unintentional or awkward cropping of faces or key body parts, ensuring the figure is presented naturally within the frame, unless the prompt specifically requests a close-up, a specific framing (e.g., 'headshot', 'upper body shot'), or artistic cropping.";
+
 
     if (exampleImg) {
-      textPrompt = `
+        textPromptContent = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
 
 The provided example image (sent first) serves ONE primary purpose: to identify the *category* of the item depicted (e.g., 'a handbag', 'a t-shirt', 'a piece of furniture', 'a pair of shoes').
@@ -368,32 +378,36 @@ The *design, appearance, theme, specific characteristics, and unique elements* o
 **Example of Interaction:**
 If the example image is a 'simple blue cotton t-shirt' (category: t-shirt), the Brand Description is 'luxury brand, minimalist ethos, inspired by serene nature, prefers organic materials', and the Desired Artistic Style is 'high-fashion product shot, muted earthy tones'.
 You should generate an image of a *luxury t-shirt made from organic-looking material, in muted earthy tones (e.g., moss green, stone grey, soft beige), shot in a high-fashion product style*. It should evoke serenity and minimalism. It should NOT be the original blue cotton t-shirt, nor should it default to a generic "luxury" color scheme like black and gold unless those colors are specifically requested or strongly implied by the *combination* of inputs.
+
+${compositionGuidance}
 `.trim();
     } else {
-        textPrompt = `
+        textPromptContent = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
 The image should be based on the following concept: "${brandDesc}".${industryContext}
 The desired artistic style for this new image is: "${combinedStyle}". If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic.
 **Important Note on Color and Style**: Strive for visual variety that aligns with the brand description and artistic style. Avoid defaulting to a narrow or stereotypical color palette unless the inputs strongly and explicitly demand it.
+
+${compositionGuidance}
 `.trim();
     }
     
     if (negPrompt) {
-      textPrompt += `\n\nAvoid the following elements or characteristics in the image: ${negPrompt}.`;
+      textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negPrompt}.`;
     }
     if (aspect) {
-      textPrompt += `\n\nThe final image should have an aspect ratio of ${aspect} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
+      textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspect} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
     }
     if (seedValue !== undefined) {
-      textPrompt += `\n\nUse seed: ${seedValue}.`;
+      textPromptContent += `\n\nUse seed: ${seedValue}.`;
     }
 
 
     if (numImages > 1) {
-        textPrompt += `\n\nImportant for batch generation: You are generating image 1 of a set of ${numImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (1/${numImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
+        textPromptContent += `\n\nImportant for batch generation: You are generating image 1 of a set of ${numImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (1/${numImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
     }
     
-    setCurrentTextPromptForEditing(textPrompt);
+    setCurrentTextPromptForEditing(textPromptContent);
     setFormSnapshot({
         brandDescription: brandDesc,
         industry: industryValue,
@@ -482,7 +496,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         rows={3}
                         required
                       />
-                       <p className="text-sm text-muted-foreground">Using: {brandData?.brandDescription ? `"${brandData.brandDescription.substring(0,50)}..." (from Profile)` : "Enter description"}</p>
+                       <p className="text-xs text-muted-foreground">Using: {brandData?.brandDescription ? `"${brandData.brandDescription.substring(0,50)}..." (from Profile)` : "Enter description"}</p>
                     </div>
                      <div>
                         <Label htmlFor="imageGenIndustry" className="flex items-center mb-1"><Briefcase className="w-4 h-4 mr-2 text-primary" />Industry</Label>
@@ -493,7 +507,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                             onChange={(e) => setImageGenIndustry(e.target.value)}
                             placeholder="e.g., Fashion, Technology"
                         />
-                        <p className="text-sm text-muted-foreground">Using: {brandData?.industry || "Enter industry (or from Profile)"}</p>
+                        <p className="text-xs text-muted-foreground">Using: {brandData?.industry || "Enter industry (or from Profile)"}</p>
                     </div>
                     
                     <div>
@@ -511,7 +525,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                               </SelectGroup>
                           </SelectContent>
                       </Select>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         Profile preset: {brandData?.imageStyle ? (artisticStyles.find(s => s.value === brandData.imageStyle)?.label || brandData.imageStyle) : 'Not set in profile'}
                       </p>
                     </div>
@@ -526,7 +540,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         placeholder="E.g., 'add a touch of vintage', 'focus on metallic textures', 'use a desaturated color palette'."
                         rows={2}
                       />
-                       <p className="text-sm text-muted-foreground">
+                       <p className="text-xs text-muted-foreground">
                         Profile notes: {brandData?.imageStyleNotes || 'None in profile'}
                        </p>
                     </div>
@@ -535,9 +549,6 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         <Label htmlFor="imageGenExampleImageSelector" className="flex items-center mb-1">
                             <ImageIcon className="w-4 h-4 mr-2 text-primary" />Example Image from Profile (Optional)
                         </Label>
-                        {/* Hidden input to carry the selected example image URL if needed by backend (though formSnapshot handles it better) */}
-                        {/* <input type="hidden" name="exampleImage" value={currentExampleImageForGen} /> */}
-
                         {brandData?.exampleImages && brandData.exampleImages.length > 0 ? (
                             <div className="mt-2 space-y-2">
                                 {brandData.exampleImages.length > 1 ? (
@@ -648,8 +659,8 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         className="font-mono text-sm"
                         placeholder="The constructed prompt will appear here. You can edit it before generation."
                       />
-                       <p className="text-sm text-muted-foreground">
-                        Note: When using this finalized prompt, aspects like Negative Prompt from the form fields above are ignored (assume you've included them here if needed). Aspect Ratio and Seed will still be applied by the system based on your selections.
+                       <p className="text-xs text-muted-foreground">
+                        Note: When using this finalized prompt, other fields like Negative Prompt from the form are ignored (assume you've included them here if needed). Aspect Ratio and Seed will still be applied.
                        </p>
                     </div>
                   </CardContent>
@@ -678,14 +689,15 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         </div>
                          {lastSuccessfulGeneratedImageUrls.length > 0 && (
                             <div className="mt-2 flex items-center gap-2">
-                                <Button 
+                                <SubmitButton 
                                     onClick={handleSaveSelectedGeneratedImages} 
-                                    disabled={selectedGeneratedImageIndices.length === 0 || (saveImagesState.message !== undefined && !saveImagesState.error && saveImagesState.data === undefined) }
+                                    disabled={selectedGeneratedImageIndices.length === 0 }
                                     size="sm"
+                                    formAction={saveImagesAction}
                                 >
-                                    {(saveImagesState.message !== undefined && !saveImagesState.error && saveImagesState.data === undefined) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                    <Save className="mr-2 h-4 w-4" />
                                     Save Selected to Library ({selectedGeneratedImageIndices.length})
-                                </Button>
+                                </SubmitButton>
                             </div>
                         )}
                     </CardHeader>

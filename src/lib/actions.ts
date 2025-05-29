@@ -10,7 +10,7 @@ import { describeImage, type DescribeImageInput, type DescribeImageOutput } from
 import { generateBlogOutline, type GenerateBlogOutlineInput, type GenerateBlogOutlineOutput } from '@/ai/flows/generate-blog-outline-flow';
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
-import { collection, addDoc, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'; // Removed unused 'doc' import
 
 
 // Generic type for form state with error
@@ -253,9 +253,9 @@ export async function handleSaveGeneratedImagesAction(
   let imagesToSave: { dataUri: string; prompt: string; style: string; }[];
   try {
     imagesToSave = JSON.parse(imagesToSaveJson);
-  } catch (e) {
-    console.error("Failed to parse imagesToSaveJson", e);
-    return { error: "Invalid image data format." };
+  } catch (e: any) {
+    console.error("Failed to parse imagesToSaveJson:", e, "\nReceived JSON string:", imagesToSaveJson);
+    return { error: "Invalid image data format. Check server logs for details." };
   }
 
   if (!Array.isArray(imagesToSave) || imagesToSave.length === 0) {
@@ -267,7 +267,8 @@ export async function handleSaveGeneratedImagesAction(
 
   for (const image of imagesToSave) {
     if (!image.dataUri || !image.dataUri.startsWith('data:image')) {
-      saveErrors.push(`Invalid data URI for one of the images. URI: ${image.dataUri?.substring(0,30)}...`);
+      console.error(`Invalid data URI for one of the images. URI starts with: ${image.dataUri?.substring(0,30)}...`);
+      saveErrors.push(`Invalid data URI for an image. Cannot save.`);
       continue;
     }
     try {
@@ -276,8 +277,12 @@ export async function handleSaveGeneratedImagesAction(
       const filePath = `generatedLibraryImages/${brandProfileDocId}/${Date.now()}_${generateFilenamePart()}.${fileExtension}`;
       const imageStorageRef = storageRef(storage, filePath);
       
+      console.log(`Attempting to upload image to: ${filePath}`);
       const snapshot = await uploadString(imageStorageRef, image.dataUri, 'data_url');
+      console.log(`Successfully uploaded image: ${filePath}, snapshot:`, snapshot);
+      
       const downloadURL = await getDownloadURL(snapshot.ref);
+      console.log(`Obtained download URL: ${downloadURL}`);
 
       const firestoreCollectionRef = collection(db, `brandProfiles/${brandProfileDocId}/savedLibraryImages`);
       await addDoc(firestoreCollectionRef, {
@@ -286,20 +291,23 @@ export async function handleSaveGeneratedImagesAction(
         style: image.style,
         createdAt: serverTimestamp(),
       });
+      console.log(`Successfully saved image metadata to Firestore for: ${filePath}`);
       savedCount++;
     } catch (e: any) {
-      console.error(`Failed to save image: ${e.message}`, e);
+      console.error(`Failed to save image (prompt: ${image.prompt.substring(0,50)}...):`, e);
       saveErrors.push(`Failed to save one image: ${e.message?.substring(0,100)}`);
     }
   }
 
   if (savedCount > 0 && saveErrors.length > 0) {
-    return { data: {savedCount}, message: `Successfully saved ${savedCount} image(s). Some errors occurred: ${saveErrors.join(', ')}` };
+    return { data: {savedCount}, message: `Successfully saved ${savedCount} image(s). Some errors occurred: ${saveErrors.join('. ')}` };
   } else if (savedCount > 0) {
     return { data: {savedCount}, message: `${savedCount} image(s) saved successfully to your library!` };
   } else if (saveErrors.length > 0) {
-    return { error: `Failed to save any images. Errors: ${saveErrors.join(', ')}` };
+    return { error: `Failed to save any images. Errors: ${saveErrors.join('. ')}` };
   } else {
-     return { error: "No images were processed or saved. Unknown error."};
+     return { error: "No images were processed or saved. This might be due to an issue with the input data."};
   }
 }
+
+    
