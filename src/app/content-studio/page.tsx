@@ -24,7 +24,6 @@ import type { DescribeImageOutput } from "@/ai/flows/describe-image-flow";
 import type { GenerateBlogOutlineOutput } from "@/ai/flows/generate-blog-outline-flow";
 import { cn } from '@/lib/utils';
 
-
 const initialImageFormState: FormState<{ generatedImages: string[]; promptUsed: string; }> = { error: undefined, data: undefined, message: undefined };
 const initialSocialFormState: FormState<{ caption: string; hashtags: string; imageSrc: string | null }> = { error: undefined, data: undefined, message: undefined };
 const initialBlogFormState: FormState<{ title: string; content: string; tags: string }> = { error: undefined, data: undefined, message: undefined };
@@ -332,7 +331,7 @@ export default function ContentStudioPage() {
                   
                   <div>
                     <Label htmlFor="imageGenImageStylePresetSelect" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Image Style Preset</Label>
-                     <Select value={selectedImageStylePreset} onValueChange={setSelectedImageStylePreset} >
+                     <Select value={selectedImageStylePreset} onValueChange={setSelectedImageStylePreset} name="imageStylePreset">
                         <SelectTrigger id="imageGenImageStylePresetSelect">
                             <SelectValue placeholder="Select image style preset" />
                         </SelectTrigger>
@@ -354,6 +353,7 @@ export default function ContentStudioPage() {
                     <Label htmlFor="imageGenCustomStyleNotes" className="flex items-center mb-1"><Edit className="w-4 h-4 mr-2 text-primary" />Custom Style Notes/Overrides (Optional)</Label>
                     <Textarea
                       id="imageGenCustomStyleNotes"
+                      name="imageStyleNotes" // Ensure this name is unique if used directly in form data, or handle combination manually
                       value={customStyleNotesInput}
                       onChange={(e) => setCustomStyleNotesInput(e.target.value)}
                       placeholder="E.g., 'add a touch of vintage', 'focus on metallic textures', 'use a desaturated color palette'."
@@ -479,14 +479,18 @@ export default function ContentStudioPage() {
                       </div>
                       {lastUsedImageGenPrompt && (
                         <div className="mt-4">
-                            <Label htmlFor="usedImagePromptDisplay" className="flex items-center mb-1 text-sm font-medium"><FileText className="w-4 h-4 mr-2 text-primary" />Prompt Used:</Label>
+                            <Label htmlFor="usedImagePromptDisplay" className="flex items-center mb-1 text-sm font-medium"><FileText className="w-4 h-4 mr-2 text-primary" />Prompt Used (Editable for Reference):</Label>
                             <Textarea
                                 id="usedImagePromptDisplay"
                                 value={lastUsedImageGenPrompt}
-                                readOnly
+                                onChange={(e) => setLastUsedImageGenPrompt(e.target.value)}
                                 rows={Math.min(10, lastUsedImageGenPrompt.split('\n').length + 1)}
                                 className="text-xs bg-muted/50"
+                                placeholder="The prompt used for generation will appear here. You can edit it for your reference or to copy elsewhere."
                             />
+                             <Button variant="ghost" size="sm" onClick={() => copyToClipboard(lastUsedImageGenPrompt, "Prompt")} className="mt-1 text-muted-foreground hover:text-primary">
+                                <Copy className="w-3 h-3 mr-1" /> Copy Prompt
+                            </Button>
                         </div>
                       )}
                       <Button variant="outline" className="mt-4" onClick={handleUseGeneratedImageForSocial} disabled={lastSuccessfulGeneratedImageUrls.length === 0}>
@@ -853,3 +857,4 @@ export default function ContentStudioPage() {
   );
 }
 
+    
