@@ -102,19 +102,16 @@ export default function ContentStudioPage() {
     if (brandData) {
         setSelectedImageStylePreset(brandData.imageStyle || (artisticStyles.length > 0 ? artisticStyles[0].value : ""));
         setCustomStyleNotesInput(brandData.imageStyleNotes || "");
+        if (brandData.exampleImages && brandData.exampleImages.length > 0) {
+            if (selectedProfileImageIndexForGen === null) setSelectedProfileImageIndexForGen(0);
+            if (selectedProfileImageIndexForSocial === null) setSelectedProfileImageIndexForSocial(0);
+        } else {
+            setSelectedProfileImageIndexForGen(null);
+            setSelectedProfileImageIndexForSocial(null);
+        }
     }
-  }, [brandData]);
+  }, [brandData, selectedProfileImageIndexForGen, selectedProfileImageIndexForSocial]);
 
-
-  useEffect(() => {
-    if (brandData?.exampleImages && brandData.exampleImages.length > 0) {
-      setSelectedProfileImageIndexForGen(0);
-      setSelectedProfileImageIndexForSocial(0);
-    } else {
-      setSelectedProfileImageIndexForGen(null);
-      setSelectedProfileImageIndexForSocial(null);
-    }
-  }, [brandData?.exampleImages]);
 
   useEffect(() => {
     if (imageState.data) {
@@ -125,9 +122,8 @@ export default function ContentStudioPage() {
       let combinedStyleForPrompt = "";
       if (imageForm) {
         const formData = new FormData(imageForm);
-        combinedStyleForPrompt = formData.get("imageStyle") as string; // This will be the combined style
+        combinedStyleForPrompt = formData.get("imageStyle") as string; 
       }
-
 
       newImageUrls.forEach(url => {
         const newImage: GeneratedImage = {
@@ -283,7 +279,9 @@ export default function ContentStudioPage() {
     }
     formData.set("imageStyle", combinedStyle); // Set the combined style for the action
 
-    imageAction(formData);
+    startTransition(() => {
+      imageAction(formData);
+    });
   };
 
 
@@ -364,7 +362,6 @@ export default function ContentStudioPage() {
                       Default from profile: {brandData?.imageStyleNotes || 'None'}
                     </p>
                   </div>
-                  {/* Hidden input to carry the combined style, value set in onSubmit handler */}
                   <input type="hidden" name="imageStyle" />
 
 
@@ -380,16 +377,20 @@ export default function ContentStudioPage() {
                     />
                     {brandData?.exampleImages && brandData.exampleImages.length > 0 ? (
                         <div className="mt-2">
-                            <p className="text-xs text-muted-foreground mb-1">Select Profile Image to Use as Reference:</p>
+                            <p className="text-xs text-muted-foreground mb-1">
+                                {brandData.exampleImages.length > 1 ? "Select Profile Image to Use as Reference:" : "Using Profile Image as Reference:"}
+                            </p>
                             <div className="flex space-x-2 overflow-x-auto pb-2">
                                 {brandData.exampleImages.map((imgSrc, index) => (
                                     <button
                                         type="button"
-                                        key={index}
+                                        key={`gen-profile-${index}`}
                                         onClick={() => setSelectedProfileImageIndexForGen(index)}
+                                        disabled={brandData.exampleImages && brandData.exampleImages.length <=1}
                                         className={cn(
                                             "w-20 h-20 rounded border-2 p-0.5 flex-shrink-0 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring",
-                                            selectedProfileImageIndexForGen === index ? "border-primary ring-2 ring-primary" : "border-border"
+                                            selectedProfileImageIndexForGen === index ? "border-primary ring-2 ring-primary" : "border-border",
+                                            brandData.exampleImages && brandData.exampleImages.length <=1 ? "cursor-default opacity-70" : ""
                                         )}
                                     >
                                         <NextImage src={imgSrc} alt={`Example ${index + 1}`} width={76} height={76} className="object-contain w-full h-full rounded-sm" data-ai-hint="style example"/>
@@ -547,16 +548,20 @@ export default function ContentStudioPage() {
 
                         {socialImageChoice === 'profile' && brandData?.exampleImages && brandData.exampleImages.length > 0 && (
                              <div className="mt-2">
-                                <p className="text-xs text-muted-foreground mb-1">Select Profile Image for Social Post:</p>
+                                 <p className="text-xs text-muted-foreground mb-1">
+                                    {brandData.exampleImages.length > 1 ? "Select Profile Image for Social Post:" : "Using Profile Image for Social Post:"}
+                                </p>
                                 <div className="flex space-x-2 overflow-x-auto pb-2">
                                     {brandData.exampleImages.map((imgSrc, index) => (
                                         <button
                                             type="button"
                                             key={`social-profile-${index}`}
                                             onClick={() => setSelectedProfileImageIndexForSocial(index)}
+                                            disabled={brandData.exampleImages && brandData.exampleImages.length <=1}
                                             className={cn(
                                                 "w-16 h-16 rounded border-2 p-0.5 flex-shrink-0 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring",
-                                                selectedProfileImageIndexForSocial === index ? "border-primary ring-2 ring-primary" : "border-border"
+                                                selectedProfileImageIndexForSocial === index ? "border-primary ring-2 ring-primary" : "border-border",
+                                                brandData.exampleImages && brandData.exampleImages.length <=1 ? "cursor-default opacity-70" : ""
                                             )}
                                         >
                                             <NextImage src={imgSrc} alt={`Profile Example ${index + 1}`} width={60} height={60} className="object-contain w-full h-full rounded-sm" data-ai-hint="social media reference"/>
@@ -837,3 +842,4 @@ export default function ContentStudioPage() {
     </AppShell>
   );
 }
+
