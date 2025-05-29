@@ -10,7 +10,7 @@ import { describeImage, type DescribeImageInput, type DescribeImageOutput } from
 import { generateBlogOutline, type GenerateBlogOutlineInput, type GenerateBlogOutlineOutput } from '@/ai/flows/generate-blog-outline-flow';
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore'; // Removed unused 'doc' import
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 
 // Generic type for form state with error
@@ -56,15 +56,15 @@ export async function handleGenerateImagesAction(
     if (input.aspectRatio === "" || input.aspectRatio === undefined) delete input.aspectRatio;
     if (input.industry === "") delete input.industry;
 
-
+    console.log("Calling generateImages with input:", JSON.stringify(input, null, 2));
     const result = await generateImages(input);
     const message = result.generatedImages.length > 1
         ? `${result.generatedImages.length} images generated successfully!`
         : "Image generated successfully!";
     return { data: { generatedImages: result.generatedImages, promptUsed: result.promptUsed }, message: message };
   } catch (e: any) {
-    console.error("Error in handleGenerateImagesAction:", e);
-    return { error: e.message || "Failed to generate image(s)." };
+    console.error("Error in handleGenerateImagesAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
+    return { error: e.message || "Failed to generate image(s). Check server logs for details." };
   }
 }
 
@@ -81,8 +81,8 @@ export async function handleDescribeImageAction(
     const result = await describeImage(input);
     return { data: result, message: "Image description generated!" };
   } catch (e: any) {
-    console.error("Error in handleDescribeImageAction:", e);
-    return { error: e.message || "Failed to generate image description." };
+    console.error("Error in handleDescribeImageAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
+    return { error: e.message || "Failed to generate image description. Check server logs for details." };
   }
 }
 
@@ -94,7 +94,6 @@ export async function handleGenerateSocialMediaCaptionAction(
     const selectedImageSrc = formData.get("selectedImageSrcForSocialPost") as string;
     const imageSrc = selectedImageSrc && selectedImageSrc.trim() !== "" ? selectedImageSrc : null;
     const imageDescription = formData.get("socialImageDescription") as string;
-
 
     const input: GenerateSocialMediaCaptionInput = {
       brandDescription: formData.get("brandDescription") as string,
@@ -111,12 +110,11 @@ export async function handleGenerateSocialMediaCaptionAction(
     }
     if (input.industry === "") delete input.industry;
 
-
     const result = await generateSocialMediaCaption(input);
     return { data: { ...result, imageSrc: imageSrc }, message: "Social media content generated!" };
   } catch (e: any) {
-    console.error("Error in handleGenerateSocialMediaCaptionAction:", e);
-    return { error: e.message || "Failed to generate social media caption." };
+    console.error("Error in handleGenerateSocialMediaCaptionAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
+    return { error: e.message || "Failed to generate social media caption. Check server logs for details." };
   }
 }
 
@@ -130,7 +128,7 @@ export async function handleGenerateBlogOutlineAction(
             brandDescription: formData.get("blogBrandDescription") as string, 
             industry: formData.get("industry") as string | undefined, 
             keywords: formData.get("blogKeywords") as string, 
-            websiteUrl: (formData.get("blogWebsiteUrl") as string) || undefined, 
+            websiteUrl: (formData.get("websiteUrl") as string) || undefined, 
         };
 
         if (!input.brandName || !input.brandDescription || !input.keywords) {
@@ -139,12 +137,11 @@ export async function handleGenerateBlogOutlineAction(
         if (input.websiteUrl === "") delete input.websiteUrl;
         if (input.industry === "") delete input.industry;
 
-
         const result = await generateBlogOutline(input);
         return { data: result, message: "Blog outline generated successfully!" };
     } catch (e: any) {
-        console.error("Error in handleGenerateBlogOutlineAction:", e);
-        return { error: e.message || "Failed to generate blog outline." };
+        console.error("Error in handleGenerateBlogOutlineAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
+        return { error: e.message || "Failed to generate blog outline. Check server logs for details." };
     }
 }
 
@@ -159,7 +156,7 @@ export async function handleGenerateBlogContentAction(
       industry: formData.get("industry") as string | undefined,
       keywords: formData.get("blogKeywords") as string,
       targetPlatform: formData.get("targetPlatform") as "Medium" | "Other",
-      websiteUrl: formData.get("blogWebsiteUrl") as string || undefined,
+      websiteUrl: formData.get("websiteUrl") as string || undefined,
       blogOutline: formData.get("blogOutline") as string,
       blogTone: formData.get("blogTone") as string,
     };
@@ -172,8 +169,8 @@ export async function handleGenerateBlogContentAction(
     const result = await generateBlogContent(input);
     return { data: result, message: "Blog content generated!" };
   } catch (e: any) {
-    console.error("Error in handleGenerateBlogContentAction:", e);
-    return { error: e.message || "Failed to generate blog content." };
+    console.error("Error in handleGenerateBlogContentAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
+    return { error: e.message || "Failed to generate blog content. Check server logs for details." };
   }
 }
 
@@ -189,7 +186,6 @@ export async function handleGenerateAdCampaignAction(
     if (generatedContent === "Custom content for ad campaign") { 
         generatedContent = formData.get("customGeneratedContent") as string; 
     }
-
 
     const input: GenerateAdCampaignInput = {
       brandName: formData.get("brandName") as string,
@@ -209,15 +205,13 @@ export async function handleGenerateAdCampaignAction(
     }
     if (input.industry === "") delete input.industry;
 
-
     const result = await generateAdCampaign(input);
     return { data: result, message: "Ad campaign variations generated successfully!" };
   } catch (e: any) {
-    console.error("Error in handleGenerateAdCampaignAction:", e);
-    return { error: e.message || "Failed to generate ad campaign variations." };
+    console.error("Error in handleGenerateAdCampaignAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
+    return { error: e.message || "Failed to generate ad campaign variations. Check server logs for details." };
   }
 }
-
 
 export async function handleExtractBrandInfoFromUrlAction(
   prevState: FormState<ExtractBrandInfoFromUrlOutput>,
@@ -231,9 +225,9 @@ export async function handleExtractBrandInfoFromUrlAction(
         const input: ExtractBrandInfoFromUrlInput = { websiteUrl };
         const result = await extractBrandInfoFromUrl(input);
         return { data: result, message: "Brand information extracted successfully." };
-    } catch (e: any) {
-        console.error("Error in handleExtractBrandInfoFromUrlAction:", e);
-        return { error: e.message || "Failed to extract brand information from URL." };
+    } catch (e: any)        {
+        console.error("Error in handleExtractBrandInfoFromUrlAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
+        return { error: e.message || "Failed to extract brand information from URL. Check server logs for details." };
     }
 }
 
@@ -279,7 +273,7 @@ export async function handleSaveGeneratedImagesAction(
       
       console.log(`Attempting to upload image to: ${filePath}`);
       const snapshot = await uploadString(imageStorageRef, image.dataUri, 'data_url');
-      console.log(`Successfully uploaded image: ${filePath}, snapshot:`, snapshot);
+      console.log(`Successfully uploaded image: ${filePath}`);
       
       const downloadURL = await getDownloadURL(snapshot.ref);
       console.log(`Obtained download URL: ${downloadURL}`);
@@ -294,7 +288,7 @@ export async function handleSaveGeneratedImagesAction(
       console.log(`Successfully saved image metadata to Firestore for: ${filePath}`);
       savedCount++;
     } catch (e: any) {
-      console.error(`Failed to save image (prompt: ${image.prompt.substring(0,50)}...):`, e);
+      console.error(`Failed to save one image (prompt: ${image.prompt.substring(0,50)}...). Full error:`, JSON.stringify(e, Object.getOwnPropertyNames(e)));
       saveErrors.push(`Failed to save one image: ${e.message?.substring(0,100)}`);
     }
   }
@@ -309,5 +303,4 @@ export async function handleSaveGeneratedImagesAction(
      return { error: "No images were processed or saved. This might be due to an issue with the input data."};
   }
 }
-
     
