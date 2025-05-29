@@ -7,6 +7,7 @@ import { generateBlogContent, type GenerateBlogContentInput } from '@/ai/flows/g
 import { generateAdCampaign, type GenerateAdCampaignInput } from '@/ai/flows/generate-ad-campaign';
 import { extractBrandInfoFromUrl, type ExtractBrandInfoFromUrlInput, type ExtractBrandInfoFromUrlOutput } from '@/ai/flows/extract-brand-info-from-url-flow';
 import { describeImage, type DescribeImageInput, type DescribeImageOutput } from '@/ai/flows/describe-image-flow';
+import { generateBlogOutline, type GenerateBlogOutlineInput, type GenerateBlogOutlineOutput } from '@/ai/flows/generate-blog-outline-flow';
 
 
 // Generic type for form state with error
@@ -95,7 +96,7 @@ export async function handleGenerateSocialMediaCaptionAction(
     if (!input.brandDescription || !input.tone) {
       return { error: "Brand description and tone are required." };
     }
-    if (imageSrc && !imageDescription) {
+    if (imageSrc && (!imageDescription || imageDescription.trim() === "")) {
         return { error: "Image description is required if an image is selected for the post."}
     }
     
@@ -105,6 +106,31 @@ export async function handleGenerateSocialMediaCaptionAction(
     console.error("Error in handleGenerateSocialMediaCaptionAction:", e);
     return { error: e.message || "Failed to generate social media caption." };
   }
+}
+
+export async function handleGenerateBlogOutlineAction(
+    prevState: FormState<GenerateBlogOutlineOutput>,
+    formData: FormData
+): Promise<FormState<GenerateBlogOutlineOutput>> {
+    try {
+        const input: GenerateBlogOutlineInput = {
+            brandName: formData.get("brandName") as string,
+            brandDescription: formData.get("brandDescription") as string,
+            keywords: formData.get("keywords") as string,
+            websiteUrl: (formData.get("websiteUrl") as string) || undefined,
+        };
+
+        if (!input.brandName || !input.brandDescription || !input.keywords) {
+            return { error: "Brand name, description, and keywords are required for outline generation." };
+        }
+        if (input.websiteUrl === "") delete input.websiteUrl;
+
+        const result = await generateBlogOutline(input);
+        return { data: result, message: "Blog outline generated successfully!" };
+    } catch (e: any) {
+        console.error("Error in handleGenerateBlogOutlineAction:", e);
+        return { error: e.message || "Failed to generate blog outline." };
+    }
 }
 
 export async function handleGenerateBlogContentAction(
@@ -118,9 +144,11 @@ export async function handleGenerateBlogContentAction(
       keywords: formData.get("keywords") as string,
       targetPlatform: formData.get("targetPlatform") as "Medium" | "Other",
       websiteUrl: formData.get("websiteUrl") as string || undefined,
+      blogOutline: formData.get("blogOutline") as string,
+      blogTone: formData.get("blogTone") as string,
     };
-     if (!input.brandName || !input.brandDescription || !input.keywords || !input.targetPlatform) {
-      return { error: "All fields (except optional website URL) are required for blog content generation." };
+     if (!input.brandName || !input.brandDescription || !input.keywords || !input.targetPlatform || !input.blogOutline || !input.blogTone) {
+      return { error: "All fields (except optional website URL) including outline and tone are required for blog content generation." };
     }
     if (input.websiteUrl === "") delete input.websiteUrl;
 
@@ -184,5 +212,3 @@ export async function handleExtractBrandInfoFromUrlAction(
         return { error: e.message || "Failed to extract brand information from URL." };
     }
 }
-
-    

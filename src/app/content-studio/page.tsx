@@ -15,16 +15,20 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette } from 'lucide-react';
-import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, type FormState } from '@/lib/actions';
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2 } from 'lucide-react';
+import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
 import type { DescribeImageOutput } from "@/ai/flows/describe-image-flow";
+import type { GenerateBlogOutlineOutput } from "@/ai/flows/generate-blog-outline-flow";
+
 
 const initialImageFormState: FormState<string[]> = { error: undefined, data: undefined, message: undefined };
 const initialSocialFormState: FormState<{ caption: string; hashtags: string; imageSrc: string | null }> = { error: undefined, data: undefined, message: undefined };
 const initialBlogFormState: FormState<{ title: string; content: string; tags: string }> = { error: undefined, data: undefined, message: undefined };
 const initialDescribeImageState: FormState<DescribeImageOutput> = { error: undefined, data: undefined, message: undefined };
+const initialBlogOutlineState: FormState<GenerateBlogOutlineOutput> = { error: undefined, data: undefined, message: undefined };
+
 
 type SocialImageChoice = 'generated' | 'profile' | null;
 
@@ -46,6 +50,16 @@ const artisticStyles = [
   { value: "cel shaded", label: "Cel Shaded" },
 ];
 
+const blogTones = [
+    { value: "Informative", label: "Informative" },
+    { value: "Conversational", label: "Conversational" },
+    { value: "Professional", label: "Professional" },
+    { value: "Witty", label: "Witty/Humorous" },
+    { value: "Persuasive", label: "Persuasive" },
+    { value: "Storytelling", label: "Storytelling" },
+    { value: "Technical", label: "Technical" },
+];
+
 export default function ContentStudioPage() {
   const { brandData, addGeneratedImage, addGeneratedSocialPost, addGeneratedBlogPost } = useBrand();
   const { toast } = useToast();
@@ -54,19 +68,23 @@ export default function ContentStudioPage() {
   const [socialState, socialAction] = useActionStateReact(handleGenerateSocialMediaCaptionAction, initialSocialFormState);
   const [blogState, blogAction] = useActionStateReact(handleGenerateBlogContentAction, initialBlogFormState);
   const [describeImageState, describeImageAction] = useActionStateReact(handleDescribeImageAction, initialDescribeImageState);
+  const [blogOutlineState, blogOutlineAction] = useActionStateReact(handleGenerateBlogOutlineAction, initialBlogOutlineState);
   
   const [lastSuccessfulGeneratedImageUrls, setLastSuccessfulGeneratedImageUrls] = useState<string[]>([]);
   const [generatedSocialPost, setGeneratedSocialPost] = useState<{caption: string, hashtags: string, imageSrc: string | null} | null>(null);
   const [generatedBlogPost, setGeneratedBlogPost] = useState<{title: string, content: string, tags: string} | null>(null);
+  const [generatedBlogOutline, setGeneratedBlogOutline] = useState<string>("");
   
   const [useImageForSocialPost, setUseImageForSocialPost] = useState<boolean>(false);
   const [socialImageChoice, setSocialImageChoice] = useState<SocialImageChoice>(null);
   const [socialToneValue, setSocialToneValue] = useState<string>("professional");
   const [blogPlatformValue, setBlogPlatformValue] = useState<"Medium" | "Other">("Medium");
+  const [selectedBlogTone, setSelectedBlogTone] = useState<string>(blogTones[0].value);
   const [selectedAspectRatio, setSelectedAspectRatio] = useState<string>("1:1");
   const [numberOfImagesToGenerate, setNumberOfImagesToGenerate] = useState<string>("1");
   const [activeTab, setActiveTab] = useState<string>("image");
   const [isGeneratingDescription, setIsGeneratingDescription] = useState<boolean>(false);
+  const [isGeneratingOutline, setIsGeneratingOutline] = useState<boolean>(false);
   
   const [selectedImageStyle, setSelectedImageStyle] = useState<string>(() => {
     if (brandData?.imageStyle && artisticStyles.some(style => style.value === brandData.imageStyle)) {
@@ -82,6 +100,7 @@ export default function ContentStudioPage() {
           setSelectedImageStyle(brandData.imageStyle);
         }
       } else if (artisticStyles.length > 0 && selectedImageStyle !== artisticStyles[0].value) {
+        // If profile style is custom and not in presets, default to first preset
         setSelectedImageStyle(artisticStyles[0].value);
       }
     } else if (artisticStyles.length > 0 && selectedImageStyle !== artisticStyles[0].value) {
@@ -99,7 +118,7 @@ export default function ContentStudioPage() {
         const newImage: GeneratedImage = {
           id: `${new Date().toISOString()}-${Math.random().toString(36).substring(2, 9)}`, 
           src: url,
-          prompt: (document.querySelector('form textarea[name="brandDescription"]') as HTMLTextAreaElement)?.value || "",
+          prompt: (document.querySelector('form textarea[name="brandDescription"]') as HTMLTextAreaElement)?.value || "", // Consider a more reliable way to get this
           style: selectedImageStyle 
         };
         addGeneratedImage(newImage);
@@ -117,7 +136,7 @@ export default function ContentStudioPage() {
         id: new Date().toISOString(),
         platform: 'Instagram', 
         imageSrc: socialData.imageSrc || "", 
-        imageDescription: (document.querySelector('form textarea[name="imageDescription"]') as HTMLTextAreaElement)?.value || "",
+        imageDescription: (document.getElementById('socialImageDescription') as HTMLTextAreaElement)?.value || "",
         caption: socialData.caption,
         hashtags: socialData.hashtags,
         tone: socialToneValue,
@@ -158,6 +177,17 @@ export default function ContentStudioPage() {
       toast({ title: "Error", description: describeImageState.error, variant: "destructive" });
     }
   }, [describeImageState, toast]);
+
+  useEffect(() => {
+    setIsGeneratingOutline(false);
+    if (blogOutlineState.data) {
+        setGeneratedBlogOutline(blogOutlineState.data.outline);
+        toast({ title: "Success", description: blogOutlineState.message || "Blog outline generated." });
+    }
+    if (blogOutlineState.error) {
+        toast({ title: "Outline Error", description: blogOutlineState.error, variant: "destructive" });
+    }
+  }, [blogOutlineState, toast]);
 
 
   const copyToClipboard = (text: string, type: string) => {
@@ -202,6 +232,28 @@ export default function ContentStudioPage() {
   
   const socialSubmitDisabled = socialState.data?.caption ? false : (useImageForSocialPost && !currentSocialImagePreviewUrl);
 
+  const handleGenerateBlogOutline = (event: React.MouseEvent<HTMLButtonElement>) => {
+    const form = event.currentTarget.closest('form');
+    if (!form) return;
+
+    const formData = new FormData(form);
+    
+    // We only need specific fields for outline generation
+    const outlineFormData = new FormData();
+    outlineFormData.append("brandName", formData.get("brandName") || brandData?.brandName || "");
+    outlineFormData.append("brandDescription", formData.get("blogBrandDescription") || brandData?.brandDescription || "");
+    outlineFormData.append("keywords", formData.get("blogKeywords") || brandData?.targetKeywords || "");
+    const websiteUrl = formData.get("blogWebsiteUrl") as string;
+    if (websiteUrl) {
+        outlineFormData.append("websiteUrl", websiteUrl);
+    }
+    
+    setIsGeneratingOutline(true);
+    startTransition(() => {
+        blogOutlineAction(outlineFormData);
+    });
+  };
+
 
   return (
     <AppShell>
@@ -235,7 +287,7 @@ export default function ContentStudioPage() {
               <form action={imageAction}>
                 <CardContent className="space-y-6">
                   <div>
-                    <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
+                    <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
                     <Textarea
                       id="imageGenBrandDescription"
                       name="brandDescription"
@@ -261,7 +313,7 @@ export default function ContentStudioPage() {
                         </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Current style from profile: {brandData?.imageStyle ? (artisticStyles.find(s => s.value === brandData.imageStyle)?.label || brandData.imageStyle) : 'Not set in profile'}
+                      Current style from profile: {brandData?.imageStyle ? (artisticStyles.find(s => s.value === brandData.imageStyle)?.label || `Custom: ${brandData.imageStyle}`) : 'Not set in profile'}
                     </p>
                   </div>
                   <div>
@@ -335,24 +387,31 @@ export default function ContentStudioPage() {
                 </CardFooter>
               </form>
               {lastSuccessfulGeneratedImageUrls.length > 0 && (
-                <CardContent className="mt-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xl font-semibold">Generated Image{lastSuccessfulGeneratedImageUrls.length > 1 ? 's' : ''}</h3>
-                    <Button variant="outline" size="sm" onClick={handleClearGeneratedImages}>
-                        <Trash2 className="mr-2 h-4 w-4" /> Clear Image{lastSuccessfulGeneratedImageUrls.length > 1 ? 's' : ''}
-                    </Button>
-                  </div>
-                  <div className={`grid gap-4 ${lastSuccessfulGeneratedImageUrls.length > 1 ? (lastSuccessfulGeneratedImageUrls.length > 2 ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'grid-cols-2') : 'grid-cols-1'}`}>
-                    {lastSuccessfulGeneratedImageUrls.map((url, index) => (
-                        <div key={index} className="relative w-full overflow-hidden border rounded-md bg-muted aspect-square">
-                            <NextImage src={url} alt={`Generated brand image ${index + 1}`} fill style={{objectFit: 'contain'}} data-ai-hint="brand marketing"/>
+                <Card className="mt-6 mx-4 mb-4 shadow-sm">
+                    <CardHeader>
+                        <div className="flex justify-between items-center">
+                            <CardTitle className="text-xl flex items-center">
+                                <ImageIcon className="w-5 h-5 mr-2 text-primary" />
+                                Generated Image{lastSuccessfulGeneratedImageUrls.length > 1 ? 's' : ''}
+                            </CardTitle>
+                            <Button variant="outline" size="sm" onClick={handleClearGeneratedImages}>
+                                <Trash2 className="mr-2 h-4 w-4" /> Clear Image{lastSuccessfulGeneratedImageUrls.length > 1 ? 's' : ''}
+                            </Button>
                         </div>
-                    ))}
-                  </div>
-                  <Button variant="outline" className="mt-4" onClick={handleUseGeneratedImageForSocial} disabled={lastSuccessfulGeneratedImageUrls.length === 0}>
-                    <ImageUp className="mr-2 h-4 w-4" /> Use First Image for Social Post
-                  </Button>
-                </CardContent>
+                    </CardHeader>
+                    <CardContent>
+                      <div className={`grid gap-4 ${lastSuccessfulGeneratedImageUrls.length > 1 ? (lastSuccessfulGeneratedImageUrls.length > 2 ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'grid-cols-2') : 'grid-cols-1'}`}>
+                        {lastSuccessfulGeneratedImageUrls.map((url, index) => (
+                            <div key={index} className="relative w-full overflow-hidden border rounded-md bg-muted aspect-square">
+                                <NextImage src={url} alt={`Generated brand image ${index + 1}`} fill style={{objectFit: 'contain'}} data-ai-hint="brand marketing"/>
+                            </div>
+                        ))}
+                      </div>
+                      <Button variant="outline" className="mt-4" onClick={handleUseGeneratedImageForSocial} disabled={lastSuccessfulGeneratedImageUrls.length === 0}>
+                        <ImageUp className="mr-2 h-4 w-4" /> Use First Image for Social Post
+                      </Button>
+                    </CardContent>
+                </Card>
               )}
             </Card>
           </TabsContent>
@@ -379,7 +438,7 @@ export default function ContentStudioPage() {
                                     setSocialImageChoice('generated'); 
                                 } else if (!socialImageChoice && brandData?.exampleImage) {
                                     setSocialImageChoice('profile'); 
-                                } else if (!socialImageChoice) {
+                                } else if (!socialImageChoice) { // If no images available, default to null
                                      setSocialImageChoice(null); 
                                 }
                             }}
@@ -423,7 +482,7 @@ export default function ContentStudioPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="socialBrandDescription" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
+                    <Label htmlFor="socialBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
                     <Textarea
                       id="socialBrandDescription"
                       name="brandDescription"
@@ -525,7 +584,7 @@ export default function ContentStudioPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>Create Blog Content</CardTitle>
-                <CardDescription>Generate SEO-friendly blog posts. Uses brand name, description, keywords, and target platform. Optionally add website for SEO insights.</CardDescription>
+                <CardDescription>Generate SEO-friendly blog posts. Define an outline, choose a tone, and let AI write the content.</CardDescription>
               </CardHeader>
               <form action={blogAction}>
                 <CardContent className="space-y-6">
@@ -540,10 +599,10 @@ export default function ContentStudioPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="blogBrandDescription" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
+                    <Label htmlFor="blogBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
                     <Textarea
                       id="blogBrandDescription"
-                      name="brandDescription"
+                      name="blogBrandDescription" // Ensure distinct name if using for outline too
                       defaultValue={brandData?.brandDescription || ""}
                       placeholder="Detailed brand description"
                       rows={3}
@@ -554,21 +613,65 @@ export default function ContentStudioPage() {
                     <Label htmlFor="blogKeywords" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Keywords (from Profile)</Label>
                     <Input
                       id="blogKeywords"
-                      name="keywords"
+                      name="blogKeywords" // Ensure distinct name
                       defaultValue={brandData?.targetKeywords || ""}
                       placeholder="Comma-separated keywords (e.g., AI, marketing, branding)"
                       required
                     />
                   </div>
                   <div>
-                      <Label htmlFor="blogWebsiteUrl" className="flex items-center mb-1"><Globe className="w-4 h-4 mr-2 text-primary" />Website URL (Optional, for SEO insights)</Label>
+                      <Label htmlFor="blogWebsiteUrl" className="flex items-center mb-1"><Globe className="w-4 h-4 mr-2 text-primary" />Website URL (Optional, for SEO & Outline)</Label>
                       <Input
                         id="blogWebsiteUrl"
-                        name="websiteUrl" 
+                        name="blogWebsiteUrl" // Ensure distinct name
                         defaultValue={brandData?.websiteUrl || ""}
                         placeholder="https://www.example.com"
                       />
                   </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="blogTone" className="flex items-center mb-1"><Mic2 className="w-4 h-4 mr-2 text-primary" />Tone/Style for Blog</Label>
+                    <Select name="blogTone" required value={selectedBlogTone} onValueChange={setSelectedBlogTone}>
+                        <SelectTrigger id="blogTone">
+                            <SelectValue placeholder="Select a tone/style" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectGroup>
+                                <SelectLabel>Blog Tones/Styles</SelectLabel>
+                                {blogTones.map(tone => (
+                                    <SelectItem key={tone.value} value={tone.value}>{tone.label}</SelectItem>
+                                ))}
+                            </SelectGroup>
+                        </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center mb-1">
+                        <Label htmlFor="blogOutline" className="flex items-center"><ListOrdered className="w-4 h-4 mr-2 text-primary" />Blog Outline</Label>
+                        <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={handleGenerateBlogOutline}
+                            disabled={isGeneratingOutline}
+                        >
+                            {isGeneratingOutline ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+                            Generate Outline with AI
+                        </Button>
+                    </div>
+                    <Textarea
+                      id="blogOutline"
+                      name="blogOutline"
+                      placeholder="Enter your blog outline here, or generate one with AI. Markdown is supported."
+                      rows={8}
+                      required
+                      value={generatedBlogOutline}
+                      onChange={(e) => setGeneratedBlogOutline(e.target.value)}
+                    />
+                    <FormDescription>AI will strictly follow this outline to generate the blog post.</FormDescription>
+                  </div>
+
                   <div>
                     <Label htmlFor="blogTargetPlatformSelect" className="flex items-center mb-1"><Newspaper className="w-4 h-4 mr-2 text-primary" />Target Platform</Label>
                     <Select name="targetPlatform" required value={blogPlatformValue} onValueChange={(value) => setBlogPlatformValue(value as "Medium" | "Other")}>
@@ -583,7 +686,7 @@ export default function ContentStudioPage() {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <SubmitButton className="w-full" loadingText="Generating Blog...">Generate Blog Post</SubmitButton>
+                  <SubmitButton className="w-full" loadingText="Generating Blog..." disabled={isGeneratingOutline || !generatedBlogOutline.trim()}>Generate Blog Post</SubmitButton>
                 </CardFooter>
               </form>
               {generatedBlogPost && (
@@ -632,5 +735,3 @@ export default function ContentStudioPage() {
     </AppShell>
   );
 }
-
-    
