@@ -65,27 +65,31 @@ async function _generateImageWithGemini(params: {
       { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
   ];
 
-  // This log is crucial for debugging the exact payload to Gemini
   console.log("Final prompt parts array for Gemini _generateImageWithGemini:", JSON.stringify(promptParts, null, 2));
 
-  const {media} = await aiInstance.generate({
-    model: 'googleai/gemini-2.0-flash-exp',
-    prompt: promptParts,
-    config: {
-      responseModalities: ['TEXT', 'IMAGE'],
-      safetySettings: safetySettingsConfig,
-    },
-  });
+  try {
+    const {media} = await aiInstance.generate({
+      model: 'googleai/gemini-2.0-flash-exp',
+      prompt: promptParts,
+      config: {
+        responseModalities: ['TEXT', 'IMAGE'],
+        safetySettings: safetySettingsConfig,
+      },
+    });
 
-  if (!media || !media.url) {
-    console.error(`AI image generation failed. Media object or URL is missing. Response media:`, JSON.stringify(media, null, 2));
-    throw new Error(`AI failed to generate image or returned an invalid image format. Check server logs for details.`);
+    if (!media || !media.url) {
+      console.error(`AI image generation failed after generate call. Media object or URL is missing. Response media:`, JSON.stringify(media, null, 2));
+      throw new Error(`AI failed to generate image or returned an invalid image format after successful API call. Check server logs for details.`);
+    }
+    if (typeof media.url !== 'string' || !media.url.startsWith('data:')) {
+      console.error(`AI image generation failed after generate call. Media URL is not a valid data URI. Received URL:`, media.url);
+      throw new Error(`AI returned image, but its format (URL) is invalid after successful API call. Expected a data URI. Check server logs for details.`);
+    }
+    return media.url;
+  } catch (error: any) {
+    console.error("Error directly from ai.generate() in _generateImageWithGemini:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    throw new Error(`Error during ai.generate call: ${error.message || 'Unknown error from ai.generate()'}. Check server logs for full error object.`);
   }
-  if (typeof media.url !== 'string' || !media.url.startsWith('data:')) {
-    console.error(`AI image generation failed. Media URL is not a valid data URI. Received URL:`, media.url);
-    throw new Error(`AI returned image, but its format (URL) is invalid. Expected a data URI. Check server logs for details.`);
-  }
-  return media.url;
 }
 
 async function _generateImageWithLeonardoAI_stub(params: {
@@ -149,8 +153,17 @@ const generateImagesFlow = ai.defineFlow(
         const industryContext = industry ? ` The brand operates in the ${industry} industry.` : "";
 
         if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
-            console.log(`Using finalized text prompt for image ${i+1}: "${finalizedTextPrompt}"`);
+            console.log(`Using finalized text prompt for image ${i+1}: "${finalizedTextPrompt.substring(0,100)}..."`);
             textPromptContent = finalizedTextPrompt;
+            // When finalizedTextPrompt is used, we assume it contains all necessary textual instructions.
+            // However, we still apply structural/control parameters like aspectRatio and seed if provided,
+            // unless the user has explicitly included them in their finalized prompt.
+            if (aspectRatio && !finalizedTextPrompt.toLowerCase().includes("aspect ratio")) {
+              textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
+            }
+            if (seed !== undefined && !finalizedTextPrompt.toLowerCase().includes("seed:")) {
+              textPromptContent += `\n\nUse seed: ${seed}.`;
+            }
         } else {
             console.log(`Constructing prompt for image ${i+1} as no finalized prompt was provided or it was empty.`);
             if (!brandDescription || !imageStyle) {
@@ -190,18 +203,15 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
             if (negativePrompt) {
                 textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
             }
+            if (aspectRatio) {
+              textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
+            }
+            if (seed !== undefined) {
+              textPromptContent += `\n\nUse seed: ${seed}.`;
+            }
         }
-
-        // These are appended regardless of whether finalizedTextPrompt was used or not,
-        // as they are structural/control parameters rather than purely stylistic.
-        // User can still manage these in their finalizedTextPrompt if they are very specific.
-        if (aspectRatio) {
-          textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
-        }
-        if (seed !== undefined) {
-          textPromptContent += `\n\nUse seed: ${seed}.`;
-        }
-
+        
+        // Add batch generation instructions if not using a finalized prompt OR if the finalized prompt doesn't seem to cover it
         if (numberOfImages > 1 && (!finalizedTextPrompt || !finalizedTextPrompt.toLowerCase().includes("batch generation")) && (!finalizedTextPrompt || !finalizedTextPrompt.toLowerCase().includes(`image ${i+1}`))) {
             textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
         }
@@ -210,11 +220,11 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
             actualPromptUsedForFirstImage = textPromptContent;
         }
         
-        console.log(`Text component of prompt for image ${i+1}/${numberOfImages} (Provider: ${imageGenerationProvider}): "${textPromptContent}"`);
+        console.log(`Text component of prompt for image ${i+1}/${numberOfImages} (Provider: ${imageGenerationProvider}): "${textPromptContent.substring(0,200)}..."`);
 
         try {
             let imageUrl = "";
-            const baseGenerationParamsForStubs = { // For non-Leonardo stubs
+            const baseGenerationParamsForStubs = {
                 brandDescription: brandDescription || "",
                 industry,
                 imageStyle: imageStyle || "",
@@ -233,7 +243,6 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
                     }
                     finalPromptParts.push({ text: textPromptContent }); 
 
-                    console.log("Attempting Gemini image generation with prompt parts:", JSON.stringify(finalPromptParts, null, 2));
                     imageUrl = await _generateImageWithGemini({
                         aiInstance: ai,
                         promptParts: finalPromptParts
@@ -242,17 +251,18 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
                 case 'LEONARDO_AI':
                     imageUrl = await _generateImageWithLeonardoAI_stub(baseGenerationParamsForStubs);
                     break;
-                case 'IMAGEN': // Changed from ImageGen
-                    imageUrl = await _generateImageWithImagen_stub(baseGenerationParamsForStubs); // Changed from ImageGen
+                case 'IMAGEN':
+                    imageUrl = await _generateImageWithImagen_stub(baseGenerationParamsForStubs);
                     break;
                 default:
                     throw new Error(`Unsupported image generation provider: ${imageGenerationProvider}`);
             }
             generatedImageUrls.push(imageUrl);
         } catch (error: any) {
-             console.error(`Error during generation of image ${i+1}/${numberOfImages} with provider ${imageGenerationProvider}:`, error);
+             console.error(`Error during generation of image ${i+1}/${numberOfImages} with provider ${imageGenerationProvider}. Full error:`, JSON.stringify(error, Object.getOwnPropertyNames(error)));
              const failingPromptSnippet = textPromptContent.substring(0, 200) + (textPromptContent.length > 200 ? "..." : "");
-             throw new Error(`Failed to generate image ${i+1} of ${numberOfImages} with provider ${imageGenerationProvider}. Prompt snippet: "${failingPromptSnippet}". Error: ${error.message}`);
+             // Re-throw with a slightly more user-friendly message, but original error is logged
+             throw new Error(`Failed to generate image ${i+1} of ${numberOfImages}. Error from provider: ${error.message || 'Unknown error'}. Prompt snippet: "${failingPromptSnippet}".`);
         }
     }
 
