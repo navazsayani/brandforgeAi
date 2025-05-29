@@ -37,7 +37,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
       <nav className="flex-1 px-2 py-4 space-y-1">
         {navItems.map((item) => (
-          <Link key={item.label} href={item.href}>
+          <Link key={item.label} href={item.href} legacyBehavior passHref>
             <Button
               variant={pathname === item.href ? 'secondary' : 'ghost'}
               className={cn(
@@ -46,6 +46,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   ? "bg-sidebar-accent text-sidebar-accent-foreground" 
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               )}
+              as="a" 
             >
               <item.icon className="w-5 h-5 mr-3" />
               {item.label}
@@ -95,6 +96,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 }
 
 function UserMenu() {
+  // In a real app, this would show user info and logout options
   return (
     <div className="flex items-center gap-2 p-2 rounded-full cursor-pointer hover:bg-accent">
       <UserCircle className="w-8 h-8 text-primary" />
