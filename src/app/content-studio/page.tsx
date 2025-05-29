@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useActionState as useActionStateReact } from 'react';
@@ -15,7 +14,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images } from 'lucide-react';
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash } from 'lucide-react';
 import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
@@ -104,7 +103,6 @@ export default function ContentStudioPage() {
         content: blogData.content,
         tags: blogData.tags,
         platform: blogPlatformValue,
-        // websiteUrl: (document.querySelector('form[action^="/content-studio"] input[name="blogWebsiteUrl"]') as HTMLInputElement)?.value || undefined,
       };
       addGeneratedBlogPost(newPost);
       toast({ title: "Success", description: blogState.message });
@@ -236,6 +234,15 @@ export default function ContentStudioPage() {
                             <NextImage src={brandData.exampleImage} alt="Example image from profile" width={80} height={80} className="rounded border object-contain" data-ai-hint="style example"/>
                         </div>
                     )}
+                  </div>
+                  <div>
+                    <Label htmlFor="imageGenNegativePrompt" className="flex items-center mb-1"><CircleSlash className="w-4 h-4 mr-2 text-primary" />Negative Prompt (Optional)</Label>
+                    <Textarea
+                      id="imageGenNegativePrompt"
+                      name="negativePrompt"
+                      placeholder="E.g., avoid text, ugly, disfigured, low quality"
+                      rows={2}
+                    />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -417,7 +424,7 @@ export default function ContentStudioPage() {
                 </CardFooter>
               </form>
               {generatedSocialPost && (
-                 <Card className="mt-6 mx-6 mb-6 shadow-sm">
+                 <Card className="mt-6 mx-4 mb-4 shadow-sm">
                     <CardHeader>
                         <CardTitle className="text-xl flex items-center">
                             <MessageSquareText className="w-5 h-5 mr-2 text-primary" />
@@ -498,10 +505,10 @@ export default function ContentStudioPage() {
                     />
                   </div>
                   <div>
-                      <Label htmlFor="blogWebsiteUrl" className="flex items-center mb-1"><Link className="w-4 h-4 mr-2 text-primary" />Website URL (Optional, for SEO insights)</Label>
+                      <Label htmlFor="blogWebsiteUrl" className="flex items-center mb-1"><Globe className="w-4 h-4 mr-2 text-primary" />Website URL (Optional, for SEO insights)</Label>
                       <Input
                         id="blogWebsiteUrl"
-                        name="blogWebsiteUrl" // Unique name for this form
+                        name="blogWebsiteUrl" 
                         defaultValue={brandData?.websiteUrl || ""}
                         placeholder="https://www.example.com"
                       />
@@ -524,7 +531,7 @@ export default function ContentStudioPage() {
                 </CardFooter>
               </form>
               {generatedBlogPost && (
-                 <Card className="mt-6 mx-6 mb-6 shadow-sm">
+                 <Card className="mt-6 mx-4 mb-4 shadow-sm">
                     <CardHeader>
                         <CardTitle className="text-xl flex items-center">
                             <Newspaper className="w-5 h-5 mr-2 text-primary" />
@@ -569,7 +576,3 @@ export default function ContentStudioPage() {
     </AppShell>
   );
 }
-
-// Added Link import for blog section
-import Link from 'next/link';
-

@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -33,6 +32,7 @@ const GenerateImagesInputSchema = z.object({
     .optional(),
   numberOfImages: z.number().int().min(1).max(4).optional().default(1)
     .describe("The number of images to generate in this batch (1-4)."),
+  negativePrompt: z.string().optional().describe("Elements to avoid in the generated image."),
 });
 export type GenerateImagesInput = z.infer<typeof GenerateImagesInputSchema>;
 
@@ -87,12 +87,11 @@ async function _generateImageWithLeonardoAI_stub(params: {
   imageStyle: string;
   exampleImage?: string;
   aspectRatio?: string;
+  negativePrompt?: string;
   textPrompt: string; // The fully constructed text part of the prompt
 }): Promise<string> {
   console.warn("Leonardo.ai image generation is called but not implemented. Parameters:", params);
   throw new Error("Leonardo.ai provider is not implemented yet.");
-  // To return a placeholder, you'd need a way to generate/fetch a data URI here.
-  // For example: return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="; // 1x1 red pixel
 }
 
 // Stub for Google's Imagen models (e.g., via Vertex AI)
@@ -101,6 +100,7 @@ async function _generateImageWithImagen_stub(params: {
   imageStyle: string;
   exampleImage?: string;
   aspectRatio?: string;
+  negativePrompt?: string;
   textPrompt: string;
 }): Promise<string> {
   console.warn("Imagen (e.g., via Vertex AI) provider is called but not implemented. Parameters:", params);
@@ -125,13 +125,13 @@ const generateImagesFlow = ai.defineFlow(
       exampleImage,
       aspectRatio,
       numberOfImages = 1,
+      negativePrompt,
     } = input;
 
     if (!brandDescription || !imageStyle) {
         throw new Error("Brand description and image style are required for image generation.");
     }
     if (exampleImage && !exampleImage.startsWith('data:')) {
-        // This case should ideally be caught by Zod schema validation if format is strict enough
         throw new Error("Example image was provided but is not a valid data URI.");
     }
 
@@ -150,7 +150,7 @@ The provided example image (sent first) serves ONE primary purpose: to identify 
 Your task is to generate a *completely new item* belonging to this *same category*.
 
 The *design, appearance, theme, specific characteristics, and unique elements* of this NEW item must be **primarily and heavily derived** from the following inputs:
-1.  **Brand Description**: "${brandDescription}" - Use this for the conceptual basis, thematic elements, and defining features of the new item.
+1.  **Brand Description**: "${brandDescription}" - This is the primary driver for the core design, theme, specific characteristics, and unique elements of the new item.
 2.  **Desired Artistic Style**: "${imageStyle}" - This dictates the rendering style of the new item. If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic and look like a real product photo.
 
 **Crucially, do NOT replicate or closely imitate the visual design details (color, pattern, specific shape elements beyond the basic category identification, embellishments) of the provided example image.** The example image is *only* for determining the item category. The new image should look like a distinct product that fits the brand description and desired artistic style.
@@ -168,6 +168,10 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
         if (aspectRatio) {
           textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
         }
+
+        if (negativePrompt) {
+            textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
+        }
         
         if (numberOfImages > 1) {
             textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
@@ -182,6 +186,7 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
                 imageStyle,
                 exampleImage,
                 aspectRatio,
+                negativePrompt,
                 textPrompt: textPromptContent,
             };
 
@@ -200,7 +205,7 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
                 case 'LEONARDO_AI':
                     imageUrl = await _generateImageWithLeonardoAI_stub(baseGenerationParams);
                     break;
-                case 'IMAGEN': // Updated from IMAGEGEN
+                case 'IMAGEN': 
                     imageUrl = await _generateImageWithImagen_stub(baseGenerationParams);
                     break;
                 default:
@@ -220,4 +225,3 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
     return {generatedImages: generatedImageUrls};
   }
 );
-

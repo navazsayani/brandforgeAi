@@ -1,4 +1,3 @@
-
 "use server";
 
 import { generateImages, type GenerateImagesInput } from '@/ai/flows/generate-images';
@@ -17,12 +16,13 @@ export interface FormState<T = any> {
 }
 
 export async function handleGenerateImagesAction(
-  prevState: FormState<string[]>, // Expecting an array of image URLs
+  prevState: FormState<string[]>, 
   formData: FormData
 ): Promise<FormState<string[]>> {
   try {
     const numberOfImagesStr = formData.get("numberOfImages") as string;
     const numberOfImages = parseInt(numberOfImagesStr, 10) || 1;
+    const negativePrompt = formData.get("negativePrompt") as string | undefined;
 
     const input: GenerateImagesInput = {
       brandDescription: formData.get("brandDescription") as string,
@@ -30,6 +30,7 @@ export async function handleGenerateImagesAction(
       exampleImage: formData.get("exampleImage") as string | undefined,
       aspectRatio: formData.get("aspectRatio") as string | undefined,
       numberOfImages: numberOfImages,
+      negativePrompt: negativePrompt === "" ? undefined : negativePrompt,
     };
 
     if (!input.brandDescription || !input.imageStyle) {
@@ -54,7 +55,7 @@ export async function handleGenerateImagesAction(
 }
 
 export async function handleDescribeImageAction(
-  prevState: FormState,
+  prevState: FormState<DescribeImageOutput>,
   formData: FormData
 ): Promise<FormState<DescribeImageOutput>> {
   try {
@@ -72,28 +73,29 @@ export async function handleDescribeImageAction(
 }
 
 export async function handleGenerateSocialMediaCaptionAction(
-  prevState: FormState,
+  prevState: FormState<{ caption: string; hashtags: string; imageSrc: string | null }>,
   formData: FormData
 ): Promise<FormState<{ caption: string; hashtags: string; imageSrc: string | null }>> {
   try {
-    const imageSrc = formData.get("selectedImageSrcForSocialPost") as string | null;
+    const selectedImageSrc = formData.get("selectedImageSrcForSocialPost") as string;
+    const imageSrc = selectedImageSrc && selectedImageSrc !== "" ? selectedImageSrc : null;
     const imageDescription = formData.get("imageDescription") as string;
 
     const input: GenerateSocialMediaCaptionInput = {
       brandDescription: formData.get("brandDescription") as string,
-      imageDescription: (imageSrc && imageSrc !== "") ? imageDescription : undefined,
+      imageDescription: imageSrc ? imageDescription : undefined,
       tone: formData.get("tone") as string,
     };
 
     if (!input.brandDescription || !input.tone) {
       return { error: "Brand description and tone are required." };
     }
-    if ((imageSrc && imageSrc !== "") && !imageDescription) {
+    if (imageSrc && !imageDescription) {
         return { error: "Image description is required if an image is selected for the post."}
     }
     
     const result = await generateSocialMediaCaption(input);
-    return { data: { ...result, imageSrc: (imageSrc && imageSrc !== "") ? imageSrc : null }, message: "Social media content generated!" };
+    return { data: { ...result, imageSrc: imageSrc }, message: "Social media content generated!" };
   } catch (e: any) {
     console.error("Error in handleGenerateSocialMediaCaptionAction:", e);
     return { error: e.message || "Failed to generate social media caption." };
@@ -101,7 +103,7 @@ export async function handleGenerateSocialMediaCaptionAction(
 }
 
 export async function handleGenerateBlogContentAction(
-  prevState: FormState,
+  prevState: FormState<{ title: string; content: string; tags: string }>,
   formData: FormData
 ): Promise<FormState<{ title: string; content: string; tags: string }>> {
   try {
@@ -115,6 +117,8 @@ export async function handleGenerateBlogContentAction(
      if (!input.brandName || !input.brandDescription || !input.keywords || !input.targetPlatform) {
       return { error: "All fields (except optional website URL) are required for blog content generation." };
     }
+    if (input.websiteUrl === "") delete input.websiteUrl;
+
     const result = await generateBlogContent(input);
     return { data: result, message: "Blog content generated!" };
   } catch (e: any) {
@@ -124,7 +128,7 @@ export async function handleGenerateBlogContentAction(
 }
 
 export async function handleGenerateAdCampaignAction(
-  prevState: FormState,
+  prevState: FormState<{ campaignSummary: string; platformDetails: Record<string, string> }>,
   formData: FormData
 ): Promise<FormState<{ campaignSummary: string; platformDetails: Record<string, string> }>> {
   try {
@@ -159,7 +163,7 @@ export async function handleGenerateAdCampaignAction(
 
 
 export async function handleExtractBrandInfoFromUrlAction(
-  prevState: FormState,
+  prevState: FormState<ExtractBrandInfoFromUrlOutput>,
   formData: FormData
 ): Promise<FormState<ExtractBrandInfoFromUrlOutput>> {
     const websiteUrl = formData.get("websiteUrl") as string;
