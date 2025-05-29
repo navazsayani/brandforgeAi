@@ -13,7 +13,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
-// FormDescription removed from here if it was only used for these problematic instances
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag } from 'lucide-react';
@@ -94,11 +93,11 @@ export default function ContentStudioPage() {
   const [selectedProfileImageIndexForGen, setSelectedProfileImageIndexForGen] = useState<number | null>(null);
   const [selectedProfileImageIndexForSocial, setSelectedProfileImageIndexForSocial] = useState<number | null>(null);
 
-  const [selectedImageStylePreset, setSelectedImageStylePreset] = useState<string>("");
-  const [customStyleNotesInput, setCustomStyleNotesInput] = useState<string>("");
-
+  // State for controlled inputs in Image Generation
   const [imageGenBrandDescription, setImageGenBrandDescription] = useState<string>("");
   const [imageGenIndustry, setImageGenIndustry] = useState<string>("");
+  const [selectedImageStylePreset, setSelectedImageStylePreset] = useState<string>("");
+  const [customStyleNotesInput, setCustomStyleNotesInput] = useState<string>("");
   const [imageGenNegativePrompt, setImageGenNegativePrompt] = useState<string>("");
   const [imageGenSeed, setImageGenSeed] = useState<string>("");
 
@@ -112,10 +111,10 @@ export default function ContentStudioPage() {
 
   useEffect(() => {
     if (brandData) {
-        setSelectedImageStylePreset(brandData.imageStyle || (artisticStyles.length > 0 ? artisticStyles[0].value : ""));
-        setCustomStyleNotesInput(brandData.imageStyleNotes || "");
         setImageGenBrandDescription(brandData.brandDescription || "");
         setImageGenIndustry(brandData.industry || "");
+        setSelectedImageStylePreset(brandData.imageStyle || (artisticStyles.length > 0 ? artisticStyles[0].value : ""));
+        setCustomStyleNotesInput(brandData.imageStyleNotes || "");
 
         if (brandData.exampleImages && brandData.exampleImages.length > 0) {
             if (selectedProfileImageIndexForGen === null) setSelectedProfileImageIndexForGen(0);
@@ -311,7 +310,7 @@ export default function ContentStudioPage() {
         toast({ title: "Error", description: "Could not find blog form data.", variant: "destructive"});
         return;
     }
-    const currentFormData = new FormData(formElement); // Use current form data
+    const currentFormData = new FormData(formElement); 
     
     const outlineFormData = new FormData();
     outlineFormData.append("brandName", currentFormData.get("brandName") as string || brandData?.brandName || "");
@@ -329,7 +328,7 @@ export default function ContentStudioPage() {
     });
   };
 
- const handlePreviewPromptClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handlePreviewPromptClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
 
     const brandDesc = imageGenBrandDescription;
@@ -359,18 +358,23 @@ The provided example image (sent first) serves ONE primary purpose: to identify 
 Your task is to generate a *completely new item* belonging to this *same category*.
 
 The *design, appearance, theme, specific characteristics, and unique elements* of this NEW item must be **primarily and heavily derived** from the following inputs:
-1.  **Brand Description**: "${brandDesc}"${industryContext} - This is the primary driver for the core design, theme, specific characteristics, and unique elements of the new item.
-2.  **Desired Artistic Style**: "${combinedStyle}" - This dictates the rendering style of the new item. If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic and look like a real product photo.
+1.  **Brand Description**: "${brandDesc}"${industryContext}. This description informs the *theme, conceptual elements, and unique characteristics* of the new item.
+2.  **Desired Artistic Style**: "${combinedStyle}". This dictates the overall visual execution, including aspects like color palette (unless the brand description very strongly and specifically dictates a color scheme), lighting, and rendering style. If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic and look like a real product photo.
+
+**Important Note on Color and Style**: While the brand description provides thematic guidance, strive for visual variety and avoid over-relying on a narrow color palette (like exclusively black and gold) unless the brand description *and* desired artistic style overwhelmingly and explicitly demand it. The goal is a fresh interpretation that fits the brand's *overall essence* and the *chosen artistic style*.
 
 **Crucially, do NOT replicate or closely imitate the visual design details (color, pattern, specific shape elements beyond the basic category identification, embellishments) of the provided example image.** The example image is *only* for determining the item category. The new image should look like a distinct product that fits the brand description and desired artistic style.
 
-For instance, if the example image is a 'simple blue cotton t-shirt' (category: t-shirt), and the Brand Description is 'luxury, silk, minimalist, black and gold accents for a high-end fashion brand' and the Desired Artistic Style is 'high-fashion product shot', you should generate an image of a *luxury black silk t-shirt with gold accents, shot in a high-fashion product style*. It should *not* look like the original blue cotton t-shirt.
+**Example of Interaction:**
+If the example image is a 'simple blue cotton t-shirt' (category: t-shirt), the Brand Description is 'luxury brand, minimalist ethos, inspired by serene nature, prefers organic materials', and the Desired Artistic Style is 'high-fashion product shot, muted earthy tones'.
+You should generate an image of a *luxury t-shirt made from organic-looking material, in muted earthy tones (e.g., moss green, stone grey, soft beige), shot in a high-fashion product style*. It should evoke serenity and minimalism. It should NOT be the original blue cotton t-shirt, nor should it default to a generic "luxury" color scheme like black and gold unless those colors are specifically requested or strongly implied by the *combination* of inputs.
 `.trim();
     } else {
         textPrompt = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
 The image should be based on the following concept: "${brandDesc}".${industryContext}
 The desired artistic style for this new image is: "${combinedStyle}". If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic.
+**Important Note on Color and Style**: Strive for visual variety that aligns with the brand description and artistic style. Avoid defaulting to a narrow or stereotypical color palette unless the inputs strongly and explicitly demand it.
 `.trim();
     }
     
@@ -394,7 +398,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
         brandDescription: brandDesc,
         industry: industryValue,
         imageStyle: combinedStyle, 
-        exampleImage: exampleImg,
+        exampleImage: exampleImg === "" ? undefined : exampleImg,
         aspectRatio: aspect,
         numberOfImages: numImages,
         negativePrompt: negPrompt === "" ? undefined : negPrompt,
@@ -407,7 +411,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
     event.preventDefault();
     const formData = new FormData();
 
-    if (!currentTextPromptForEditing && !formSnapshot) { 
+    if (!formSnapshot && !currentTextPromptForEditing) { 
         toast({ title: "Error", description: "Prompt data is missing. Please prepare prompt again.", variant: "destructive"});
         return;
     }
@@ -426,8 +430,8 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
     const negPromptValue = formSnapshot?.negativePrompt || imageGenNegativePrompt;
     if (negPromptValue) formData.append("negativePrompt", negPromptValue);
 
-    const seedValue = formSnapshot?.seed !== undefined ? formSnapshot.seed : (imageGenSeed && !isNaN(parseInt(imageGenSeed)) ? parseInt(imageGenSeed) : undefined);
-    if (seedValue !== undefined) formData.append("seed", String(seedValue));
+    const seedValueNum = formSnapshot?.seed !== undefined ? formSnapshot.seed : (imageGenSeed && !isNaN(parseInt(imageGenSeed)) ? parseInt(imageGenSeed) : undefined);
+    if (seedValueNum !== undefined) formData.append("seed", String(seedValueNum));
 
     startTransition(() => {
       imageAction(formData);
@@ -1087,4 +1091,6 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
     </AppShell>
   );
 }
+    
+
     
