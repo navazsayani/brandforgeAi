@@ -24,7 +24,7 @@ const GenerateImagesInputSchema = z.object({
   exampleImage: z
     .string()
     .describe(
-      "An example image as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'. This image primarily defines the *item category*."
+      "An example image as a URL or data URI. This image primarily defines the *item category*."
     )
     .optional(),
   aspectRatio: z
@@ -136,9 +136,7 @@ const generateImagesFlow = ai.defineFlow(
     if (!brandDescription || !imageStyle) {
         throw new Error("Brand description and image style are required for image generation.");
     }
-    if (exampleImage && !exampleImage.startsWith('data:')) {
-        throw new Error("Example image was provided but is not a valid data URI.");
-    }
+    // The problematic check for data URI on exampleImage has been REMOVED here.
 
     const generatedImageUrls: string[] = [];
     const imageGenerationProvider = process.env.IMAGE_GENERATION_PROVIDER || 'GEMINI';
@@ -146,7 +144,7 @@ const generateImagesFlow = ai.defineFlow(
     for (let i = 0; i < numberOfImages; i++) {
         let textPromptContent = "";
 
-        if (exampleImage && exampleImage.startsWith('data:')) {
+        if (exampleImage) { // Check if exampleImage exists
             textPromptContent = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
 
@@ -203,7 +201,7 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
             switch (imageGenerationProvider.toUpperCase()) {
                 case 'GEMINI':
                     const finalPromptParts: ({text: string} | {media: {url: string}})[] = [];
-                    if (exampleImage && exampleImage.startsWith('data:')) {
+                    if (exampleImage) { // Only add if exampleImage is provided
                         finalPromptParts.push({ media: { url: exampleImage } });
                     }
                     finalPromptParts.push({ text: textPromptContent });
@@ -235,5 +233,3 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
     return {generatedImages: generatedImageUrls};
   }
 );
-
-    
