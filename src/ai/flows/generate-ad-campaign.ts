@@ -74,7 +74,10 @@ const generateAdCampaignFlow = ai.defineFlow(
     if (!output) {
         throw new Error("AI failed to generate ad campaign variations.");
     }
+    // Additional validation for expected array lengths can be helpful
     if (output.headlines.length !== 3 || output.bodyTexts.length !== 2) {
+        // This is a soft warning as the AI might sometimes deviate.
+        // For stricter enforcement, this could throw an error.
         console.warn("AI did not return the expected number of headlines/body texts.", output);
     }
     return output;

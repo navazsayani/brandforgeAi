@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useActionState as useActionStateReact } from 'react';
+import React, { useState, useEffect, useActionState } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,7 @@ const platforms = [
 export default function CampaignManagerPage() {
   const { brandData, addGeneratedAdCampaign, generatedBlogPosts, generatedSocialPosts } = useBrand();
   const { toast } = useToast();
-  const [state, formAction] = useActionStateReact(handleGenerateAdCampaignAction, initialFormState);
+  const [state, formAction] = useActionState(handleGenerateAdCampaignAction, initialFormState);
   const [generatedCampaign, setGeneratedCampaign] = useState<GenerateAdCampaignOutput | null>(null);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [selectedContentSource, setSelectedContentSource] = useState<string | undefined>(undefined);
@@ -37,6 +37,9 @@ export default function CampaignManagerPage() {
   useEffect(() => {
     if (state.data) {
       setGeneratedCampaign(state.data);
+      // Assuming the form data is available or can be retrieved to enrich the saved campaign
+      const formData = new FormData(document.getElementById('adCampaignForm') as HTMLFormElement);
+
       const newCampaignData: GeneratedAdCampaign = {
         id: new Date().toISOString(),
         campaignConcept: state.data.campaignConcept,
@@ -44,12 +47,21 @@ export default function CampaignManagerPage() {
         bodyTexts: state.data.bodyTexts,
         platformGuidance: state.data.platformGuidance,
         targetPlatforms: selectedPlatforms as ('google_ads' | 'meta')[],
+        // Storing inputs for context
+        brandName: formData.get('brandName') as string || brandData?.brandName,
+        brandDescription: formData.get('brandDescription') as string || brandData?.brandDescription,
+        industry: brandData?.industry, // Get industry from brandData context
+        inspirationalContent: formData.get('generatedContent') === 'Custom content for ad campaign' 
+                               ? formData.get('customGeneratedContent') as string 
+                               : formData.get('generatedContent') as string,
+        targetKeywords: formData.get('targetKeywords') as string,
+        budget: Number(formData.get('budget')),
       };
       addGeneratedAdCampaign(newCampaignData);
       toast({ title: "Success", description: state.message });
     }
     if (state.error) toast({ title: "Error", description: state.error, variant: "destructive" });
-  }, [state, toast, addGeneratedAdCampaign, selectedPlatforms]);
+  }, [state, toast, addGeneratedAdCampaign, selectedPlatforms, brandData]);
 
   const copyToClipboard = (text: string, type: string) => {
     navigator.clipboard.writeText(text);
@@ -76,7 +88,8 @@ export default function CampaignManagerPage() {
                 </div>
             </div>
           </CardHeader>
-          <form action={formAction}>
+          <form id="adCampaignForm" action={formAction}>
+            <input type="hidden" name="industry" value={brandData?.industry || ""} />
             <CardContent className="space-y-8">
               <div>
                 <Label htmlFor="adBrandName" className="flex items-center mb-2 text-base"><Edit3 className="w-5 h-5 mr-2 text-primary" />Brand Name</Label>
@@ -201,7 +214,7 @@ export default function CampaignManagerPage() {
               </div>
               
               <div>
-                <h3 className="mb-3 text-xl font-semibold flex items-center"><Megaphone className="w-5 h-5 mr-2 text-primary"/>Headline Variations</h3>
+                <h3 className="mb-3 text-xl font-semibold flex items-center"><Megaphone className="w-5 h-5 mr-2 text-primary"/>Headline Variations ({generatedCampaign.headlines.length})</h3>
                 <div className="space-y-3">
                   {generatedCampaign.headlines.map((headline, index) => (
                     <div key={`headline-${index}`} className="p-3 border rounded-md bg-muted/50">
@@ -215,7 +228,7 @@ export default function CampaignManagerPage() {
               </div>
 
               <div>
-                <h3 className="mb-3 text-xl font-semibold flex items-center"><ListChecks className="w-5 h-5 mr-2 text-primary"/>Body Text Variations</h3>
+                <h3 className="mb-3 text-xl font-semibold flex items-center"><ListChecks className="w-5 h-5 mr-2 text-primary"/>Body Text Variations ({generatedCampaign.bodyTexts.length})</h3>
                 <div className="space-y-3">
                   {generatedCampaign.bodyTexts.map((body, index) => (
                     <div key={`body-${index}`} className="p-3 border rounded-md bg-muted/50">

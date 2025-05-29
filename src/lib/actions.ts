@@ -33,9 +33,10 @@ export async function handleGenerateImagesAction(
     const seed = seedStr && !isNaN(parseInt(seedStr, 10)) ? parseInt(seedStr, 10) : undefined;
     
     let finalizedTextPromptValue = formData.get("finalizedTextPrompt") as string | undefined | null;
-    if (finalizedTextPromptValue === "" || finalizedTextPromptValue === null) {
+     if (finalizedTextPromptValue === "" || finalizedTextPromptValue === null) {
       finalizedTextPromptValue = undefined;
     }
+
 
     const input: GenerateImagesInput = {
       brandDescription: formData.get("brandDescription") as string,
@@ -54,7 +55,9 @@ export async function handleGenerateImagesAction(
     }
     if (input.exampleImage === "") delete input.exampleImage;
     if (input.aspectRatio === "" || input.aspectRatio === undefined) delete input.aspectRatio;
-    if (input.industry === "") delete input.industry;
+    if (input.industry === "" || input.industry === undefined) delete input.industry;
+    if (input.negativePrompt === "") delete input.negativePrompt;
+
 
     console.log("Calling generateImages with input:", JSON.stringify(input, null, 2));
     const result = await generateImages(input);
@@ -108,7 +111,7 @@ export async function handleGenerateSocialMediaCaptionAction(
     if (imageSrc && (!imageDescription || imageDescription.trim() === "")) {
         return { error: "Image description is required if an image is selected for the post."}
     }
-    if (input.industry === "") delete input.industry;
+    if (input.industry === "" || input.industry === undefined) delete input.industry;
 
     const result = await generateSocialMediaCaption(input);
     return { data: { ...result, imageSrc: imageSrc }, message: "Social media content generated!" };
@@ -128,14 +131,14 @@ export async function handleGenerateBlogOutlineAction(
             brandDescription: formData.get("blogBrandDescription") as string, 
             industry: formData.get("industry") as string | undefined, 
             keywords: formData.get("blogKeywords") as string, 
-            websiteUrl: (formData.get("websiteUrl") as string) || undefined, 
+            websiteUrl: (formData.get("blogWebsiteUrl") as string) || undefined, 
         };
 
         if (!input.brandName || !input.brandDescription || !input.keywords) {
             return { error: "Brand name, description, and keywords are required for outline generation." };
         }
         if (input.websiteUrl === "") delete input.websiteUrl;
-        if (input.industry === "") delete input.industry;
+        if (input.industry === "" || input.industry === undefined) delete input.industry;
 
         const result = await generateBlogOutline(input);
         return { data: result, message: "Blog outline generated successfully!" };
@@ -156,7 +159,7 @@ export async function handleGenerateBlogContentAction(
       industry: formData.get("industry") as string | undefined,
       keywords: formData.get("blogKeywords") as string,
       targetPlatform: formData.get("targetPlatform") as "Medium" | "Other",
-      websiteUrl: formData.get("websiteUrl") as string || undefined,
+      websiteUrl: formData.get("blogWebsiteUrl") as string || undefined,
       blogOutline: formData.get("blogOutline") as string,
       blogTone: formData.get("blogTone") as string,
     };
@@ -164,7 +167,7 @@ export async function handleGenerateBlogContentAction(
       return { error: "All fields (except optional website URL and industry) including outline and tone are required for blog content generation." };
     }
     if (input.websiteUrl === "") delete input.websiteUrl;
-    if (input.industry === "") delete input.industry;
+    if (input.industry === "" || input.industry === undefined) delete input.industry;
 
     const result = await generateBlogContent(input);
     return { data: result, message: "Blog content generated!" };
@@ -180,12 +183,19 @@ export async function handleGenerateAdCampaignAction(
 ): Promise<FormState<GenerateAdCampaignOutput>> {
   try {
     const platformsString = formData.get("platforms") as string;
-    const platformsArray = platformsString ? platformsString.split(',') as ('google_ads' | 'meta')[] : [];
+    const platformsArray = platformsString ? platformsString.split(',').map(p => p.trim()).filter(p => p) as ('google_ads' | 'meta')[] : [];
 
     let generatedContent = formData.get("generatedContent") as string; 
     if (generatedContent === "Custom content for ad campaign") { 
         generatedContent = formData.get("customGeneratedContent") as string; 
     }
+
+    const budgetStr = formData.get("budget") as string;
+    const budgetNum = budgetStr ? Number(budgetStr) : undefined;
+    if (budgetNum === undefined || isNaN(budgetNum)) {
+        return { error: "Budget must be a valid number." };
+    }
+
 
     const input: GenerateAdCampaignInput = {
       brandName: formData.get("brandName") as string,
@@ -193,17 +203,17 @@ export async function handleGenerateAdCampaignAction(
       industry: formData.get("industry") as string | undefined,
       generatedContent: generatedContent,
       targetKeywords: formData.get("targetKeywords") as string,
-      budget: Number(formData.get("budget")),
+      budget: budgetNum,
       platforms: platformsArray,
     };
 
-    if (!input.brandName || !input.brandDescription || !input.generatedContent || !input.targetKeywords || isNaN(input.budget) || input.platforms.length === 0) {
-        return { error: "All fields are required, budget must be a number, and at least one platform must be selected." };
+    if (!input.brandName || !input.brandDescription || !input.generatedContent || !input.targetKeywords || input.platforms.length === 0) {
+        return { error: "Brand name, description, inspirational content, target keywords, and at least one platform are required." };
     }
     if (!input.generatedContent || !input.generatedContent.trim()) { 
-        return { error: "Ad content (selected or custom) cannot be empty."};
+        return { error: "Inspirational content (selected or custom) cannot be empty."};
     }
-    if (input.industry === "") delete input.industry;
+    if (input.industry === "" || input.industry === undefined) delete input.industry;
 
     const result = await generateAdCampaign(input);
     return { data: result, message: "Ad campaign variations generated successfully!" };
@@ -241,19 +251,21 @@ export async function handleSaveGeneratedImagesAction(
   const brandProfileDocId = formData.get('brandProfileDocId') as string || 'defaultBrandProfile';
 
   if (!imagesToSaveJson) {
-    return { error: "No image data received." };
+    console.error("handleSaveGeneratedImagesAction: No imagesToSaveJson received in formData.");
+    return { error: "No image data received from the client." };
   }
 
   let imagesToSave: { dataUri: string; prompt: string; style: string; }[];
   try {
     imagesToSave = JSON.parse(imagesToSaveJson);
   } catch (e: any) {
-    console.error("Failed to parse imagesToSaveJson:", e, "\nReceived JSON string:", imagesToSaveJson);
-    return { error: "Invalid image data format. Check server logs for details." };
+    console.error("handleSaveGeneratedImagesAction: Failed to parse imagesToSaveJson. Received:", imagesToSaveJson, "Error:", e);
+    return { error: `Invalid image data format received from client: ${e.message}` };
   }
 
   if (!Array.isArray(imagesToSave) || imagesToSave.length === 0) {
-    return { error: "No images selected to save." };
+     console.error("handleSaveGeneratedImagesAction: Parsed imagesToSave is not an array or is empty.");
+    return { error: "No images selected or data is not in expected array format." };
   }
 
   let savedCount = 0;
@@ -261,8 +273,8 @@ export async function handleSaveGeneratedImagesAction(
 
   for (const image of imagesToSave) {
     if (!image.dataUri || !image.dataUri.startsWith('data:image')) {
-      console.error(`Invalid data URI for one of the images. URI starts with: ${image.dataUri?.substring(0,30)}...`);
-      saveErrors.push(`Invalid data URI for an image. Cannot save.`);
+      console.error(`handleSaveGeneratedImagesAction: Invalid data URI for an image. URI starts with: ${image.dataUri?.substring(0,30)}...`);
+      saveErrors.push(`Invalid data URI for an image (prompt: ${image.prompt.substring(0,30)}...). Cannot save.`);
       continue;
     }
     try {
@@ -271,25 +283,25 @@ export async function handleSaveGeneratedImagesAction(
       const filePath = `generatedLibraryImages/${brandProfileDocId}/${Date.now()}_${generateFilenamePart()}.${fileExtension}`;
       const imageStorageRef = storageRef(storage, filePath);
       
-      console.log(`Attempting to upload image to: ${filePath}`);
+      console.log(`handleSaveGeneratedImagesAction: Attempting to upload image to: ${filePath}`);
       const snapshot = await uploadString(imageStorageRef, image.dataUri, 'data_url');
-      console.log(`Successfully uploaded image: ${filePath}`);
+      console.log(`handleSaveGeneratedImagesAction: Successfully uploaded image: ${filePath}, snapshot:`, snapshot);
       
       const downloadURL = await getDownloadURL(snapshot.ref);
-      console.log(`Obtained download URL: ${downloadURL}`);
+      console.log(`handleSaveGeneratedImagesAction: Obtained download URL: ${downloadURL}`);
 
       const firestoreCollectionRef = collection(db, `brandProfiles/${brandProfileDocId}/savedLibraryImages`);
       await addDoc(firestoreCollectionRef, {
         storageUrl: downloadURL,
-        prompt: image.prompt,
-        style: image.style,
+        prompt: image.prompt || "N/A",
+        style: image.style || "N/A",
         createdAt: serverTimestamp(),
       });
-      console.log(`Successfully saved image metadata to Firestore for: ${filePath}`);
+      console.log(`handleSaveGeneratedImagesAction: Successfully saved image metadata to Firestore for: ${filePath}`);
       savedCount++;
     } catch (e: any) {
-      console.error(`Failed to save one image (prompt: ${image.prompt.substring(0,50)}...). Full error:`, JSON.stringify(e, Object.getOwnPropertyNames(e)));
-      saveErrors.push(`Failed to save one image: ${e.message?.substring(0,100)}`);
+      console.error(`handleSaveGeneratedImagesAction: Failed to save one image (prompt: ${image.prompt.substring(0,50)}...). Full error:`, JSON.stringify(e, Object.getOwnPropertyNames(e)));
+      saveErrors.push(`Failed to save image (prompt: ${image.prompt.substring(0,30)}...): ${e.message?.substring(0,100)}`);
     }
   }
 
@@ -300,7 +312,7 @@ export async function handleSaveGeneratedImagesAction(
   } else if (saveErrors.length > 0) {
     return { error: `Failed to save any images. Errors: ${saveErrors.join('. ')}` };
   } else {
-     return { error: "No images were processed or saved. This might be due to an issue with the input data."};
+     return { error: "No images were processed or saved. This might be due to an issue with the input data or no images being selected."};
   }
 }
     

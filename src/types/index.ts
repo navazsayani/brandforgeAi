@@ -51,4 +51,11 @@ export interface GeneratedAdCampaign {
   bodyTexts: string[];
   platformGuidance: string;
   targetPlatforms: ('google_ads' | 'meta')[];
+  // The following fields are based on the input to help associate the campaign
+  brandName?: string;
+  brandDescription?: string;
+  industry?: string;
+  inspirationalContent?: string;
+  targetKeywords?: string;
+  budget?: number;
 }

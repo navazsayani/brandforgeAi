@@ -52,22 +52,28 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
           imageStyleNotes: fetchedData.imageStyleNotes || "",
         });
       } else {
-        setBrandDataState({ brandName: "", websiteUrl: "", brandDescription: "", industry: "", exampleImages: [] , imageStyle: "", imageStyleNotes: "", targetKeywords: ""});
+        // Initialize with all fields, including new ones, to avoid undefined issues
+        setBrandDataState({ 
+            brandName: "", 
+            websiteUrl: "", 
+            brandDescription: "", 
+            industry: "", 
+            exampleImages: [] , 
+            imageStyle: "", 
+            imageStyleNotes: "", 
+            targetKeywords: ""
+        });
       }
     } catch (e: any) {
       console.error("Error fetching brand data from Firestore:", e);
       let specificError = `Failed to fetch brand data: ${e.message || "Unknown error. Check console."}`;
-      if (e.message && (e.message.toLowerCase().includes("client is offline") || e.message.toLowerCase().includes("could not reach cloud firestore backend"))) {
-        specificError = "Connection Error: Unable to reach Firestore. Please check your internet connection. The app will operate in offline mode if data was previously loaded.";
+      if (e.code === 'unavailable' || (e.message && (e.message.toLowerCase().includes("client is offline") || e.message.toLowerCase().includes("could not reach cloud firestore backend")))) {
+        specificError = "Connection Error: Unable to reach Firestore. Please check your internet connection or Firebase status. The app may operate with cached data if available.";
         console.warn("FIRESTORE OFFLINE: Could not reach Cloud Firestore backend. Client operating in offline mode.", e);
       } else if (e.message && e.message.toLowerCase().includes("missing or insufficient permissions")) {
         specificError = "Database permission error. Please check your Firestore security rules in the Firebase console.";
-      } else if (e.code && e.code === "unavailable") {
-         specificError = "The Firebase service is temporarily unavailable. Please try again later.";
       }
       setError(specificError);
-      // Do not set brandDataState to null if offline, allow it to use cached data if available
-      // setBrandDataState(null); 
     } finally {
       setIsLoading(false);
     }
@@ -90,37 +96,37 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
       };
       const brandDocRef = doc(db, "brandProfiles", BRAND_PROFILE_DOC_ID);
       await setDoc(brandDocRef, dataToSave, { merge: true });
-      setBrandDataState(dataToSave);
+      setBrandDataState(dataToSave); // Update local state with the successfully saved data
     } catch (e: any) {
       console.error("Error saving brand data to Firestore:", e);
       let specificError = `Failed to save brand profile: ${e.message || "Unknown error. Check console."}`;
-      if (e.message && (e.message.toLowerCase().includes("client is offline") || e.message.toLowerCase().includes("could not reach cloud firestore backend"))) {
-        specificError = "Connection Error: Unable to save data to Firestore. Please check your internet connection.";
+       if (e.code === 'unavailable' || (e.message && (e.message.toLowerCase().includes("client is offline") || e.message.toLowerCase().includes("could not reach cloud firestore backend")))) {
+        specificError = "Connection Error: Unable to save data to Firestore. Please check your internet connection or Firebase status.";
          console.warn("FIRESTORE OFFLINE: Could not reach Cloud Firestore backend during save. Client operating in offline mode.", e);
       } else if (e.message && e.message.toLowerCase().includes("missing or insufficient permissions")) {
           specificError = "Failed to save data due to database permission error. Check Firestore security rules.";
       }
       setError(specificError);
-      throw e; 
+      throw e; // Re-throw to allow form handling to catch it if necessary
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   const addGeneratedImageCB = useCallback((image: GeneratedImage) => {
-    setGeneratedImages(prev => [image, ...prev.slice(0,19)]);
+    setGeneratedImages(prev => [image, ...prev.slice(0,19)]); // Keep last 20
   }, []);
 
   const addGeneratedSocialPostCB = useCallback((post: GeneratedSocialMediaPost) => {
-    setGeneratedSocialPosts(prev => [post, ...prev.slice(0,19)]);
+    setGeneratedSocialPosts(prev => [post, ...prev.slice(0,19)]); // Keep last 20
   }, []);
 
   const addGeneratedBlogPostCB = useCallback((post: GeneratedBlogPost) => {
-    setGeneratedBlogPosts(prev => [post, ...prev.slice(0,19)]);
+    setGeneratedBlogPosts(prev => [post, ...prev.slice(0,19)]); // Keep last 20
   }, []);
 
   const addGeneratedAdCampaignCB = useCallback((campaign: GeneratedAdCampaign) => {
-    setGeneratedAdCampaigns(prev => [campaign, ...prev.slice(0,19)]);
+    setGeneratedAdCampaigns(prev => [campaign, ...prev.slice(0,19)]); // Keep last 20
   }, []);
   
   const contextValue = useMemo(() => ({
