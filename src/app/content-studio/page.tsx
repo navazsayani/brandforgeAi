@@ -94,12 +94,15 @@ export default function ContentStudioPage() {
   const [selectedProfileImageIndexForGen, setSelectedProfileImageIndexForGen] = useState<number | null>(null);
   const [selectedProfileImageIndexForSocial, setSelectedProfileImageIndexForSocial] = useState<number | null>(null);
 
-  const [selectedImageStylePreset, setSelectedImageStylePreset] = useState<string>(() => {
-    return brandData?.imageStyle || (artisticStyles.length > 0 ? artisticStyles[0].value : "");
-  });
-  const [customStyleNotesInput, setCustomStyleNotesInput] = useState<string>(() => {
-    return brandData?.imageStyleNotes || "";
-  });
+  const [selectedImageStylePreset, setSelectedImageStylePreset] = useState<string>("");
+  const [customStyleNotesInput, setCustomStyleNotesInput] = useState<string>("");
+
+  // State for controlled inputs in image generation form
+  const [imageGenBrandDescription, setImageGenBrandDescription] = useState<string>("");
+  const [imageGenIndustry, setImageGenIndustry] = useState<string>("");
+  const [imageGenNegativePrompt, setImageGenNegativePrompt] = useState<string>("");
+  const [imageGenSeed, setImageGenSeed] = useState<string>("");
+
 
   const [isPreviewingPrompt, setIsPreviewingPrompt] = useState<boolean>(false);
   const [currentTextPromptForEditing, setCurrentTextPromptForEditing] = useState<string>("");
@@ -112,6 +115,9 @@ export default function ContentStudioPage() {
     if (brandData) {
         setSelectedImageStylePreset(brandData.imageStyle || (artisticStyles.length > 0 ? artisticStyles[0].value : ""));
         setCustomStyleNotesInput(brandData.imageStyleNotes || "");
+        setImageGenBrandDescription(brandData.brandDescription || "");
+        setImageGenIndustry(brandData.industry || "");
+
         if (brandData.exampleImages && brandData.exampleImages.length > 0) {
             if (selectedProfileImageIndexForGen === null) setSelectedProfileImageIndexForGen(0);
             if (selectedProfileImageIndexForSocial === null) setSelectedProfileImageIndexForSocial(0);
@@ -327,24 +333,18 @@ export default function ContentStudioPage() {
     });
   };
 
-  const handlePreviewPromptClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+ const handlePreviewPromptClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
-    const formElement = document.getElementById('imageGenerationFormFields') as HTMLFormElement;
-    if (!formElement) {
-        toast({ title: "Error", description: "Could not find image generation form data.", variant: "destructive"});
-        return;
-    }
 
-    const formData = new FormData(formElement);
-    const brandDesc = formData.get("brandDescription") as string || brandData?.brandDescription || "";
-    const negPrompt = formData.get("negativePrompt") as string || "";
+    const brandDesc = imageGenBrandDescription;
+    const industryValue = imageGenIndustry;
+    const negPrompt = imageGenNegativePrompt;
+    const seedValueStr = imageGenSeed;
+    
     const aspect = selectedAspectRatio;
     const numImages = parseInt(numberOfImagesToGenerate, 10);
-    const seedValueStr = formData.get("seed") as string;
     const seedValue = seedValueStr && !isNaN(parseInt(seedValueStr)) ? parseInt(seedValueStr, 10) : undefined;
-    const industryValue = formData.get("industry") as string || brandData?.industry || "";
     const exampleImg = (brandData?.exampleImages && selectedProfileImageIndexForGen !== null && brandData.exampleImages[selectedProfileImageIndexForGen]) || "";
-
 
     let combinedStyle = selectedImageStylePreset;
     if (customStyleNotesInput.trim()) {
@@ -418,16 +418,20 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
     
     formData.append("finalizedTextPrompt", currentTextPromptForEditing);
     
-    formData.append("brandDescription", formSnapshot?.brandDescription || brandData?.brandDescription || "");
-    formData.append("industry", formSnapshot?.industry || brandData?.industry || "");
+    // Use values from formSnapshot or fall back to brandData or current state for other fields
+    formData.append("brandDescription", formSnapshot?.brandDescription || imageGenBrandDescription || brandData?.brandDescription || "");
+    formData.append("industry", formSnapshot?.industry || imageGenIndustry || brandData?.industry || "");
     formData.append("imageStyle", formSnapshot?.imageStyle || (selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")));
 
 
     if (formSnapshot?.exampleImage) formData.append("exampleImage", formSnapshot.exampleImage);
-    if (formSnapshot?.aspectRatio) formData.append("aspectRatio", formSnapshot.aspectRatio);
-    formData.append("numberOfImages", String(formSnapshot?.numberOfImages || 1));
+    formData.append("aspectRatio", formSnapshot?.aspectRatio || selectedAspectRatio);
+    formData.append("numberOfImages", String(formSnapshot?.numberOfImages || parseInt(numberOfImagesToGenerate,10)));
     if (formSnapshot?.negativePrompt) formData.append("negativePrompt", formSnapshot.negativePrompt);
+    else if (imageGenNegativePrompt) formData.append("negativePrompt", imageGenNegativePrompt);
+
     if (formSnapshot?.seed !== undefined) formData.append("seed", String(formSnapshot.seed));
+    else if (imageGenSeed && !isNaN(parseInt(imageGenSeed))) formData.append("seed", imageGenSeed);
 
     startTransition(() => {
       imageAction(formData);
@@ -468,24 +472,28 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                 <div id="imageGenerationFormFields"> {/* Wrapper for fields, not a form itself */}
                   <CardContent className="space-y-6">
                     <div>
-                      <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
+                      <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description</Label>
                       <Textarea
                         id="imageGenBrandDescription"
                         name="brandDescription"
-                        defaultValue={brandData?.brandDescription || ""}
+                        value={imageGenBrandDescription}
+                        onChange={(e) => setImageGenBrandDescription(e.target.value)}
                         placeholder="Detailed description of the brand and its values."
                         rows={3}
                         required
                       />
+                       <FormDescription>Using: {brandData?.brandDescription ? `"${brandData.brandDescription.substring(0,50)}..." (from Profile)` : "Enter description"}</FormDescription>
                     </div>
                      <div>
-                        <Label htmlFor="imageGenIndustry" className="flex items-center mb-1"><Briefcase className="w-4 h-4 mr-2 text-primary" />Industry (from Profile)</Label>
+                        <Label htmlFor="imageGenIndustry" className="flex items-center mb-1"><Briefcase className="w-4 h-4 mr-2 text-primary" />Industry</Label>
                         <Input
                             id="imageGenIndustry"
                             name="industry"
-                            defaultValue={brandData?.industry || ""}
+                            value={imageGenIndustry}
+                            onChange={(e) => setImageGenIndustry(e.target.value)}
                             placeholder="e.g., Fashion, Technology"
                         />
+                        <FormDescription>Using: {brandData?.industry || "Enter industry (or from Profile)"}</FormDescription>
                     </div>
                     
                     <div>
@@ -503,9 +511,9 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                               </SelectGroup>
                           </SelectContent>
                       </Select>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Using: {selectedImageStylePreset ? (artisticStyles.find(s => s.value === selectedImageStylePreset)?.label || selectedImageStylePreset) : 'Not set'}
-                      </p>
+                      <FormDescription>
+                        Profile preset: {brandData?.imageStyle ? (artisticStyles.find(s => s.value === brandData.imageStyle)?.label || brandData.imageStyle) : 'Not set in profile'}
+                      </FormDescription>
                     </div>
 
                     <div>
@@ -518,16 +526,15 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         placeholder="E.g., 'add a touch of vintage', 'focus on metallic textures', 'use a desaturated color palette'."
                         rows={2}
                       />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Profile notes: {brandData?.imageStyleNotes || 'None'}
-                      </p>
+                       <FormDescription>
+                        Profile notes: {brandData?.imageStyleNotes || 'None in profile'}
+                      </FormDescription>
                     </div>
                     
                     <div>
                         <Label htmlFor="imageGenExampleImageSelector" className="flex items-center mb-1">
                             <ImageIcon className="w-4 h-4 mr-2 text-primary" />Example Image from Profile (Optional)
                         </Label>
-                        {/* Hidden input to carry the selected example image URL */}
                         <input type="hidden" name="exampleImage" value={currentExampleImageForGen} />
 
                         {brandData?.exampleImages && brandData.exampleImages.length > 0 ? (
@@ -551,7 +558,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                                         ))}
                                     </div>
                                     </>
-                                ) : ( /* If only one image, display it without selection */
+                                ) : ( 
                                      <div className="w-20 h-20 rounded border-2 p-0.5 border-primary ring-2 ring-primary flex-shrink-0">
                                          <NextImage src={brandData.exampleImages[0]} alt={`Example 1`} width={76} height={76} className="object-contain w-full h-full rounded-sm" data-ai-hint="style example"/>
                                      </div>
@@ -573,6 +580,8 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                       <Textarea
                         id="imageGenNegativePrompt"
                         name="negativePrompt"
+                        value={imageGenNegativePrompt}
+                        onChange={(e) => setImageGenNegativePrompt(e.target.value)}
                         placeholder="E.g., avoid text, ugly, disfigured, low quality"
                         rows={2}
                       />
@@ -612,6 +621,8 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         id="imageGenSeed"
                         name="seed"
                         type="number"
+                        value={imageGenSeed}
+                        onChange={(e) => setImageGenSeed(e.target.value)}
                         placeholder="Enter a number for reproducible results"
                         min="0"
                       />
@@ -636,9 +647,9 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         className="font-mono text-sm"
                         placeholder="The constructed prompt will appear here. You can edit it before generation."
                       />
-                       <p className="text-xs text-muted-foreground mt-1">
+                       <FormDescription>
                         Note: When using this finalized prompt, aspects like Negative Prompt from the form fields above are ignored (assume you've included them here if needed). Aspect Ratio and Seed will still be applied by the system based on your selections.
-                       </p>
+                       </FormDescription>
                     </div>
                   </CardContent>
                   <CardFooter className="flex flex-col sm:flex-row gap-2">
@@ -851,7 +862,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                     <Textarea
                       id="socialImageDescription"
                       name="socialImageDescription" 
-                      placeholder={useImageForSocialPost && currentSocialImagePreviewUrl ? "Describe the image you're posting or use AI. Required if image used." : "Optionally describe the theme if not using an image."}
+                      placeholder={useImageForSocialPost && !!currentSocialImagePreviewUrl ? "Describe the image you're posting or use AI. Required if image used." : "Optionally describe the theme if not using an image."}
                       rows={3}
                       required={useImageForSocialPost && !!currentSocialImagePreviewUrl} 
                     />
@@ -925,7 +936,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                 <CardTitle>Create Blog Content</CardTitle>
                 <CardDescription>Generate SEO-friendly blog posts. Define an outline, choose a tone, and let AI write the content. Uses brand description and industry.</CardDescription>
               </CardHeader>
-              <form action={blogAction}> 
+              <form action={blogAction} className="w-full">
                 <CardContent className="space-y-6">
                   <div>
                     <Label htmlFor="blogBrandName" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Name (from Profile)</Label>
@@ -1079,6 +1090,4 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
     </AppShell>
   );
 }
-
-
     
