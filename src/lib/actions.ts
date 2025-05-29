@@ -24,12 +24,12 @@ export async function handleGenerateImagesAction(
   try {
     const numberOfImagesStr = formData.get("numberOfImages") as string;
     const numberOfImages = parseInt(numberOfImagesStr, 10) || 1;
-    const negativePromptValue = formData.get("negativePrompt") as string | undefined;
+    
+    const negativePromptValue = formData.get("negativePrompt") as string | null; // Can be null if field is empty
     const seedStr = formData.get("seed") as string | undefined;
     const seed = seedStr && !isNaN(parseInt(seedStr, 10)) ? parseInt(seedStr, 10) : undefined;
+    
     let finalizedTextPromptValue = formData.get("finalizedTextPrompt") as string | undefined;
-
-    // If finalizedTextPrompt is an empty string, treat it as undefined so the flow reconstructs the prompt
     if (finalizedTextPromptValue === "") {
       finalizedTextPromptValue = undefined;
     }
@@ -37,22 +37,22 @@ export async function handleGenerateImagesAction(
     const input: GenerateImagesInput = {
       brandDescription: formData.get("brandDescription") as string,
       industry: formData.get("industry") as string | undefined,
-      imageStyle: formData.get("imageStyle") as string, // This is preset + custom notes combined by client
+      imageStyle: formData.get("imageStyle") as string,
       exampleImage: formData.get("exampleImage") as string | undefined,
       aspectRatio: formData.get("aspectRatio") as string | undefined,
       numberOfImages: numberOfImages,
-      negativePrompt: negativePromptValue === "" ? undefined : negativePromptValue,
+      negativePrompt: negativePromptValue === null || negativePromptValue === "" ? undefined : negativePromptValue, // Ensure undefined if empty/null
       seed: seed,
       finalizedTextPrompt: finalizedTextPromptValue,
     };
 
-    // Basic validation for core fields if no finalized prompt is given
     if (!input.finalizedTextPrompt && (!input.brandDescription || !input.imageStyle)) {
       return { error: "Brand description and image style are required if not providing a finalized text prompt." };
     }
     if (input.exampleImage === "") delete input.exampleImage;
     if (input.aspectRatio === "" || input.aspectRatio === undefined) delete input.aspectRatio;
     if (input.industry === "") delete input.industry;
+
 
     const result = await generateImages(input);
     const message = result.generatedImages.length > 1
@@ -96,7 +96,7 @@ export async function handleGenerateSocialMediaCaptionAction(
     const input: GenerateSocialMediaCaptionInput = {
       brandDescription: formData.get("brandDescription") as string,
       industry: formData.get("industry") as string | undefined,
-      imageDescription: imageSrc ? imageDescription : undefined, // Only pass if imageSrc is present
+      imageDescription: imageSrc ? imageDescription : undefined, 
       tone: formData.get("tone") as string,
     };
 
@@ -107,6 +107,7 @@ export async function handleGenerateSocialMediaCaptionAction(
         return { error: "Image description is required if an image is selected for the post."}
     }
     if (input.industry === "") delete input.industry;
+
 
     const result = await generateSocialMediaCaption(input);
     return { data: { ...result, imageSrc: imageSrc }, message: "Social media content generated!" };
@@ -134,6 +135,7 @@ export async function handleGenerateBlogOutlineAction(
         }
         if (input.websiteUrl === "") delete input.websiteUrl;
         if (input.industry === "") delete input.industry;
+
 
         const result = await generateBlogOutline(input);
         return { data: result, message: "Blog outline generated successfully!" };
@@ -231,3 +233,6 @@ export async function handleExtractBrandInfoFromUrlAction(
         return { error: e.message || "Failed to extract brand information from URL." };
     }
 }
+
+
+    
