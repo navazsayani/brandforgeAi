@@ -11,7 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
@@ -24,17 +25,32 @@ import { Alert, AlertTitle as AlertTitleShadcn, AlertDescription as AlertDescrip
 const MAX_FILE_SIZE_MB = 0.5; // Max file size in MB for base64 to avoid Firestore limits
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
+const artisticStyles = [
+  { value: "photorealistic", label: "Photorealistic" },
+  { value: "minimalist", label: "Minimalist" },
+  { value: "vibrant", label: "Vibrant & Colorful" },
+  { value: "professional", label: "Professional & Clean" },
+  { value: "impressionistic", label: "Impressionistic" },
+  { value: "watercolor", label: "Watercolor" },
+  { value: "abstract", label: "Abstract" },
+  { value: "retro", label: "Retro / Vintage" },
+  { value: "cyberpunk", label: "Cyberpunk" },
+  { value: "fantasy art", label: "Fantasy Art" },
+  { value: "isometric", label: "Isometric" },
+  { value: "line art", label: "Line Art" },
+  { value: "3d render", label: "3D Render" },
+  { value: "pixel art", label: "Pixel Art" },
+  { value: "cel shaded", label: "Cel Shaded" },
+];
+
 const brandProfileSchema = z.object({
   brandName: z.string().min(2, { message: "Brand name must be at least 2 characters." }),
   websiteUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   brandDescription: z.string().min(10, { message: "Description must be at least 10 characters." }),
-  imageStyle: z.string().min(5, { message: "Image style description must be at least 5 characters." }),
+  imageStyle: z.string().min(3, { message: "Please select or enter an image style." }),
   exampleImage: z.string().optional().refine(value => {
     if (!value) return true;
-    // Basic check for base64 string length. 1MB base64 string is ~1.37MB in length.
-    // So, 0.5MB file is roughly 0.5 * 1.37 * 1024 * 1024 = ~718,848 characters.
-    // We'll set a limit slightly above that to be safe, but still well under Firestore's 1MB field limit.
-    return value.length < 750000;
+    return value.length < 750000; // Approx 0.5MB base64
   }, {message: `Image data is too large. Please use a smaller image (under ${MAX_FILE_SIZE_MB}MB).`}),
   targetKeywords: z.string().optional(),
 });
@@ -45,7 +61,7 @@ const defaultFormValues: BrandProfileFormData = {
   brandName: "",
   websiteUrl: "",
   brandDescription: "",
-  imageStyle: "",
+  imageStyle: artisticStyles.length > 0 ? artisticStyles[0].value : "",
   exampleImage: "",
   targetKeywords: "",
 };
@@ -61,11 +77,8 @@ export default function BrandProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
 
-
-  // For AI extraction
   const [extractState, extractAction] = useActionState(handleExtractBrandInfoFromUrlAction, initialExtractState);
   const [isExtracting, setIsExtracting] = useState(false);
-
 
   const form = useForm<BrandProfileFormData>({
     resolver: zodResolver(brandProfileSchema),
@@ -105,10 +118,10 @@ export default function BrandProfilePage() {
     if (extractState.error) {
       toast({ title: "Extraction Error", description: extractState.error, variant: "destructive" });
     }
-    setIsExtracting(false); // Reset loading state regardless of outcome
+    setIsExtracting(false); 
   }, [extractState, form, toast]);
 
-  const handleAutoFill = async () => {
+  const handleAutoFill = () => {
     const websiteUrl = form.getValues("websiteUrl");
     if (!websiteUrl) {
       toast({
@@ -155,12 +168,10 @@ export default function BrandProfilePage() {
           description: `Please upload an image smaller than ${MAX_FILE_SIZE_MB}MB. This is a temporary limit for storing directly in the profile.`,
           variant: "destructive",
         });
-        if (fileInputRef.current) {
-            fileInputRef.current.value = ""; 
-        }
+        if (fileInputRef.current) fileInputRef.current.value = ""; 
         form.setValue('exampleImage', brandData?.exampleImage || '', { shouldValidate: true });
         setPreviewImage(brandData?.exampleImage || null);
-        setSelectedFileName(null); // Clear selected file name if too large
+        setSelectedFileName(brandData?.exampleImage ? "Previous image" : null);
         return;
       }
 
@@ -184,18 +195,16 @@ export default function BrandProfilePage() {
           variant: "destructive",
         });
         setIsProcessingImage(false);
-        if (fileInputRef.current) {
-            fileInputRef.current.value = ""; 
-        }
+        if (fileInputRef.current) fileInputRef.current.value = ""; 
         form.setValue('exampleImage', brandData?.exampleImage || '', { shouldValidate: true });
         setPreviewImage(brandData?.exampleImage || null);
-        setSelectedFileName(null); // Clear selected file name on error
+        setSelectedFileName(brandData?.exampleImage ? "Previous image" : null);
       };
       reader.readAsDataURL(file);
     } else {
         form.setValue('exampleImage', brandData?.exampleImage || '', { shouldValidate: true });
         setPreviewImage(brandData?.exampleImage || null);
-        setSelectedFileName(null); // Clear selected file name if no file selected
+        setSelectedFileName(brandData?.exampleImage ? "Previous image" : null);
     }
   };
   
@@ -306,9 +315,24 @@ export default function BrandProfilePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><Palette className="w-5 h-5 mr-2 text-primary"/>Desired Image Style</FormLabel>
-                      <FormControl>
-                        <Input placeholder="E.g., minimalist, vibrant, professional, retro" {...field} disabled={isBrandContextLoading || isProcessingImage} />
-                      </FormControl>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isBrandContextLoading || isProcessingImage}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select an artistic style" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectLabel>Artistic Styles</SelectLabel>
+                            {artisticStyles.map(style => (
+                              <SelectItem key={style.value} value={style.value}>{style.label}</SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        This style will be used for AI image generation.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -321,7 +345,7 @@ export default function BrandProfilePage() {
                     <AlertTitleShadcn>Image Size Limit</AlertTitleShadcn>
                     <AlertDescriptionShadcn>
                       Due to Firestore document size limits, please use very small images (under {MAX_FILE_SIZE_MB}MB).
-                      Larger images will cause errors when saving. This is a temporary workaround.
+                      Larger images will cause errors when saving.
                     </AlertDescriptionShadcn>
                   </Alert>
                    <FormControl>
@@ -380,9 +404,9 @@ export default function BrandProfilePage() {
                       <FormControl>
                         <Input placeholder="E.g., innovation, tech solutions, eco-friendly (comma-separated)" {...field} disabled={isBrandContextLoading || isProcessingImage || isExtracting}/>
                       </FormControl>
-                       <p className="text-xs text-muted-foreground">
+                       <FormDescription>
                         Comma-separated keywords related to your brand and industry.
-                      </p>
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

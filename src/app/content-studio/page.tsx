@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useActionState as useActionStateReact } from 'react';
@@ -9,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useBrand } from '@/contexts/BrandContext';
@@ -20,14 +21,30 @@ import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
 import type { DescribeImageOutput } from "@/ai/flows/describe-image-flow";
 
-
 const initialImageFormState: FormState<string[]> = { error: undefined, data: undefined, message: undefined };
 const initialSocialFormState: FormState<{ caption: string; hashtags: string; imageSrc: string | null }> = { error: undefined, data: undefined, message: undefined };
 const initialBlogFormState: FormState<{ title: string; content: string; tags: string }> = { error: undefined, data: undefined, message: undefined };
 const initialDescribeImageState: FormState<DescribeImageOutput> = { error: undefined, data: undefined, message: undefined };
 
-
 type SocialImageChoice = 'generated' | 'profile' | null;
+
+const artisticStyles = [
+  { value: "photorealistic", label: "Photorealistic" },
+  { value: "minimalist", label: "Minimalist" },
+  { value: "vibrant", label: "Vibrant & Colorful" },
+  { value: "professional", label: "Professional & Clean" },
+  { value: "impressionistic", label: "Impressionistic" },
+  { value: "watercolor", label: "Watercolor" },
+  { value: "abstract", label: "Abstract" },
+  { value: "retro", label: "Retro / Vintage" },
+  { value: "cyberpunk", label: "Cyberpunk" },
+  { value: "fantasy art", label: "Fantasy Art" },
+  { value: "isometric", label: "Isometric" },
+  { value: "line art", label: "Line Art" },
+  { value: "3d render", label: "3D Render" },
+  { value: "pixel art", label: "Pixel Art" },
+  { value: "cel shaded", label: "Cel Shaded" },
+];
 
 export default function ContentStudioPage() {
   const { brandData, addGeneratedImage, addGeneratedSocialPost, addGeneratedBlogPost } = useBrand();
@@ -50,7 +67,16 @@ export default function ContentStudioPage() {
   const [numberOfImagesToGenerate, setNumberOfImagesToGenerate] = useState<string>("1");
   const [activeTab, setActiveTab] = useState<string>("image");
   const [isGeneratingDescription, setIsGeneratingDescription] = useState<boolean>(false);
+  const [selectedImageStyle, setSelectedImageStyle] = useState<string>(brandData?.imageStyle || artisticStyles[0].value);
 
+
+  useEffect(() => {
+    if (brandData?.imageStyle) {
+        setSelectedImageStyle(brandData.imageStyle);
+    } else if (artisticStyles.length > 0) {
+        setSelectedImageStyle(artisticStyles[0].value);
+    }
+  }, [brandData?.imageStyle]);
 
   useEffect(() => {
     if (imageState.data) {
@@ -58,7 +84,8 @@ export default function ContentStudioPage() {
       setLastSuccessfulGeneratedImageUrls(newImageUrls);
       
       const imageGenBrandDescription = (document.querySelector('form[action^="/content-studio"] textarea[name="brandDescription"]') as HTMLTextAreaElement)?.value || "";
-      const imageGenImageStyle = (document.querySelector('form[action^="/content-studio"] input[name="imageStyle"]') as HTMLInputElement)?.value || "";
+      const imageGenImageStyle = (document.querySelector('form[action^="/content-studio"] select[name="imageStyle"]') as HTMLSelectElement)?.value || "";
+
 
       newImageUrls.forEach(url => {
         const newImage: GeneratedImage = {
@@ -212,13 +239,19 @@ export default function ContentStudioPage() {
                   </div>
                   <div>
                     <Label htmlFor="imageGenImageStyle" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Image Style (from Profile)</Label>
-                    <Input
-                      id="imageGenImageStyle"
-                      name="imageStyle"
-                      defaultValue={brandData?.imageStyle || ""}
-                      placeholder="E.g., minimalist, vibrant, professional"
-                      required
-                    />
+                     <Select name="imageStyle" required value={selectedImageStyle} onValueChange={setSelectedImageStyle}>
+                        <SelectTrigger id="imageGenImageStyleSelect">
+                            <SelectValue placeholder="Select image style" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectGroup>
+                                <SelectLabel>Artistic Styles</SelectLabel>
+                                {artisticStyles.map(style => (
+                                    <SelectItem key={style.value} value={style.value}>{style.label}</SelectItem>
+                                ))}
+                            </SelectGroup>
+                        </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <Label htmlFor="imageGenExampleImage" className="flex items-center mb-1"><ImageIcon className="w-4 h-4 mr-2 text-primary" />Example Image Data URI (from Profile, Optional)</Label>
@@ -235,7 +268,7 @@ export default function ContentStudioPage() {
                         </div>
                     )}
                   </div>
-                  <div>
+                   <div>
                     <Label htmlFor="imageGenNegativePrompt" className="flex items-center mb-1"><CircleSlash className="w-4 h-4 mr-2 text-primary" />Negative Prompt (Optional)</Label>
                     <Textarea
                       id="imageGenNegativePrompt"
@@ -567,7 +600,7 @@ export default function ContentStudioPage() {
                             </Button>
                         </div>
                     </CardContent>
-                </Card>
+                 </Card>
               )}
             </Card>
           </TabsContent>
