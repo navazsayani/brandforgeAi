@@ -49,9 +49,10 @@ const brandProfileSchema = z.object({
   brandDescription: z.string().min(10, { message: "Description must be at least 10 characters." }),
   imageStyle: z.string().min(3, { message: "Please select or enter an image style." }),
   exampleImage: z.string().optional().refine(value => {
-    if (!value) return true;
-    return value.length < 750000; // Approx 0.5MB base64
-  }, {message: `Image data is too large. Please use a smaller image (under ${MAX_FILE_SIZE_MB}MB).`}),
+    if (!value) return true; // Allow empty string (no image)
+    if (!value.startsWith('data:image')) return true; // Allow non-data URIs (like URLs from storage, though current logic is for data URIs)
+    return value.length < MAX_FILE_SIZE_BYTES; 
+  }, {message: `Image data is too large. Please use a smaller image (under ${MAX_FILE_SIZE_MB}MB) or a URL.`}),
   targetKeywords: z.string().optional(),
 });
 
@@ -90,12 +91,25 @@ export default function BrandProfilePage() {
       form.reset(brandData);
       if (brandData.exampleImage) {
         setPreviewImage(brandData.exampleImage);
+        // Attempt to set a meaningful filename if it's a data URI; might need better logic for URLs
+        if (brandData.exampleImage.startsWith("data:")) {
+            setSelectedFileName("Previously saved image");
+        } else {
+            try {
+                const url = new URL(brandData.exampleImage);
+                setSelectedFileName(url.pathname.split('/').pop() || "Previously saved image URL");
+            } catch (e) {
+                setSelectedFileName("Previously saved image data");
+            }
+        }
       } else {
         setPreviewImage(null);
+        setSelectedFileName(null);
       }
     } else if (!isBrandContextLoading) {
       form.reset(defaultFormValues);
       setPreviewImage(null);
+      setSelectedFileName(null);
     }
   }, [brandData, form, isBrandContextLoading]);
   
@@ -315,7 +329,7 @@ export default function BrandProfilePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><Palette className="w-5 h-5 mr-2 text-primary"/>Desired Image Style</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isBrandContextLoading || isProcessingImage}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value} disabled={isBrandContextLoading || isProcessingImage}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select an artistic style" />
@@ -390,8 +404,8 @@ export default function BrandProfilePage() {
                       <NextImage src={previewImage} alt="Example image preview" width={100} height={100} className="rounded border object-contain" data-ai-hint="brand example"/>
                   </div>
                 )}
-                {!previewImage && form.getValues("exampleImage") && (
-                    <p className="text-xs text-destructive mt-1">Could not load preview for current image data.</p>
+                {!previewImage && form.getValues("exampleImage") && !form.getFieldState("exampleImage").error && (
+                    <p className="text-xs text-destructive mt-1">Could not load preview for current image data. It might be an invalid data URI or URL.</p>
                 )}
 
 

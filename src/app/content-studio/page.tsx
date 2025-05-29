@@ -67,11 +67,11 @@ export default function ContentStudioPage() {
   const [numberOfImagesToGenerate, setNumberOfImagesToGenerate] = useState<string>("1");
   const [activeTab, setActiveTab] = useState<string>("image");
   const [isGeneratingDescription, setIsGeneratingDescription] = useState<boolean>(false);
-  const [selectedImageStyle, setSelectedImageStyle] = useState<string>(brandData?.imageStyle || artisticStyles[0].value);
+  const [selectedImageStyle, setSelectedImageStyle] = useState<string>(brandData?.imageStyle || (artisticStyles.length > 0 ? artisticStyles[0].value : ""));
 
 
   useEffect(() => {
-    if (brandData?.imageStyle) {
+    if (brandData?.imageStyle && artisticStyles.some(style => style.value === brandData.imageStyle)) {
         setSelectedImageStyle(brandData.imageStyle);
     } else if (artisticStyles.length > 0) {
         setSelectedImageStyle(artisticStyles[0].value);
@@ -84,7 +84,7 @@ export default function ContentStudioPage() {
       setLastSuccessfulGeneratedImageUrls(newImageUrls);
       
       const imageGenBrandDescription = (document.querySelector('form[action^="/content-studio"] textarea[name="brandDescription"]') as HTMLTextAreaElement)?.value || "";
-      const imageGenImageStyle = (document.querySelector('form[action^="/content-studio"] select[name="imageStyle"]') as HTMLSelectElement)?.value || "";
+      // const imageGenImageStyle = (document.querySelector('form[action^="/content-studio"] select[name="imageStyle"]') as HTMLSelectElement)?.value || "";
 
 
       newImageUrls.forEach(url => {
@@ -92,14 +92,14 @@ export default function ContentStudioPage() {
           id: `${new Date().toISOString()}-${Math.random().toString(36).substring(2, 9)}`, 
           src: url,
           prompt: imageGenBrandDescription,
-          style: imageGenImageStyle
+          style: selectedImageStyle // Use state variable selectedImageStyle
         };
         addGeneratedImage(newImage);
       });
       toast({ title: "Success", description: imageState.message });
     }
     if (imageState.error) toast({ title: "Error", description: imageState.error, variant: "destructive" });
-  }, [imageState, toast, addGeneratedImage]);
+  }, [imageState, toast, addGeneratedImage, selectedImageStyle]);
 
   useEffect(() => {
     if (socialState.data) {
@@ -238,7 +238,7 @@ export default function ContentStudioPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="imageGenImageStyle" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Image Style (from Profile)</Label>
+                    <Label htmlFor="imageGenImageStyleSelect" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Image Style</Label>
                      <Select name="imageStyle" required value={selectedImageStyle} onValueChange={setSelectedImageStyle}>
                         <SelectTrigger id="imageGenImageStyleSelect">
                             <SelectValue placeholder="Select image style" />
@@ -252,6 +252,9 @@ export default function ContentStudioPage() {
                             </SelectGroup>
                         </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Current style from profile: {brandData?.imageStyle ? (artisticStyles.find(s => s.value === brandData.imageStyle)?.label || brandData.imageStyle) : 'Not set in profile'}
+                    </p>
                   </div>
                   <div>
                     <Label htmlFor="imageGenExampleImage" className="flex items-center mb-1"><ImageIcon className="w-4 h-4 mr-2 text-primary" />Example Image Data URI (from Profile, Optional)</Label>
@@ -279,7 +282,7 @@ export default function ContentStudioPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <Label htmlFor="imageGenAspectRatio" className="flex items-center mb-1"><Ratio className="w-4 h-4 mr-2 text-primary" />Aspect Ratio</Label>
+                        <Label htmlFor="imageGenAspectRatioSelect" className="flex items-center mb-1"><Ratio className="w-4 h-4 mr-2 text-primary" />Aspect Ratio</Label>
                         <Select name="aspectRatio" required value={selectedAspectRatio} onValueChange={setSelectedAspectRatio}>
                         <SelectTrigger id="imageGenAspectRatioSelect">
                             <SelectValue placeholder="Select aspect ratio" />
@@ -293,7 +296,7 @@ export default function ContentStudioPage() {
                         </Select>
                     </div>
                     <div>
-                        <Label htmlFor="numberOfImages" className="flex items-center mb-1"><Images className="w-4 h-4 mr-2 text-primary" />Number of Images</Label>
+                        <Label htmlFor="numberOfImagesSelect" className="flex items-center mb-1"><Images className="w-4 h-4 mr-2 text-primary" />Number of Images</Label>
                         <Select name="numberOfImages" value={numberOfImagesToGenerate} onValueChange={setNumberOfImagesToGenerate}>
                             <SelectTrigger id="numberOfImagesSelect">
                                 <SelectValue placeholder="Select number" />
@@ -358,6 +361,8 @@ export default function ContentStudioPage() {
                                     setSocialImageChoice('generated'); 
                                 } else if (!socialImageChoice && brandData?.exampleImage) {
                                     setSocialImageChoice('profile'); 
+                                } else if (!socialImageChoice) {
+                                     setSocialImageChoice(null); // Default to null if no other choice is viable
                                 }
                             }}
                         />
@@ -430,14 +435,14 @@ export default function ContentStudioPage() {
                     <Textarea
                       id="socialImageDescription"
                       name="imageDescription"
-                      placeholder={useImageForSocialPost ? "Describe the image you're posting (e.g., 'A vibrant photo of our new product'). Required if using an image." : "Optionally describe the theme or topic if not using an image."}
+                      placeholder={useImageForSocialPost && currentSocialImagePreviewUrl ? "Describe the image you're posting (e.g., 'A vibrant photo of our new product'). Required if using an image." : "Optionally describe the theme or topic if not using an image."}
                       rows={3}
                       required={useImageForSocialPost && !!currentSocialImagePreviewUrl} 
                     />
                   </div>
 
                    <div>
-                    <Label htmlFor="socialTone" className="flex items-center mb-1"><ThumbsUp className="w-4 h-4 mr-2 text-primary" />Tone</Label>
+                    <Label htmlFor="socialToneSelect" className="flex items-center mb-1"><ThumbsUp className="w-4 h-4 mr-2 text-primary" />Tone</Label>
                      <Select name="tone" required value={socialToneValue} onValueChange={setSocialToneValue}>
                         <SelectTrigger id="socialToneSelect">
                           <SelectValue placeholder="Select a tone" />
@@ -541,13 +546,13 @@ export default function ContentStudioPage() {
                       <Label htmlFor="blogWebsiteUrl" className="flex items-center mb-1"><Globe className="w-4 h-4 mr-2 text-primary" />Website URL (Optional, for SEO insights)</Label>
                       <Input
                         id="blogWebsiteUrl"
-                        name="blogWebsiteUrl" 
+                        name="websiteUrl" 
                         defaultValue={brandData?.websiteUrl || ""}
                         placeholder="https://www.example.com"
                       />
                   </div>
                   <div>
-                    <Label htmlFor="blogTargetPlatform" className="flex items-center mb-1"><Newspaper className="w-4 h-4 mr-2 text-primary" />Target Platform</Label>
+                    <Label htmlFor="blogTargetPlatformSelect" className="flex items-center mb-1"><Newspaper className="w-4 h-4 mr-2 text-primary" />Target Platform</Label>
                     <Select name="targetPlatform" required value={blogPlatformValue} onValueChange={(value) => setBlogPlatformValue(value as "Medium" | "Other")}>
                       <SelectTrigger id="blogTargetPlatformSelect">
                         <SelectValue placeholder="Select platform" />
