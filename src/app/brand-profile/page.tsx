@@ -25,33 +25,17 @@ import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject, 
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { SubmitButton } from '@/components/SubmitButton';
 import type { GenerateBrandLogoOutput } from '@/ai/flows/generate-brand-logo-flow';
-
-const industries = [
-  { value: "fashion_apparel", label: "Fashion & Apparel" },
-  { value: "beauty_cosmetics", label: "Beauty & Cosmetics" },
-  { value: "food_beverage", label: "Food & Beverage" },
-  { value: "health_wellness", label: "Health & Wellness" },
-  { value: "technology_saas", label: "Technology & SaaS" },
-  { value: "travel_hospitality", label: "Travel & Hospitality" },
-  { value: "ecommerce_retail", label: "E-commerce & Retail" },
-  { value: "education", label: "Education" },
-  { value: "finance_fintech", label: "Finance & Fintech" },
-  { value: "real_estate", label: "Real Estate" },
-  { value: "arts_entertainment", label: "Arts & Entertainment" },
-  { value: "automotive", label: "Automotive" },
-  { value: "non_profit", label: "Non-profit" },
-  { value: "other", label: "Other" },
-];
+import { industries } from '../../lib/constants'; // Import industries from constants using relative path
 
 const brandProfileSchema = z.object({
   brandName: z.string().min(2, { message: "Brand name must be at least 2 characters." }),
   websiteUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   brandDescription: z.string().min(10, { message: "Description must be at least 10 characters." }),
   industry: z.string().optional(),
-  imageStyleNotes: z.string().optional(),
+  imageStyleNotes: z.string().optional(), // Keep this for general notes
   exampleImages: z.array(z.string().url({ message: "Each image must be a valid URL." })).max(5, {message: "You can upload a maximum of 5 example images."}).optional(),
   targetKeywords: z.string().optional(),
-  brandLogoUrl: z.string().url().optional(), // For storing the final Firebase Storage URL
+  brandLogoUrl: z.string().url().optional(),
 });
 
 type BrandProfileFormData = z.infer<typeof brandProfileSchema>;
@@ -86,7 +70,7 @@ export default function BrandProfilePage() {
   const [isExtracting, setIsExtracting] = useState(false);
 
   const [generateLogoState, generateLogoAction] = useActionState(handleGenerateBrandLogoAction, initialGenerateLogoState);
-  const [generatedLogoPreview, setGeneratedLogoPreview] = useState<string | null>(null); // Holds data URI
+  const [generatedLogoPreview, setGeneratedLogoPreview] = useState<string | null>(null);
   const [isGeneratingLogo, setIsGeneratingLogo] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [logoUploadProgress, setLogoUploadProgress] = useState(0);
@@ -102,7 +86,6 @@ export default function BrandProfilePage() {
       const currentData = { ...defaultFormValues, ...brandData, exampleImages: brandData.exampleImages || [] };
       form.reset(currentData);
       setPreviewImages(currentData.exampleImages);
-      // Reset generatedLogoPreview when brandData loads, so it doesn't persist across reloads if not saved
       setGeneratedLogoPreview(null); 
       if (currentData.exampleImages.length > 0) {
         setSelectedFileNames(currentData.exampleImages.map((_,i) => `Saved image ${i+1}`));
@@ -255,7 +238,11 @@ export default function BrandProfilePage() {
       }
       
       const currentSelectedFileNames = files.map(file => file.name);
-      setSelectedFileNames(prev => [...prev.slice(0, currentSavedImages.length), ...currentSelectedFileNames]); 
+      // Update selectedFileNames to reflect both old saved and new pending uploads
+      setSelectedFileNames(prev => {
+          const oldNames = prev.filter((_,i) => i < currentSavedImages.length);
+          return [...oldNames, ...currentSelectedFileNames];
+      });
       setIsUploading(true);
       setUploadProgress(0);
 
@@ -275,11 +262,15 @@ export default function BrandProfilePage() {
         
         form.setValue('exampleImages', updatedImages, { shouldValidate: true });
         setPreviewImages(updatedImages); 
+        // Update selectedFileNames to represent the newly saved state
+        setSelectedFileNames(updatedImages.map((_,i) => `Saved image ${i+1}`));
         
         toast({ title: "Images Uploaded", description: `${successfullyUploadedURLs.length} image(s) uploaded successfully. Save profile to persist changes.` });
       } catch (error) {
         toast({ title: "Some Uploads Failed", description: "Not all images were uploaded successfully. Check individual error messages.", variant: "destructive" });
-        setPreviewImages(form.getValues("exampleImages") || []); 
+        const stillValidImages = form.getValues("exampleImages") || [];
+        setPreviewImages(stillValidImages); 
+        setSelectedFileNames(stillValidImages.map((_,i) => `Saved image ${i+1}`));
       } finally {
         setIsUploading(false);
         setUploadProgress(0);
@@ -318,20 +309,16 @@ export default function BrandProfilePage() {
 
   const onSubmit: SubmitHandler<BrandProfileFormData> = async (data) => {
     let finalData = { ...data };
-    setIsUploadingLogo(true); // Indicate general saving process might involve logo upload
+    setIsUploadingLogo(true); 
     setLogoUploadProgress(0);
 
-    if (generatedLogoPreview) { // A new logo was generated
+    if (generatedLogoPreview) { 
       try {
-        const logoFilePath = `brand_logos/${BRAND_PROFILE_DOC_ID}/logo_${Date.now()}.png`; // Assume PNG
+        const logoFilePath = `brand_logos/${BRAND_PROFILE_DOC_ID}/logo_${Date.now()}.png`; 
         const logoStorageRef = storageRef(storage, logoFilePath);
         
         const uploadTask = uploadString(logoStorageRef, generatedLogoPreview, 'data_url');
         
-        // Simple progress for single logo upload
-        // For more detailed progress on uploadString, one might need to monitor bytes directly if SDK supports it,
-        // or use uploadBytesResumable if it were a File/Blob.
-        // Here, we'll just simulate a bit of progress.
         let progressInterval = setInterval(() => {
           setLogoUploadProgress(prev => Math.min(prev + 10, 90));
         }, 100);
@@ -342,10 +329,10 @@ export default function BrandProfilePage() {
 
         const downloadURL = await getDownloadURL(snapshot.ref);
         finalData.brandLogoUrl = downloadURL;
-        setGeneratedLogoPreview(null); // Clear preview as it's now saved
+        setGeneratedLogoPreview(null); 
          toast({ title: "Logo Uploaded", description: "New logo uploaded and will be saved with profile." });
       } catch (error: any) {
-        clearInterval(progressInterval); // ensure interval is cleared on error
+        clearInterval(progressInterval); 
         setIsUploadingLogo(false);
         setLogoUploadProgress(0);
         toast({
@@ -354,8 +341,7 @@ export default function BrandProfilePage() {
           variant: "destructive",
         });
         console.error("Logo upload error:", error);
-        // Proceed to save other data, but without the new logo URL
-        delete finalData.brandLogoUrl; // Or set to old one if desired: finalData.brandLogoUrl = brandData?.brandLogoUrl;
+        delete finalData.brandLogoUrl; 
       }
     }
 
@@ -602,7 +588,7 @@ export default function BrandProfilePage() {
                   <FormLabel className="flex items-center text-base"><UploadCloud className="w-5 h-5 mr-2 text-primary"/>Upload Example Images (Optional, up to 5)</FormLabel>
                    <FormControl>
                     <div className="flex items-center justify-center w-full">
-                        <Label htmlFor="dropzone-file" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer border-border bg-card hover:bg-secondary ${isBrandContextLoading || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                        <Label htmlFor="dropzone-file" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer border-border bg-card hover:bg-secondary ${isBrandContextLoading || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || (form.getValues("exampleImages")?.length || 0) >= 5 ? 'opacity-50 cursor-not-allowed' : ''}`}>
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                 {isUploading ? <Loader2 className="w-8 h-8 mb-2 text-muted-foreground animate-spin" /> : <UploadCloud className="w-8 h-8 mb-2 text-muted-foreground" />}
                                 <p className="mb-1 text-sm text-muted-foreground">

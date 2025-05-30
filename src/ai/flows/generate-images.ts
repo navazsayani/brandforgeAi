@@ -3,7 +3,8 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { Action } from 'genkit'; // For genkit eval/dev UI
+import { Action } from 'genkit'; 
+import { describeImage } from './describe-image-flow'; // For Freepik description
 
 const GenerateImagesInputSchema = z.object({
   provider: z.enum(['GEMINI', 'FREEPIK', 'LEONARDO_AI', 'IMAGEN']).optional().describe("The image generation provider to use."),
@@ -36,7 +37,7 @@ const GenerateImagesInputSchema = z.object({
   
   freepikStylingColors: z.array(z.object({
       color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a valid hex color code e.g. #FF0000"),
-      weight: z.number().min(0.05).max(1).default(0.5) // Updated min weight
+      weight: z.number().min(0.05).max(1).default(0.5) 
   })).min(1).max(5).optional().describe("Up to 5 dominant hex colors for Freepik image generation, with optional weights."),
   freepikEffectColor: z.string().optional().describe("Freepik specific color effect enum (e.g., for Imagen3: 'b&w', 'pastel')."),
   freepikEffectLightning: z.string().optional().describe("Freepik specific lightning effect enum (e.g., for Imagen3: 'studio', 'warm')."),
@@ -124,7 +125,7 @@ async function _generateImageWithImagen_stub(params: {
 }
 
 // For Freepik/Imagen3 provider
-const freepikImagen3AspectRatios: Record<string, string> = {
+const freepikImagen3ApiAspectRatios: Record<string, string> = {
     "1:1": "square_1_1",
     "9:16": "social_story_9_16",
     "16:9": "widescreen_16_9",
@@ -137,10 +138,10 @@ const freepikValidStyles = ["photo", "digital-art", "3d", "painting", "low-poly"
 
 async function _initiateFreepikImageTask(params: { 
   textPrompt: string; 
-  imageStyle: string; // This will be the combined style string (preset + custom notes)
-  exampleImage?: string; // URL of the example image (not used by API, but for context)
+  imageStyle: string;
+  exampleImage?: string; 
   negativePrompt?: string;
-  aspectRatio?: string; // Our generic aspect ratio e.g., "1:1"
+  aspectRatio?: string; 
   freepikStylingColors?: { color: string; weight: number }[];
   freepikEffectColor?: string;
   freepikEffectLightning?: string;
@@ -156,7 +157,7 @@ async function _initiateFreepikImageTask(params: {
     throw new Error("Prompt cannot be empty for Freepik Imagen3 model.");
   }
   
-  let finalFreepikAspectRatio = freepikImagen3AspectRatios[params.aspectRatio || "1:1"] || "square_1_1";
+  let finalFreepikAspectRatio = freepikImagen3ApiAspectRatios[params.aspectRatio || "1:1"] || "square_1_1";
   if (params.aspectRatio === "4:5") { 
       finalFreepikAspectRatio = "traditional_3_4"; 
       console.log("Freepik/Imagen3: Mapping UI aspect ratio 4:5 to Freepik's 'traditional_3_4'");
@@ -265,9 +266,9 @@ const generateImagesFlow = ai.defineFlow(
     const {
       brandDescription,
       industry,
-      imageStyle, // This is the combined style (preset + custom notes)
+      imageStyle, 
       exampleImage,
-      exampleImageDescription, // AI-generated description of exampleImage
+      exampleImageDescription,
       aspectRatio,
       numberOfImages = 1,
       negativePrompt,
@@ -284,18 +285,19 @@ const generateImagesFlow = ai.defineFlow(
 
     const generatedImageResults: string[] = [];
     let actualPromptUsedForFirstImage = ""; 
-    
     const compositionGuidance = "IMPORTANT COMPOSITION RULE: When depicting human figures as the primary subject, the image *must* be well-composed. Avoid awkward or unintentional cropping of faces or key body parts. Ensure the figure is presented naturally and fully within the frame, unless the prompt *explicitly* requests a specific framing like 'close-up', 'headshot', 'upper body shot', or an artistic crop. Prioritize showing the entire subject if it's a person.";
+    const industryLabel = industries.find(i => i.value === industry)?.label || industry;
+    const industryContext = industryLabel ? ` The brand operates in the ${industryLabel} industry.` : "";
+
 
     if (chosenProvider.toUpperCase() === 'FREEPIK') {
         console.log(`Freepik provider (imagen3) selected for a batch of ${numberOfImages} images.`);
         let textPromptForFreepik = "";
-        const industryContext = industry ? ` The brand operates in the ${industry} industry.` : "";
 
         if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
             console.log(`Using finalized text prompt for Freepik batch: "${finalizedTextPrompt.substring(0,100)}..."`);
             textPromptForFreepik = finalizedTextPrompt;
-            // Composition guidance is good if not already handled in finalized prompt
+            // Add composition guidance if not already handled in finalized prompt
              if (
                 !finalizedTextPrompt.toLowerCase().includes("human figure") &&
                 !finalizedTextPrompt.toLowerCase().includes("crop") &&
@@ -316,15 +318,15 @@ const generateImagesFlow = ai.defineFlow(
             let baseContentPrompt = "";
             if (exampleImageDescription) {
                 console.log(`Freepik prompt using example image description: "${exampleImageDescription.substring(0,100)}..."`);
-                baseContentPrompt = `An example image was provided, which is described as: "${exampleImageDescription}". Using that description as primary inspiration for the subject and main visual elements, create an image based on the concept: "${brandDescription}".`;
+                baseContentPrompt = `An example image was provided, which is described as: "${exampleImageDescription}". Using that description as primary inspiration for the subject and main visual elements, generate an image based on the concept: "${brandDescription}".`;
             } else {
-                baseContentPrompt = `Create an image based on the concept: "${brandDescription}".`;
+                baseContentPrompt = `Generate an image based on the concept: "${brandDescription}".`;
             }
-            // The imageStyle here is the combined (preset + custom notes).
-            // The preset part is also used structurally by _initiateFreepikImageTask to try and set styling.style enum.
-            // The full string here provides additional textual detail for content and nuanced style.
-            textPromptForFreepik = `${baseContentPrompt}${industryContext}\nIncorporate these additional stylistic details, mood, and specific elements: "${imageStyle}".`;
+            textPromptForFreepik = `${baseContentPrompt}${industryContext}\nIncorporate these additional stylistic details and elements: "${imageStyle}".`;
             
+            if (negativePrompt) { // Freepik/Imagen3 handles negative_prompt structurally, but including it textually can be a fallback or for other models
+              textPromptForFreepik += `\n\nAvoid: ${negativePrompt}.`;
+            }
             textPromptForFreepik +=`\n\n${compositionGuidance}`;
         }
         actualPromptUsedForFirstImage = textPromptForFreepik; 
@@ -362,13 +364,12 @@ const generateImagesFlow = ai.defineFlow(
     } else { 
         for (let i = 0; i < numberOfImages; i++) {
             let textPromptContent = "";
-            const industryContext = industry ? ` The brand operates in the ${industry} industry.` : "";
             
             if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
                 console.log(`Using finalized text prompt for image ${i+1}: "${finalizedTextPrompt.substring(0,100)}..." (Provider: ${chosenProvider})`);
                 textPromptContent = finalizedTextPrompt;
                 
-                if (chosenProvider !== 'FREEPIK') { // Textual appends for Gemini & others
+                if (chosenProvider !== 'FREEPIK') { 
                     if (aspectRatio && !finalizedTextPrompt.toLowerCase().includes("aspect ratio")) {
                       textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally, and the image content itself must fully occupy this ${aspectRatio} frame, without any artificial letterboxing or pillarboxing.`;
                     }
@@ -386,6 +387,9 @@ const generateImagesFlow = ai.defineFlow(
                     ) {
                         textPromptContent += `\n\n${compositionGuidance}`;
                     }
+                }
+                 if (numberOfImages > 1 && chosenProvider !== 'FREEPIK' && (!finalizedTextPrompt || (!finalizedTextPrompt.toLowerCase().includes("batch generation") && !finalizedTextPrompt.toLowerCase().includes(`image ${i+1}`)))) {
+                    textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
                 }
             } else { 
                 console.log(`Constructing prompt for image ${i+1}/${numberOfImages}. (Provider: ${chosenProvider})`);
@@ -420,7 +424,6 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
                 }
                 textPromptContent = `Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.\n\n${coreInstructions}`;
                 
-                // Textual appends for Gemini/other non-Freepik providers
                 if (chosenProvider !== 'FREEPIK') { 
                   if (negativePrompt) {
                       textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
@@ -433,12 +436,11 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
                   }
                    textPromptContent +=`\n\n${compositionGuidance}`; 
                 }
+                if (numberOfImages > 1 && chosenProvider !== 'FREEPIK') {
+                    textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
+                }
             }
             
-            if (numberOfImages > 1 && chosenProvider !== 'FREEPIK' && (!finalizedTextPrompt || (!finalizedTextPrompt.toLowerCase().includes("batch generation") && !finalizedTextPrompt.toLowerCase().includes(`image ${i+1}`))) ) {
-                textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
-            }
-
             if (i === 0) { 
                 actualPromptUsedForFirstImage = textPromptContent;
             }
@@ -500,35 +502,33 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
   }
 );
 
-/*
-Action.define(generateImagesFlow, { 
-    name: 'testGenerateImages',
-    input: {
-        schema: GenerateImagesInputSchema,
-        examples: [
-            {
-                provider: 'GEMINI',
-                brandDescription: 'A futuristic eco-friendly tech company.',
-                imageStyle: 'cyberpunk, neon lights, detailed illustration',
-                numberOfImages: 1,
-                aspectRatio: '16:9',
-                negativePrompt: 'blurry, low quality'
-            },
-            {
-                provider: 'FREEPIK',
-                brandDescription: 'A luxury Italian coffee brand.',
-                imageStyle: 'photo', 
-                numberOfImages: 2,
-                aspectRatio: 'square_1_1', 
-                freepikEffectColor: 'sepia',
-                freepikEffectFraming: 'close-up'
-            }
-        ],
-    },
-    output: {
-        schema: GenerateImagesOutputSchema,
-    },
-});
-*/
-
+// Action.define(generateImagesFlow, { 
+//     name: 'testGenerateImages',
+//     input: {
+//         schema: GenerateImagesInputSchema,
+//         examples: [
+//             {
+//                 provider: 'GEMINI',
+//                 brandDescription: 'A futuristic eco-friendly tech company.',
+//                 imageStyle: 'cyberpunk, neon lights, detailed illustration',
+//                 numberOfImages: 1,
+//                 aspectRatio: '16:9',
+//                 negativePrompt: 'blurry, low quality'
+//             },
+//             {
+//                 provider: 'FREEPIK',
+//                 brandDescription: 'A luxury Italian coffee brand.',
+//                 imageStyle: 'photo', 
+//                 numberOfImages: 2,
+//                 aspectRatio: 'square_1_1', 
+//                 freepikEffectColor: 'sepia',
+//                 freepikEffectFraming: 'close-up'
+//             }
+//         ],
+//     },
+//     output: {
+//         schema: GenerateImagesOutputSchema,
+//     },
+// });
     
+

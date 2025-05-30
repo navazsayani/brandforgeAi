@@ -46,14 +46,13 @@ export async function handleGenerateImagesAction(
             .map(color => color.trim())
             .filter(color => /^#[0-9a-fA-F]{6}$/.test(color)) 
             .slice(0, 5) 
-            .map(color => ({ color, weight: 0.5 })); // Default weight, can be made configurable
+            .map(color => ({ color, weight: 0.5 })); 
         if (freepikStylingColors.length === 0) freepikStylingColors = undefined; 
     }
     
     const exampleImageUrl = formData.get("exampleImage") as string | undefined;
     const chosenProvider = (formData.get("provider") as GenerateImagesInput['provider']) || process.env.IMAGE_GENERATION_PROVIDER || 'GEMINI';
     let aiGeneratedDesc: string | undefined = undefined;
-
     const placeholderToReplace = "[An AI-generated description of your example image will be used here by the backend to guide content when Freepik/Imagen3 is selected.]";
 
     if (chosenProvider.toUpperCase() === 'FREEPIK' && exampleImageUrl && exampleImageUrl.trim() !== "") {
@@ -84,7 +83,7 @@ export async function handleGenerateImagesAction(
       numberOfImages: numberOfImages,
       negativePrompt: negativePromptValue === null || negativePromptValue === "" ? undefined : negativePromptValue,
       seed: seed,
-      finalizedTextPrompt: finalizedTextPromptValue === null ? undefined : finalizedTextPromptValue,
+      finalizedTextPrompt: finalizedTextPromptValue === null || finalizedTextPromptValue === "" ? undefined : finalizedTextPromptValue,
       freepikStylingColors: freepikStylingColors,
       freepikEffectColor: (formData.get("freepikEffectColor") as string === "none" ? undefined : formData.get("freepikEffectColor") as string | undefined) || undefined,
       freepikEffectLightning: (formData.get("freepikEffectLightning") as string === "none" ? undefined : formData.get("freepikEffectLightning") as string | undefined) || undefined,
@@ -472,3 +471,4 @@ export async function handleGenerateBrandLogoAction(
     
 
     
+
