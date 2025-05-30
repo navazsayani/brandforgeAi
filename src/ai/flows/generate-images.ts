@@ -37,25 +37,25 @@ const GenerateImagesInputSchema = z.object({
   numberOfImages: z.number().int().min(1).max(4).optional().default(1)
     .describe("The number of images to generate in this batch (1-4)."),
   negativePrompt: z.string().optional().describe("Elements to avoid in the generated image."),
-  seed: z.number().int().optional().describe("An optional seed for image generation to promote reproducibility. Freepik range: 1 <= x <= 4294967295"),
+  seed: z.number().int().optional().describe("An optional seed for image generation to promote reproducibility. For Freepik/Imagen3, this is not currently passed."),
   finalizedTextPrompt: z.string().optional().describe("A complete, user-edited text prompt that should be used directly for image generation, potentially overriding constructed prompts."),
   
-  // Freepik flux-dev specific styling options
+  // Freepik specific styling options
   freepikStylingColors: z.array(z.object({
       color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a valid hex color code e.g. #FF0000"),
-      weight: z.number().min(0).max(1).default(0.5) // Default weight as per example
+      weight: z.number().min(0.05).max(1).default(0.5) // Updated default weight as per Imagen3
   })).min(1).max(5).optional().describe("Up to 5 dominant hex colors for Freepik image generation, with optional weights."),
-  freepikEffectColor: z.string().optional().describe("Freepik flux-dev specific color effect enum."),
-  freepikEffectLightning: z.string().optional().describe("Freepik flux-dev specific lightning effect enum."),
-  freepikEffectFraming: z.string().optional().describe("Freepik flux-dev specific framing effect enum."),
+  freepikEffectColor: z.string().optional().describe("Freepik specific color effect enum (e.g., for Imagen3: 'b&w', 'pastel')."),
+  freepikEffectLightning: z.string().optional().describe("Freepik specific lightning effect enum (e.g., for Imagen3: 'studio', 'warm')."),
+  freepikEffectFraming: z.string().optional().describe("Freepik specific framing effect enum (e.g., for Imagen3: 'portrait', 'macro')."),
 });
 export type GenerateImagesInput = z.infer<typeof GenerateImagesInputSchema>;
 
 const GenerateImagesOutputSchema = z.object({
   generatedImages: z.array(z
-    .string() // Can be data URI (Gemini) or task_id string (Freepik step 1)
+    .string() // Can be data URI (Gemini), task_id string (Freepik initial step), or direct image URL (Freepik if generated quickly)
     .describe(
-      "A generated image as a data URI, or a task ID for asynchronous providers like Freepik flux-dev."
+      "A generated image as a data URI, a task ID for asynchronous providers, or a direct image URL if immediately available from providers like Freepik/Imagen3."
     )
   ),
   promptUsed: z.string().describe("The text prompt that was used to generate the first image in the batch."),
@@ -130,70 +130,74 @@ async function _generateImageWithImagen_stub(params: {
   throw new Error("Imagen provider (e.g., via Vertex AI) is not implemented yet. This would typically involve a different Genkit plugin or direct API calls.");
 }
 
-const freepikFluxValidAspectRatios: Record<string, string> = {
+// Aspect ratios for Freepik Imagen3
+const freepikImagen3AspectRatios: Record<string, string> = {
     "1:1": "square_1_1",
-    "4:3": "classic_4_3",
-    "3:4": "traditional_3_4",
-    "16:9": "widescreen_16_9",
     "9:16": "social_story_9_16",
-    "3:2": "standard_3_2",
-    "2:3": "portrait_2_3",
-    "2:1": "horizontal_2_1",
-    "1:2": "vertical_1_2",
-    "4:5": "social_post_4_5",
+    "16:9": "widescreen_16_9",
+    "3:4": "traditional_3_4",
+    "4:3": "classic_4_3",
     // Direct enum values also accepted
     "square_1_1": "square_1_1",
-    "classic_4_3": "classic_4_3",
-    "traditional_3_4": "traditional_3_4",
-    "widescreen_16_9": "widescreen_16_9",
     "social_story_9_16": "social_story_9_16",
-    "standard_3_2": "standard_3_2",
-    "portrait_2_3": "portrait_2_3",
-    "horizontal_2_1": "horizontal_2_1",
-    "vertical_1_2": "vertical_1_2",
-    "social_post_4_5": "social_post_4_5",
+    "widescreen_16_9": "widescreen_16_9",
+    "traditional_3_4": "traditional_3_4",
+    "classic_4_3": "classic_4_3",
+    // Mapping our other general ratios to the closest Freepik Imagen3 option
+    "4:5": "traditional_3_4", // Closest portrait option
 };
 
+const freepikValidStyles = ["photo", "digital-art", "3d", "painting", "low-poly", "pixel-art", "anime", "cyberpunk", "comic", "vintage", "cartoon", "vector", "studio-shot", "dark", "sketch", "mockup", "2000s-pone", "70s-vibe", "watercolor", "art-nouveau", "origami", "surreal", "fantasy", "traditional-japan"];
 
-// Updated for flux-dev POST call - returns task_id
-async function _initiateFreepikFluxImageGeneration(params: {
+
+async function _initiateFreepikImageTask(params: { // Renamed from _initiateFreepikFluxImageGeneration
   textPrompt: string; 
-  // imageStyle is used in textPrompt. Freepik's 'styling.style' is more restrictive.
-  // exampleImage is ignored for flux-dev in this step as per API.
+  imageStyle: string; // This is the combined preset + custom notes
+  exampleImage?: string; // Will be ignored by Freepik text-to-image
   negativePrompt?: string;
-  seed?: number;
-  aspectRatio?: string; // e.g., "1:1", or direct Freepik enum "square_1_1"
+  // seed?: number; // Imagen3 cURL does not show seed, omitting for now
+  aspectRatio?: string; // e.g., "1:1", or direct Freepik enum
   freepikStylingColors?: { color: string; weight: number }[];
   freepikEffectColor?: string;
   freepikEffectLightning?: string;
   freepikEffectFraming?: string;
-}): Promise<{ taskId: string; status: string }> { // Returns task info
+  numberOfImages: number; // For 'num_images' parameter in Imagen3
+}): Promise<{ taskId: string; status: string; generatedUrls: string[] }> {
   const freepikApiKey = process.env.FREEPIK_API_KEY;
   if (!freepikApiKey) {
     throw new Error("FREEPIK_API_KEY is not set in environment variables.");
   }
 
   if (params.textPrompt.length === 0) {
-    throw new Error("Prompt cannot be empty for Freepik flux-dev model.");
+    throw new Error("Prompt cannot be empty for Freepik Imagen3 model.");
   }
   
-  let finalFreepikAspectRatio = freepikFluxValidAspectRatios[params.aspectRatio || "1:1"] || "square_1_1";
-
+  let finalFreepikAspectRatio = freepikImagen3AspectRatios[params.aspectRatio || "square_1_1"] || "square_1_1";
 
   const requestBody: any = {
     prompt: params.textPrompt,
-    // webhook_url: "YOUR_OPTIONAL_WEBHOOK_URL", // Omitted for now
+    num_images: 1, // We handle batching by making multiple calls to this function
     aspect_ratio: finalFreepikAspectRatio,
+    person_generation: "allow_all", // Default, can be parameterized later
+    safety_settings: "block_none",   // Default, can be parameterized later
   };
   
-  if (params.seed !== undefined) {
-    // Ensure seed is within Freepik's valid range
-    requestBody.seed = Math.max(1, Math.min(params.seed, 4294967295));
-  }
+  // if (params.seed !== undefined) { // Not sending seed for Imagen3 based on cURL
+  //   requestBody.seed = Math.max(1, Math.min(params.seed, 4294967295));
+  // }
 
   const styling: any = {};
-  const effects: any = {};
+  if (params.imageStyle) {
+      if (freepikValidStyles.includes(params.imageStyle.toLowerCase().trim())) {
+          styling.style = params.imageStyle.toLowerCase().trim();
+      } else {
+          console.warn(`Freepik/Imagen3: Provided imageStyle "${params.imageStyle}" is not a direct Freepik enum. Defaulting to 'photo' for structured style. Full style string still in text prompt.`);
+          styling.style = "photo"; // Default if not a direct match
+      }
+  }
 
+
+  const effects: any = {};
   if (params.freepikEffectColor && params.freepikEffectColor !== "none") effects.color = params.freepikEffectColor;
   if (params.freepikEffectLightning && params.freepikEffectLightning !== "none") effects.lightning = params.freepikEffectLightning;
   if (params.freepikEffectFraming && params.freepikEffectFraming !== "none") effects.framing = params.freepikEffectFraming;
@@ -205,7 +209,7 @@ async function _initiateFreepikFluxImageGeneration(params: {
   if (params.freepikStylingColors && params.freepikStylingColors.length > 0) {
     styling.colors = params.freepikStylingColors.map(c => ({
         color: c.color,
-        weight: c.weight || 0.5 // Use provided weight or default
+        weight: c.weight // Already validated to be 0.05-1
     }));
   }
   
@@ -213,13 +217,10 @@ async function _initiateFreepikFluxImageGeneration(params: {
       requestBody.styling = styling;
   }
   
-  // Note: 'styling.style' specific enum for Freepik is not used here with flux-dev's first call
-  // The main 'prompt' field carries all textual style descriptions.
-
-  console.log("Sending request to Freepik API (flux-dev) with body:", JSON.stringify(requestBody, null, 2));
+  console.log("Sending request to Freepik API (imagen3) with body:", JSON.stringify(requestBody, null, 2));
 
   try {
-    const response = await fetch("https://api.freepik.com/v1/ai/text-to-image/flux-dev", {
+    const response = await fetch("https://api.freepik.com/v1/ai/text-to-image/imagen3", { // Updated endpoint
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -229,20 +230,24 @@ async function _initiateFreepikFluxImageGeneration(params: {
     });
 
     const responseData = await response.json();
-    console.log("Response from Freepik API (flux-dev):", JSON.stringify(responseData, null, 2));
+    console.log("Response from Freepik API (imagen3):", JSON.stringify(responseData, null, 2));
 
     if (!response.ok) {
-      throw new Error(`Freepik API error (flux-dev): ${response.status} - ${responseData.title || responseData.detail || JSON.stringify(responseData)}`);
+      throw new Error(`Freepik API error (imagen3): ${response.status} - ${responseData.title || responseData.detail || JSON.stringify(responseData)}`);
     }
 
     if (responseData.data && responseData.data.task_id && responseData.data.status) {
-      return { taskId: responseData.data.task_id, status: responseData.data.status };
+      return { 
+        taskId: responseData.data.task_id, 
+        status: responseData.data.status,
+        generatedUrls: responseData.data.generated || [] // Expecting an array of URLs
+      };
     } else {
-      throw new Error("Freepik API (flux-dev) did not return task_id and status in expected format.");
+      throw new Error("Freepik API (imagen3) did not return task_id and status in expected format.");
     }
   } catch (error: any) {
-    console.error("Error calling Freepik API (flux-dev):", error);
-    throw new Error(`Freepik API request failed (flux-dev): ${error.message}`);
+    console.error("Error calling Freepik API (imagen3):", error);
+    throw new Error(`Freepik API request failed (imagen3): ${error.message}`);
   }
 }
 
@@ -258,7 +263,7 @@ const generateImagesFlow = ai.defineFlow(
   },
   async (input) => {
     const {
-      provider, // Provider chosen from UI
+      provider,
       brandDescription,
       industry,
       imageStyle, // Combined preset + custom notes
@@ -275,7 +280,7 @@ const generateImagesFlow = ai.defineFlow(
       freepikEffectFraming,
     } = input;
 
-    const generatedImageResults: string[] = []; // Will store URLs or task_ids
+    const generatedImageResults: string[] = []; 
     const chosenProvider = provider || process.env.IMAGE_GENERATION_PROVIDER || 'GEMINI';
     let actualPromptUsedForFirstImage = "";
     const compositionGuidance = "IMPORTANT COMPOSITION RULE: When depicting human figures as the primary subject, the image *must* be well-composed. Avoid awkward or unintentional cropping of faces or key body parts. Ensure the figure is presented naturally and fully within the frame, unless the prompt *explicitly* requests a specific framing like 'close-up', 'headshot', 'upper body shot', or an artistic crop. Prioritize showing the entire subject if it's a person.";
@@ -290,7 +295,6 @@ const generateImagesFlow = ai.defineFlow(
             textPromptContent = finalizedTextPrompt;
             
             if (chosenProvider === 'GEMINI') {
-                // Append structural params if not likely in finalized prompt (heuristic)
                 if (aspectRatio && !finalizedTextPrompt.toLowerCase().includes("aspect ratio")) {
                   textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
                 }
@@ -318,7 +322,7 @@ const generateImagesFlow = ai.defineFlow(
             const baseTextPrompt = `Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.\n\n`;
             let coreInstructions = "";
 
-            if (exampleImage) {
+            if (exampleImage && chosenProvider !== 'FREEPIK') { // Freepik text-to-image (Imagen3 or flux-dev) doesn't take reference image this way
                 coreInstructions = `The provided example image (sent first for Gemini) serves ONE primary purpose: to identify the *category* of the item depicted (e.g., 'a handbag', 'a t-shirt', 'a piece of furniture', 'a pair of shoes').
 
 Your task is to generate a *completely new item* belonging to this *same category*.
@@ -341,17 +345,20 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
 **Important Note on Color and Style**: Strive for visual variety that aligns with the brand description and artistic style. Avoid defaulting to a narrow or stereotypical color palette unless the inputs strongly and explicitly demand it.
 `;
             }
-            textPromptContent = `${baseTextPrompt}${coreInstructions}\n${compositionGuidance}`;
-
-            if (negativePrompt) {
-                textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
+            textPromptContent = `${baseTextPrompt}${coreInstructions}`;
+            if (chosenProvider !== 'FREEPIK') { // Freepik Imagen3 does not take negativePrompt in the main prompt
+              if (negativePrompt) {
+                  textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
+              }
             }
-            if (chosenProvider !== 'FREEPIK') { // Freepik flux-dev takes aspectRatio structurally
+            textPromptContent +=`\n\n${compositionGuidance}`; // Add composition guidance
+
+            if (chosenProvider !== 'FREEPIK') { // Freepik takes aspectRatio structurally
                 if (aspectRatio) {
                   textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
                 }
             }
-            if (chosenProvider !== 'FREEPIK') { // Freepik flux-dev takes seed structurally
+            if (chosenProvider !== 'FREEPIK') { // Freepik/Imagen3 does not take seed in prompt, and seed param is omitted for imagen3
                 if (seed !== undefined) {
                   textPromptContent += `\n\nUse seed: ${seed}.`;
                 }
@@ -369,7 +376,7 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
         console.log(`Text component of prompt for image ${i+1}/${numberOfImages} (Provider: ${chosenProvider}): "${textPromptContent.substring(0,200)}..."`);
 
         try {
-            let resultValue = ""; // Will be image URL or task_id
+            let resultValue = ""; 
             
             switch (chosenProvider.toUpperCase()) {
                 case 'GEMINI':
@@ -391,21 +398,28 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
                     break;
                 case 'FREEPIK':
                     if (exampleImage) {
-                        console.warn("Freepik flux-dev model selected, but exampleImage was provided. The flux-dev API for text-to-image does not currently support reference images. The exampleImage will be ignored for this Freepik request.");
+                        console.warn("Freepik/Imagen3 model selected, but exampleImage was provided. The Imagen3 API for text-to-image does not currently support reference images via this parameter. The exampleImage will be ignored for this Freepik request.");
                     }
-                    const freepikTask = await _initiateFreepikFluxImageGeneration({
+                    const freepikTask = await _initiateFreepikImageTask({ // Updated call
                         textPrompt: textPromptContent,
-                        negativePrompt: negativePrompt,
-                        seed: seed,
+                        imageStyle: imageStyle, // Pass the full style string
+                        negativePrompt: negativePrompt, // Pass for Freepik body
+                        // seed: seed, // Imagen3 does not use seed parameter in cURL
                         aspectRatio: aspectRatio,
                         freepikStylingColors: freepikStylingColors,
                         freepikEffectColor: freepikEffectColor,
                         freepikEffectLightning: freepikEffectLightning,
                         freepikEffectFraming: freepikEffectFraming,
+                        numberOfImages: 1, // API call for 1 image, loop handles batch
                     });
-                    // For now, store task_id prefixed so client can identify it
-                    resultValue = `task_id:${freepikTask.taskId}`; 
-                    console.log(`Freepik flux-dev task initiated: ${freepikTask.taskId}, Status: ${freepikTask.status}`);
+                    
+                    if (freepikTask.generatedUrls && freepikTask.generatedUrls.length > 0 && freepikTask.generatedUrls[0]) {
+                        resultValue = `image_url:${freepikTask.generatedUrls[0]}`; // Prefix to distinguish from data URI or task ID
+                         console.log(`Freepik/Imagen3 task ${freepikTask.taskId} returned image URL directly: ${freepikTask.generatedUrls[0]}`);
+                    } else {
+                        resultValue = `task_id:${freepikTask.taskId}`; 
+                        console.log(`Freepik/Imagen3 task initiated: ${freepikTask.taskId}, Status: ${freepikTask.status}. Polling needed.`);
+                    }
                     break;
                 default:
                     throw new Error(`Unsupported image generation provider: ${chosenProvider}`);
@@ -413,24 +427,20 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
             generatedImageResults.push(resultValue);
         } catch (error: any) {
              console.error(`Error during generation of image ${i+1}/${numberOfImages} with provider ${chosenProvider}. Full error:`, JSON.stringify(error, Object.getOwnPropertyNames(error)));
-             const failingPromptSnippet = textPromptContent.substring(0, 200) + (textPromptContent.length > 200 ? "..." : "");
              // Don't throw here, allow other images in batch to attempt generation
              generatedImageResults.push(`error:Failed to process image ${i+1}. ${error.message || 'Unknown error'}`);
         }
     }
 
-    // Filter out errors from results if needed or handle them appropriately
     const finalGeneratedImages = generatedImageResults.filter(res => !res.startsWith('error:'));
     const errorsEncountered = generatedImageResults.filter(res => res.startsWith('error:')).map(err => err.substring(6));
 
     if (finalGeneratedImages.length === 0 && numberOfImages > 0 && errorsEncountered.length === numberOfImages) {
-        throw new Error(`AI failed to generate any images for the batch. Errors: ${errorsEncountered.join('; ')}`);
+        throw new Error(`AI failed to generate any images/tasks for the batch. Errors: ${errorsEncountered.join('; ')}`);
     }
     if (errorsEncountered.length > 0) {
-      console.warn(`Some images in the batch failed: ${errorsEncountered.join('; ')}`);
-      // You might want to include these errors in the response or handle them
+      console.warn(`Some images/tasks in the batch failed: ${errorsEncountered.join('; ')}`);
     }
-
 
     return {generatedImages: finalGeneratedImages, promptUsed: actualPromptUsedForFirstImage, providerUsed: chosenProvider };
   }
