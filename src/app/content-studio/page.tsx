@@ -18,12 +18,13 @@ import { useToast } from '@/hooks/use-toast';
 import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon } from 'lucide-react';
 import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
-import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
+import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage } from '@/types';
 import type { DescribeImageOutput } from "@/ai/flows/describe-image-flow";
 import type { GenerateBlogOutlineOutput } from "@/ai/flows/generate-blog-outline-flow";
 import type { GenerateImagesInput } from '@/ai/flows/generate-images';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; 
+import { FormDescription } from '@/components/ui/form';
 
 const initialImageFormState: FormState<{ generatedImages: string[]; promptUsed: string; }> = { error: undefined, data: undefined, message: undefined };
 const initialSocialFormState: FormState<{ caption: string; hashtags: string; imageSrc: string | null }> = { error: undefined, data: undefined, message: undefined };
@@ -126,13 +127,21 @@ export default function ContentStudioPage() {
   const [formSnapshot, setFormSnapshot] = useState<Partial<GenerateImagesInput> | null>(null);
 
   const [selectedGeneratedImageIndices, setSelectedGeneratedImageIndices] = useState<number[]>([]);
+  
+  // Refs for blog form fields
+  const blogBrandNameRef = useRef<HTMLInputElement>(null);
+  const blogBrandDescriptionRef = useRef<HTMLTextAreaElement>(null);
+  const blogIndustryRef = useRef<HTMLInputElement>(null);
+  const blogKeywordsRef = useRef<HTMLInputElement>(null);
+  const blogWebsiteUrlRef = useRef<HTMLInputElement>(null);
+
 
   useEffect(() => {
     if (brandData) {
         setImageGenBrandDescription(brandData.brandDescription || "");
         setImageGenIndustry(brandData.industry || "");
-        const isValidFreepikStyle = freepikSpecificStyles.some(s => s.value === brandData.imageStyle);
-        setSelectedImageStylePreset(brandData.imageStyle && isValidFreepikStyle ? brandData.imageStyle : freepikSpecificStyles[0].value);
+        const initialStyle = brandData.imageStyle && freepikSpecificStyles.some(s => s.value === brandData.imageStyle) ? brandData.imageStyle : freepikSpecificStyles[0].value;
+        setSelectedImageStylePreset(initialStyle);
         setCustomStyleNotesInput(brandData.imageStyleNotes || "");
 
         if (brandData.exampleImages && brandData.exampleImages.length > 0) {
@@ -142,6 +151,8 @@ export default function ContentStudioPage() {
             setSelectedProfileImageIndexForGen(null);
             setSelectedProfileImageIndexForSocial(null);
         }
+    } else {
+         setSelectedImageStylePreset(freepikSpecificStyles[0].value);
     }
   }, [brandData]);
 
@@ -284,6 +295,7 @@ export default function ContentStudioPage() {
     if (lastSuccessfulGeneratedImageUrls.length > 0) {
       setUseImageForSocialPost(true);
       setSocialImageChoice('generated'); 
+      setSelectedProfileImageIndexForSocial(null); // Ensure profile image choice is reset
       setActiveTab('social'); 
       toast({title: "Image Selected", description: "First generated image selected for social post."});
     } else {
@@ -310,7 +322,8 @@ export default function ContentStudioPage() {
     const formData = new FormData();
     if (currentSocialImagePreviewUrl.startsWith('http')) {
        if (!currentSocialImagePreviewUrl.startsWith('data:')) {
-            toast({ title: "AI Describe Info", description: "AI description for profile images (non-data URI) uses the image URL directly. Generation for newly generated images uses data URI.", variant: "informative" });
+            // This toast is a bit noisy, can be removed if not strictly needed
+            // toast({ title: "AI Describe Info", description: "AI description for profile images (non-data URI) uses the image URL directly. Generation for newly generated images uses data URI.", variant: "informative" });
        }
     }
     formData.append("imageDataUri", currentSocialImagePreviewUrl); 
@@ -375,9 +388,7 @@ ${compositionGuidance}
     if (negPrompt) {
       textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negPrompt}.`;
     }
-    // Aspect ratio and seed are appended by the backend if not using finalizedTextPrompt,
-    // or if using finalizedTextPrompt and the backend decides to append them.
-    // For preview, we can show them.
+    
     if (aspect) {
       textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspect} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
     }
@@ -393,15 +404,17 @@ ${compositionGuidance}
     setFormSnapshot({
         brandDescription: brandDesc,
         industry: industryValue,
-        imageStyle: stylePreset, // This is the preset
-        // For the backend, imageStyle will be preset, and customStyleNotes will be handled by being part of finalizedTextPrompt
+        imageStyle: stylePreset, 
+        // The combined style (preset + custom notes) is already part of textPromptContent construction here.
+        // For the backend, we send the individual preset and custom notes, or finalized text.
+        // Let's ensure formSnapshot has the combined style if used for submission.
         exampleImage: exampleImg === "" ? undefined : exampleImg,
         aspectRatio: aspect,
         numberOfImages: numImages,
         negativePrompt: negPrompt === "" ? undefined : negPrompt,
         seed: seedValue,
         // Freepik specific fields from state
-        freepikDominantColorsInput,
+        freepikStylingColors: freepikDominantColorsInput ? [{color: freepikDominantColorsInput, weight:1}] : undefined, // Simplified for snapshot, actual parsing in action
         freepikEffectColor: freepikEffectColor || undefined,
         freepikEffectLightning: freepikEffectLightning || undefined,
         freepikEffectFraming: freepikEffectFraming || undefined,
@@ -410,31 +423,28 @@ ${compositionGuidance}
   };
 
  const handleImageGenerationSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+    event.preventDefault(); // Prevent default form submission
+    
     const formData = new FormData();
 
-    if (!currentTextPromptForEditing && !formSnapshot?.brandDescription) { 
+    if (!currentTextPromptForEditing && !formSnapshot?.brandDescription && !imageGenBrandDescription) { 
         toast({ title: "Error", description: "Prompt text or brand description is missing. Please fill fields or preview and edit prompt.", variant: "destructive"});
         return;
     }
     
-    // Always send the finalizedTextPrompt if it's being edited
     formData.append("finalizedTextPrompt", currentTextPromptForEditing || "");
     
-    // Essential parameters from formSnapshot or current state
+    // Append values from formSnapshot if available, otherwise from current state/brandData
     formData.append("brandDescription", formSnapshot?.brandDescription || imageGenBrandDescription || brandData?.brandDescription || "");
     formData.append("industry", formSnapshot?.industry || imageGenIndustry || brandData?.industry || "");
-    formData.append("imageStyle", formSnapshot?.imageStyle || selectedImageStylePreset); // This should be the selected preset
     
-    // If customStyleNotesInput has a value, it's typically baked into finalizedTextPrompt by handlePreviewPromptClick.
-    // However, if the user *doesn't* click preview and goes straight to a direct submit (if we had that option),
-    // or if the backend flow has a path that combines imageStyle + customNotes, it's good to send it.
-    // For Freepik, imageStyle is the enum, custom notes are part of the main text prompt.
-    // The backend `generate-images.ts` handles this by using `finalizedTextPrompt` if present,
-    // otherwise constructing from `imageStyle` (preset) and potentially `customStyleNotes` (though our client preview bakes it in).
-    // Let's keep it simple: `imageStyle` from snapshot (which is the preset) is enough if `finalizedTextPrompt` is sent.
-
+    // For 'imageStyle', send the preset. Custom notes are part of 'finalizedTextPrompt' if edited,
+    // or handled by backend logic if not.
+    formData.append("imageStyle", formSnapshot?.imageStyle || selectedImageStylePreset);
+    
     if (formSnapshot?.exampleImage) formData.append("exampleImage", formSnapshot.exampleImage);
+    else if (currentExampleImageForGen) formData.append("exampleImage", currentExampleImageForGen);
+
     formData.append("aspectRatio", formSnapshot?.aspectRatio || selectedAspectRatio);
     formData.append("numberOfImages", String(formSnapshot?.numberOfImages || parseInt(numberOfImagesToGenerate,10)));
     
@@ -444,23 +454,45 @@ ${compositionGuidance}
     const seedValueNum = formSnapshot?.seed !== undefined ? formSnapshot.seed : (imageGenSeed && !isNaN(parseInt(imageGenSeed)) ? parseInt(imageGenSeed) : undefined);
     if (seedValueNum !== undefined) formData.append("seed", String(seedValueNum));
 
-    // Add Freepik specific fields
-    if (formSnapshot?.freepikDominantColorsInput) formData.append("freepikDominantColorsInput", formSnapshot.freepikDominantColorsInput);
-    if (formSnapshot?.freepikEffectColor) formData.append("freepikEffectColor", formSnapshot.freepikEffectColor);
-    if (formSnapshot?.freepikEffectLightning) formData.append("freepikEffectLightning", formSnapshot.freepikEffectLightning);
-    if (formSnapshot?.freepikEffectFraming) formData.append("freepikEffectFraming", formSnapshot.freepikEffectFraming);
+    // Add Freepik specific fields from snapshot or current state
+    formData.append("freepikDominantColorsInput", formSnapshot?.freepikDominantColorsInput?.map(c => c.color).join(',') || freepikDominantColorsInput);
+    formData.append("freepikEffectColor", formSnapshot?.freepikEffectColor || freepikEffectColor || "none");
+    formData.append("freepikEffectLightning", formSnapshot?.freepikEffectLightning || freepikEffectLightning || "none");
+    formData.append("freepikEffectFraming", formSnapshot?.freepikEffectFraming || freepikEffectFraming || "none");
+    formData.append("customStyleNotes", customStyleNotesInput); // Send custom notes separately
+
 
     startTransition(() => {
       imageAction(formData);
     });
   };
 
+  const handleGenerateBlogOutline = () => {
+    const formData = new FormData();
+    formData.append('brandName', blogBrandNameRef.current?.value || brandData?.brandName || "");
+    formData.append('blogBrandDescription', blogBrandDescriptionRef.current?.value || brandData?.brandDescription || "");
+    formData.append('industry', blogIndustryRef.current?.value || brandData?.industry || "");
+    formData.append('blogKeywords', blogKeywordsRef.current?.value || brandData?.targetKeywords || "");
+    formData.append('blogWebsiteUrl', blogWebsiteUrlRef.current?.value || brandData?.websiteUrl || "");
+    
+    if (!formData.get('brandName') && !formData.get('blogBrandDescription') && !formData.get('blogKeywords')) {
+        toast({title: "Missing Info", description: "Please provide Brand Name, Description, and Keywords for outline generation.", variant: "destructive"});
+        return;
+    }
+
+    setIsGeneratingOutline(true);
+    startTransition(() => {
+        blogOutlineAction(formData);
+    });
+  };
+
+
   return (
     <AppShell>
       <div className="max-w-4xl mx-auto">
         <CardHeader className="px-0 mb-6">
           <div className="flex items-center space-x-3">
-              <Paintbrush className="w-10 h-10 text-primary" /> {/* Changed Icon */}
+              <Paintbrush className="w-10 h-10 text-primary" />
               <div>
                 <CardTitle className="text-3xl font-bold">Content Studio</CardTitle>
                 <p className="text-lg text-muted-foreground">
@@ -496,7 +528,6 @@ ${compositionGuidance}
                         onChange={(e) => setImageGenBrandDescription(e.target.value)}
                         placeholder="Detailed description of the brand and its values."
                         rows={3}
-                        required
                       />
                        <p className="text-xs text-muted-foreground">Using: {brandData?.brandDescription ? `"${brandData.brandDescription.substring(0,50)}..." (from Profile)` : "Enter description"}</p>
                     </div>
@@ -579,7 +610,7 @@ ${compositionGuidance}
                                 )}
                                 {currentExampleImageForGen && (
                                     <p className="text-xs text-muted-foreground">
-                                        Using image {selectedProfileImageIndexForGen !== null && brandData.exampleImages.length > 1 ? selectedProfileImageIndexForGen + 1 : '1'} as reference.
+                                        Using image {selectedProfileImageIndexForGen !== null && brandData.exampleImages && brandData.exampleImages.length > 1 ? selectedProfileImageIndexForGen + 1 : '1'} as reference.
                                     </p>
                                 )}
                             </div>
@@ -733,15 +764,23 @@ ${compositionGuidance}
                         </div>
                          {lastSuccessfulGeneratedImageUrls.length > 0 && (
                             <div className="mt-2 flex items-center gap-2">
-                                <SubmitButton 
-                                    onClick={handleSaveSelectedGeneratedImages} 
-                                    disabled={selectedGeneratedImageIndices.length === 0 }
-                                    size="sm"
-                                    formAction={saveImagesAction} // This should be part of a form if it's a submit button
-                                >
-                                    <Save className="mr-2 h-4 w-4" />
-                                    Save Selected to Library ({selectedGeneratedImageIndices.length})
-                                </SubmitButton>
+                                <form> {/* Form wrapper for save button if it uses formAction */}
+                                    <input type="hidden" name="imagesToSaveJson" value={JSON.stringify(selectedGeneratedImageIndices.map(index => ({
+                                        dataUri: lastSuccessfulGeneratedImageUrls[index],
+                                        prompt: lastUsedImageGenPrompt || "N/A", 
+                                        style: (formSnapshot?.imageStyle || selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")),
+                                    })))} />
+                                    <input type="hidden" name="brandProfileDocId" value="defaultBrandProfile" />
+                                    <SubmitButton 
+                                        onClick={handleSaveSelectedGeneratedImages} 
+                                        formAction={saveImagesAction}
+                                        disabled={selectedGeneratedImageIndices.length === 0 }
+                                        size="sm"
+                                    >
+                                        <Save className="mr-2 h-4 w-4" />
+                                        Save Selected to Library ({selectedGeneratedImageIndices.length})
+                                    </SubmitButton>
+                                </form>
                             </div>
                         )}
                     </CardHeader>
@@ -1000,6 +1039,7 @@ ${compositionGuidance}
                     <Input
                       id="blogBrandName"
                       name="brandName" 
+                      ref={blogBrandNameRef}
                       defaultValue={brandData?.brandName || ""}
                       placeholder="Your brand's name"
                     />
@@ -1009,6 +1049,7 @@ ${compositionGuidance}
                     <Textarea
                       id="blogBrandDescription"
                       name="blogBrandDescription" 
+                      ref={blogBrandDescriptionRef}
                       defaultValue={brandData?.brandDescription || ""}
                       placeholder="Detailed brand description"
                       rows={3}
@@ -1019,6 +1060,7 @@ ${compositionGuidance}
                         <Input
                             id="blogIndustry"
                             name="industry" 
+                            ref={blogIndustryRef}
                             defaultValue={brandData?.industry || ""}
                             placeholder="e.g., Fashion, Technology"
                         />
@@ -1028,6 +1070,7 @@ ${compositionGuidance}
                     <Input
                       id="blogKeywords"
                       name="blogKeywords" 
+                      ref={blogKeywordsRef}
                       defaultValue={brandData?.targetKeywords || ""}
                       placeholder="Comma-separated keywords (e.g., AI, marketing, branding)"
                     />
@@ -1037,6 +1080,7 @@ ${compositionGuidance}
                       <Input
                         id="blogWebsiteUrl"
                         name="blogWebsiteUrl" 
+                        ref={blogWebsiteUrlRef}
                         defaultValue={brandData?.websiteUrl || ""}
                         placeholder="https://www.example.com"
                       />
