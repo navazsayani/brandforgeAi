@@ -1,12 +1,28 @@
 
+"use client"; // Make this a client component to use useBrand hook
+
+import React, { useEffect, useState } from 'react'; // Import React and hooks
 import { AppShell } from '@/components/AppShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowRight, BarChart2, Edit3, Send, TrendingUp } from 'lucide-react';
-import Image from 'next/image';
+import { ArrowRight, BarChart2, Edit3, Send, TrendingUp, Sparkles } from 'lucide-react';
+import NextImage from 'next/image'; // Use NextImage to avoid conflicts
+import { useBrand } from '@/contexts/BrandContext'; // Import useBrand
+import { Skeleton } from '@/components/ui/skeleton'; // For loading state
 
 export default function DashboardPage() {
+  const { brandData, isLoading: isBrandLoading } = useBrand();
+  const [logoUrl, setLogoUrl] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (brandData?.brandLogoUrl) {
+      setLogoUrl(brandData.brandLogoUrl);
+    } else {
+      setLogoUrl(undefined);
+    }
+  }, [brandData]);
+
   return (
     <AppShell>
       <div className="space-y-8">
@@ -29,14 +45,43 @@ export default function DashboardPage() {
               then explore our content creation and campaign management tools.
             </p>
             <div className="grid gap-6 md:grid-cols-2">
-              <Image 
-                src="https://placehold.co/600x400.png" 
-                alt="AI working on brand strategy" 
-                width={600} 
-                height={400} 
-                className="object-cover w-full rounded-lg shadow-md"
-                data-ai-hint="AI branding"
-              />
+              <div className="relative w-full aspect-[600/400] rounded-lg shadow-md overflow-hidden bg-muted flex items-center justify-center">
+                {isBrandLoading ? (
+                  <Skeleton className="w-full h-full" />
+                ) : logoUrl ? (
+                  <NextImage 
+                    src={logoUrl} 
+                    alt={brandData?.brandName ? `${brandData.brandName} Logo` : "Brand Logo"} 
+                    fill 
+                    style={{objectFit: "contain"}} // Use contain to ensure logo is fully visible
+                    priority // Prioritize loading the logo if it exists
+                    data-ai-hint="brand logo main"
+                  />
+                ) : (
+                  <div className="text-center p-4">
+                    <NextImage 
+                        src="https://placehold.co/600x400.png" 
+                        alt="Placeholder for brand logo" 
+                        width={600} 
+                        height={400} 
+                        className="object-cover w-full h-full absolute inset-0 opacity-30"
+                        data-ai-hint="generic placeholder"
+                    />
+                    <div className="relative z-10 flex flex-col items-center justify-center h-full">
+                        <Sparkles className="w-16 h-16 text-primary mb-4" />
+                        <p className="text-lg font-semibold text-foreground">Your Brand Logo Here</p>
+                        <p className="text-sm text-muted-foreground mb-3">
+                         Generate your brand logo in the Brand Profile page.
+                        </p>
+                        <Link href="/brand-profile" passHref>
+                            <Button variant="default" size="sm">
+                                Go to Brand Profile <ArrowRight className="w-4 h-4 ml-2" />
+                            </Button>
+                        </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
               <div className="flex flex-col justify-center space-y-4">
                 <FeatureHighlight
                   icon={<Edit3 className="w-6 h-6 text-accent" />}

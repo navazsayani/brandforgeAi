@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useActionState, startTransition } from 'react';
 import NextImage from 'next/image';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,13 +17,14 @@ import { Progress } from '@/components/ui/progress';
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-import { UserCircle, LinkIcon, FileText, UploadCloud, Tag, Brain, Loader2, Trash2, Edit, Briefcase } from 'lucide-react';
+import { UserCircle, LinkIcon, FileText, UploadCloud, Tag, Brain, Loader2, Trash2, Edit, Briefcase, Image as ImageIconLucide, Sparkles } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { handleExtractBrandInfoFromUrlAction, type FormState as ExtractFormState } from '@/lib/actions';
+import { handleExtractBrandInfoFromUrlAction, handleGenerateBrandLogoAction, type FormState as ExtractFormState, type FormState as GenerateLogoFormState } from '@/lib/actions';
 import { storage } from '@/lib/firebaseConfig';
-import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
-import { useActionState, startTransition } from 'react';
-import { Alert, AlertTitle } from '@/components/ui/alert';
+import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject, uploadString } from 'firebase/storage';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { SubmitButton } from '@/components/SubmitButton';
+import type { GenerateBrandLogoOutput } from '@/ai/flows/generate-brand-logo-flow';
 
 const industries = [
   { value: "fashion_apparel", label: "Fashion & Apparel" },
@@ -50,6 +51,7 @@ const brandProfileSchema = z.object({
   imageStyleNotes: z.string().optional(),
   exampleImages: z.array(z.string().url({ message: "Each image must be a valid URL." })).max(5, {message: "You can upload a maximum of 5 example images."}).optional(),
   targetKeywords: z.string().optional(),
+  brandLogoUrl: z.string().url().optional(), // For storing the final Firebase Storage URL
 });
 
 type BrandProfileFormData = z.infer<typeof brandProfileSchema>;
@@ -62,9 +64,12 @@ const defaultFormValues: BrandProfileFormData = {
   imageStyleNotes: "",
   exampleImages: [],
   targetKeywords: "",
+  brandLogoUrl: "",
 };
 
 const initialExtractState: ExtractFormState<{ brandDescription: string; targetKeywords: string; }> = { error: undefined, data: undefined, message: undefined };
+const initialGenerateLogoState: GenerateLogoFormState<GenerateBrandLogoOutput> = { error: undefined, data: undefined, message: undefined };
+
 const BRAND_PROFILE_DOC_ID = "defaultBrandProfile";
 
 export default function BrandProfilePage() {
@@ -77,9 +82,15 @@ export default function BrandProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFileNames, setSelectedFileNames] = useState<string[]>([]);
 
-
   const [extractState, extractAction] = useActionState(handleExtractBrandInfoFromUrlAction, initialExtractState);
   const [isExtracting, setIsExtracting] = useState(false);
+
+  const [generateLogoState, generateLogoAction] = useActionState(handleGenerateBrandLogoAction, initialGenerateLogoState);
+  const [generatedLogoPreview, setGeneratedLogoPreview] = useState<string | null>(null); // Holds data URI
+  const [isGeneratingLogo, setIsGeneratingLogo] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [logoUploadProgress, setLogoUploadProgress] = useState(0);
+
 
   const form = useForm<BrandProfileFormData>({
     resolver: zodResolver(brandProfileSchema),
@@ -91,6 +102,8 @@ export default function BrandProfilePage() {
       const currentData = { ...defaultFormValues, ...brandData, exampleImages: brandData.exampleImages || [] };
       form.reset(currentData);
       setPreviewImages(currentData.exampleImages);
+      // Reset generatedLogoPreview when brandData loads, so it doesn't persist across reloads if not saved
+      setGeneratedLogoPreview(null); 
       if (currentData.exampleImages.length > 0) {
         setSelectedFileNames(currentData.exampleImages.map((_,i) => `Saved image ${i+1}`));
       } else {
@@ -100,6 +113,7 @@ export default function BrandProfilePage() {
       form.reset(defaultFormValues);
       setPreviewImages([]);
       setSelectedFileNames([]);
+      setGeneratedLogoPreview(null);
     }
   }, [brandData, form, isBrandContextLoading]);
   
@@ -125,6 +139,18 @@ export default function BrandProfilePage() {
     setIsExtracting(false); 
   }, [extractState, form, toast]);
 
+  useEffect(() => {
+    setIsGeneratingLogo(false);
+    if (generateLogoState.data?.logoDataUri) {
+      setGeneratedLogoPreview(generateLogoState.data.logoDataUri);
+      toast({ title: "Logo Generated!", description: "Preview your new logo below. Save the profile to keep it." });
+    }
+    if (generateLogoState.error) {
+      toast({ title: "Logo Generation Error", description: generateLogoState.error, variant: "destructive" });
+    }
+  }, [generateLogoState, toast]);
+
+
   const handleAutoFill = () => {
     const websiteUrl = form.getValues("websiteUrl");
     if (!websiteUrl) {
@@ -136,11 +162,36 @@ export default function BrandProfilePage() {
       return;
     }
     setIsExtracting(true);
-    
     startTransition(() => {
       const formData = new FormData();
       formData.append("websiteUrl", websiteUrl);
       extractAction(formData);
+    });
+  };
+
+  const handleGenerateLogo = () => {
+    const brandName = form.getValues("brandName");
+    const brandDescription = form.getValues("brandDescription");
+    const industry = form.getValues("industry");
+    const targetKeywords = form.getValues("targetKeywords");
+
+    if (!brandName || !brandDescription) {
+      toast({
+        title: "Missing Information",
+        description: "Brand Name and Brand Description are required to generate a logo.",
+        variant: "warning"
+      });
+      return;
+    }
+    setIsGeneratingLogo(true);
+    const formData = new FormData();
+    formData.append("brandName", brandName);
+    formData.append("brandDescription", brandDescription);
+    if (industry) formData.append("industry", industry);
+    if (targetKeywords) formData.append("targetKeywords", targetKeywords);
+    
+    startTransition(() => {
+      generateLogoAction(formData);
     });
   };
 
@@ -266,8 +317,50 @@ export default function BrandProfilePage() {
 
 
   const onSubmit: SubmitHandler<BrandProfileFormData> = async (data) => {
+    let finalData = { ...data };
+    setIsUploadingLogo(true); // Indicate general saving process might involve logo upload
+    setLogoUploadProgress(0);
+
+    if (generatedLogoPreview) { // A new logo was generated
+      try {
+        const logoFilePath = `brand_logos/${BRAND_PROFILE_DOC_ID}/logo_${Date.now()}.png`; // Assume PNG
+        const logoStorageRef = storageRef(storage, logoFilePath);
+        
+        const uploadTask = uploadString(logoStorageRef, generatedLogoPreview, 'data_url');
+        
+        // Simple progress for single logo upload
+        // For more detailed progress on uploadString, one might need to monitor bytes directly if SDK supports it,
+        // or use uploadBytesResumable if it were a File/Blob.
+        // Here, we'll just simulate a bit of progress.
+        let progressInterval = setInterval(() => {
+          setLogoUploadProgress(prev => Math.min(prev + 10, 90));
+        }, 100);
+
+        const snapshot = await uploadTask;
+        clearInterval(progressInterval);
+        setLogoUploadProgress(100);
+
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        finalData.brandLogoUrl = downloadURL;
+        setGeneratedLogoPreview(null); // Clear preview as it's now saved
+         toast({ title: "Logo Uploaded", description: "New logo uploaded and will be saved with profile." });
+      } catch (error: any) {
+        clearInterval(progressInterval); // ensure interval is cleared on error
+        setIsUploadingLogo(false);
+        setLogoUploadProgress(0);
+        toast({
+          title: "Logo Upload Error",
+          description: `Failed to upload generated logo: ${error.message}. Profile saved without new logo.`,
+          variant: "destructive",
+        });
+        console.error("Logo upload error:", error);
+        // Proceed to save other data, but without the new logo URL
+        delete finalData.brandLogoUrl; // Or set to old one if desired: finalData.brandLogoUrl = brandData?.brandLogoUrl;
+      }
+    }
+
     try {
-      await setBrandData({...data, exampleImages: data.exampleImages || []});
+      await setBrandData({...finalData, exampleImages: finalData.exampleImages || []});
       toast({
         title: "Brand Profile Saved",
         description: "Your brand information has been saved successfully.",
@@ -279,6 +372,9 @@ export default function BrandProfilePage() {
         variant: "destructive",
       });
       console.error("Brand profile save error:", error); 
+    } finally {
+       setIsUploadingLogo(false);
+       setLogoUploadProgress(0);
     }
   };
   
@@ -292,7 +388,7 @@ export default function BrandProfilePage() {
               <Skeleton className="h-6 w-3/4" />
             </CardHeader>
             <CardContent className="space-y-8">
-              {[...Array(6)].map((_, i) => ( 
+              {[...Array(7)].map((_, i) => ( 
                 <div key={i} className="space-y-2">
                   <Skeleton className="h-5 w-1/4" />
                   <Skeleton className={i === 2 || i === 4 ? "h-24 w-full" : "h-10 w-full"} />
@@ -305,6 +401,8 @@ export default function BrandProfilePage() {
       </AppShell>
     );
   }
+
+  const currentLogoToDisplay = generatedLogoPreview || brandData?.brandLogoUrl;
 
   return (
     <AppShell>
@@ -331,7 +429,7 @@ export default function BrandProfilePage() {
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><UserCircle className="w-5 h-5 mr-2 text-primary"/>Brand Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="E.g., Acme Innovations" {...field} disabled={isBrandContextLoading || isUploading || isExtracting} />
+                        <Input placeholder="E.g., Acme Innovations" {...field} disabled={isBrandContextLoading || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -346,12 +444,12 @@ export default function BrandProfilePage() {
                       <FormLabel className="flex items-center text-base"><LinkIcon className="w-5 h-5 mr-2 text-primary"/>Website URL</FormLabel>
                         <div className="flex items-center space-x-2">
                            <FormControl>
-                            <Input placeholder="https://www.example.com" {...field} disabled={isBrandContextLoading || isUploading || isExtracting} />
+                            <Input placeholder="https://www.example.com" {...field} disabled={isBrandContextLoading || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo} />
                            </FormControl>
                             <Button 
                                 type="button" 
                                 onClick={handleAutoFill} 
-                                disabled={isExtracting || isBrandContextLoading || !field.value || form.getFieldState("websiteUrl").invalid || isUploading}
+                                disabled={isExtracting || isBrandContextLoading || !field.value || form.getFieldState("websiteUrl").invalid || isUploading || isGeneratingLogo || isUploadingLogo}
                                 variant="outline"
                                 size="icon"
                                 title="Auto-fill from Website"
@@ -375,7 +473,7 @@ export default function BrandProfilePage() {
                           placeholder="Describe your brand, its values, target audience, and unique selling propositions."
                           rows={5}
                           {...field}
-                          disabled={isBrandContextLoading || isUploading || isExtracting}
+                          disabled={isBrandContextLoading || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo}
                         />
                       </FormControl>
                       <FormMessage />
@@ -389,7 +487,7 @@ export default function BrandProfilePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><Briefcase className="w-5 h-5 mr-2 text-primary"/>Industry / Brand Type</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || ""} disabled={isBrandContextLoading || isUploading || isExtracting}>
+                      <Select onValueChange={field.onChange} value={field.value || ""} disabled={isBrandContextLoading || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select your industry" />
@@ -408,6 +506,75 @@ export default function BrandProfilePage() {
                     </FormItem>
                   )}
                 />
+
+                <FormField
+                  control={form.control}
+                  name="targetKeywords"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center text-base"><Tag className="w-5 h-5 mr-2 text-primary"/>Target Keywords</FormLabel>
+                      <FormControl>
+                        <Input placeholder="E.g., innovation, tech solutions, eco-friendly (comma-separated)" {...field} disabled={isBrandContextLoading || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo}/>
+                      </FormControl>
+                       <p className="text-sm text-muted-foreground">
+                        Comma-separated keywords related to your brand and industry.
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Brand Logo Section */}
+                <FormItem>
+                    <FormLabel className="flex items-center text-base mb-2"><Sparkles className="w-5 h-5 mr-2 text-primary"/>Brand Logo</FormLabel>
+                    <div className="p-4 border rounded-lg space-y-4">
+                        <div className="flex flex-col sm:flex-row items-center gap-4">
+                            <div className="w-32 h-32 border rounded-md flex items-center justify-center bg-muted overflow-hidden">
+                                {isGeneratingLogo ? (
+                                    <Loader2 className="w-12 h-12 text-primary animate-spin"/>
+                                ) : currentLogoToDisplay ? (
+                                    <NextImage src={currentLogoToDisplay} alt="Brand Logo Preview" width={128} height={128} className="object-contain" data-ai-hint="brand logo"/>
+                                ) : (
+                                    <ImageIconLucide className="w-12 h-12 text-muted-foreground"/>
+                                )}
+                            </div>
+                            <div className="flex-1 text-center sm:text-left">
+                                <Button 
+                                    type="button" 
+                                    onClick={handleGenerateLogo} 
+                                    disabled={isGeneratingLogo || isUploadingLogo || !form.getValues("brandName") || !form.getValues("brandDescription")}
+                                    className="w-full sm:w-auto"
+                                >
+                                    {isGeneratingLogo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                                    Generate Logo with AI
+                                </Button>
+                                {!currentLogoToDisplay && !isGeneratingLogo && (
+                                    <p className="text-xs text-muted-foreground mt-2">Fill in Brand Name and Description to enable logo generation.</p>
+                                )}
+                                {generateLogoState.error && !isGeneratingLogo && (
+                                  <p className="text-xs text-destructive mt-1">{generateLogoState.error}</p>
+                                )}
+                            </div>
+                        </div>
+                        {isUploadingLogo && logoUploadProgress > 0 && logoUploadProgress < 100 && (
+                            <Progress value={logoUploadProgress} className="w-full h-2 mt-2" />
+                        )}
+                         {generatedLogoPreview && (
+                            <Alert variant="default" className="mt-2">
+                                <Sparkles className="h-4 w-4" />
+                                <AlertTitle>Logo Generated!</AlertTitle>
+                                <AlertDescription>
+                                A new logo has been generated. Click "Save Brand Profile" below to upload and save it.
+                                </AlertDescription>
+                            </Alert>
+                        )}
+                    </div>
+                    <FormField
+                        control={form.control}
+                        name="brandLogoUrl"
+                        render={() => ( <FormMessage /> )}
+                    />
+                </FormItem>
                 
                 <FormField
                   control={form.control}
@@ -420,7 +587,7 @@ export default function BrandProfilePage() {
                           placeholder="Describe the general aesthetic for your brand's images, e.g., 'minimalist and clean', 'vibrant and energetic', 'moody lighting'."
                           rows={3}
                           {...field}
-                          disabled={isBrandContextLoading || isUploading || isExtracting}
+                          disabled={isBrandContextLoading || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo}
                         />
                       </FormControl>
                       <FormDescription>
@@ -435,7 +602,7 @@ export default function BrandProfilePage() {
                   <FormLabel className="flex items-center text-base"><UploadCloud className="w-5 h-5 mr-2 text-primary"/>Upload Example Images (Optional, up to 5)</FormLabel>
                    <FormControl>
                     <div className="flex items-center justify-center w-full">
-                        <Label htmlFor="dropzone-file" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer border-border bg-card hover:bg-secondary ${isBrandContextLoading || isUploading || isExtracting ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                        <Label htmlFor="dropzone-file" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer border-border bg-card hover:bg-secondary ${isBrandContextLoading || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo ? 'opacity-50 cursor-not-allowed' : ''}`}>
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                 {isUploading ? <Loader2 className="w-8 h-8 mb-2 text-muted-foreground animate-spin" /> : <UploadCloud className="w-8 h-8 mb-2 text-muted-foreground" />}
                                 <p className="mb-1 text-sm text-muted-foreground">
@@ -450,7 +617,7 @@ export default function BrandProfilePage() {
                                 className="hidden" 
                                 onChange={handleImageFileChange} 
                                 accept="image/*" 
-                                disabled={isBrandContextLoading || isUploading || isExtracting || (form.getValues("exampleImages")?.length || 0) >= 5}
+                                disabled={isBrandContextLoading || isUploading || isExtracting || (form.getValues("exampleImages")?.length || 0) >= 5 || isGeneratingLogo || isUploadingLogo}
                                 ref={fileInputRef} 
                             />
                         </Label>
@@ -482,7 +649,7 @@ export default function BrandProfilePage() {
                                 size="icon"
                                 className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                                 onClick={() => handleDeleteImage(src, index)}
-                                disabled={isUploading || isExtracting || isBrandContextLoading}
+                                disabled={isUploading || isExtracting || isBrandContextLoading || isGeneratingLogo || isUploadingLogo}
                                 title="Delete this image"
                             >
                                 <Trash2 className="h-3 w-3" />
@@ -492,32 +659,15 @@ export default function BrandProfilePage() {
                       </div>
                   </div>
                 )}
-
-                <FormField
-                  control={form.control}
-                  name="targetKeywords"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center text-base"><Tag className="w-5 h-5 mr-2 text-primary"/>Target Keywords</FormLabel>
-                      <FormControl>
-                        <Input placeholder="E.g., innovation, tech solutions, eco-friendly (comma-separated)" {...field} disabled={isBrandContextLoading || isUploading || isExtracting}/>
-                      </FormControl>
-                       <p className="text-sm text-muted-foreground">
-                        Comma-separated keywords related to your brand and industry.
-                      </p>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
                 
-                <Button 
-                  type="submit" 
+                <SubmitButton 
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" 
                   size="lg" 
-                  disabled={isBrandContextLoading || form.formState.isSubmitting || isUploading || isExtracting}
+                  disabled={isBrandContextLoading || form.formState.isSubmitting || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo}
+                  loadingText={isUploadingLogo ? 'Uploading Logo & Saving...' : (isUploading ? 'Uploading Image(s)...' : (isBrandContextLoading ? 'Loading Profile...' : (form.formState.isSubmitting ? 'Saving...' : (isExtracting ? 'Extracting Info...' : 'Save Brand Profile'))))}
                 >
-                  {isUploading ? 'Uploading Image(s)...' : (isBrandContextLoading ? 'Loading Profile...' : (form.formState.isSubmitting ? 'Saving...' : (isExtracting ? 'Extracting Info...' : 'Save Brand Profile')))}
-                </Button>
+                   {isUploadingLogo ? 'Uploading Logo & Saving...' : (isUploading ? 'Uploading Image(s)...' : (isBrandContextLoading ? 'Loading Profile...' : (form.formState.isSubmitting ? 'Saving...' : (isExtracting ? 'Extracting Info...' : 'Save Brand Profile'))))}
+                </SubmitButton>
               </form>
             </Form>
           </CardContent>

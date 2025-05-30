@@ -8,6 +8,7 @@ import { generateAdCampaign, type GenerateAdCampaignInput, type GenerateAdCampai
 import { extractBrandInfoFromUrl, type ExtractBrandInfoFromUrlInput, type ExtractBrandInfoFromUrlOutput } from '@/ai/flows/extract-brand-info-from-url-flow';
 import { describeImage, type DescribeImageInput, type DescribeImageOutput } from '@/ai/flows/describe-image-flow';
 import { generateBlogOutline, type GenerateBlogOutlineInput, type GenerateBlogOutlineOutput } from '@/ai/flows/generate-blog-outline-flow';
+import { generateBrandLogo, type GenerateBrandLogoInput, type GenerateBrandLogoOutput } from '@/ai/flows/generate-brand-logo-flow'; // Added
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -45,7 +46,7 @@ export async function handleGenerateImagesAction(
             .map(color => color.trim())
             .filter(color => /^#[0-9a-fA-F]{6}$/.test(color)) 
             .slice(0, 5) 
-            .map(color => ({ color, weight: 0.5 })); // Default weight, Freepik schema updated
+            .map(color => ({ color, weight: 0.5 }));
         if (freepikStylingColors.length === 0) freepikStylingColors = undefined; 
     }
 
@@ -59,7 +60,7 @@ export async function handleGenerateImagesAction(
       numberOfImages: numberOfImages,
       negativePrompt: negativePromptValue === null || negativePromptValue === "" ? undefined : negativePromptValue,
       seed: seed,
-      finalizedTextPrompt: finalizedTextPromptValue === "" ? undefined : finalizedTextPromptValue,
+      finalizedTextPrompt: finalizedTextPromptValue === "" || finalizedTextPromptValue === null ? undefined : finalizedTextPromptValue,
       freepikStylingColors: freepikStylingColors,
       freepikEffectColor: (formData.get("freepikEffectColor") as string === "none" ? undefined : formData.get("freepikEffectColor") as string | undefined) || undefined,
       freepikEffectLightning: (formData.get("freepikEffectLightning") as string === "none" ? undefined : formData.get("freepikEffectLightning") as string | undefined) || undefined,
@@ -75,7 +76,7 @@ export async function handleGenerateImagesAction(
     if (input.industry === "" || input.industry === undefined) delete input.industry;
     
     const result = await generateImages(input);
-    const message = `Image(s)/task(s) processed using ${result.providerUsed}.`;
+    const message = `${result.generatedImages.length} image(s)/task(s) processed using ${result.providerUsed || 'default provider'}.`;
     return { data: { generatedImages: result.generatedImages, promptUsed: result.promptUsed, providerUsed: result.providerUsed }, message: message };
   } catch (e: any) {
     console.error("Error in handleGenerateImagesAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
@@ -381,7 +382,6 @@ async function _checkFreepikTaskStatus(taskId: string): Promise<{ status: string
 
     if (responseData.data && responseData.data.status) {
       if (responseData.data.status === 'COMPLETED' && responseData.data.generated && responseData.data.generated.length > 0) {
-        // Expecting URLs directly from Freepik GET as per last correction
         return { status: responseData.data.status, images: responseData.data.generated };
       }
       return { status: responseData.data.status, images: null };
@@ -419,4 +419,29 @@ export async function handleCheckFreepikTaskStatusAction(
   }
 }
 
-    
+export async function handleGenerateBrandLogoAction(
+  prevState: FormState<GenerateBrandLogoOutput>,
+  formData: FormData
+): Promise<FormState<GenerateBrandLogoOutput>> {
+  try {
+    const input: GenerateBrandLogoInput = {
+      brandName: formData.get("brandName") as string,
+      brandDescription: formData.get("brandDescription") as string,
+      industry: formData.get("industry") as string | undefined,
+      targetKeywords: formData.get("targetKeywords") as string | undefined,
+    };
+
+    if (!input.brandName || !input.brandDescription) {
+      return { error: "Brand name and description are required for logo generation." };
+    }
+     if (input.industry === "" || input.industry === undefined) delete input.industry;
+     if (input.targetKeywords === "" || input.targetKeywords === undefined) delete input.targetKeywords;
+
+
+    const result = await generateBrandLogo(input);
+    return { data: result, message: "Brand logo generated successfully!" };
+  } catch (e: any) {
+    console.error("Error in handleGenerateBrandLogoAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
+    return { error: `Failed to generate brand logo: ${e.message || "Unknown error. Check server logs."}` };
+  }
+}

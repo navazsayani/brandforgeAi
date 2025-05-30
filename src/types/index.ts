@@ -7,6 +7,7 @@ export interface BrandData {
   imageStyleNotes?: string; // For custom free-text style notes
   targetKeywords?: string;
   exampleImages?: string[]; // URLs from Firebase Storage
+  brandLogoUrl?: string; // URL from Firebase Storage for the brand logo
 }
 
 export interface GeneratedImage {

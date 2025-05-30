@@ -49,6 +49,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
           industry: fetchedData.industry || "",
           imageStyleNotes: fetchedData.imageStyleNotes || "",
           exampleImages: fetchedData.exampleImages || [],
+          brandLogoUrl: fetchedData.brandLogoUrl || undefined, // Ensure brandLogoUrl is handled
         });
       } else {
         setBrandDataState({ 
@@ -58,7 +59,8 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
             industry: "", 
             imageStyleNotes: "", 
             exampleImages: [] , 
-            targetKeywords: ""
+            targetKeywords: "",
+            brandLogoUrl: undefined,
         });
       }
     } catch (e: any) {
@@ -89,6 +91,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         industry: data.industry || "",
         imageStyleNotes: data.imageStyleNotes || "",
         exampleImages: data.exampleImages || [],
+        brandLogoUrl: data.brandLogoUrl || undefined, // Ensure brandLogoUrl is included
       };
       const brandDocRef = doc(db, "brandProfiles", BRAND_PROFILE_DOC_ID);
       await setDoc(brandDocRef, dataToSave, { merge: true });
