@@ -15,7 +15,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download } from 'lucide-react'; // Added Download
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download } from 'lucide-react';
 import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage } from '@/types';
@@ -53,7 +53,7 @@ export default function ContentStudioPage() {
   const [blogState, blogAction] = useActionState(handleGenerateBlogContentAction, initialBlogFormState);
   const [describeImageState, describeImageAction] = useActionState(handleDescribeImageAction, initialDescribeImageState);
   const [blogOutlineState, blogOutlineAction] = useActionState(handleGenerateBlogOutlineAction, initialBlogOutlineState);
-  const [saveImagesState, saveImagesAction, isSavingImages] = useActionState(handleSaveGeneratedImagesAction, initialSaveImagesState);
+  const [saveImagesState, saveImagesAction] = useActionState(handleSaveGeneratedImagesAction, initialSaveImagesState);
   const [freepikTaskStatusState, freepikTaskStatusAction] = useActionState(handleCheckFreepikTaskStatusAction, initialFreepikTaskStatusState);
 
   const [lastSuccessfulGeneratedImageUrls, setLastSuccessfulGeneratedImageUrls] = useState<string[]>([]);
@@ -102,6 +102,7 @@ export default function ContentStudioPage() {
   const [formSnapshot, setFormSnapshot] = useState<Partial<GenerateImagesInput> & { provider?: string } | null>(null);
 
   const [checkingTaskId, setCheckingTaskId] = useState<string | null>(null);
+  const [isCurrentlySavingImages, setIsCurrentlySavingImages] = useState(false);
 
 
   useEffect(() => {
@@ -239,6 +240,7 @@ export default function ContentStudioPage() {
   }, [blogOutlineState, toast]);
 
  useEffect(() => {
+    setIsCurrentlySavingImages(false); // Ensure loading state is reset
     if (saveImagesState.message && !saveImagesState.error) {
       toast({ title: "Image Library", description: saveImagesState.message });
     }
@@ -298,6 +300,7 @@ export default function ContentStudioPage() {
   };
 
   const handleSaveAllGeneratedImages = () => {
+    setIsCurrentlySavingImages(true);
     const saveableImages = lastSuccessfulGeneratedImageUrls
         .filter(url => url && (url.startsWith('data:') || url.startsWith('image_url:')))
         .map(url => ({
@@ -308,6 +311,7 @@ export default function ContentStudioPage() {
 
     if (saveableImages.length === 0) {
         toast({ title: "No new images to save", description: "No valid generated images are available for saving.", variant: "default"});
+        setIsCurrentlySavingImages(false);
         return;
     }
 
@@ -365,7 +369,7 @@ export default function ContentStudioPage() {
     const industryLabelForPreview = industries.find(i => i.value === currentIndustryValue)?.label || currentIndustryValue;
     console.log("Client-side preview: currentIndustryValue:", currentIndustryValue, "resolved to industryLabelForPreview:", industryLabelForPreview); 
 
-    const industryCtx = industryLabelForPreview ? ` The brand operates in the ${industryLabelForPreview} industry.` : "";
+    const industryCtx = industryLabelForPreview && industryLabelForPreview !== "_none_" ? ` The brand operates in the ${industryLabelForPreview} industry.` : "";
     const exampleImg = currentExampleImageForGen;
     const combinedStyle = selectedImageStylePreset + (customStyleNotesInput ? `. ${customStyleNotesInput}` : "");
     const negPrompt = imageGenNegativePrompt;
@@ -384,7 +388,7 @@ export default function ContentStudioPage() {
         } else {
             baseFreepikPrompt = `Generate an image based on the concept: "${imageGenBrandDescription}".`;
         }
-        textPromptContent = `${baseFreepikPrompt}${industryCtx}\nIncorporate these additional stylistic details and elements: "${combinedStyle}".`;
+        textPromptContent = `${baseFreepikPrompt}${industryCtx}\nIncorporate these stylistic details and elements: "${combinedStyle}".`;
         if (negPrompt) {
             textPromptContent += `\n\nAvoid: ${negPrompt}.`;
         }
@@ -437,7 +441,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
     setFormSnapshot({
         provider: selectedImageProvider,
         brandDescription: imageGenBrandDescription,
-        industry: currentIndustryValue,
+        industry: currentIndustryValue === "_none_" ? "" : currentIndustryValue,
         imageStyle: combinedStyle,
         exampleImage: exampleImg === "" ? undefined : exampleImg,
         aspectRatio: aspect,
@@ -461,7 +465,10 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
         formData.append("finalizedTextPrompt", currentTextPromptForEditing || "");
         formData.append("provider", formSnapshot?.provider || selectedImageProvider);
         formData.append("brandDescription", formSnapshot?.brandDescription || imageGenBrandDescription || brandData?.brandDescription || "");
-        formData.append("industry", formSnapshot?.industry || imageGenIndustry || brandData?.industry || "");
+        
+        const industryToSubmit = formSnapshot?.industry || imageGenIndustry || brandData?.industry || "";
+        formData.append("industry", industryToSubmit === "_none_" ? "" : industryToSubmit);
+        
         formData.append("imageStyle", formSnapshot?.imageStyle || (selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")));
 
         const exampleImgToUse = formSnapshot?.exampleImage;
@@ -615,13 +622,15 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                                 <SelectGroup>
                                     <SelectLabel>Industries</SelectLabel>
                                     {industries.map(industry => (
-                                        <SelectItem key={industry.value} value={industry.value}>{industry.label}</SelectItem>
+                                        <SelectItem key={industry.value} value={industry.value}>
+                                            {industry.label}
+                                        </SelectItem>
                                     ))}
-                                     <SelectItem value="">None (or type custom below)</SelectItem>
+                                     <SelectItem value="_none_">None / Custom</SelectItem>
                                 </SelectGroup>
                             </SelectContent>
                         </Select>
-                         <p className="text-xs text-muted-foreground mt-1">Uses label (e.g., "Fashion & Apparel") in AI prompts. Value from Brand Profile is pre-selected.</p>
+                         <p className="text-xs text-muted-foreground mt-1">"None" means no specific industry context will be sent to AI. Value from Brand Profile is pre-selected.</p>
                     </div>
 
                     <div>
@@ -865,10 +874,10 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                                     <Button
                                         type="button"
                                         onClick={handleSaveAllGeneratedImages}
-                                        disabled={isSavingImages || !lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url.startsWith('image_url:'))}
+                                        disabled={isCurrentlySavingImages || !lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url.startsWith('image_url:'))}
                                         size="sm"
                                     >
-                                        {isSavingImages ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                        {isCurrentlySavingImages ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                                         Save All to Library
                                     </Button>
                                 )}
@@ -883,6 +892,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         {lastSuccessfulGeneratedImageUrls.map((url, index) => (
                             <div key={url || index} className="relative group w-full overflow-hidden border rounded-md bg-muted aspect-square">
                                 {url && (url.startsWith('data:') || url.startsWith('image_url:')) ? (
+                                    <>
                                     <NextImage
                                         src={url.startsWith('image_url:') ? url.substring(10) : url}
                                         alt={`Generated brand image ${index + 1}`}
@@ -891,6 +901,16 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                                         data-ai-hint="brand marketing"
                                         className="transition-opacity duration-300 opacity-100 group-hover:opacity-80"
                                     />
+                                     <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 z-10 bg-background/70 hover:bg-background"
+                                        onClick={() => downloadImage(url.startsWith('image_url:') ? url.substring(10) : url, `generated-image-${index + 1}.png`)}
+                                        title="Download image"
+                                      >
+                                        <Download className="h-4 w-4" />
+                                      </Button>
+                                    </>
                                 ) : url && url.startsWith('task_id:') ? (
                                      <div className="flex flex-col items-center justify-center h-full text-xs text-muted-foreground p-2 text-center">
                                         <Loader2 className="w-6 h-6 animate-spin mb-2" />
@@ -959,7 +979,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                 <p className="text-sm text-muted-foreground">Generate engaging captions and hashtags. Uses brand description, industry, image description (optional), and selected tone.</p>
               </CardHeader>
               <form action={socialAction}>
-                <input type="hidden" name="industry" value={brandData?.industry || ""} />
+                <input type="hidden" name="industry" value={brandData?.industry === "_none_" ? "" : brandData?.industry || ""} />
                 <input type="hidden" name="selectedImageSrcForSocialPost" value={useImageForSocialPost && currentSocialImagePreviewUrl ? currentSocialImagePreviewUrl : ""} />
                 <CardContent className="space-y-6">
                   <div className="space-y-3">
@@ -1215,7 +1235,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                             <Input
                                 id="blogIndustry"
                                 name="industry"
-                                defaultValue={brandData?.industry || ""}
+                                defaultValue={brandData?.industry === "_none_" ? "" : brandData?.industry || ""}
                                 placeholder="e.g., Fashion, Technology"
                             />
                         </div>
