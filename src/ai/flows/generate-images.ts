@@ -139,14 +139,15 @@ async function _generateImageWithFreepik(params: {
       case "1:1":
         freepikSize = "square_1_1";
         break;
-      case "4:5":
-        freepikSize = "portrait_4_5"; // Assuming this is valid
+      case "4:5": // Closest to traditional_3_4
+        freepikSize = "traditional_3_4";
+        console.warn(`Mapping UI aspect ratio '4:5' to Freepik 'traditional_3_4'.`);
         break;
       case "16:9":
-        freepikSize = "landscape_16_9";
+        freepikSize = "widescreen_16_9";
         break;
       case "9:16":
-        freepikSize = "portrait_9_16"; // Assuming this is valid
+        freepikSize = "social_story_9_16";
         break;
       default:
         console.warn(`Unsupported aspect ratio '${params.aspectRatio}' for Freepik, defaulting to square_1_1.`);
@@ -160,8 +161,8 @@ async function _generateImageWithFreepik(params: {
     image: {
       size: freepikSize,
     },
+    guidance_scale: 1.0, // Updated default based on documentation
     filter_nsfw: true,
-    guidance_scale: 7, // Common default, can be adjusted. Example used 1.
   };
 
   if (params.negativePrompt) {
@@ -170,9 +171,14 @@ async function _generateImageWithFreepik(params: {
   if (params.seed !== undefined) {
     requestBody.seed = params.seed;
   }
+  // The `styling.style` parameter in Freepik seems to be for broad categories like "anime", "photorealistic".
+  // Our `params.imageStyle` might be more descriptive (e.g., "photorealistic, intricate hand embroidery indian").
+  // We will pass `params.imageStyle` as the `styling.style` and let Freepik interpret it.
+  // More complex `styling.effects` and `styling.colors` are omitted for now.
   if (params.imageStyle) {
     requestBody.styling = { style: params.imageStyle };
   }
+
 
   console.log("Sending request to Freepik API with body:", JSON.stringify(requestBody, null, 2));
 
@@ -194,9 +200,6 @@ async function _generateImageWithFreepik(params: {
     }
 
     if (responseData.data && responseData.data.length > 0 && responseData.data[0].url) {
-      // Freepik might return a temporary URL which then processes. For now, we assume direct image URL.
-      // If it's a job ID, further polling would be needed.
-      // The cURL suggests it's a direct image generation.
       return responseData.data[0].url;
     } else {
       throw new Error("Freepik API did not return image URL in expected format.");
@@ -245,10 +248,6 @@ const generateImagesFlow = ai.defineFlow(
             console.log(`Using finalized text prompt for image ${i+1}: "${finalizedTextPrompt.substring(0,100)}..."`);
             textPromptContent = finalizedTextPrompt;
             
-            // Aspect ratio & seed are structural parameters for the model,
-            // they are often appended or handled separately even with a finalized prompt.
-            // For Freepik, these might be top-level params not appended to text.
-            // For Gemini, we append them.
             if (imageGenerationProvider.toUpperCase() === 'GEMINI') {
                 if (aspectRatio && !finalizedTextPrompt.toLowerCase().includes("aspect ratio")) {
                   textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
@@ -302,8 +301,8 @@ ${compositionGuidance}
             if (negativePrompt) {
                 textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
             }
-             // Aspect ratio and seed for non-finalized prompts are typically appended for Gemini
-            if (imageGenerationProvider.toUpperCase() === 'GEMINI' || imageGenerationProvider.toUpperCase() === 'FREEPIK') { // Freepik also gets text instructions, but might ignore if structure is different
+            
+            if (imageGenerationProvider.toUpperCase() === 'GEMINI' ) { 
                 if (aspectRatio) {
                   textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
                 }
@@ -379,3 +378,4 @@ ${compositionGuidance}
     return {generatedImages: generatedImageUrls, promptUsed: actualPromptUsedForFirstImage };
   }
 );
+
