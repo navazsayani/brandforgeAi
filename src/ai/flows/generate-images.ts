@@ -296,7 +296,7 @@ const generateImagesFlow = ai.defineFlow(
         if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
             console.log(`Using finalized text prompt for Freepik batch: "${finalizedTextPrompt.substring(0,100)}..."`);
             textPromptForFreepik = finalizedTextPrompt;
-            if (
+             if (
                 !finalizedTextPrompt.toLowerCase().includes("human figure") &&
                 !finalizedTextPrompt.toLowerCase().includes("crop") &&
                 !finalizedTextPrompt.toLowerCase().includes("close-up") &&
@@ -322,7 +322,7 @@ const generateImagesFlow = ai.defineFlow(
             }
             textPromptForFreepik = baseFreepikPrompt;
             if (negativePrompt) { 
-                 textPromptForFreepik += `\n\nAvoid: ${negativePrompt}.`; // Negative prompt is also structural for Freepik, but good for text too
+                 textPromptForFreepik += `\n\nAvoid: ${negativePrompt}.`;
             }
             textPromptForFreepik +=`\n\n${compositionGuidance}`; 
         }
@@ -333,14 +333,14 @@ const generateImagesFlow = ai.defineFlow(
             const freepikTask = await _initiateFreepikImageTask({
                 textPrompt: textPromptForFreepik,
                 imageStyle: imageStyle, 
-                exampleImage: exampleImage, // Passed for logging/warning, but ignored by API
+                exampleImage: exampleImage, 
                 negativePrompt: negativePrompt, 
                 aspectRatio: aspectRatio,
                 freepikStylingColors: freepikStylingColors,
                 freepikEffectColor: freepikEffectColor,
                 freepikEffectLightning: freepikEffectLightning,
                 freepikEffectFraming: freepikEffectFraming,
-                numberOfImages: numberOfImages, // Pass the batch number here
+                numberOfImages: numberOfImages, 
             });
             
             if (freepikTask.generatedUrls && freepikTask.generatedUrls.length > 0) {
@@ -356,10 +356,9 @@ const generateImagesFlow = ai.defineFlow(
             }
         } catch (error: any) {
              console.error(`Error during Freepik batch generation. Full error:`, JSON.stringify(error, Object.getOwnPropertyNames(error)));
-             // If the batch request itself fails, push one error message representing the batch failure.
              generatedImageResults.push(`error:Failed to process Freepik batch. ${error.message || 'Unknown error'}`);
         }
-    } else { // For Gemini or other providers that generate one image at a time
+    } else { 
         for (let i = 0; i < numberOfImages; i++) {
             let textPromptContent = "";
             const industryContext = industry ? ` The brand operates in the ${industry} industry.` : "";
@@ -523,3 +522,4 @@ Action.define(generateImagesFlow, {
         schema: GenerateImagesOutputSchema,
     },
 });
+
