@@ -46,7 +46,7 @@ export async function handleGenerateImagesAction(
             .map(color => color.trim())
             .filter(color => /^#[0-9a-fA-F]{6}$/.test(color)) 
             .slice(0, 5) 
-            .map(color => ({ color, weight: parseFloat(formData.get(`freepikColorWeight_${color}`) as string) || 0.5 }));
+            .map(color => ({ color, weight: 0.5 })); // Default weight, can be made configurable
         if (freepikStylingColors.length === 0) freepikStylingColors = undefined; 
     }
     
@@ -64,8 +64,9 @@ export async function handleGenerateImagesAction(
         console.log(`Successfully described example image for Freepik: ${aiGeneratedDesc}`);
         
         if (finalizedTextPromptValue && finalizedTextPromptValue.includes(placeholderToReplace)) {
-          finalizedTextPromptValue = finalizedTextPromptValue.replace(placeholderToReplace, aiGeneratedDesc || "[Image description not available]");
-          console.log("Server Action: Replaced placeholder in finalizedTextPrompt. New prompt:", finalizedTextPromptValue.substring(0,100) + "...");
+          const replacementText = `The user provided an example image which is described as: "${aiGeneratedDesc || "No specific description available for the example image"}". Using that description as primary inspiration for the subject and main visual elements, continue with the rest of the prompt instructions which should guide the concept and style for the new image.`;
+          finalizedTextPromptValue = finalizedTextPromptValue.replace(placeholderToReplace, replacementText);
+          console.log("Server Action: Replaced placeholder in finalizedTextPrompt. New prompt starts with:", finalizedTextPromptValue.substring(0,150) + "...");
         }
       } catch (descError: any) {
         console.warn(`Could not generate description for example image (Freepik): ${descError.message}. Proceeding without it.`);
@@ -78,12 +79,12 @@ export async function handleGenerateImagesAction(
       industry: formData.get("industry") as string | undefined,
       imageStyle: formData.get("imageStyle") as string, 
       exampleImage: exampleImageUrl === "" ? undefined : exampleImageUrl,
-      exampleImageDescription: aiGeneratedDesc, // Pass AI generated desc to flow, it will decide to use it if finalizedTextPrompt is not set or if it needs to construct
+      exampleImageDescription: aiGeneratedDesc, 
       aspectRatio: formData.get("aspectRatio") as string | undefined,
       numberOfImages: numberOfImages,
       negativePrompt: negativePromptValue === null || negativePromptValue === "" ? undefined : negativePromptValue,
       seed: seed,
-      finalizedTextPrompt: finalizedTextPromptValue, // This should now have the description if applicable
+      finalizedTextPrompt: finalizedTextPromptValue === null ? undefined : finalizedTextPromptValue,
       freepikStylingColors: freepikStylingColors,
       freepikEffectColor: (formData.get("freepikEffectColor") as string === "none" ? undefined : formData.get("freepikEffectColor") as string | undefined) || undefined,
       freepikEffectLightning: (formData.get("freepikEffectLightning") as string === "none" ? undefined : formData.get("freepikEffectLightning") as string | undefined) || undefined,
@@ -94,8 +95,7 @@ export async function handleGenerateImagesAction(
     if (input.aspectRatio === "" || input.aspectRatio === undefined) delete input.aspectRatio;
     if (input.industry === "" || input.industry === undefined) delete input.industry;
     
-    console.log("Server Action: Calling generateImages flow with input:", JSON.stringify({ ...input, finalizedTextPrompt: input.finalizedTextPrompt?.substring(0,100) + "..." }, null, 2) );
-
+    console.log("Server Action: Calling generateImages flow with input (finalizedTextPrompt excerpt):", JSON.stringify({ ...input, finalizedTextPrompt: input.finalizedTextPrompt?.substring(0,150) + "..." }, null, 2) );
 
     const result = await generateImages(input);
     const message = `${result.generatedImages.length} image(s)/task(s) processed using ${result.providerUsed || 'default provider'}.`;
