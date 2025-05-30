@@ -6,7 +6,7 @@ import { generateSocialMediaCaption, type GenerateSocialMediaCaptionInput } from
 import { generateBlogContent, type GenerateBlogContentInput } from '@/ai/flows/generate-blog-content';
 import { generateAdCampaign, type GenerateAdCampaignInput, type GenerateAdCampaignOutput } from '@/ai/flows/generate-ad-campaign';
 import { extractBrandInfoFromUrl, type ExtractBrandInfoFromUrlInput, type ExtractBrandInfoFromUrlOutput } from '@/ai/flows/extract-brand-info-from-url-flow';
-import { describeImage, type DescribeImageInput, type DescribeImageOutput } from '@/ai/flows/describe-image-flow'; // Import describeImage
+import { describeImage, type DescribeImageInput, type DescribeImageOutput } from '@/ai/flows/describe-image-flow'; 
 import { generateBlogOutline, type GenerateBlogOutlineInput, type GenerateBlogOutlineOutput } from '@/ai/flows/generate-blog-outline-flow';
 import { generateBrandLogo, type GenerateBrandLogoInput, type GenerateBrandLogoOutput } from '@/ai/flows/generate-brand-logo-flow';
 import { storage, db } from '@/lib/firebaseConfig';
@@ -18,7 +18,7 @@ export interface FormState<T = any> {
   data?: T;
   error?: string;
   message?: string;
-  taskId?: string; // Added for Freepik task status action
+  taskId?: string; 
 }
 
 export async function handleGenerateImagesAction(
@@ -46,7 +46,7 @@ export async function handleGenerateImagesAction(
             .map(color => color.trim())
             .filter(color => /^#[0-9a-fA-F]{6}$/.test(color)) 
             .slice(0, 5) 
-            .map(color => ({ color, weight: 0.5 }));
+            .map(color => ({ color, weight: 0.5 })); // default weight
         if (freepikStylingColors.length === 0) freepikStylingColors = undefined; 
     }
     
@@ -59,10 +59,9 @@ export async function handleGenerateImagesAction(
         console.log(`Attempting to describe example image for Freepik prompt: ${exampleImageUrl}`);
         const descriptionOutput = await describeImage({ imageDataUri: exampleImageUrl });
         exampleImageDescription = descriptionOutput.description;
-        console.log(`Successfully described example image: ${exampleImageDescription}`);
+        console.log(`Successfully described example image for Freepik: ${exampleImageDescription}`);
       } catch (descError: any) {
-        console.warn(`Could not generate description for example image: ${descError.message}. Proceeding without it.`);
-        // Optionally, you could return an error or partial error here if description is critical
+        console.warn(`Could not generate description for example image (Freepik): ${descError.message}. Proceeding without it.`);
       }
     }
 
@@ -73,7 +72,7 @@ export async function handleGenerateImagesAction(
       industry: formData.get("industry") as string | undefined,
       imageStyle: formData.get("imageStyle") as string, 
       exampleImage: exampleImageUrl === "" ? undefined : exampleImageUrl,
-      exampleImageDescription: exampleImageDescription, // Pass the description
+      exampleImageDescription: exampleImageDescription,
       aspectRatio: formData.get("aspectRatio") as string | undefined,
       numberOfImages: numberOfImages,
       negativePrompt: negativePromptValue === null || negativePromptValue === "" ? undefined : negativePromptValue,
@@ -85,12 +84,8 @@ export async function handleGenerateImagesAction(
       freepikEffectFraming: (formData.get("freepikEffectFraming") as string === "none" ? undefined : formData.get("freepikEffectFraming") as string | undefined) || undefined,
     };
     
+    // Clean up optional fields if they are empty strings from form
     if (input.provider === "" || input.provider === undefined) delete input.provider;
-
-    if (!input.finalizedTextPrompt && (!input.brandDescription || !input.imageStyle)) {
-      return { error: "Brand description and image style are required if not providing a finalized text prompt." };
-    }
-    // exampleImage can be undefined, so no explicit delete if empty
     if (input.aspectRatio === "" || input.aspectRatio === undefined) delete input.aspectRatio;
     if (input.industry === "" || input.industry === undefined) delete input.industry;
     
@@ -402,10 +397,9 @@ async function _checkFreepikTaskStatus(taskId: string): Promise<{ status: string
 
     if (responseData.data && responseData.data.status) {
       if (responseData.data.status === 'COMPLETED' && responseData.data.generated && responseData.data.generated.length > 0) {
-        // Assuming responseData.data.generated is an array of image URLs
         return { status: responseData.data.status, images: responseData.data.generated };
       }
-      return { status: responseData.data.status, images: null };
+      return { status: responseData.data.status, images: null }; // No images yet or other status
     } else {
       throw new Error(`Freepik GET API for task ${taskId} did not return data in expected format.`);
     }

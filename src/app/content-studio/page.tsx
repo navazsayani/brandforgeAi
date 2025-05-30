@@ -15,7 +15,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download } from 'lucide-react'; // Added Download
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download } from 'lucide-react';
 import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage } from '@/types';
@@ -42,51 +42,50 @@ const imageGenerationProviders = [
 
 const imageStylePresets = [
   { value: "photorealistic", label: "Photorealistic (General)" },
-  { value: "digital-art", label: "Digital Art (General/Freepik)" },
-  { value: "3d", label: "3D (General/Freepik)" },
-  { value: "painting", label: "Painting (General/Freepik)" },
+  { value: "digital-art", label: "Digital Art (Freepik)" },
+  { value: "3d", label: "3D (Freepik)" },
+  { value: "painting", label: "Painting (Freepik)" },
   { value: "minimalist", label: "Minimalist (General)" },
   { value: "abstract", label: "Abstract (General)" },
-  { value: "vintage", label: "Vintage / Retro (General/Freepik)" },
-  { value: "surreal", label: "Surreal (General/Freepik)" },
-  { value: "fantasy", label: "Fantasy Art (General/Freepik)" },
+  { value: "vintage", label: "Vintage / Retro (Freepik)" },
+  { value: "surreal", label: "Surreal (Freepik)" },
+  { value: "fantasy", label: "Fantasy Art (Freepik)" },
   { value: "photo", label: "Photo (Freepik Specific)" },
-  { value: "low-poly", label: "Low Poly (Freepik Specific)" },
-  { value: "pixel-art", label: "Pixel Art (Freepik Specific)" },
-  { value: "anime", label: "Anime / Manga (Freepik Specific)" },
-  { value: "cyberpunk", label: "Cyberpunk (Freepik Specific)" },
-  { value: "comic", label: "Comic (Freepik Specific)" },
+  { value: "low-poly", label: "Low Poly (Freepik)" },
+  { value: "pixel-art", label: "Pixel Art (Freepik)" },
+  { value: "anime", label: "Anime / Manga (Freepik)" },
+  { value: "cyberpunk", label: "Cyberpunk (Freepik)" },
+  { value: "comic", label: "Comic (Freepik)" },
   { value: "cartoon", label: "Cartoon (General/Freepik)" },
-  { value: "vector", label: "Vector (Freepik Specific)" },
-  { value: "studio-shot", label: "Studio Shot (Freepik Specific)"},
-  { value: "dark", label: "Dark (Freepik Specific)"},
-  { value: "sketch", label: "Sketch (Freepik Specific)"},
-  { value: "mockup", label: "Mockup (Freepik Specific)"},
-  { value: "2000s-pone", label: "2000s Pone (Freepik Specific)"},
-  { value: "70s-vibe", label: "70s Vibe (Freepik Specific)"},
-  { value: "watercolor", label: "Watercolor (Freepik Specific)"},
-  { value: "art-nouveau", label: "Art Nouveau (Freepik Specific)"},
-  { value: "origami", label: "Origami (Freepik Specific)"},
-  { value: "traditional-japan", label: "Traditional Japan (Freepik Specific)"},
+  { value: "vector", label: "Vector (Freepik)" },
+  { value: "studio-shot", label: "Studio Shot (Freepik)"},
+  { value: "dark", label: "Dark (Freepik)"},
+  { value: "sketch", label: "Sketch (Freepik)"},
+  { value: "mockup", label: "Mockup (Freepik)"},
+  { value: "2000s-pone", label: "2000s Pone (Freepik)"},
+  { value: "70s-vibe", label: "70s Vibe (Freepik)"},
+  { value: "watercolor", label: "Watercolor (Freepik)"},
+  { value: "art-nouveau", label: "Art Nouveau (Freepik)"},
+  { value: "origami", label: "Origami (Freepik)"},
+  { value: "traditional-japan", label: "Traditional Japan (Freepik)"},
 ];
 
-// For Freepik Imagen3 model
 const freepikImagen3EffectColors = ["none", "b&w", "pastel", "sepia", "dramatic", "vibrant", "orange&teal", "film-filter", "split", "electric", "pastel-pink", "gold-glow", "autumn", "muted-green", "deep-teal", "duotone", "terracotta&teal", "red&blue", "cold-neon", "burgundy&blue"];
 const freepikImagen3EffectLightnings = ["none", "studio", "warm", "cinematic", "volumetric", "golden-hour", "long-exposure", "cold", "iridescent", "dramatic", "hardlight", "redscale", "indoor-light"];
 const freepikImagen3EffectFramings = ["none", "portrait", "macro", "panoramic", "aerial-view", "close-up", "cinematic", "high-angle", "low-angle", "symmetry", "fish-eye", "first-person"];
-const freepikImagen3AspectRatios = [
-    { value: "square_1_1", label: "Square (1:1)" },
-    { value: "social_story_9_16", label: "Social Story (9:16)" },
-    { value: "widescreen_16_9", label: "Widescreen (16:9)" },
-    { value: "traditional_3_4", label: "Traditional (3:4)" },
-    { value: "classic_4_3", label: "Classic (4:3)" },
-];
 
 const generalAspectRatios = [
   { value: "1:1", label: "Square (1:1)" },
   { value: "4:5", label: "Portrait (4:5)" },
   { value: "16:9", label: "Landscape (16:9)" },
   { value: "9:16", label: "Story/Reel (9:16)" },
+];
+const freepikImagen3AspectRatios = [
+    { value: "square_1_1", label: "Square (1:1)" },
+    { value: "social_story_9_16", label: "Social Story (9:16)" },
+    { value: "widescreen_16_9", label: "Widescreen (16:9)" },
+    { value: "traditional_3_4", label: "Traditional (3:4)" },
+    { value: "classic_4_3", label: "Classic (4:3)" },
 ];
 
 const blogTones = [
@@ -98,6 +97,8 @@ const blogTones = [
     { value: "Storytelling", label: "Storytelling" },
     { value: "Technical", label: "Technical" },
 ];
+
+type SocialImageChoice = 'generated' | 'profile' | null;
 
 export default function ContentStudioPage() {
   const { brandData, addGeneratedImage, addGeneratedSocialPost, addGeneratedBlogPost } = useBrand();
@@ -136,6 +137,8 @@ export default function ContentStudioPage() {
   const [selectedProfileImageIndexForSocial, setSelectedProfileImageIndexForSocial] = useState<number | null>(null);
 
   const [selectedImageProvider, setSelectedImageProvider] = useState<string>(imageGenerationProviders[0].value);
+  
+  // State for controlled inputs in Image Generation
   const [imageGenBrandDescription, setImageGenBrandDescription] = useState<string>("");
   const [imageGenIndustry, setImageGenIndustry] = useState<string>("");
   const [selectedImageStylePreset, setSelectedImageStylePreset] = useState<string>(imageStylePresets[0].value);
@@ -161,6 +164,7 @@ export default function ContentStudioPage() {
     if (brandData) {
         setImageGenBrandDescription(brandData.brandDescription || "");
         setImageGenIndustry(brandData.industry || "");
+        // ImageStylePreset is a generation-time choice, not from brandData.imageStyle
         setCustomStyleNotesInput(brandData.imageStyleNotes || ""); 
 
         if (brandData.exampleImages && brandData.exampleImages.length > 0) {
@@ -170,18 +174,29 @@ export default function ContentStudioPage() {
             setSelectedProfileImageIndexForGen(null);
             setSelectedProfileImageIndexForSocial(null);
         }
+    } else {
+        // Reset if brandData is null (e.g., on initial load before context is ready)
+        setImageGenBrandDescription("");
+        setImageGenIndustry("");
+        setCustomStyleNotesInput("");
+        setSelectedProfileImageIndexForGen(null);
+        setSelectedProfileImageIndexForSocial(null);
     }
   }, [brandData]);
 
   useEffect(() => {
     if (selectedImageProvider === 'FREEPIK') {
       setCurrentAspectRatioOptions(freepikImagen3AspectRatios);
-      setSelectedAspectRatio(freepikImagen3AspectRatios[0].value);
+      if (!freepikImagen3AspectRatios.find(ar => ar.value === selectedAspectRatio)) {
+        setSelectedAspectRatio(freepikImagen3AspectRatios[0].value);
+      }
     } else {
       setCurrentAspectRatioOptions(generalAspectRatios);
-      setSelectedAspectRatio(generalAspectRatios[0].value);
+      if (!generalAspectRatios.find(ar => ar.value === selectedAspectRatio)) {
+        setSelectedAspectRatio(generalAspectRatios[0].value);
+      }
     }
-  }, [selectedImageProvider]);
+  }, [selectedImageProvider, selectedAspectRatio]); // Added selectedAspectRatio dependency
 
   useEffect(() => {
     if (imageState.data) {
@@ -205,16 +220,18 @@ export default function ContentStudioPage() {
          toast({ title: "Success", description: `${displayableImages.length} image(s) processed using ${imageState.data.providerUsed || 'default provider'}.` });
       } else if (newImageUrls.some(url => url.startsWith('task_id:'))) {
         toast({ title: "Freepik Task Started", description: "Freepik image generation task started. Use 'Check Status' to retrieve images." });
-      } else if (imageState.error) {
+      } else if (imageState.error) { // This was missing, should be state.error
         toast({ title: "Error generating images", description: imageState.error, variant: "destructive" });
       } else if (!newImageUrls || newImageUrls.length === 0) {
         toast({ title: "No Images/Tasks Generated", description: `Received empty list from ${imageState.data.providerUsed || 'default provider'}. Check logs.`, variant: "default" });
       }
       setIsPreviewingPrompt(false); 
+      setFormSnapshot(null);
     }
-    if (imageState.error && !imageState.data) {
+    if (imageState.error && !imageState.data) { // Check for error when no data
       toast({ title: "Error generating images", description: imageState.error, variant: "destructive" });
       setIsPreviewingPrompt(false); 
+      setFormSnapshot(null);
     }
   }, [imageState, toast, addGeneratedImage, selectedImageStylePreset, customStyleNotesInput]);
 
@@ -292,15 +309,30 @@ export default function ContentStudioPage() {
     if (freepikTaskStatusState.data) {
       const { status, images, taskId } = freepikTaskStatusState.data;
       if (status === 'COMPLETED' && images && images.length > 0) {
-        const newImageUrls = images.map(url => `image_url:${url}`);
-        setLastSuccessfulGeneratedImageUrls(prevUrls =>
-          prevUrls.map(url => (url === `task_id:${taskId}` ? newImageUrls : url)).flat()
-        );
+        const newImageUrls = images.map(url => `image_url:${url}`); // Freepik GET API returns direct URLs
+        setLastSuccessfulGeneratedImageUrls(prevUrls => {
+            const taskIdentifier = `task_id:${taskId}`;
+            // Replace the task_id entry with all new URLs, or add if no task_id was present (e.g. direct image in POST)
+            const existingTaskIndex = prevUrls.findIndex(url => url === taskIdentifier);
+            if (existingTaskIndex !== -1) {
+                const before = prevUrls.slice(0, existingTaskIndex);
+                const after = prevUrls.slice(existingTaskIndex + 1);
+                return [...before, ...newImageUrls, ...after];
+            } else {
+                 // If the task ID wasn't there (e.g. initial POST gave image), just append/replace logic.
+                 // For simplicity here, if taskID was not found to be replaced, this indicates an issue or the images were already directly populated.
+                 // We might want to be more robust here, but for now, let's ensure it updates if task_id was the placeholder.
+                 // Let's try to replace all task_ids for safety or simply prepend if this task ID was the only thing
+                 const otherImages = prevUrls.filter(url => !url.startsWith('task_id:'));
+                 return [...otherImages, ...newImageUrls];
+            }
+        });
         toast({ title: `Task ${taskId.substring(0,8)}... Completed`, description: `${images.length} image(s) retrieved.` });
       } else if (status === 'IN_PROGRESS') {
         toast({ title: `Task ${taskId.substring(0,8)}... Still In Progress`, description: "Please check again in a few moments." });
       } else if (status === 'FAILED') {
         toast({ title: `Task ${taskId.substring(0,8)}... Failed`, description: "Freepik failed to generate images for this task.", variant: "destructive" });
+         setLastSuccessfulGeneratedImageUrls(prevUrls => prevUrls.filter(url => url !== `task_id:${taskId}`)); // Remove failed task
       } else {
          toast({ title: `Task ${taskId.substring(0,8)}... Status: ${status}`, description: "Could not retrieve images or task has an unexpected status." });
       }
@@ -344,7 +376,7 @@ export default function ContentStudioPage() {
     const formData = new FormData();
     formData.append('imagesToSaveJson', JSON.stringify(saveableImages));
     formData.append('brandProfileDocId', 'defaultBrandProfile');
-    // No need to call saveImagesAction directly here if using formAction on SubmitButton
+    // The SubmitButton will call the action.
   };
 
   const handleUseGeneratedImageForSocial = () => {
@@ -356,7 +388,7 @@ export default function ContentStudioPage() {
       setActiveTab('social'); 
       toast({title: "Image Selected", description: "First available generated image selected for social post."});
     } else {
-      toast({title: "No Image", description: "Please generate a displayable image first (Gemini or completed Freepik task).", variant: "destructive"});
+      toast({title: "No Image", description: "Please generate a displayable image first (e.g. Gemini, or completed Freepik task).", variant: "destructive"});
     }
   };
 
@@ -399,8 +431,23 @@ export default function ContentStudioPage() {
     
     let textPromptContent = "";
         
-    if (exampleImg) {
-        textPromptContent = `
+    if (selectedImageProvider === 'FREEPIK') {
+        // Simpler prompt for Freepik as many details are structural
+        let baseFreepikPrompt = "";
+        if (exampleImg) {
+            // Note: exampleImg is ignored by Freepik text-to-image, but description will be added by backend.
+            baseFreepikPrompt = `[An AI-generated description of your example image will be used here by the backend to guide content when Freepik/Imagen3 is selected.]\nConcept: "${imageGenBrandDescription}".${industryContext}\nArtistic style and detailed elements: "${combinedStyle}".`;
+        } else {
+            baseFreepikPrompt = `Concept: "${imageGenBrandDescription}".${industryContext}\nDesired artistic style for new images: "${combinedStyle}".`;
+        }
+        textPromptContent = baseFreepikPrompt;
+        if (negPrompt) { // Negative prompt is structural for Freepik, but can be included textually for user preview.
+             textPromptContent += `\n\nAvoid: ${negPrompt}.`;
+        }
+         textPromptContent +=`\n\n${compositionGuidance}`;
+    } else { // Gemini or other providers that rely more on text
+        if (exampleImg) {
+            textPromptContent = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
 
 The provided example image (sent first for Gemini) serves ONE primary purpose: to identify the *category* of the item depicted (e.g., 'a handbag', 'a t-shirt', 'a piece of furniture', 'a pair of shoes').
@@ -419,27 +466,28 @@ The *design, appearance, theme, specific characteristics, and unique elements* o
 If the example image is a 'simple blue cotton t-shirt' (category: t-shirt), the Brand Description is 'luxury brand, minimalist ethos, inspired by serene nature, prefers organic materials', and the Desired Artistic Style is 'high-fashion product shot, muted earthy tones'.
 You should generate an image of a *luxury t-shirt made from organic-looking material, in muted earthy tones (e.g., moss green, stone grey, soft beige), shot in a high-fashion product style*. It should evoke serenity and minimalism. It should NOT be the original blue cotton t-shirt, nor should it default to a generic "luxury" color scheme like black and gold unless those colors are specifically requested or strongly implied by the *combination* of inputs.
 `.trim();
-    } else { 
-        textPromptContent = `
+        } else { 
+            textPromptContent = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
 The image should be based on the following concept: "${imageGenBrandDescription}".${industryContext}
 The desired artistic style for this new image is: "${combinedStyle}". If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic.
 **Important Note on Color and Style**: Strive for visual variety that aligns with the brand description and artistic style. Avoid defaulting to a narrow or stereotypical color palette unless the inputs strongly and explicitly demand it.
 `.trim();
-    }
+        }
+        
+        // Appends for Gemini-like providers (textual parameters)
+        if (negPrompt) {
+            textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negPrompt}.`;
+        }
+        if (aspect) {
+            textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspect} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally, and the image content itself must fully occupy this ${aspect} frame, without any artificial letterboxing or pillarboxing.`;
+        }
+        if (seedValue !== undefined) {
+            textPromptContent += `\n\nUse seed: ${seedValue}.`;
+        }
+    } // End of Gemini/other provider prompt construction
     
-    if (selectedImageProvider !== 'FREEPIK') { 
-      if (negPrompt) {
-        textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negPrompt}.`;
-      }
-      if (aspect) {
-        textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspect} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally, and the image content itself must fully occupy this ${aspect} frame, without any artificial letterboxing or pillarboxing.`;
-      }
-      if (seedValue !== undefined) {
-        textPromptContent += `\n\nUse seed: ${seedValue}.`;
-      }
-    }
-    
+     // Common appends (composition, batch)
     if (
         !textPromptContent.toLowerCase().includes("human figure") &&
         !textPromptContent.toLowerCase().includes("crop") &&
@@ -452,8 +500,11 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
         textPromptContent += `\n\n${compositionGuidance}`;
     }
     
-    if (numImages > 1 && selectedImageProvider !== 'FREEPIK' && (!currentTextPromptForEditing || (!currentTextPromptForEditing.toLowerCase().includes("batch generation") && !currentTextPromptForEditing.toLowerCase().includes("image 1 of")))) { 
-        textPromptContent += `\n\nImportant for batch generation: You are generating image 1 of a set of ${numImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (1/${numImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
+    if (numImages > 1 && (!currentTextPromptForEditing || (!currentTextPromptForEditing.toLowerCase().includes("batch generation") && !currentTextPromptForEditing.toLowerCase().includes("image 1 of"))) ) { 
+        // Add batch instruction if not already in a user-edited prompt and not Freepik (Freepik handles num_images structurally)
+        if (selectedImageProvider !== 'FREEPIK') {
+           textPromptContent += `\n\nImportant for batch generation: You are generating image 1 of a set of ${numImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (1/${numImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
+        }
     }
     
     setCurrentTextPromptForEditing(textPromptContent);
@@ -467,6 +518,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
         numberOfImages: numImages,
         negativePrompt: negPrompt === "" ? undefined : negPrompt,
         seed: seedValue,
+        // Freepik specific fields, pass them along
         freepikStylingColors: freepikDominantColorsInput ? freepikDominantColorsInput.split(',').map(c => ({color: c.trim(), weight: 0.5})) : undefined,
         freepikEffectColor: freepikEffectColor === "none" ? undefined : freepikEffectColor,
         freepikEffectLightning: freepikEffectLightning === "none" ? undefined : freepikEffectLightning,
@@ -480,14 +532,14 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
     startTransition(() => {
         const formData = new FormData();
         
-        formData.append("finalizedTextPrompt", currentTextPromptForEditing || ""); // Use currentTextPromptForEditing
+        formData.append("finalizedTextPrompt", currentTextPromptForEditing || ""); 
         formData.append("provider", formSnapshot?.provider || selectedImageProvider);
         formData.append("brandDescription", formSnapshot?.brandDescription || imageGenBrandDescription || brandData?.brandDescription || "");
         formData.append("industry", formSnapshot?.industry || imageGenIndustry || brandData?.industry || "");
         formData.append("imageStyle", formSnapshot?.imageStyle || (selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")));
         
-        const exampleImg = (formSnapshot?.exampleImage) || currentExampleImageForGen;
-        if (exampleImg) formData.append("exampleImage", exampleImg);
+        const exampleImgFromSnapshot = formSnapshot?.exampleImage;
+        if (exampleImgFromSnapshot) formData.append("exampleImage", exampleImgFromSnapshot);
 
         formData.append("aspectRatio", formSnapshot?.aspectRatio || selectedAspectRatio);
         formData.append("numberOfImages", String(formSnapshot?.numberOfImages || parseInt(numberOfImagesToGenerate,10)));
@@ -496,11 +548,14 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
         if (negPromptValue) formData.append("negativePrompt", negPromptValue);
 
         const seedValueNum = formSnapshot?.seed !== undefined ? formSnapshot.seed : (imageGenSeed && !isNaN(parseInt(imageGenSeed)) ? parseInt(imageGenSeed) : undefined);
-        if (seedValueNum !== undefined && (formSnapshot?.provider || selectedImageProvider) !== 'FREEPIK') { 
+        // Seed is only appended textually for Gemini; Freepik handles it structurally or ignores.
+        // The backend flow decides whether to append seed to text based on provider if not in finalizedTextPrompt.
+        // So, just pass the value.
+        if (seedValueNum !== undefined) { 
           formData.append("seed", String(seedValueNum));
         }
 
-        const fColorsInput = formSnapshot?.freepikStylingColors?.map(c=>c.color).join(',') || freepikDominantColorsInput;
+        const fColorsInput = (formSnapshot?.freepikStylingColors?.map(c=>c.color).join(',')) || freepikDominantColorsInput;
         if (fColorsInput && (formSnapshot?.provider || selectedImageProvider) === 'FREEPIK') formData.append("freepikDominantColorsInput", fColorsInput);
         
         const fEffectColorValue = formSnapshot?.freepikEffectColor || freepikEffectColor;
@@ -518,11 +573,23 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
   
   const handleGenerateBlogOutline = () => {
     const formData = new FormData();
-    formData.append('brandName', (document.getElementById('blogBrandName') as HTMLInputElement)?.value || brandData?.brandName || "");
-    formData.append('blogBrandDescription', (document.getElementById('blogBrandDescription') as HTMLTextAreaElement)?.value || brandData?.brandDescription || "");
-    formData.append('industry', (document.getElementById('blogIndustry') as HTMLInputElement)?.value || brandData?.industry || "");
-    formData.append('blogKeywords', (document.getElementById('blogKeywords') as HTMLInputElement)?.value || brandData?.targetKeywords || "");
-    formData.append('blogWebsiteUrl', (document.getElementById('blogWebsiteUrl') as HTMLInputElement)?.value || brandData?.websiteUrl || "");
+    // Get values from the actual form inputs using their names
+    const formElement = document.getElementById('blogPostForm') as HTMLFormElement | null;
+    if (formElement) {
+        const currentFormData = new FormData(formElement);
+        formData.append('brandName', currentFormData.get('brandName') as string || brandData?.brandName || "");
+        formData.append('blogBrandDescription', currentFormData.get('blogBrandDescription') as string || brandData?.brandDescription || "");
+        formData.append('industry', currentFormData.get('industry') as string || brandData?.industry || "");
+        formData.append('blogKeywords', currentFormData.get('blogKeywords') as string || brandData?.targetKeywords || "");
+        formData.append('blogWebsiteUrl', currentFormData.get('blogWebsiteUrl') as string || brandData?.websiteUrl || "");
+    } else {
+        // Fallback if form element not found - less ideal
+        formData.append('brandName', (document.getElementById('blogBrandName') as HTMLInputElement)?.value || brandData?.brandName || "");
+        formData.append('blogBrandDescription', (document.getElementById('blogBrandDescription') as HTMLTextAreaElement)?.value || brandData?.brandDescription || "");
+        formData.append('industry', (document.getElementById('blogIndustry') as HTMLInputElement)?.value || brandData?.industry || "");
+        formData.append('blogKeywords', (document.getElementById('blogKeywords') as HTMLInputElement)?.value || brandData?.targetKeywords || "");
+        formData.append('blogWebsiteUrl', (document.getElementById('blogWebsiteUrl') as HTMLInputElement)?.value || brandData?.websiteUrl || "");
+    }
     
     if (!formData.get('brandName') && !formData.get('blogBrandDescription') && !formData.get('blogKeywords')) {
         toast({title: "Missing Info", description: "Please provide Brand Name, Description, and Keywords for outline generation.", variant: "destructive"});
@@ -545,16 +612,14 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
   };
 
   const downloadImage = (imageUrl: string, filename = "generated-image.png") => {
-    if (imageUrl.startsWith('data:')) { // Handle data URI
+    if (imageUrl.startsWith('data:')) { 
       const link = document.createElement('a');
       link.href = imageUrl;
       link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    } else { // Handle direct URL
-      // For direct URLs, this will open in a new tab. User can right-click save.
-      // A true direct download for cross-origin URLs requires server-side help or specific CORS.
+    } else { 
       window.open(imageUrl, '_blank');
     }
   };
@@ -590,7 +655,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                  {lastUsedImageProvider && <p className="text-xs text-primary mt-1">Image(s) last generated using: {lastUsedImageProvider}</p>}
               </CardHeader>
               {!isPreviewingPrompt ? (
-                <form id="imageGenerationFormFields"> 
+                <div id="imageGenerationFormFields"> {/* Changed from form to div as submission is handled differently */}
                   <CardContent className="space-y-6">
                      <div>
                         <Label htmlFor="imageGenProviderSelect" className="flex items-center mb-1"><Server className="w-4 h-4 mr-2 text-primary" />Image Generation Provider</Label>
@@ -612,7 +677,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                     </div>
 
                     <div>
-                      <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
+                      <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description</Label>
                       <Textarea
                         id="imageGenBrandDescription"
                         name="brandDescription"
@@ -623,7 +688,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                       />
                     </div>
                      <div>
-                        <Label htmlFor="imageGenIndustry" className="flex items-center mb-1"><Briefcase className="w-4 h-4 mr-2 text-primary" />Industry (from Profile)</Label>
+                        <Label htmlFor="imageGenIndustry" className="flex items-center mb-1"><Briefcase className="w-4 h-4 mr-2 text-primary" />Industry</Label>
                         <Input
                             id="imageGenIndustry"
                             name="industry"
@@ -639,6 +704,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         name="imageStylePreset"
                         value={selectedImageStylePreset} 
                         onValueChange={setSelectedImageStylePreset}
+                        
                       >
                           <SelectTrigger id="imageGenImageStylePresetSelect">
                               <SelectValue placeholder="Select image style preset" />
@@ -653,7 +719,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                           </SelectContent>
                       </Select>
                        <p className="text-xs text-muted-foreground">
-                         General styles. Some may be more effective with specific providers.
+                         Generic styles. Some may be more effective with specific providers (e.g., Freepik styles are often enum based).
                        </p>
                     </div>
 
@@ -701,7 +767,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                                 )}
                                 { (brandData?.exampleImages && selectedProfileImageIndexForGen !== null && brandData.exampleImages[selectedProfileImageIndexForGen]) && (
                                     <p className="text-xs text-muted-foreground">
-                                        Using image {selectedProfileImageIndexForGen !== null && brandData.exampleImages && brandData.exampleImages.length > 1 ? selectedProfileImageIndexForGen + 1 : '1'} as reference.
+                                        Using image {selectedProfileImageIndexForGen !== null && brandData.exampleImages && brandData.exampleImages.length > 1 ? selectedProfileImageIndexForGen + 1 : '1'} as reference for Gemini. Freepik text-to-image ignores this.
                                     </p>
                                 )}
                             </div>
@@ -737,7 +803,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                                         onChange={(e) => setFreepikDominantColorsInput(e.target.value)}
                                         placeholder="Up to 5 hex codes, e.g., #FF0000,#00FF00"
                                     />
-                                    <p className="text-xs text-muted-foreground">Comma-separated hex codes. (Freepik specific)</p>
+                                    <p className="text-xs text-muted-foreground">Comma-separated hex codes. (Freepik imagen3 specific)</p>
                                 </div>
                                 <div>
                                     <Label htmlFor="freepikEffectColor" className="flex items-center mb-1"><Paintbrush className="w-4 h-4 mr-2 text-primary" />Effect - Color</Label>
@@ -747,7 +813,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                                             {freepikImagen3EffectColors.map(effect => <SelectItem key={effect} value={effect || "none"}>{effect || "None"}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
-                                     <p className="text-xs text-muted-foreground">(Freepik specific)</p>
+                                     <p className="text-xs text-muted-foreground">(Freepik imagen3 specific)</p>
                                 </div>
                                 <div>
                                     <Label htmlFor="freepikEffectLightning" className="flex items-center mb-1"><Zap className="w-4 h-4 mr-2 text-primary" />Effect - Lightning</Label>
@@ -757,7 +823,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                                             {freepikImagen3EffectLightnings.map(effect => <SelectItem key={effect} value={effect || "none"}>{effect || "None"}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
-                                     <p className="text-xs text-muted-foreground">(Freepik specific)</p>
+                                     <p className="text-xs text-muted-foreground">(Freepik imagen3 specific)</p>
                                 </div>
                                 <div>
                                     <Label htmlFor="freepikEffectFraming" className="flex items-center mb-1"><Aperture className="w-4 h-4 mr-2 text-primary" />Effect - Framing</Label>
@@ -767,7 +833,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                                             {freepikImagen3EffectFramings.map(effect => <SelectItem key={effect} value={effect || "none"}>{effect || "None"}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
-                                     <p className="text-xs text-muted-foreground">(Freepik specific)</p>
+                                     <p className="text-xs text-muted-foreground">(Freepik imagen3 specific)</p>
                                 </div>
                             </div>
                         </>
@@ -819,7 +885,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         disabled={selectedImageProvider === 'FREEPIK'}
                       />
                        <p className="text-xs text-muted-foreground">
-                         {selectedImageProvider === 'FREEPIK' ? "Seed is ignored for Freepik/Imagen3 integration." : "Seed might not be strictly enforced by all models."}
+                         {selectedImageProvider === 'FREEPIK' ? "Seed is ignored for Freepik/Imagen3 UI integration (uses API default or fixed for now)." : "Seed might not be strictly enforced by all models."}
                        </p>
                     </div>
                   </CardContent>
@@ -828,8 +894,8 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         <Eye className="mr-2 h-4 w-4" /> Preview Prompt
                     </Button>
                   </CardFooter>
-                </form>
-              ) : (
+                </div> // End of imageGenerationFormFields div
+              ) : ( // isPreviewingPrompt is true
                 <form onSubmit={handleImageGenerationSubmit}>
                   <CardContent className="space-y-6">
                     <div>
@@ -843,12 +909,12 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         placeholder="The constructed prompt will appear here. You can edit it before generation."
                       />
                        <p className="text-xs text-muted-foreground">
-                        Note: For Freepik, structural parameters (aspect ratio, Freepik-specific styles/effects) are set separately if chosen. Editing this prompt gives most control to Gemini.
+                        Note: For Freepik, structural parameters (aspect ratio, Freepik-specific styles/effects) are set separately. Editing this prompt gives most control to Gemini.
                        </p>
                     </div>
                   </CardContent>
                   <CardFooter className="flex flex-col sm:flex-row gap-2">
-                    <Button type="button" variant="outline" onClick={() => setIsPreviewingPrompt(false)} className="w-full sm:w-auto">
+                    <Button type="button" variant="outline" onClick={() => { setIsPreviewingPrompt(false); setFormSnapshot(null);}} className="w-full sm:w-auto">
                         Back to Edit Fields
                     </Button>
                     <SubmitButton className="w-full sm:flex-1" loadingText={parseInt(formSnapshot?.numberOfImages?.toString() || "1") > 1 ? "Generating Images..." : "Generating Image..."}>
@@ -872,13 +938,19 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                             </Button>
                         </div>
                          {lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url?.startsWith('image_url:')) && (
-                            <div className="mt-2 flex items-center gap-2">
-                                <form> 
+                            <div className="mt-2"> 
+                                <form className="inline-block"> 
+                                    <input type="hidden" name="imagesToSaveJson" value={JSON.stringify(
+                                        lastSuccessfulGeneratedImageUrls
+                                            .filter(url => url && (url.startsWith('data:') || url.startsWith('image_url:')))
+                                            .map(url => ({
+                                                dataUri: url,
+                                                prompt: lastUsedImageGenPrompt || "N/A",
+                                                style: formSnapshot?.imageStyle || (selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")),
+                                            }))
+                                    )} />
+                                    <input type="hidden" name="brandProfileDocId" value="defaultBrandProfile" />
                                     <SubmitButton 
-                                        onClick={(e) => {
-                                          e.preventDefault(); // Prevent default form submission if any
-                                          handleSaveAllGeneratedImages();
-                                        }}
                                         formAction={saveImagesAction}
                                         disabled={!lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url?.startsWith('image_url:')) || !!(saveImagesState.message?.startsWith('Saving...'))} 
                                         size="sm"
@@ -909,16 +981,16 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                                 ) : url && url.startsWith('task_id:') ? (
                                      <div className="flex flex-col items-center justify-center h-full text-xs text-muted-foreground p-2 text-center">
                                         <Loader2 className="w-6 h-6 animate-spin mb-2" />
-                                        Freepik image task started. <br/> Task ID: {url.substring(8)}
+                                        Freepik image task pending. <br/> Task ID: {url.substring(8).substring(0,8)}...
                                         <form className="mt-2">
                                           <input type="hidden" name="taskId" value={url.substring(8)} />
                                           <SubmitButton
                                             size="sm"
                                             variant="outline"
                                             loadingText="Checking..."
-                                            formAction={(formData) => {
+                                            formAction={ (formData) => {
                                                 setCheckingTaskId(url.substring(8));
-                                                startTransition(() => freepikTaskStatusAction(formData));
+                                                freepikTaskStatusAction(formData);
                                             }}
                                             disabled={checkingTaskId === url.substring(8)}
                                           >
@@ -951,7 +1023,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                             />
                         </div>
                       )}
-                      <Button 
+                       <Button 
                         variant="outline" 
                         className="mt-4" 
                         onClick={handleUseGeneratedImageForSocial} 
@@ -1203,7 +1275,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                     <CardTitle>Create Blog Content</CardTitle>
                     <p className="text-sm text-muted-foreground">Generate SEO-friendly blog posts. Define an outline, choose a tone, and let AI write the content.</p>
                 </CardHeader>
-                <form action={blogAction} className="w-full">
+                <form id="blogPostForm" action={blogAction} className="w-full">
                     <CardContent className="space-y-6">
                         <div>
                             <Label htmlFor="blogBrandName" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Name (from Profile)</Label>
@@ -1357,7 +1429,5 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
     </AppShell>
   );
 }
-
-    
 
     
