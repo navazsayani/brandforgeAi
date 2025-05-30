@@ -15,7 +15,7 @@ const DescribeImageInputSchema = z.object({
   imageDataUri: z
     .string()
     .describe(
-      "The image to describe, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+      "The image to describe, as a data URI or a public HTTPS URL. The model will attempt to fetch HTTPS URLs. Expected format for data URI: 'data:<mimetype>;base64,<encoded_data>'."
     ),
 });
 export type DescribeImageInput = z.infer<typeof DescribeImageInputSchema>;
@@ -51,9 +51,17 @@ const describeImageFlow = ai.defineFlow(
     outputSchema: DescribeImageOutputSchema,
   },
   async input => {
-    if (!input.imageDataUri || !input.imageDataUri.startsWith('data:')) {
-      throw new Error('A valid image data URI is required.');
+    // Log the input URI to help debug
+    console.log('describeImageFlow received imageDataUri:', input.imageDataUri);
+
+    // Ensure imageDataUri is present, but do not strictly check for 'data:' prefix
+    if (!input.imageDataUri) {
+      throw new Error('Image data URI or URL is required for description.');
     }
+    
+    // The check for 'data:' prefix has been removed to allow HTTPS URLs.
+    // Gemini should handle HTTPS URLs in the {{media url=...}} tag.
+
     const {output} = await prompt(input);
     if (!output) {
       throw new Error('AI failed to generate an image description.');
