@@ -24,6 +24,7 @@ import type { GenerateBlogOutlineOutput } from "@/ai/flows/generate-blog-outline
 import type { GenerateImagesInput } from '@/ai/flows/generate-images';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; 
+import { FormDescription } from '@/components/ui/form';
 
 const initialImageFormState: FormState<{ generatedImages: string[]; promptUsed: string; providerUsed: string; }> = { error: undefined, data: undefined, message: undefined };
 const initialSocialFormState: FormState<{ caption: string; hashtags: string; imageSrc: string | null }> = { error: undefined, data: undefined, message: undefined };
@@ -35,41 +36,40 @@ const initialSaveImagesState: FormState<{ savedCount: number }> = { error: undef
 type SocialImageChoice = 'generated' | 'profile' | null;
 
 const imageStylePresets = [
-  // Generic (Good for Gemini)
-  { value: "photorealistic", label: "Photorealistic" },
-  { value: "digital-art", label: "Digital Art" },
-  { value: "minimalist", label: "Minimalist" },
-  { value: "abstract", label: "Abstract" },
-  { value: "vintage", label: "Vintage / Retro" },
-  { value: "surreal", label: "Surreal" },
-  { value: "fantasy", label: "Fantasy Art" },
-  // Freepik Specific (will also work for Gemini as text)
-  { value: "photo", label: "Photo (Freepik)" },
-  { value: "3d", label: "3D (Freepik)" },
-  { value: "painting", label: "Painting (Freepik)" },
-  { value: "low-poly", label: "Low Poly (Freepik)" },
-  { value: "pixel-art", label: "Pixel Art (Freepik)" },
-  { value: "anime", label: "Anime / Manga (Freepik)" },
-  { value: "cyberpunk", label: "Cyberpunk (Freepik)" },
-  { value: "comic", label: "Comic (Freepik)" },
-  { value: "cartoon", label: "Cartoon (Freepik)" },
-  { value: "vector", label: "Vector (Freepik)" },
-  { value: "studio-shot", label: "Studio Shot (Freepik)"},
-  { value: "dark", label: "Dark (Freepik)"},
-  { value: "sketch", label: "Sketch (Freepik)"},
-  { value: "mockup", label: "Mockup (Freepik)"},
-  { value: "2000s-pone", label: "2000s Pone (Freepik)"},
-  { value: "70s-vibe", label: "70s Vibe (Freepik)"},
-  { value: "watercolor", label: "Watercolor (Freepik)"},
-  { value: "art-nouveau", label: "Art Nouveau (Freepik)"},
-  { value: "origami", label: "Origami (Freepik)"},
-  { value: "traditional-japan", label: "Traditional Japan (Freepik)"},
+  { value: "photorealistic", label: "Photorealistic (General)" },
+  { value: "digital-art", label: "Digital Art (General/Freepik)" },
+  { value: "3d", label: "3D (General/Freepik)" },
+  { value: "painting", label: "Painting (General/Freepik)" },
+  { value: "minimalist", label: "Minimalist (General)" },
+  { value: "abstract", label: "Abstract (General)" },
+  { value: "vintage", label: "Vintage / Retro (General/Freepik)" },
+  { value: "surreal", label: "Surreal (General/Freepik)" },
+  { value: "fantasy", label: "Fantasy Art (General/Freepik)" },
+  { value: "photo", label: "Photo (Freepik Specific)" },
+  { value: "low-poly", label: "Low Poly (Freepik Specific)" },
+  { value: "pixel-art", label: "Pixel Art (Freepik Specific)" },
+  { value: "anime", label: "Anime / Manga (Freepik Specific)" },
+  { value: "cyberpunk", label: "Cyberpunk (Freepik Specific)" },
+  { value: "comic", label: "Comic (Freepik Specific)" },
+  { value: "cartoon", label: "Cartoon (General/Freepik)" },
+  { value: "vector", label: "Vector (Freepik Specific)" },
+  { value: "studio-shot", label: "Studio Shot (Freepik Specific)"},
+  { value: "dark", label: "Dark (Freepik Specific)"},
+  { value: "sketch", label: "Sketch (Freepik Specific)"},
+  { value: "mockup", label: "Mockup (Freepik Specific)"},
+  { value: "2000s-pone", label: "2000s Pone (Freepik Specific)"},
+  { value: "70s-vibe", label: "70s Vibe (Freepik Specific)"},
+  { value: "watercolor", label: "Watercolor (Freepik Specific)"},
+  { value: "art-nouveau", label: "Art Nouveau (Freepik Specific)"},
+  { value: "origami", label: "Origami (Freepik Specific)"},
+  { value: "traditional-japan", label: "Traditional Japan (Freepik Specific)"},
 ];
 
+// Updated for flux-dev
+const freepikFluxEffectColors = ["none", "softhue", "b&w", "goldglow", "vibrant", "coldneon"];
+const freepikFluxEffectLightnings = ["none", "iridescent", "dramatic", "goldenhour", "longexposure", "indorlight", "flash", "neon"];
+const freepikFluxEffectFramings = ["none", "portrait", "lowangle", "midshot", "wideshot", "tiltshot", "aerial"];
 
-const freepikEffectColors = ["none", "b&w", "pastel", "sepia", "dramatic", "vibrant", "orange&teal", "film-filter", "split", "electric", "pastel-pink", "gold-glow", "autumn", "muted-green", "deep-teal", "duotone", "terracotta&teal", "red&blue", "cold-neon", "burgundy&blue"];
-const freepikEffectLightnings = ["none", "studio", "warm", "cinematic", "volumetric", "golden-hour", "long-exposure", "cold", "iridescent", "dramatic", "hardlight", "redscale", "indoor-light"];
-const freepikEffectFramings = ["none", "portrait", "macro", "panoramic", "aerial-view", "close-up", "cinematic", "high-angle", "low-angle", "symmetry", "fish-eye", "first-person"];
 
 const blogTones = [
     { value: "Informative", label: "Informative" },
@@ -83,10 +83,32 @@ const blogTones = [
 
 const imageGenerationProviders = [
     { value: "GEMINI", label: "Gemini (Google AI)" },
-    { value: "FREEPIK", label: "Freepik API" },
+    { value: "FREEPIK", label: "Freepik API (flux-dev)" },
     { value: "LEONARDO_AI", label: "Leonardo.ai (Not Implemented)", disabled: true },
     { value: "IMAGEN", label: "Imagen (Not Implemented)", disabled: true },
 ];
+
+// Aspect ratios compatible with Freepik flux-dev
+const freepikFluxAspectRatios = [
+    { value: "square_1_1", label: "Square (1:1)" },
+    { value: "classic_4_3", label: "Classic (4:3)" },
+    { value: "traditional_3_4", label: "Traditional (3:4)" },
+    { value: "widescreen_16_9", label: "Widescreen (16:9)" },
+    { value: "social_story_9_16", label: "Social Story (9:16)" },
+    { value: "standard_3_2", label: "Standard (3:2)" },
+    { value: "portrait_2_3", label: "Portrait (2:3)" },
+    { value: "horizontal_2_1", label: "Horizontal (2:1)" },
+    { value: "vertical_1_2", label: "Vertical (1:2)" },
+    { value: "social_post_4_5", label: "Social Post (4:5)" },
+];
+// General aspect ratios (can be used by Gemini, Freepik will map them)
+const generalAspectRatios = [
+  { value: "1:1", label: "Square (1:1)" },
+  { value: "4:5", label: "Portrait (4:5)" },
+  { value: "16:9", label: "Landscape (16:9)" },
+  { value: "9:16", label: "Story/Reel (9:16)" },
+];
+
 
 export default function ContentStudioPage() {
   const { brandData, addGeneratedImage, addGeneratedSocialPost, addGeneratedBlogPost } = useBrand();
@@ -102,6 +124,7 @@ export default function ContentStudioPage() {
   const [lastSuccessfulGeneratedImageUrls, setLastSuccessfulGeneratedImageUrls] = useState<string[]>([]);
   const [lastUsedImageGenPrompt, setLastUsedImageGenPrompt] = useState<string | null>(null);
   const [lastUsedImageProvider, setLastUsedImageProvider] = useState<string | null>(null);
+
   const [generatedSocialPost, setGeneratedSocialPost] = useState<{caption: string, hashtags: string, imageSrc: string | null} | null>(null);
   const [generatedBlogPost, setGeneratedBlogPost] = useState<{title: string, content: string, tags: string} | null>(null);
   const [generatedBlogOutline, setGeneratedBlogOutline] = useState<string>("");
@@ -111,7 +134,7 @@ export default function ContentStudioPage() {
   const [socialToneValue, setSocialToneValue] = useState<string>("professional");
   const [blogPlatformValue, setBlogPlatformValue] = useState<"Medium" | "Other">("Medium");
   const [selectedBlogTone, setSelectedBlogTone] = useState<string>(blogTones[0].value);
-  const [selectedAspectRatio, setSelectedAspectRatio] = useState<string>("1:1");
+  
   const [numberOfImagesToGenerate, setNumberOfImagesToGenerate] = useState<string>("1");
   const [activeTab, setActiveTab] = useState<string>("image");
   const [isGeneratingDescription, setIsGeneratingDescription] = useState<boolean>(false);
@@ -120,6 +143,7 @@ export default function ContentStudioPage() {
   const [selectedProfileImageIndexForGen, setSelectedProfileImageIndexForGen] = useState<number | null>(null);
   const [selectedProfileImageIndexForSocial, setSelectedProfileImageIndexForSocial] = useState<number | null>(null);
 
+  // States for controlled inputs in Image Generation
   const [selectedImageProvider, setSelectedImageProvider] = useState<string>(imageGenerationProviders[0].value);
   const [imageGenBrandDescription, setImageGenBrandDescription] = useState<string>("");
   const [imageGenIndustry, setImageGenIndustry] = useState<string>("");
@@ -127,6 +151,9 @@ export default function ContentStudioPage() {
   const [customStyleNotesInput, setCustomStyleNotesInput] = useState<string>("");
   const [imageGenNegativePrompt, setImageGenNegativePrompt] = useState<string>("");
   const [imageGenSeed, setImageGenSeed] = useState<string>("");
+  const [selectedAspectRatio, setSelectedAspectRatio] = useState<string>(
+    selectedImageProvider === 'FREEPIK' ? freepikFluxAspectRatios[0].value : generalAspectRatios[0].value
+  );
   
   const [freepikDominantColorsInput, setFreepikDominantColorsInput] = useState<string>("");
   const [freepikEffectColor, setFreepikEffectColor] = useState<string>("none");
@@ -145,7 +172,7 @@ export default function ContentStudioPage() {
     if (brandData) {
         setImageGenBrandDescription(brandData.brandDescription || "");
         setImageGenIndustry(brandData.industry || "");
-        setCustomStyleNotesInput(brandData.imageStyleNotes || ""); // Initialize custom notes
+        setCustomStyleNotesInput(brandData.imageStyleNotes || ""); 
 
         if (brandData.exampleImages && brandData.exampleImages.length > 0) {
             if (selectedProfileImageIndexForGen === null) setSelectedProfileImageIndexForGen(0);
@@ -157,27 +184,47 @@ export default function ContentStudioPage() {
     }
   }, [brandData]);
 
+  // Effect to update aspect ratio options when provider changes
+  useEffect(() => {
+    if (selectedImageProvider === 'FREEPIK') {
+      setSelectedAspectRatio(freepikFluxAspectRatios[0].value);
+    } else {
+      setSelectedAspectRatio(generalAspectRatios[0].value);
+    }
+  }, [selectedImageProvider]);
+
   useEffect(() => {
     if (imageState.data) {
       const newImageUrls = imageState.data.generatedImages;
-      setLastSuccessfulGeneratedImageUrls(newImageUrls);
+      setLastSuccessfulGeneratedImageUrls(newImageUrls); // Expecting string[]
       setLastUsedImageGenPrompt(imageState.data.promptUsed);
       setLastUsedImageProvider(imageState.data.providerUsed);
       setSelectedGeneratedImageIndices([]); 
       
-      newImageUrls.forEach(url => { 
-        const newImage: GeneratedImage = {
-          id: `${new Date().toISOString()}-${Math.random().toString(36).substring(2, 9)}`, 
-          src: url,
-          prompt: imageState.data.promptUsed || "", 
-          style: selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")
-        };
-        addGeneratedImage(newImage); 
-      });
-      toast({ title: "Success", description: `${imageState.message} (using ${imageState.data.providerUsed})` });
+      if (newImageUrls && newImageUrls.length > 0) {
+        newImageUrls.forEach(url => { 
+            if (url && typeof url === 'string') { // Ensure URL is valid before adding
+                const newImage: GeneratedImage = {
+                    id: `${new Date().toISOString()}-${Math.random().toString(36).substring(2, 9)}`, 
+                    src: url,
+                    prompt: imageState.data.promptUsed || "", 
+                    style: selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")
+                };
+                addGeneratedImage(newImage); 
+            }
+        });
+         toast({ title: "Success", description: `${newImageUrls.length} image(s) data processed using ${imageState.data.providerUsed}. Freepik images require polling (not yet implemented).` });
+      } else if (imageState.data.providerUsed === 'FREEPIK' && imageState.message?.includes("Task started")) {
+        // Handle case where Freepik task started but no images yet
+        toast({ title: "Freepik Task Started", description: imageState.message });
+      } else if (imageState.error) {
+        toast({ title: "Error generating images", description: imageState.error, variant: "destructive" });
+      } else if (!newImageUrls || newImageUrls.length === 0) {
+        toast({ title: "No Images Generated", description: `Received empty image list from ${imageState.data.providerUsed}. Check logs.`, variant: "default" });
+      }
       setIsPreviewingPrompt(false); 
     }
-    if (imageState.error) {
+    if (imageState.error && !imageState.data) { // Only show top-level error if no data part
       toast({ title: "Error generating images", description: imageState.error, variant: "destructive" });
       setIsPreviewingPrompt(false); 
     }
@@ -279,12 +326,20 @@ export default function ContentStudioPage() {
       toast({ title: "No Images Selected", description: "Please select images to save.", variant: "destructive" });
       return;
     }
-    const imagesToSave = selectedGeneratedImageIndices.map(index => ({
-      dataUri: lastSuccessfulGeneratedImageUrls[index],
-      prompt: lastUsedImageGenPrompt || "N/A", 
-      style: (formSnapshot?.imageStyle || selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")),
-    }));
+    const imagesToSave = selectedGeneratedImageIndices
+        .map(index => lastSuccessfulGeneratedImageUrls[index])
+        .filter(url => url && url.startsWith('data:')) // Only save data URIs that need uploading
+        .map(url => ({
+            dataUri: url,
+            prompt: lastUsedImageGenPrompt || "N/A",
+            style: (formSnapshot?.imageStyle || selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")),
+        }));
 
+    if (imagesToSave.length === 0) {
+        toast({ title: "No new images to save", description: "Selected images might already be URLs or invalid for saving.", variant: "default"});
+        return;
+    }
+    
     const formData = new FormData();
     formData.append('imagesToSaveJson', JSON.stringify(imagesToSave));
     formData.append('brandProfileDocId', 'defaultBrandProfile');
@@ -295,14 +350,14 @@ export default function ContentStudioPage() {
   };
 
   const handleUseGeneratedImageForSocial = () => {
-    if (lastSuccessfulGeneratedImageUrls.length > 0) {
+    if (lastSuccessfulGeneratedImageUrls.length > 0 && lastSuccessfulGeneratedImageUrls[0]) {
       setUseImageForSocialPost(true);
       setSocialImageChoice('generated'); 
       setSelectedProfileImageIndexForSocial(null); 
       setActiveTab('social'); 
       toast({title: "Image Selected", description: "First generated image selected for social post."});
     } else {
-      toast({title: "No Image", description: "Please generate an image first.", variant: "destructive"});
+      toast({title: "No Image", description: "Please generate an image first, or ensure the first generated image is valid.", variant: "destructive"});
     }
   };
 
@@ -331,9 +386,8 @@ export default function ContentStudioPage() {
   
   const socialSubmitDisabled = socialState.data?.caption ? false : (useImageForSocialPost && !currentSocialImagePreviewUrl);
 
-  const handlePreviewPromptClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+ const handlePreviewPromptClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
-
     const combinedStyle = selectedImageStylePreset + (customStyleNotesInput ? `. ${customStyleNotesInput}` : "");
     const exampleImg = (brandData?.exampleImages && selectedProfileImageIndexForGen !== null && brandData.exampleImages[selectedProfileImageIndexForGen]) || "";
     const aspect = selectedAspectRatio;
@@ -341,14 +395,13 @@ export default function ContentStudioPage() {
     const seedValueStr = imageGenSeed;
     const seedValue = seedValueStr && !isNaN(parseInt(seedValueStr)) ? parseInt(seedValueStr, 10) : undefined;
     const negPrompt = imageGenNegativePrompt;
-
     const industryContext = imageGenIndustry ? ` The brand operates in the ${imageGenIndustry} industry.` : "";
     const compositionGuidance = "IMPORTANT COMPOSITION RULE: When depicting human figures as the primary subject, the image *must* be well-composed. Avoid awkward or unintentional cropping of faces or key body parts. Ensure the figure is presented naturally and fully within the frame, unless the prompt *explicitly* requests a specific framing like 'close-up', 'headshot', 'upper body shot', or an artistic crop. Prioritize showing the entire subject if it's a person.";
     
-    let textPromptContent = "";
+    let textPrompt = "";
         
     if (exampleImg) {
-        textPromptContent = `
+        textPrompt = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
 
 The provided example image (sent first) serves ONE primary purpose: to identify the *category* of the item depicted (e.g., 'a handbag', 'a t-shirt', 'a piece of furniture', 'a pair of shoes').
@@ -366,36 +419,31 @@ The *design, appearance, theme, specific characteristics, and unique elements* o
 **Example of Interaction:**
 If the example image is a 'simple blue cotton t-shirt' (category: t-shirt), the Brand Description is 'luxury brand, minimalist ethos, inspired by serene nature, prefers organic materials', and the Desired Artistic Style is 'high-fashion product shot, muted earthy tones'.
 You should generate an image of a *luxury t-shirt made from organic-looking material, in muted earthy tones (e.g., moss green, stone grey, soft beige), shot in a high-fashion product style*. It should evoke serenity and minimalism. It should NOT be the original blue cotton t-shirt, nor should it default to a generic "luxury" color scheme like black and gold unless those colors are specifically requested or strongly implied by the *combination* of inputs.
-
-${compositionGuidance}
 `.trim();
     } else { 
-        textPromptContent = `
+        textPrompt = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
 The image should be based on the following concept: "${imageGenBrandDescription}".${industryContext}
 The desired artistic style for this new image is: "${combinedStyle}". If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic.
 **Important Note on Color and Style**: Strive for visual variety that aligns with the brand description and artistic style. Avoid defaulting to a narrow or stereotypical color palette unless the inputs strongly and explicitly demand it.
-
-${compositionGuidance}
 `.trim();
     }
     
+    let textPromptContent = `${textPrompt}\n\n${compositionGuidance}`;
+
+    // Note: Backend flow will append negative prompt, aspect ratio, seed, and batch instructions 
+    // if finalizedTextPrompt is NOT used. If it IS used, backend might only append aspect/seed.
+    // For client-side preview, we show what would be constructed if no finalized text was there.
     if (negPrompt) {
       textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negPrompt}.`;
     }
-    
-    // These are appended by the backend flow if not using finalizedTextPrompt,
-    // so we add them here for preview consistency if we were to fully rely on this preview.
-    // However, backend currently appends them anyway if not using finalizedTextPrompt.
-    // For pure preview, we can add them.
     if (aspect) {
       textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspect} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
     }
     if (seedValue !== undefined) {
       textPromptContent += `\n\nUse seed: ${seedValue}.`;
     }
-
-    if (numImages > 1 && (!textPromptContent.toLowerCase().includes("batch generation") && !textPromptContent.toLowerCase().includes(`image ${0 + 1}`))) {
+    if (numImages > 1 ) {
         textPromptContent += `\n\nImportant for batch generation: You are generating image 1 of a set of ${numImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (1/${numImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
     }
     
@@ -430,7 +478,7 @@ ${compositionGuidance}
         formData.append("industry", formSnapshot?.industry || imageGenIndustry || brandData?.industry || "");
         formData.append("imageStyle", formSnapshot?.imageStyle || (selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")));
         
-        const exampleImg = (formSnapshot?.exampleImage) || ((brandData?.exampleImages && selectedProfileImageIndexForGen !== null && brandData.exampleImages[selectedProfileImageIndexForGen]) || "");
+        const exampleImg = (formSnapshot?.exampleImage) || currentExampleImageForGen;
         if (exampleImg) formData.append("exampleImage", exampleImg);
 
         formData.append("aspectRatio", formSnapshot?.aspectRatio || selectedAspectRatio);
@@ -460,7 +508,6 @@ ${compositionGuidance}
   
   const handleGenerateBlogOutline = () => {
     const formData = new FormData();
-    // Values are now directly submitted by the form due to name attributes
     const formElement = document.getElementById('blogPostForm') as HTMLFormElement;
     if (formElement) {
         const currentFormData = new FormData(formElement);
@@ -469,7 +516,7 @@ ${compositionGuidance}
         formData.append('industry', currentFormData.get('industry') as string || "");
         formData.append('blogKeywords', currentFormData.get('blogKeywords') as string || "");
         formData.append('blogWebsiteUrl', currentFormData.get('blogWebsiteUrl') as string || "");
-    } else { // Fallback if form not found, though unlikely now
+    } else { 
         formData.append('brandName', brandData?.brandName || "");
         formData.append('blogBrandDescription', brandData?.brandDescription || "");
         formData.append('industry', brandData?.industry || "");
@@ -487,6 +534,8 @@ ${compositionGuidance}
         blogOutlineAction(formData);
     });
   };
+
+  const currentAspectRatioOptions = selectedImageProvider === 'FREEPIK' ? freepikFluxAspectRatios : generalAspectRatios;
 
 
   return (
@@ -517,10 +566,10 @@ ${compositionGuidance}
               <CardHeader>
                 <CardTitle>Generate Brand Images</CardTitle>
                 <p className="text-sm text-muted-foreground">Create unique images. Uses brand description, industry, and style. Optionally use an example image from your Brand Profile.</p>
-                 {lastUsedImageProvider && <p className="text-xs text-primary mt-1">Image(s) will be generated using: {imageGenerationProviders.find(p => p.value === selectedImageProvider)?.label || selectedImageProvider}</p>}
+                 {lastUsedImageProvider && <p className="text-xs text-primary mt-1">Image(s) last generated using: {imageGenerationProviders.find(p => p.value === lastUsedImageProvider)?.label || lastUsedImageProvider}</p>}
               </CardHeader>
               {!isPreviewingPrompt ? (
-                <div id="imageGenerationFormFields"> {/* Wrapper for fields */}
+                <div id="imageGenerationFormFields"> 
                   <CardContent className="space-y-6">
                     <div>
                         <Label htmlFor="imageGenProviderSelect" className="flex items-center mb-1"><Server className="w-4 h-4 mr-2 text-primary" />Image Generation Provider</Label>
@@ -545,6 +594,7 @@ ${compositionGuidance}
                       <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description</Label>
                       <Textarea
                         id="imageGenBrandDescription"
+                        name="brandDescription"
                         value={imageGenBrandDescription}
                         onChange={(e) => setImageGenBrandDescription(e.target.value)}
                         placeholder="Detailed description of the brand and its values."
@@ -556,18 +606,20 @@ ${compositionGuidance}
                         <Label htmlFor="imageGenIndustry" className="flex items-center mb-1"><Briefcase className="w-4 h-4 mr-2 text-primary" />Industry</Label>
                         <Input
                             id="imageGenIndustry"
+                            name="industry"
                             value={imageGenIndustry}
                             onChange={(e) => setImageGenIndustry(e.target.value)}
                             placeholder="e.g., Fashion, Technology"
                         />
-                        <p className="text-xs text-muted-foreground">Using: {brandData?.industry || "Enter industry (or from Profile)"}</p>
+                        <p className="text-xs text-muted-foreground">Using: {brandData?.industry ? `${industries.find(ind => ind.value === brandData.industry)?.label || brandData.industry} (from Profile)` : "Enter industry (or from Profile)"}</p>
                     </div>
                     
                     <div>
                       <Label htmlFor="imageGenImageStylePresetSelect" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Image Style Preset</Label>
                       <Select 
                         value={selectedImageStylePreset} 
-                        onValueChange={setSelectedImageStylePreset} 
+                        onValueChange={setSelectedImageStylePreset}
+                        name="imageStylePreset" 
                       >
                           <SelectTrigger id="imageGenImageStylePresetSelect">
                               <SelectValue placeholder="Select image style preset" />
@@ -581,22 +633,23 @@ ${compositionGuidance}
                               </SelectGroup>
                           </SelectContent>
                       </Select>
-                      <p className="text-xs text-muted-foreground">
-                         General styles. Some may be more effective with specific providers (e.g., Freepik).
-                      </p>
+                       <p className="text-xs text-muted-foreground">
+                         General styles. Some may be more effective with specific providers (e.g., styles labeled Freepik).
+                       </p>
                     </div>
 
                     <div>
                       <Label htmlFor="imageGenCustomStyleNotes" className="flex items-center mb-1"><Edit className="w-4 h-4 mr-2 text-primary" />Custom Style Notes</Label>
                       <Textarea
                         id="imageGenCustomStyleNotes"
+                        name="customStyleNotes"
                         value={customStyleNotesInput}
                         onChange={(e) => setCustomStyleNotesInput(e.target.value)}
                         placeholder="E.g., 'add a touch of vintage', 'focus on metallic textures'. These notes are added to the main text prompt."
                         rows={2}
                       />
                        <p className="text-xs text-muted-foreground">
-                        Profile notes: {brandData?.imageStyleNotes || 'None in profile'}. Will be part of the text prompt.
+                        Profile notes for general style: {brandData?.imageStyleNotes || 'None in profile'}.
                        </p>
                     </div>
                     
@@ -645,6 +698,7 @@ ${compositionGuidance}
                       <Label htmlFor="imageGenNegativePrompt" className="flex items-center mb-1"><CircleSlash className="w-4 h-4 mr-2 text-primary" />Negative Prompt (Optional)</Label>
                       <Textarea
                         id="imageGenNegativePrompt"
+                        name="negativePrompt"
                         value={imageGenNegativePrompt}
                         onChange={(e) => setImageGenNegativePrompt(e.target.value)}
                         placeholder="E.g., avoid text, ugly, disfigured, low quality"
@@ -656,13 +710,14 @@ ${compositionGuidance}
                     {selectedImageProvider === 'FREEPIK' && (
                         <>
                             <div className="pt-4 mt-4 border-t">
-                                <h4 className="text-md font-semibold mb-3 text-primary flex items-center"><Paintbrush className="w-5 h-5 mr-2"/>Freepik Specific Styling</h4>
+                                <h4 className="text-md font-semibold mb-3 text-primary flex items-center"><Paintbrush className="w-5 h-5 mr-2"/>Freepik Specific Styling (flux-dev model)</h4>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <Label htmlFor="freepikDominantColorsInput" className="flex items-center mb-1"><PaletteIcon className="w-4 h-4 mr-2 text-primary" />Dominant Colors (Freepik)</Label>
                                     <Input
                                         id="freepikDominantColorsInput"
+                                        name="freepikDominantColorsInput"
                                         value={freepikDominantColorsInput}
                                         onChange={(e) => setFreepikDominantColorsInput(e.target.value)}
                                         placeholder="Up to 5 hex codes, e.g., #FF0000,#00FF00"
@@ -671,28 +726,28 @@ ${compositionGuidance}
                                 </div>
                                 <div>
                                     <Label htmlFor="freepikEffectColor" className="flex items-center mb-1"><Paintbrush className="w-4 h-4 mr-2 text-primary" />Effect - Color (Freepik)</Label>
-                                    <Select value={freepikEffectColor} onValueChange={setFreepikEffectColor}>
+                                    <Select name="freepikEffectColor" value={freepikEffectColor} onValueChange={setFreepikEffectColor}>
                                         <SelectTrigger id="freepikEffectColor"><SelectValue placeholder="Select Freepik color effect" /></SelectTrigger>
                                         <SelectContent>
-                                            {freepikEffectColors.map(effect => <SelectItem key={effect} value={effect || "none"}>{effect || "None"}</SelectItem>)}
+                                            {freepikFluxEffectColors.map(effect => <SelectItem key={effect} value={effect || "none"}>{effect || "None"}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div>
                                     <Label htmlFor="freepikEffectLightning" className="flex items-center mb-1"><Zap className="w-4 h-4 mr-2 text-primary" />Effect - Lightning (Freepik)</Label>
-                                    <Select value={freepikEffectLightning} onValueChange={setFreepikEffectLightning}>
+                                    <Select name="freepikEffectLightning" value={freepikEffectLightning} onValueChange={setFreepikEffectLightning}>
                                         <SelectTrigger id="freepikEffectLightning"><SelectValue placeholder="Select Freepik lightning effect" /></SelectTrigger>
                                         <SelectContent>
-                                            {freepikEffectLightnings.map(effect => <SelectItem key={effect} value={effect || "none"}>{effect || "None"}</SelectItem>)}
+                                            {freepikFluxEffectLightnings.map(effect => <SelectItem key={effect} value={effect || "none"}>{effect || "None"}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div>
                                     <Label htmlFor="freepikEffectFraming" className="flex items-center mb-1"><Aperture className="w-4 h-4 mr-2 text-primary" />Effect - Framing (Freepik)</Label>
-                                    <Select value={freepikEffectFraming} onValueChange={setFreepikEffectFraming}>
+                                    <Select name="freepikEffectFraming" value={freepikEffectFraming} onValueChange={setFreepikEffectFraming}>
                                         <SelectTrigger id="freepikEffectFraming"><SelectValue placeholder="Select Freepik framing effect" /></SelectTrigger>
                                         <SelectContent>
-                                            {freepikEffectFramings.map(effect => <SelectItem key={effect} value={effect || "none"}>{effect || "None"}</SelectItem>)}
+                                            {freepikFluxEffectFramings.map(effect => <SelectItem key={effect} value={effect || "none"}>{effect || "None"}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -704,21 +759,25 @@ ${compositionGuidance}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                           <Label htmlFor="imageGenAspectRatioSelect" className="flex items-center mb-1"><Ratio className="w-4 h-4 mr-2 text-primary" />Aspect Ratio</Label>
-                          <Select required value={selectedAspectRatio} onValueChange={setSelectedAspectRatio}>
+                          <Select 
+                            name="aspectRatio" 
+                            required 
+                            value={selectedAspectRatio} 
+                            onValueChange={setSelectedAspectRatio}
+                          >
                           <SelectTrigger id="imageGenAspectRatioSelect">
                               <SelectValue placeholder="Select aspect ratio" />
                           </SelectTrigger>
                           <SelectContent>
-                              <SelectItem value="1:1">Square (1:1)</SelectItem>
-                              <SelectItem value="4:5">Portrait (4:5)</SelectItem>
-                              <SelectItem value="16:9">Landscape (16:9)</SelectItem>
-                              <SelectItem value="9:16">Story/Reel (9:16)</SelectItem>
+                             {currentAspectRatioOptions.map(ar => (
+                                <SelectItem key={ar.value} value={ar.value}>{ar.label}</SelectItem>
+                             ))}
                           </SelectContent>
                           </Select>
                       </div>
                       <div>
                           <Label htmlFor="numberOfImagesSelect" className="flex items-center mb-1"><Images className="w-4 h-4 mr-2 text-primary" />Number of Images</Label>
-                          <Select value={numberOfImagesToGenerate} onValueChange={setNumberOfImagesToGenerate}>
+                          <Select name="numberOfImages" value={numberOfImagesToGenerate} onValueChange={setNumberOfImagesToGenerate}>
                               <SelectTrigger id="numberOfImagesSelect">
                                   <SelectValue placeholder="Select number" />
                               </SelectTrigger>
@@ -734,6 +793,7 @@ ${compositionGuidance}
                       <Label htmlFor="imageGenSeed" className="flex items-center mb-1"><Pipette className="w-4 h-4 mr-2 text-primary" />Seed (Optional)</Label>
                       <Input
                         id="imageGenSeed"
+                        name="seed"
                         type="number"
                         value={imageGenSeed}
                         onChange={(e) => setImageGenSeed(e.target.value)}
@@ -762,7 +822,7 @@ ${compositionGuidance}
                         placeholder="The constructed prompt will appear here. You can edit it before generation."
                       />
                        <p className="text-xs text-muted-foreground">
-                        Note: For Freepik, some parameters (aspect ratio, specific Freepik style enum) are set structurally. For Gemini, editing this prompt gives full control.
+                        Note: For Freepik, structural parameters (aspect ratio, specific Freepik style enum if one was picked for the preset) are set separately if this provider is chosen. For Gemini, editing this prompt gives more control.
                        </p>
                     </div>
                   </CardContent>
@@ -802,7 +862,7 @@ ${compositionGuidance}
                                     <SubmitButton 
                                         onClick={handleSaveSelectedGeneratedImages} 
                                         formAction={saveImagesAction}
-                                        disabled={selectedGeneratedImageIndices.length === 0 || saveImagesState.message?.startsWith('Saving...') } 
+                                        disabled={selectedGeneratedImageIndices.length === 0 || !!(saveImagesState.message?.startsWith('Saving...')) || lastSuccessfulGeneratedImageUrls.every(url => !url.startsWith('data:')) } 
                                         size="sm"
                                         loadingText="Saving..."
                                     >
@@ -817,14 +877,26 @@ ${compositionGuidance}
                       <div className={`grid gap-4 ${lastSuccessfulGeneratedImageUrls.length > 1 ? (lastSuccessfulGeneratedImageUrls.length > 2 ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'grid-cols-2') : 'grid-cols-1'}`}>
                         {lastSuccessfulGeneratedImageUrls.map((url, index) => (
                             <div key={index} className="relative group w-full overflow-hidden border rounded-md bg-muted aspect-square">
-                                <NextImage src={url} alt={`Generated brand image ${index + 1}`} fill style={{objectFit: 'contain'}} data-ai-hint="brand marketing"/>
-                                 <Checkbox
-                                    id={`select-gen-img-${index}`}
-                                    checked={selectedGeneratedImageIndices.includes(index)}
-                                    onCheckedChange={() => handleToggleGeneratedImageSelection(index)}
-                                    className="absolute top-2 left-2 z-10 bg-background/80 data-[state=checked]:bg-primary"
-                                    aria-label={`Select image ${index + 1}`}
-                                />
+                                {url && url.startsWith('data:') ? (
+                                    <NextImage src={url} alt={`Generated brand image ${index + 1}`} fill style={{objectFit: 'contain'}} data-ai-hint="brand marketing"/>
+                                ) : url ? (
+                                     <div className="flex flex-col items-center justify-center h-full text-xs text-muted-foreground p-2 text-center">
+                                        <Loader2 className="w-6 h-6 animate-spin mb-2" />
+                                        Freepik image task started. <br/> Result will be available via polling (not yet implemented). <br/> Task ID: {url.startsWith('task_id:') ? url.substring(8) : 'Processing...'}
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center justify-center h-full text-xs text-muted-foreground">Image not available</div>
+                                )}
+
+                                 {url && url.startsWith('data:') && (
+                                    <Checkbox
+                                        id={`select-gen-img-${index}`}
+                                        checked={selectedGeneratedImageIndices.includes(index)}
+                                        onCheckedChange={() => handleToggleGeneratedImageSelection(index)}
+                                        className="absolute top-2 left-2 z-10 bg-background/80 data-[state=checked]:bg-primary"
+                                        aria-label={`Select image ${index + 1}`}
+                                    />
+                                 )}
                             </div>
                         ))}
                       </div>
@@ -840,13 +912,13 @@ ${compositionGuidance}
                                 id="usedImagePromptDisplay"
                                 value={lastUsedImageGenPrompt}
                                 onChange={(e) => setLastUsedImageGenPrompt(e.target.value)}
-                                rows={Math.min(10, (lastUsedImageGenPrompt.match(/\n/g) || []).length + 2)}
+                                rows={Math.min(10, (lastUsedImageGenPrompt?.match(/\n/g) || []).length + 2)}
                                 className="text-xs bg-muted/50 font-mono"
                                 placeholder="The prompt used for generation will appear here. You can edit it for your reference or to copy elsewhere."
                             />
                         </div>
                       )}
-                      <Button variant="outline" className="mt-4" onClick={handleUseGeneratedImageForSocial} disabled={lastSuccessfulGeneratedImageUrls.length === 0}>
+                      <Button variant="outline" className="mt-4" onClick={handleUseGeneratedImageForSocial} disabled={!lastSuccessfulGeneratedImageUrls.length || !lastSuccessfulGeneratedImageUrls[0] || !lastSuccessfulGeneratedImageUrls[0].startsWith('data:')}>
                         <ImageUp className="mr-2 h-4 w-4" /> Use First Image for Social Post
                       </Button>
                     </CardContent>
@@ -872,10 +944,11 @@ ${compositionGuidance}
                             id="useImageForSocialPost" 
                             checked={useImageForSocialPost}
                             onCheckedChange={(checked) => {
-                                setUseImageForSocialPost(checked as boolean);
-                                if (!(checked as boolean)) {
+                                const isChecked = checked as boolean;
+                                setUseImageForSocialPost(isChecked);
+                                if (!isChecked) {
                                     setSocialImageChoice(null); 
-                                } else if (!socialImageChoice && lastSuccessfulGeneratedImageUrls.length > 0) {
+                                } else if (!socialImageChoice && lastSuccessfulGeneratedImageUrls.length > 0 && lastSuccessfulGeneratedImageUrls[0]?.startsWith('data:')) {
                                     setSocialImageChoice('generated'); 
                                 } else if (!socialImageChoice && brandData?.exampleImages?.[selectedProfileImageIndexForSocial !== null ? selectedProfileImageIndexForSocial : 0]) {
                                     setSocialImageChoice('profile'); 
@@ -898,9 +971,9 @@ ${compositionGuidance}
                             className="space-y-2"
                         >
                             <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="generated" id="social-generated" disabled={lastSuccessfulGeneratedImageUrls.length === 0}/>
-                                <Label htmlFor="social-generated" className={lastSuccessfulGeneratedImageUrls.length === 0 ? "text-muted-foreground" : ""}>
-                                    Use Last Generated Image {lastSuccessfulGeneratedImageUrls.length === 0 ? "(None available)" : `(${lastSuccessfulGeneratedImageUrls.length} available - first will be used)`}
+                                <RadioGroupItem value="generated" id="social-generated" disabled={lastSuccessfulGeneratedImageUrls.length === 0 || !lastSuccessfulGeneratedImageUrls[0]?.startsWith('data:')}/>
+                                <Label htmlFor="social-generated" className={(lastSuccessfulGeneratedImageUrls.length === 0 || !lastSuccessfulGeneratedImageUrls[0]?.startsWith('data:')) ? "text-muted-foreground" : ""}>
+                                    Use Last Generated Image {(lastSuccessfulGeneratedImageUrls.length === 0 || !lastSuccessfulGeneratedImageUrls[0]?.startsWith('data:')) ? "(None available/suitable)" : `(First of ${lastSuccessfulGeneratedImageUrls.filter(url => url?.startsWith('data:')).length} available will be used)`}
                                 </Label>
                             </div>
                             <div className="flex items-center space-x-2">
@@ -1215,3 +1288,23 @@ ${compositionGuidance}
     </AppShell>
   );
 }
+
+// Minimal BrandProfile industries for Content Studio context only
+const industries = [
+  { value: "fashion_apparel", label: "Fashion & Apparel" },
+  { value: "beauty_cosmetics", label: "Beauty & Cosmetics" },
+  { value: "food_beverage", label: "Food & Beverage" },
+  { value: "health_wellness", label: "Health & Wellness" },
+  { value: "technology_saas", label: "Technology & SaaS" },
+  { value: "travel_hospitality", label: "Travel & Hospitality" },
+  { value: "ecommerce_retail", label: "E-commerce & Retail" },
+  { value: "education", label: "Education" },
+  { value: "finance_fintech", label: "Finance & Fintech" },
+  { value: "real_estate", label: "Real Estate" },
+  { value: "arts_entertainment", label: "Arts & Entertainment" },
+  { value: "automotive", label: "Automotive" },
+  { value: "non_profit", label: "Non-profit" },
+  { value: "other", label: "Other" },
+];
+
+    
