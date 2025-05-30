@@ -120,6 +120,44 @@ async function _generateImageWithImagen_stub(params: {
   throw new Error("Imagen provider (e.g., via Vertex AI) is not implemented yet. This would typically involve a different Genkit plugin or direct API calls.");
 }
 
+async function _generateImageWithFreepik_stub(params: {
+  brandDescription: string;
+  industry?: string;
+  imageStyle: string;
+  exampleImage?: string;
+  aspectRatio?: string;
+  negativePrompt?: string;
+  seed?: number;
+  textPrompt: string;
+}): Promise<string> {
+  console.warn("Freepik API image generation is called but not implemented. You would need a FREEPIK_API_KEY. Parameters:", params);
+  // Here you would implement the call to the Freepik API
+  // Example:
+  // const freepikApiKey = process.env.FREEPIK_API_KEY;
+  // if (!freepikApiKey) {
+  //   throw new Error("FREEPIK_API_KEY is not set in environment variables.");
+  // }
+  // const response = await fetch("https://api.freepik.com/v1/images/generate", { // Fictional endpoint
+  //   method: 'POST',
+  //   headers: {
+  //     'Authorization': `Bearer ${freepikApiKey}`,
+  //     'Content-Type': 'application/json'
+  //   },
+  //   body: JSON.stringify({
+  //     prompt: params.textPrompt,
+  //     style: params.imageStyle,
+  //     // ... other Freepik specific parameters
+  //   })
+  // });
+  // if (!response.ok) {
+  //   const errorData = await response.text();
+  //   throw new Error(`Freepik API error: ${response.status} - ${errorData}`);
+  // }
+  // const result = await response.json();
+  // return result.imageDataUri; // Assuming Freepik returns a data URI
+  throw new Error("Freepik API provider is not implemented yet.");
+}
+
 
 export async function generateImages(input: GenerateImagesInput): Promise<GenerateImagesOutput> {
   return generateImagesFlow(input);
@@ -156,16 +194,14 @@ const generateImagesFlow = ai.defineFlow(
         if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
             console.log(`Using finalized text prompt for image ${i+1}: "${finalizedTextPrompt.substring(0,100)}..."`);
             textPromptContent = finalizedTextPrompt;
-            // When finalizedTextPrompt is used, user is assumed to have full control.
-            // Structural/control parameters like aspectRatio and seed are still applied by the system IF NOT explicitly mentioned in the finalized prompt.
-             if (aspectRatio && !finalizedTextPrompt.toLowerCase().includes("aspect ratio")) {
+            
+            if (aspectRatio && !finalizedTextPrompt.toLowerCase().includes("aspect ratio")) {
               textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
             }
             if (seed !== undefined && !finalizedTextPrompt.toLowerCase().includes("seed:")) {
               textPromptContent += `\n\nUse seed: ${seed}.`;
             }
-             // Add composition guidance if not explicitly handled in finalized prompt
-            if (!finalizedTextPrompt.toLowerCase().includes("crop") && !finalizedTextPrompt.toLowerCase().includes("close-up") && !finalizedTextPrompt.toLowerCase().includes("headshot") && !finalizedTextPrompt.toLowerCase().includes("portrait") && !finalizedTextPrompt.toLowerCase().includes("figure framing")) {
+            if (!finalizedTextPrompt.toLowerCase().includes("crop") && !finalizedTextPrompt.toLowerCase().includes("close-up") && !finalizedTextPrompt.toLowerCase().includes("headshot") && !finalizedTextPrompt.toLowerCase().includes("portrait") && !finalizedTextPrompt.toLowerCase().includes("figure framing") && !finalizedTextPrompt.toLowerCase().includes("composition")) {
                 textPromptContent += `\n\n${compositionGuidance}`;
             }
 
@@ -208,7 +244,6 @@ ${compositionGuidance}
 `.trim();
             }
 
-            // Append other instructions ONLY if not using a finalized prompt
             if (negativePrompt) {
                 textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
             }
@@ -220,10 +255,10 @@ ${compositionGuidance}
             }
         }
         
-        // Add batch generation instructions if not using a finalized prompt OR if the finalized prompt doesn't seem to cover it
         if (numberOfImages > 1 && (!finalizedTextPrompt || !finalizedTextPrompt.toLowerCase().includes("batch generation")) && (!finalizedTextPrompt || !finalizedTextPrompt.toLowerCase().includes(`image ${i+1}`))) {
-            textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
+             textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
         }
+
 
         if (i === 0) {
             actualPromptUsedForFirstImage = textPromptContent;
@@ -261,8 +296,11 @@ ${compositionGuidance}
                 case 'LEONARDO_AI':
                     imageUrl = await _generateImageWithLeonardoAI_stub(baseGenerationParamsForStubs);
                     break;
-                case 'IMAGEN':
+                case 'IMAGEN': // Use for Imagen via Vertex AI
                     imageUrl = await _generateImageWithImagen_stub(baseGenerationParamsForStubs);
+                    break;
+                case 'FREEPIK':
+                    imageUrl = await _generateImageWithFreepik_stub(baseGenerationParamsForStubs);
                     break;
                 default:
                     throw new Error(`Unsupported image generation provider: ${imageGenerationProvider}`);
@@ -271,7 +309,6 @@ ${compositionGuidance}
         } catch (error: any) {
              console.error(`Error during generation of image ${i+1}/${numberOfImages} with provider ${imageGenerationProvider}. Full error:`, JSON.stringify(error, Object.getOwnPropertyNames(error)));
              const failingPromptSnippet = textPromptContent.substring(0, 200) + (textPromptContent.length > 200 ? "..." : "");
-             // Re-throw with a slightly more user-friendly message, but original error is logged
              throw new Error(`Failed to generate image ${i+1} of ${numberOfImages}. Error from provider: ${error.message || 'Unknown error'}. Prompt snippet: "${failingPromptSnippet}".`);
         }
     }
