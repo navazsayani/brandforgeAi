@@ -6,7 +6,7 @@ import { generateSocialMediaCaption, type GenerateSocialMediaCaptionInput } from
 import { generateBlogContent, type GenerateBlogContentInput } from '@/ai/flows/generate-blog-content';
 import { generateAdCampaign, type GenerateAdCampaignInput, type GenerateAdCampaignOutput } from '@/ai/flows/generate-ad-campaign';
 import { extractBrandInfoFromUrl, type ExtractBrandInfoFromUrlInput, type ExtractBrandInfoFromUrlOutput } from '@/ai/flows/extract-brand-info-from-url-flow';
-import { describeImage, type DescribeImageInput, type DescribeImageOutput } from '@/ai/flows/describe-image-flow'; 
+import { describeImage, type DescribeImageInput, type DescribeImageOutput } from "@/ai/flows/describe-image-flow"; 
 import { generateBlogOutline, type GenerateBlogOutlineInput, type GenerateBlogOutlineOutput } from '@/ai/flows/generate-blog-outline-flow';
 import { generateBrandLogo, type GenerateBrandLogoInput, type GenerateBrandLogoOutput } from '@/ai/flows/generate-brand-logo-flow';
 import { storage, db } from '@/lib/firebaseConfig';
@@ -34,7 +34,7 @@ export async function handleGenerateImagesAction(
     const seed = seedStr && !isNaN(parseInt(seedStr, 10)) ? parseInt(seedStr, 10) : undefined;
     
     let finalizedTextPromptValue = formData.get("finalizedTextPrompt") as string | undefined | null;
-    if (finalizedTextPromptValue === "" || finalizedTextPromptValue === null) { 
+    if (finalizedTextPromptValue === "") { 
       finalizedTextPromptValue = undefined;
     }
 
@@ -46,25 +46,31 @@ export async function handleGenerateImagesAction(
             .map(color => color.trim())
             .filter(color => /^#[0-9a-fA-F]{6}$/.test(color)) 
             .slice(0, 5) 
-            .map(color => ({ color, weight: 0.5 })); // default weight
+            .map(color => ({ color, weight: parseFloat(formData.get(`freepikColorWeight_${color}`) as string) || 0.5 }));
         if (freepikStylingColors.length === 0) freepikStylingColors = undefined; 
     }
     
     const exampleImageUrl = formData.get("exampleImage") as string | undefined;
     const chosenProvider = (formData.get("provider") as GenerateImagesInput['provider']) || process.env.IMAGE_GENERATION_PROVIDER || 'GEMINI';
-    let exampleImageDescription: string | undefined = undefined;
+    let aiGeneratedDesc: string | undefined = undefined;
 
-    if (chosenProvider === 'FREEPIK' && exampleImageUrl && exampleImageUrl.trim() !== "") {
+    const placeholderToReplace = "[An AI-generated description of your example image will be used here by the backend to guide content when Freepik/Imagen3 is selected.]";
+
+    if (chosenProvider.toUpperCase() === 'FREEPIK' && exampleImageUrl && exampleImageUrl.trim() !== "") {
       try {
         console.log(`Attempting to describe example image for Freepik prompt: ${exampleImageUrl}`);
         const descriptionOutput = await describeImage({ imageDataUri: exampleImageUrl });
-        exampleImageDescription = descriptionOutput.description;
-        console.log(`Successfully described example image for Freepik: ${exampleImageDescription}`);
+        aiGeneratedDesc = descriptionOutput.description;
+        console.log(`Successfully described example image for Freepik: ${aiGeneratedDesc}`);
+        
+        if (finalizedTextPromptValue && finalizedTextPromptValue.includes(placeholderToReplace)) {
+          finalizedTextPromptValue = finalizedTextPromptValue.replace(placeholderToReplace, aiGeneratedDesc || "[Image description not available]");
+          console.log("Server Action: Replaced placeholder in finalizedTextPrompt. New prompt:", finalizedTextPromptValue.substring(0,100) + "...");
+        }
       } catch (descError: any) {
         console.warn(`Could not generate description for example image (Freepik): ${descError.message}. Proceeding without it.`);
       }
     }
-
 
     const input: GenerateImagesInput = {
       provider: formData.get("provider") as GenerateImagesInput['provider'] || undefined,
@@ -72,23 +78,25 @@ export async function handleGenerateImagesAction(
       industry: formData.get("industry") as string | undefined,
       imageStyle: formData.get("imageStyle") as string, 
       exampleImage: exampleImageUrl === "" ? undefined : exampleImageUrl,
-      exampleImageDescription: exampleImageDescription,
+      exampleImageDescription: aiGeneratedDesc, // Pass AI generated desc to flow, it will decide to use it if finalizedTextPrompt is not set or if it needs to construct
       aspectRatio: formData.get("aspectRatio") as string | undefined,
       numberOfImages: numberOfImages,
       negativePrompt: negativePromptValue === null || negativePromptValue === "" ? undefined : negativePromptValue,
       seed: seed,
-      finalizedTextPrompt: finalizedTextPromptValue,
+      finalizedTextPrompt: finalizedTextPromptValue, // This should now have the description if applicable
       freepikStylingColors: freepikStylingColors,
       freepikEffectColor: (formData.get("freepikEffectColor") as string === "none" ? undefined : formData.get("freepikEffectColor") as string | undefined) || undefined,
       freepikEffectLightning: (formData.get("freepikEffectLightning") as string === "none" ? undefined : formData.get("freepikEffectLightning") as string | undefined) || undefined,
       freepikEffectFraming: (formData.get("freepikEffectFraming") as string === "none" ? undefined : formData.get("freepikEffectFraming") as string | undefined) || undefined,
     };
     
-    // Clean up optional fields if they are empty strings from form
     if (input.provider === "" || input.provider === undefined) delete input.provider;
     if (input.aspectRatio === "" || input.aspectRatio === undefined) delete input.aspectRatio;
     if (input.industry === "" || input.industry === undefined) delete input.industry;
     
+    console.log("Server Action: Calling generateImages flow with input:", JSON.stringify({ ...input, finalizedTextPrompt: input.finalizedTextPrompt?.substring(0,100) + "..." }, null, 2) );
+
+
     const result = await generateImages(input);
     const message = `${result.generatedImages.length} image(s)/task(s) processed using ${result.providerUsed || 'default provider'}.`;
     return { data: { generatedImages: result.generatedImages, promptUsed: result.promptUsed, providerUsed: result.providerUsed }, message: message };
@@ -397,9 +405,9 @@ async function _checkFreepikTaskStatus(taskId: string): Promise<{ status: string
 
     if (responseData.data && responseData.data.status) {
       if (responseData.data.status === 'COMPLETED' && responseData.data.generated && responseData.data.generated.length > 0) {
-        return { status: responseData.data.status, images: responseData.data.generated };
+        return { status: responseData.data.status, images: responseData.data.generated as string[] };
       }
-      return { status: responseData.data.status, images: null }; // No images yet or other status
+      return { status: responseData.data.status, images: null }; 
     } else {
       throw new Error(`Freepik GET API for task ${taskId} did not return data in expected format.`);
     }
@@ -461,5 +469,6 @@ export async function handleGenerateBrandLogoAction(
     return { error: `Failed to generate brand logo: ${e.message || "Unknown error. Check server logs."}` };
   }
 }
+    
 
     
