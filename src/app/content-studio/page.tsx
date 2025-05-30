@@ -24,7 +24,7 @@ import type { GenerateBlogOutlineOutput } from "@/ai/flows/generate-blog-outline
 import type { GenerateImagesInput } from '@/ai/flows/generate-images';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { industries, imageStylePresets, freepikImagen3EffectColors, freepikImagen3EffectLightnings, freepikImagen3EffectFramings, freepikImagen3AspectRatios, generalAspectRatios, blogTones } from '../../lib/constants'; // Updated import path
+import { industries, imageStylePresets, freepikImagen3EffectColors, freepikImagen3EffectLightnings, freepikImagen3EffectFramings, freepikImagen3AspectRatios, generalAspectRatios, blogTones } from '../../lib/constants';
 
 
 const initialImageFormState: FormState<{ generatedImages: string[]; promptUsed: string; providerUsed: string; }>= { error: undefined, data: undefined, message: undefined };
@@ -53,7 +53,7 @@ export default function ContentStudioPage() {
   const [blogState, blogAction] = useActionState(handleGenerateBlogContentAction, initialBlogFormState);
   const [describeImageState, describeImageAction] = useActionState(handleDescribeImageAction, initialDescribeImageState);
   const [blogOutlineState, blogOutlineAction] = useActionState(handleGenerateBlogOutlineAction, initialBlogOutlineState);
-  const [saveImagesState, saveImagesAction] = useActionState(handleSaveGeneratedImagesAction, initialSaveImagesState); // Kept useActionState for save
+  const [saveImagesState, saveImagesAction, isSavingImages] = useActionState(handleSaveGeneratedImagesAction, initialSaveImagesState);
   const [freepikTaskStatusState, freepikTaskStatusAction] = useActionState(handleCheckFreepikTaskStatusAction, initialFreepikTaskStatusState);
 
   const [lastSuccessfulGeneratedImageUrls, setLastSuccessfulGeneratedImageUrls] = useState<string[]>([]);
@@ -102,7 +102,6 @@ export default function ContentStudioPage() {
   const [formSnapshot, setFormSnapshot] = useState<Partial<GenerateImagesInput> & { provider?: string } | null>(null);
 
   const [checkingTaskId, setCheckingTaskId] = useState<string | null>(null);
-  const [isSavingImages, setIsSavingImages] = useState(false);
 
 
   useEffect(() => {
@@ -164,6 +163,7 @@ export default function ContentStudioPage() {
       } else if (newImageUrls.some(url => url.startsWith('task_id:'))) {
         toast({ title: "Freepik Task Started", description: "Freepik image generation task started. Use 'Check Status' to retrieve images." });
       } else if (imageState.error) {
+        // Error already handled below
       } else if (!newImageUrls || newImageUrls.length === 0) {
         toast({ title: "No Images/Tasks Generated", description: `Received empty list from ${imageState.data.providerUsed || 'default provider'}.`, variant: "default" });
       }
@@ -239,7 +239,6 @@ export default function ContentStudioPage() {
   }, [blogOutlineState, toast]);
 
  useEffect(() => {
-    setIsSavingImages(false); // Reset loading state when action completes
     if (saveImagesState.message && !saveImagesState.error) {
       toast({ title: "Image Library", description: saveImagesState.message });
     }
@@ -302,7 +301,7 @@ export default function ContentStudioPage() {
     const saveableImages = lastSuccessfulGeneratedImageUrls
         .filter(url => url && (url.startsWith('data:') || url.startsWith('image_url:')))
         .map(url => ({
-            dataUri: url, // Send the full string, backend will parse `image_url:` if needed
+            dataUri: url,
             prompt: lastUsedImageGenPrompt || "N/A",
             style: (selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")),
         }));
@@ -312,7 +311,6 @@ export default function ContentStudioPage() {
         return;
     }
 
-    setIsSavingImages(true);
     const formData = new FormData();
     formData.append('imagesToSaveJson', JSON.stringify(saveableImages));
     formData.append('brandProfileDocId', 'defaultBrandProfile');
@@ -382,11 +380,11 @@ export default function ContentStudioPage() {
     if (selectedImageProvider === 'FREEPIK') {
         let baseFreepikPrompt = "";
         if (exampleImg) {
-            baseFreepikPrompt = `[An AI-generated description of your example image will be used here by the backend to guide content when Freepik/Imagen3 is selected.]\nNow, using that description as primary inspiration for the subject and main visual elements, generate an image based on the concept: "${imageGenBrandDescription}".`;
+            baseFreepikPrompt = `[An AI-generated description of your example image will be used here by the backend to guide content when Freepik/Imagen3 is selected.]\nUsing that description as primary inspiration for the subject and main visual elements, now generate an image based on the following concept: "${imageGenBrandDescription}".`;
         } else {
             baseFreepikPrompt = `Generate an image based on the concept: "${imageGenBrandDescription}".`;
         }
-        textPromptContent = `${baseFreepikPrompt}${industryCtx}\nIncorporate these stylistic details and elements: "${combinedStyle}".`;
+        textPromptContent = `${baseFreepikPrompt}${industryCtx}\nIncorporate these additional stylistic details and elements: "${combinedStyle}".`;
         if (negPrompt) {
             textPromptContent += `\n\nAvoid: ${negPrompt}.`;
         }
@@ -606,14 +604,24 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                     </div>
                      <div>
                         <Label htmlFor="imageGenIndustry" className="flex items-center mb-1"><Briefcase className="w-4 h-4 mr-2 text-primary" />Industry (from Profile)</Label>
-                        <Input
-                            id="imageGenIndustry"
-                            name="industry"
-                            value={imageGenIndustry}
-                            onChange={(e) => setImageGenIndustry(e.target.value)}
-                            placeholder="e.g., fashion_apparel, technology_saas"
-                        />
-                         <p className="text-xs text-muted-foreground mt-1">Uses label (e.g., "Fashion & Apparel") in AI prompts if available from Brand Profile, otherwise uses this value.</p>
+                        <Select 
+                            value={imageGenIndustry} 
+                            onValueChange={setImageGenIndustry}
+                        >
+                            <SelectTrigger id="imageGenIndustry">
+                                <SelectValue placeholder="Select industry from profile" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectLabel>Industries</SelectLabel>
+                                    {industries.map(industry => (
+                                        <SelectItem key={industry.value} value={industry.value}>{industry.label}</SelectItem>
+                                    ))}
+                                     <SelectItem value="">None (or type custom below)</SelectItem>
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                         <p className="text-xs text-muted-foreground mt-1">Uses label (e.g., "Fashion & Apparel") in AI prompts. Value from Brand Profile is pre-selected.</p>
                     </div>
 
                     <div>
