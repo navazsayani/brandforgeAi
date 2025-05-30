@@ -45,25 +45,27 @@ export default function DashboardPage() {
               then explore our content creation and campaign management tools.
             </p>
             <div className="grid gap-6 md:grid-cols-2">
-              <div className="relative w-full aspect-[600/400] rounded-lg shadow-md overflow-hidden bg-muted flex items-center justify-center">
+              {/* Adjusted logo container to be square and control its max size */}
+              <div className="relative w-full max-w-md mx-auto aspect-square rounded-lg shadow-md overflow-hidden bg-muted flex items-center justify-center">
                 {isBrandLoading ? (
                   <Skeleton className="w-full h-full" />
                 ) : logoUrl ? (
-                  <NextImage 
-                    src={logoUrl} 
-                    alt={brandData?.brandName ? `${brandData.brandName} Logo` : "Brand Logo"} 
-                    fill 
-                    style={{objectFit: "contain"}} // Use contain to ensure logo is fully visible
-                    priority // Prioritize loading the logo if it exists
+                  <NextImage
+                    src={logoUrl}
+                    alt={brandData?.brandName ? `${brandData.brandName} Logo` : "Brand Logo"}
+                    fill
+                    style={{objectFit: "contain"}}
+                    priority
                     data-ai-hint="brand logo main"
                   />
                 ) : (
                   <div className="text-center p-4">
-                    <NextImage 
-                        src="https://placehold.co/600x400.png" 
-                        alt="Placeholder for brand logo" 
-                        width={600} 
-                        height={400} 
+                    {/* The placeholder image can remain non-square as it's just a generic background */}
+                    <NextImage
+                        src="https://placehold.co/400x400.png"
+                        alt="Placeholder for brand logo"
+                        width={400}
+                        height={400}
                         className="object-cover w-full h-full absolute inset-0 opacity-30"
                         data-ai-hint="generic placeholder"
                     />
