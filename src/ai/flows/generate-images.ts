@@ -79,7 +79,7 @@ async function _generateImageWithGemini(params: {
 
   try {
     const {media} = await aiInstance.generate({
-      model: 'googleai/gemini-2.0-flash-exp',
+      model: 'googleai/gemini-2.0-flash-exp', // Ensure this is the correct model for image gen
       prompt: promptParts,
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
@@ -153,14 +153,15 @@ const freepikValidStyles = ["photo", "digital-art", "3d", "painting", "low-poly"
 async function _initiateFreepikImageTask(params: { 
   textPrompt: string; 
   imageStyle: string; 
-  exampleImage?: string; 
+  exampleImage?: string; // Will be ignored by Freepik for text-to-image
   negativePrompt?: string;
   aspectRatio?: string; 
   freepikStylingColors?: { color: string; weight: number }[];
   freepikEffectColor?: string;
   freepikEffectLightning?: string;
   freepikEffectFraming?: string;
-  numberOfImages: number; 
+  numberOfImages: number; // Used for num_images
+  // seed is not used by Freepik Imagen3
 }): Promise<{ taskId: string; status: string; generatedUrls: string[] }> {
   const freepikApiKey = process.env.FREEPIK_API_KEY;
   if (!freepikApiKey) {
@@ -177,8 +178,8 @@ async function _initiateFreepikImageTask(params: {
     prompt: params.textPrompt,
     num_images: params.numberOfImages, 
     aspect_ratio: finalFreepikAspectRatio,
-    person_generation: "allow_all", 
-    safety_settings: "block_none",  
+    person_generation: "allow_all", // Default, can be made configurable later
+    safety_settings: "block_none",  // Default, can be made configurable later
   };
   
   if (params.negativePrompt) {
@@ -188,11 +189,31 @@ async function _initiateFreepikImageTask(params: {
 
   const styling: any = {};
   if (params.imageStyle) {
-      if (freepikValidStyles.includes(params.imageStyle.toLowerCase().trim())) {
-          styling.style = params.imageStyle.toLowerCase().trim();
+      // For Freepik, try to use the style if it's a valid enum, otherwise, it's mainly for the text prompt.
+      // The 'style' parameter in Freepik's JSON body expects one of their specific enums.
+      const directFreepikStyleMatch = freepikValidStyles.find(s => s.toLowerCase() === params.imageStyle.toLowerCase().trim());
+      if (directFreepikStyleMatch) {
+          styling.style = directFreepikStyleMatch;
       } else {
-          console.warn(`Freepik/Imagen3: Provided imageStyle "${params.imageStyle}" is not a direct Freepik enum. Defaulting to 'photo' for structured style. Full style string still in text prompt.`);
-          styling.style = "photo"; 
+          // If no direct match, Freepik will rely on the textual prompt for style.
+          // We can optionally set a default or log a warning.
+          console.warn(`Freepik/Imagen3: Provided imageStyle "${params.imageStyle}" is not a direct Freepik enum. Relying on text prompt for detailed styling. Freepik's 'style' parameter will be omitted or set to 'photo' if no custom style is present in text prompt.`);
+          // Optionally set a default if no keywords matching Freepik styles are found in the prompt.
+          // For now, we'll let the text prompt carry the full style string.
+          // A more advanced approach could try to extract a keyword that matches a Freepik enum.
+          // if (params.imageStyle.toLowerCase().includes("photo")) styling.style = "photo"; 
+          // else if (params.imageStyle.toLowerCase().includes("digital-art")) styling.style = "digital-art";
+          // etc.
+          // For simplicity, if not a direct match, we omit `styling.style` or Freepik might error if it's not a valid enum.
+          // Or, we can pick 'photo' as a general default if our params.imageStyle is not a direct match.
+          if (params.imageStyle.toLowerCase().includes("photo") || params.imageStyle.toLowerCase().includes("photorealistic")) {
+            styling.style = "photo";
+          } else if (freepikValidStyles.includes(params.imageStyle.split(/[,.]/)[0].trim().toLowerCase())) {
+            // Try using the first part of a combined style if it matches a Freepik enum
+            styling.style = params.imageStyle.split(/[,.]/)[0].trim().toLowerCase();
+          } else {
+            console.log("No direct Freepik style enum matched, omitting structural 'styling.style'. Text prompt will guide Freepik.");
+          }
       }
   }
 
@@ -239,7 +260,7 @@ async function _initiateFreepikImageTask(params: {
       return { 
         taskId: responseData.data.task_id, 
         status: responseData.data.status,
-        generatedUrls: responseData.data.generated || [] 
+        generatedUrls: responseData.data.generated || [] // data.generated can be null initially
       };
     } else {
       throw new Error("Freepik API (imagen3) did not return task_id and status in expected format.");
@@ -285,15 +306,16 @@ const generateImagesFlow = ai.defineFlow(
     const compositionGuidance = "IMPORTANT COMPOSITION RULE: When depicting human figures as the primary subject, the image *must* be well-composed. Avoid awkward or unintentional cropping of faces or key body parts. Ensure the figure is presented naturally and fully within the frame, unless the prompt *explicitly* requests a specific framing like 'close-up', 'headshot', 'upper body shot', or an artistic crop. Prioritize showing the entire subject if it's a person.";
 
     if (chosenProvider.toUpperCase() === 'FREEPIK') {
-        console.log(`Freepik provider selected for a batch of ${numberOfImages} images.`);
-        let textPromptContent = "";
+        console.log(`Freepik provider (imagen3) selected for a batch of ${numberOfImages} images.`);
+        let textPromptForFreepik = "";
         const industryContext = industry ? ` The brand operates in the ${industry} industry.` : "";
 
         if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
             console.log(`Using finalized text prompt for Freepik batch: "${finalizedTextPrompt.substring(0,100)}..."`);
-            textPromptContent = finalizedTextPrompt;
-             // For Freepik, structural elements like aspect ratio, seed, negative prompt are passed in the JSON body, not text.
-             // Composition guidance might still be useful in the text prompt.
+            textPromptForFreepik = finalizedTextPrompt;
+            // For Freepik, structural elements like aspect ratio, seed, negative prompt are passed in the JSON body,
+            // so they are NOT appended to the finalizedTextPrompt textually.
+            // Composition guidance might still be useful if the user's prompt doesn't cover it.
             if (
                 !finalizedTextPrompt.toLowerCase().includes("human figure") &&
                 !finalizedTextPrompt.toLowerCase().includes("crop") &&
@@ -303,7 +325,7 @@ const generateImagesFlow = ai.defineFlow(
                 !finalizedTextPrompt.toLowerCase().includes("figure framing") &&
                 !finalizedTextPrompt.toLowerCase().includes("composition")
             ) {
-                 textPromptContent += `\n\n${compositionGuidance}`;
+                 textPromptForFreepik += `\n\n${compositionGuidance}`;
             }
         } else {
             console.log(`Constructing prompt for Freepik batch as no finalized prompt was provided or it was empty.`);
@@ -312,42 +334,44 @@ const generateImagesFlow = ai.defineFlow(
             }
             
             const baseTextPrompt = `Generate new, high-quality, visually appealing images suitable for social media platforms like Instagram.\n\n`;
-            let coreInstructions = "";
-            // Freepik text-to-image (Imagen3) doesn't take reference image this way
-            coreInstructions = `The images should be based on the following concept: "${brandDescription}".${industryContext}
-The desired artistic style for these new images is: "${imageStyle}". If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic.
+            let coreInstructions = `The images should be based on the following concept: "${brandDescription}".${industryContext}
+The desired artistic style for these new images is: "${imageStyle}".
 **Important Note on Color and Style**: Strive for visual variety that aligns with the brand description and artistic style. Avoid defaulting to a narrow or stereotypical color palette unless the inputs strongly and explicitly demand it.
-`;
-            textPromptContent = `${baseTextPrompt}${coreInstructions}`;
-            textPromptContent +=`\n\n${compositionGuidance}`; // Add composition guidance
+`; // imageStyle here provides textual style cues. Freepik's structural 'styling.style' is handled separately.
+            textPromptForFreepik = `${baseTextPrompt}${coreInstructions}`;
+            if (negativePrompt) { // Negative prompt is a structural param for Freepik, but can also be in text.
+                textPromptForFreepik += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
+            }
+            textPromptForFreepik +=`\n\n${compositionGuidance}`; // Add composition guidance
         }
-        actualPromptUsedForFirstImage = textPromptContent;
-        console.log(`Text component of prompt for Freepik batch: "${textPromptContent.substring(0,200)}..."`);
+        actualPromptUsedForFirstImage = textPromptForFreepik;
+        console.log(`Text component of prompt for Freepik batch: "${textPromptForFreepik.substring(0,200)}..."`);
 
         try {
             if (exampleImage) {
                 console.warn("Freepik/Imagen3 model selected, but exampleImage was provided. The Imagen3 API for text-to-image does not currently support reference images via this parameter. The exampleImage will be ignored for this Freepik request.");
             }
             const freepikTask = await _initiateFreepikImageTask({
-                textPrompt: textPromptContent,
-                imageStyle: imageStyle, 
-                negativePrompt: negativePrompt, 
+                textPrompt: textPromptForFreepik,
+                imageStyle: imageStyle, // This is used to try and match a Freepik enum for styling.style
+                negativePrompt: negativePrompt, // This is for the structural negative_prompt
                 aspectRatio: aspectRatio,
                 freepikStylingColors: freepikStylingColors,
                 freepikEffectColor: freepikEffectColor,
                 freepikEffectLightning: freepikEffectLightning,
                 freepikEffectFraming: freepikEffectFraming,
-                numberOfImages: numberOfImages, 
+                numberOfImages: numberOfImages, // Passed directly to Freepik's num_images
             });
             
             if (freepikTask.generatedUrls && freepikTask.generatedUrls.length > 0) {
                 freepikTask.generatedUrls.forEach(url => {
                     if (url) {
-                        generatedImageResults.push(`image_url:${url}`);
+                        generatedImageResults.push(`image_url:${url}`); // Prefix to identify as direct URL
                         console.log(`Freepik/Imagen3 task ${freepikTask.taskId} returned image URL directly: ${url}`);
                     }
                 });
             } else {
+                // If no direct URLs, still add the task_id for polling
                 generatedImageResults.push(`task_id:${freepikTask.taskId}`); 
                 console.log(`Freepik/Imagen3 task initiated: ${freepikTask.taskId}, Status: ${freepikTask.status}. Polling needed.`);
             }
@@ -365,6 +389,7 @@ The desired artistic style for these new images is: "${imageStyle}". If this sty
                 console.log(`Using finalized text prompt for image ${i+1}: "${finalizedTextPrompt.substring(0,100)}..." (Provider: ${chosenProvider})`);
                 textPromptContent = finalizedTextPrompt;
                 
+                // For Gemini, append structural/quality instructions if not already in finalized prompt
                 if (chosenProvider === 'GEMINI') {
                     if (aspectRatio && !finalizedTextPrompt.toLowerCase().includes("aspect ratio")) {
                       textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
@@ -417,10 +442,10 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
 `;
                 }
                 textPromptContent = `${baseTextPrompt}${coreInstructions}`;
-                if (negativePrompt) {
+                if (negativePrompt) { // Negative prompt added for Gemini. Freepik handles this structurally.
                     textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
                 }
-                textPromptContent +=`\n\n${compositionGuidance}`; 
+                textPromptContent +=`\n\n${compositionGuidance}`; // Add composition guidance
 
                 if (aspectRatio) {
                   textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
@@ -431,7 +456,10 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
             }
             
             if (numberOfImages > 1 && (!finalizedTextPrompt || (!finalizedTextPrompt.toLowerCase().includes("batch generation") && !finalizedTextPrompt.toLowerCase().includes(`image ${i+1}`)))) {
+                // For Gemini, add batch instruction textually. Freepik handles batching via num_images.
+                if (chosenProvider !== 'FREEPIK') {
                  textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
+                }
             }
 
             if (i === 0) {
@@ -470,7 +498,7 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
                  console.error(`Error during generation of image ${i+1}/${numberOfImages} with provider ${chosenProvider}. Full error:`, JSON.stringify(error, Object.getOwnPropertyNames(error)));
                  generatedImageResults.push(`error:Failed to process image ${i+1}. ${error.message || 'Unknown error'}`);
             }
-        } // end for loop
+        } // end for loop for non-Freepik providers
     } // end else for non-Freepik providers
 
     const finalGeneratedImages = generatedImageResults.filter(res => !res.startsWith('error:'));
@@ -488,3 +516,5 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
 );
     
       
+
+    
