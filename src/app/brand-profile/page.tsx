@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState, useRef, useActionState, startTransition } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import NextImage from 'next/image';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,24 +22,35 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { handleExtractBrandInfoFromUrlAction, type FormState as ExtractFormState } from '@/lib/actions';
 import { storage } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import { useActionState, startTransition } from 'react';
 
-const artisticStyles = [
-  { value: "photorealistic", label: "Photorealistic" },
-  { value: "minimalist", label: "Minimalist" },
-  { value: "vibrant", label: "Vibrant & Colorful" },
-  { value: "professional", label: "Professional & Clean" },
-  { value: "impressionistic", label: "Impressionistic" },
-  { value: "watercolor", label: "Watercolor" },
-  { value: "abstract", label: "Abstract" },
-  { value: "retro", label: "Retro / Vintage" },
-  { value: "cyberpunk", label: "Cyberpunk" },
-  { value: "fantasy art", label: "Fantasy Art" },
-  { value: "isometric", label: "Isometric" },
-  { value: "line art", label: "Line Art" },
-  { value: "3d render", label: "3D Render" },
-  { value: "pixel art", label: "Pixel Art" },
-  { value: "cel shaded", label: "Cel Shaded" },
+const freepikSpecificStyles = [
+  { value: "photo", label: "Photo (Freepik)" },
+  { value: "digital-art", label: "Digital Art (Freepik)" },
+  { value: "3d", label: "3D (Freepik)" },
+  { value: "painting", label: "Painting (Freepik)" },
+  { value: "low-poly", label: "Low Poly (Freepik)" },
+  { value: "pixel-art", label: "Pixel Art (Freepik)" },
+  { value: "anime", label: "Anime (Freepik)" },
+  { value: "cyberpunk", label: "Cyberpunk (Freepik)" },
+  { value: "comic", label: "Comic (Freepik)" },
+  { value: "vintage", label: "Vintage (Freepik)" },
+  { value: "cartoon", label: "Cartoon (Freepik)" },
+  { value: "vector", label: "Vector (Freepik)" },
+  { value: "studio-shot", label: "Studio Shot (Freepik)" },
+  { value: "dark", label: "Dark (Freepik)" },
+  { value: "sketch", label: "Sketch (Freepik)" },
+  { value: "mockup", label: "Mockup (Freepik)" },
+  { value: "2000s-pone", label: "2000s Phone (Freepik)" }, // Assuming "2000s-pone" might be a typo for phone aesthetics
+  { value: "70s-vibe", label: "70s Vibe (Freepik)" },
+  { value: "watercolor", label: "Watercolor (Freepik)" },
+  { value: "art-nouveau", label: "Art Nouveau (Freepik)" },
+  { value: "origami", label: "Origami (Freepik)" },
+  { value: "surreal", label: "Surreal (Freepik)" },
+  { value: "fantasy", label: "Fantasy (Freepik)" },
+  { value: "traditional-japan", label: "Traditional Japan (Freepik)" },
 ];
+
 
 const industries = [
   { value: "fashion_apparel", label: "Fashion & Apparel" },
@@ -76,7 +87,7 @@ const defaultFormValues: BrandProfileFormData = {
   websiteUrl: "",
   brandDescription: "",
   industry: "",
-  imageStyle: artisticStyles.length > 0 ? artisticStyles[0].value : "",
+  imageStyle: freepikSpecificStyles.length > 0 ? freepikSpecificStyles[0].value : "",
   imageStyleNotes: "",
   exampleImages: [],
   targetKeywords: "",
@@ -207,7 +218,8 @@ export default function BrandProfilePage() {
   const handleImageFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
       const files = Array.from(event.target.files);
-      setSelectedFileNames(files.map(file => file.name)); // Keep this for immediate feedback on selected files
+      const currentSelectedFileNames = files.map(file => file.name);
+      setSelectedFileNames(currentSelectedFileNames);
       setIsUploading(true);
       setUploadProgress(0);
 
@@ -222,15 +234,14 @@ export default function BrandProfilePage() {
         const downloadURLs = await Promise.all(uploadPromises);
         const updatedImages = [...currentSavedImages, ...downloadURLs];
         form.setValue('exampleImages', updatedImages, { shouldValidate: true });
-        setPreviewImages(updatedImages); // Now set the final list with actual storage URLs
+        setPreviewImages(updatedImages); 
         toast({ title: "Images Uploaded", description: `${files.length} image(s) uploaded successfully. Save profile to persist changes.` });
       } catch (error) {
         toast({ title: "Some Uploads Failed", description: "Not all images were uploaded successfully. Check individual error messages.", variant: "destructive" });
-        setPreviewImages(form.getValues("exampleImages") || []); // Revert previews to currently saved URLs
+        setPreviewImages(form.getValues("exampleImages") || []); 
       } finally {
         setIsUploading(false);
         setUploadProgress(0);
-        setSelectedFileNames([]); // Clear selected file names after attempting upload
         if (fileInputRef.current) {
           fileInputRef.current.value = ""; 
         }
@@ -288,7 +299,7 @@ export default function BrandProfilePage() {
               <Skeleton className="h-6 w-3/4" />
             </CardHeader>
             <CardContent className="space-y-8">
-              {[...Array(7)].map((_, i) => ( // Increased array size for new field
+              {[...Array(7)].map((_, i) => ( 
                 <div key={i} className="space-y-2">
                   <Skeleton className="h-5 w-1/4" />
                   <Skeleton className={i === 2 || i === 5 ? "h-24 w-full" : "h-10 w-full"} />
@@ -419,15 +430,15 @@ export default function BrandProfilePage() {
                         </FormControl>
                         <SelectContent>
                           <SelectGroup>
-                            <SelectLabel>Artistic Styles</SelectLabel>
-                            {artisticStyles.map(style => (
+                            <SelectLabel>Artistic Styles (Freepik)</SelectLabel>
+                            {freepikSpecificStyles.map(style => (
                               <SelectItem key={style.value} value={style.value}>{style.label}</SelectItem>
                             ))}
                           </SelectGroup>
                         </SelectContent>
                       </Select>
                       <FormDescription>
-                        Choose a base style. Further refine with notes below.
+                        Choose a base style for Freepik. Other providers might interpret this differently.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -442,14 +453,14 @@ export default function BrandProfilePage() {
                       <FormLabel className="flex items-center text-base"><Edit className="w-5 h-5 mr-2 text-primary"/>Custom Image Style Notes (Optional)</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Add custom details, e.g., 'moody lighting, close-up shot, focus on texture', or override preset aspects."
+                          placeholder="Add custom details to the text prompt, e.g., 'moody lighting, focus on texture'."
                           rows={3}
                           {...field}
                           disabled={isBrandContextLoading || isUploading || isExtracting}
                         />
                       </FormControl>
                       <FormDescription>
-                        These notes will be combined with the preset style for AI image generation.
+                        These notes will be added to the main text prompt for AI image generation.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -464,9 +475,9 @@ export default function BrandProfilePage() {
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                 {isUploading ? <Loader2 className="w-8 h-8 mb-2 text-muted-foreground animate-spin" /> : <UploadCloud className="w-8 h-8 mb-2 text-muted-foreground" />}
                                 <p className="mb-1 text-sm text-muted-foreground">
-                                  {isUploading ? `Uploading ${selectedFileNames.length > 0 ? selectedFileNames.join(', ').substring(0,30)+'...' : 'files'}...` : (selectedFileNames.length > 0 ? selectedFileNames.join(', ') : <><span className="font-semibold">Click to upload</span> or drag and drop</>)}
+                                  {isUploading ? `Uploading ${selectedFileNames.join(', ').substring(0,30)}...` : (selectedFileNames.length > 0 ? selectedFileNames.join(', ') : <><span className="font-semibold">Click to upload</span> or drag and drop</>)}
                                 </p>
-                                {!selectedFileNames.length && !isUploading && <p className="text-xs text-muted-foreground">SVG, PNG, JPG, GIF (Max 5MB per file recommended)</p>}
+                                {selectedFileNames.length === 0 && !isUploading && <p className="text-xs text-muted-foreground">SVG, PNG, JPG, GIF (Max 5MB per file recommended)</p>}
                             </div>
                             <Input 
                                 id="dropzone-file" 
@@ -548,3 +559,5 @@ export default function BrandProfilePage() {
     </AppShell>
   );
 }
+
+    
