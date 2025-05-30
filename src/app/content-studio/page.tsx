@@ -15,7 +15,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag } from 'lucide-react';
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon } from 'lucide-react';
 import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
@@ -31,7 +31,6 @@ const initialBlogFormState: FormState<{ title: string; content: string; tags: st
 const initialDescribeImageState: FormState<DescribeImageOutput> = { error: undefined, data: undefined, message: undefined };
 const initialBlogOutlineState: FormState<GenerateBlogOutlineOutput> = { error: undefined, data: undefined, message: undefined };
 const initialSaveImagesState: FormState<{ savedCount: number }> = { error: undefined, data: undefined, message: undefined };
-
 
 type SocialImageChoice = 'generated' | 'profile' | null;
 
@@ -61,6 +60,10 @@ const freepikSpecificStyles = [
   { value: "fantasy", label: "Fantasy (Freepik)" },
   { value: "traditional-japan", label: "Traditional Japan (Freepik)" },
 ];
+
+const freepikEffectColors = ["", "b&w", "pastel", "sepia", "dramatic", "vibrant", "orange&teal", "film-filter", "split", "electric", "pastel-pink", "gold-glow", "autumn", "muted-green", "deep-teal", "duotone", "terracotta&teal", "red&blue", "cold-neon", "burgundy&blue"];
+const freepikEffectLightnings = ["", "studio", "warm", "cinematic", "volumetric", "golden-hour", "long-exposure", "cold", "iridescent", "dramatic", "hardlight", "redscale", "indoor-light"];
+const freepikEffectFramings = ["", "portrait", "macro", "panoramic", "aerial-view", "close-up", "cinematic", "high-angle", "low-angle", "symmetry", "fish-eye", "first-person"];
 
 const blogTones = [
     { value: "Informative", label: "Informative" },
@@ -103,12 +106,19 @@ export default function ContentStudioPage() {
   const [selectedProfileImageIndexForGen, setSelectedProfileImageIndexForGen] = useState<number | null>(null);
   const [selectedProfileImageIndexForSocial, setSelectedProfileImageIndexForSocial] = useState<number | null>(null);
 
+  // State for Image Generation Form Fields
   const [imageGenBrandDescription, setImageGenBrandDescription] = useState<string>("");
   const [imageGenIndustry, setImageGenIndustry] = useState<string>("");
   const [selectedImageStylePreset, setSelectedImageStylePreset] = useState<string>(freepikSpecificStyles[0].value);
   const [customStyleNotesInput, setCustomStyleNotesInput] = useState<string>("");
   const [imageGenNegativePrompt, setImageGenNegativePrompt] = useState<string>("");
   const [imageGenSeed, setImageGenSeed] = useState<string>("");
+  
+  // State for Freepik specific styling options
+  const [freepikDominantColorsInput, setFreepikDominantColorsInput] = useState<string>("");
+  const [freepikEffectColor, setFreepikEffectColor] = useState<string>("");
+  const [freepikEffectLightning, setFreepikEffectLightning] = useState<string>("");
+  const [freepikEffectFraming, setFreepikEffectFraming] = useState<string>("");
 
 
   const [isPreviewingPrompt, setIsPreviewingPrompt] = useState<boolean>(false);
@@ -117,12 +127,10 @@ export default function ContentStudioPage() {
 
   const [selectedGeneratedImageIndices, setSelectedGeneratedImageIndices] = useState<number[]>([]);
 
-
   useEffect(() => {
     if (brandData) {
         setImageGenBrandDescription(brandData.brandDescription || "");
         setImageGenIndustry(brandData.industry || "");
-        // Ensure brandData.imageStyle is a valid Freepik style, otherwise default
         const isValidFreepikStyle = freepikSpecificStyles.some(s => s.value === brandData.imageStyle);
         setSelectedImageStylePreset(brandData.imageStyle && isValidFreepikStyle ? brandData.imageStyle : freepikSpecificStyles[0].value);
         setCustomStyleNotesInput(brandData.imageStyleNotes || "");
@@ -136,7 +144,6 @@ export default function ContentStudioPage() {
         }
     }
   }, [brandData]);
-
 
   useEffect(() => {
     if (imageState.data) {
@@ -159,6 +166,7 @@ export default function ContentStudioPage() {
     }
     if (imageState.error) {
       toast({ title: "Error generating images", description: imageState.error, variant: "destructive" });
+      setIsPreviewingPrompt(false); // Also hide preview on error
     }
   }, [imageState, toast, addGeneratedImage, selectedImageStylePreset, customStyleNotesInput]);
 
@@ -232,7 +240,6 @@ export default function ContentStudioPage() {
     }
   }, [saveImagesState, toast]);
 
-
   const copyToClipboard = (text: string, type: string) => {
     navigator.clipboard.writeText(text);
     toast({ title: `${type} Copied!`, description: "Content copied to clipboard." });
@@ -294,7 +301,6 @@ export default function ContentStudioPage() {
             : null))
     : null;
 
-
   const handleAIDescribeImage = () => {
     if (!currentSocialImagePreviewUrl) {
       toast({ title: "No Image Selected", description: "Please select an image to describe.", variant: "destructive" });
@@ -302,8 +308,7 @@ export default function ContentStudioPage() {
     }
     setIsGeneratingDescription(true);
     const formData = new FormData();
-    
-     if (currentSocialImagePreviewUrl.startsWith('http')) {
+    if (currentSocialImagePreviewUrl.startsWith('http')) {
        if (!currentSocialImagePreviewUrl.startsWith('data:')) {
             toast({ title: "AI Describe Info", description: "AI description for profile images (non-data URI) uses the image URL directly. Generation for newly generated images uses data URI.", variant: "informative" });
        }
@@ -316,31 +321,7 @@ export default function ContentStudioPage() {
   
   const socialSubmitDisabled = socialState.data?.caption ? false : (useImageForSocialPost && !currentSocialImagePreviewUrl);
 
-  const handleGenerateBlogOutline = (event: React.MouseEvent<HTMLButtonElement>) => {
-    const formElement = (event.currentTarget as HTMLElement).closest('form');
-    if (!formElement) {
-        toast({ title: "Error", description: "Could not find blog form data.", variant: "destructive"});
-        return;
-    }
-    const currentFormData = new FormData(formElement); 
-    
-    const outlineFormData = new FormData();
-    outlineFormData.append("brandName", currentFormData.get("brandName") as string || brandData?.brandName || "");
-    outlineFormData.append("blogBrandDescription", currentFormData.get("blogBrandDescription") as string || brandData?.brandDescription || "");
-    outlineFormData.append("industry", currentFormData.get("industry") as string || brandData?.industry || "");
-    outlineFormData.append("blogKeywords", currentFormData.get("blogKeywords") as string || brandData?.targetKeywords || "");
-    const websiteUrl = currentFormData.get("blogWebsiteUrl") as string;
-    if (websiteUrl) {
-        outlineFormData.append("websiteUrl", websiteUrl);
-    }
-    
-    setIsGeneratingOutline(true);
-    startTransition(() => {
-        blogOutlineAction(outlineFormData);
-    });
-  };
-
- const handlePreviewPromptClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handlePreviewPromptClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
 
     const brandDesc = imageGenBrandDescription;
@@ -353,16 +334,11 @@ export default function ContentStudioPage() {
     const numImages = parseInt(numberOfImagesToGenerate, 10);
     const seedValue = seedValueStr && !isNaN(parseInt(seedValueStr)) ? parseInt(seedValueStr, 10) : undefined;
     const exampleImg = currentExampleImageForGen;
-
-    let combinedStyle = stylePreset; // This will be a Freepik enum or a generic style string
-    // Custom notes will be part of the main text prompt, not combined into 'imageStyle' for Freepik directly.
-    // For Gemini, imageStyle in flow combines preset + notes.
-    // For Freepik, imageStyle in flow uses the preset directly for `styling.style`.
+    const compositionGuidance = "IMPORTANT COMPOSITION RULE: When depicting human figures as the primary subject, the image *must* be well-composed. Avoid awkward or unintentional cropping of faces or key body parts. Ensure the figure is presented naturally and fully within the frame, unless the prompt *explicitly* requests a specific framing like 'close-up', 'headshot', 'upper body shot', or an artistic crop. Prioritize showing the entire subject if it's a person.";
 
     let textPromptContent = "";
     const industryContext = industryValue ? ` The brand operates in the ${industryValue} industry.` : "";
-    const compositionGuidance = "IMPORTANT COMPOSITION RULE: When depicting human figures as the primary subject, the image *must* be well-composed. Avoid awkward or unintentional cropping of faces or key body parts. Ensure the figure is presented naturally and fully within the frame, unless the prompt *explicitly* requests a specific framing like 'close-up', 'headshot', 'upper body shot', or an artistic crop. Prioritize showing the entire subject if it's a person.";
-
+    
     if (exampleImg) {
         textPromptContent = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
@@ -373,7 +349,7 @@ Your task is to generate a *completely new item* belonging to this *same categor
 
 The *design, appearance, theme, specific characteristics, and unique elements* of this NEW item must be **primarily and heavily derived** from the following inputs:
 1.  **Brand Description**: "${brandDesc}"${industryContext}. ${customNotes ? `Additional creative direction: "${customNotes}".` : ""} This description informs the *theme, conceptual elements, and unique characteristics* of the new item.
-2.  **Desired Artistic Style**: "${stylePreset}". This dictates the overall visual execution (e.g. for Freepik, this is used for their 'styling.style' enum; for Gemini it's part of the main prompt to guide visual style). If this style suggests realism (e.g., "photorealistic", "realistic photo", "photo"), the output *must* be highly realistic and look like a real product photo.
+2.  **Desired Artistic Style**: "${stylePreset}". This dictates the overall visual execution, including aspects like color palette (unless the brand description very strongly and specifically dictates a color scheme), lighting, and rendering style. If this style suggests realism (e.g., "photorealistic", "realistic photo", "photo"), the output *must* be highly realistic and look like a real product photo.
 
 **Important Note on Color and Style**: While the brand description provides thematic guidance, strive for visual variety and avoid over-relying on a narrow color palette (like exclusively black and gold) unless the brand description *and* desired artistic style overwhelmingly and explicitly demand it. The goal is a fresh interpretation that fits the brand's *overall essence* and the *chosen artistic style*.
 
@@ -385,7 +361,7 @@ You should generate an image of a *luxury t-shirt made from organic-looking mate
 
 ${compositionGuidance}
 `.trim();
-    } else {
+    } else { // No example image
         textPromptContent = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
 The image should be based on the following concept: "${brandDesc}".${industryContext} ${customNotes ? `Additional creative direction: "${customNotes}".` : ""}
@@ -399,6 +375,9 @@ ${compositionGuidance}
     if (negPrompt) {
       textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negPrompt}.`;
     }
+    // Aspect ratio and seed are appended by the backend if not using finalizedTextPrompt,
+    // or if using finalizedTextPrompt and the backend decides to append them.
+    // For preview, we can show them.
     if (aspect) {
       textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspect} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
     }
@@ -414,13 +393,18 @@ ${compositionGuidance}
     setFormSnapshot({
         brandDescription: brandDesc,
         industry: industryValue,
-        imageStyle: stylePreset, // This will be the Freepik enum or generic style
-        // customStyleNotesInput is handled by being baked into textPromptContent above for client preview
+        imageStyle: stylePreset, // This is the preset
+        // For the backend, imageStyle will be preset, and customStyleNotes will be handled by being part of finalizedTextPrompt
         exampleImage: exampleImg === "" ? undefined : exampleImg,
         aspectRatio: aspect,
         numberOfImages: numImages,
         negativePrompt: negPrompt === "" ? undefined : negPrompt,
         seed: seedValue,
+        // Freepik specific fields from state
+        freepikDominantColorsInput,
+        freepikEffectColor: freepikEffectColor || undefined,
+        freepikEffectLightning: freepikEffectLightning || undefined,
+        freepikEffectFraming: freepikEffectFraming || undefined,
     });
     setIsPreviewingPrompt(true);
   };
@@ -429,22 +413,26 @@ ${compositionGuidance}
     event.preventDefault();
     const formData = new FormData();
 
-    if (!currentTextPromptForEditing) { 
-        toast({ title: "Error", description: "Prompt text is missing. Please preview and edit prompt.", variant: "destructive"});
+    if (!currentTextPromptForEditing && !formSnapshot?.brandDescription) { 
+        toast({ title: "Error", description: "Prompt text or brand description is missing. Please fill fields or preview and edit prompt.", variant: "destructive"});
         return;
     }
     
-    formData.append("finalizedTextPrompt", currentTextPromptForEditing);
+    // Always send the finalizedTextPrompt if it's being edited
+    formData.append("finalizedTextPrompt", currentTextPromptForEditing || "");
     
     // Essential parameters from formSnapshot or current state
     formData.append("brandDescription", formSnapshot?.brandDescription || imageGenBrandDescription || brandData?.brandDescription || "");
     formData.append("industry", formSnapshot?.industry || imageGenIndustry || brandData?.industry || "");
-    formData.append("imageStyle", formSnapshot?.imageStyle || selectedImageStylePreset); // This should be the selected Freepik enum or generic style
-    // Custom notes are part of finalizedTextPrompt now, but for non-finalized path, they are sent to backend combined.
-    // For the finalizedTextPrompt path, the backend won't use the form-field `imageStyleNotes` if `finalizedTextPrompt` is present.
-    // It will rely on `finalizedTextPrompt` to contain all stylistic text.
-    // However, it's good practice to pass what was in formSnapshot in case flow logic changes.
-    // So, we pass the 'imageStyle' from snapshot which *is* the preset. Custom notes are already in `finalizedTextPrompt`.
+    formData.append("imageStyle", formSnapshot?.imageStyle || selectedImageStylePreset); // This should be the selected preset
+    
+    // If customStyleNotesInput has a value, it's typically baked into finalizedTextPrompt by handlePreviewPromptClick.
+    // However, if the user *doesn't* click preview and goes straight to a direct submit (if we had that option),
+    // or if the backend flow has a path that combines imageStyle + customNotes, it's good to send it.
+    // For Freepik, imageStyle is the enum, custom notes are part of the main text prompt.
+    // The backend `generate-images.ts` handles this by using `finalizedTextPrompt` if present,
+    // otherwise constructing from `imageStyle` (preset) and potentially `customStyleNotes` (though our client preview bakes it in).
+    // Let's keep it simple: `imageStyle` from snapshot (which is the preset) is enough if `finalizedTextPrompt` is sent.
 
     if (formSnapshot?.exampleImage) formData.append("exampleImage", formSnapshot.exampleImage);
     formData.append("aspectRatio", formSnapshot?.aspectRatio || selectedAspectRatio);
@@ -456,18 +444,23 @@ ${compositionGuidance}
     const seedValueNum = formSnapshot?.seed !== undefined ? formSnapshot.seed : (imageGenSeed && !isNaN(parseInt(imageGenSeed)) ? parseInt(imageGenSeed) : undefined);
     if (seedValueNum !== undefined) formData.append("seed", String(seedValueNum));
 
+    // Add Freepik specific fields
+    if (formSnapshot?.freepikDominantColorsInput) formData.append("freepikDominantColorsInput", formSnapshot.freepikDominantColorsInput);
+    if (formSnapshot?.freepikEffectColor) formData.append("freepikEffectColor", formSnapshot.freepikEffectColor);
+    if (formSnapshot?.freepikEffectLightning) formData.append("freepikEffectLightning", formSnapshot.freepikEffectLightning);
+    if (formSnapshot?.freepikEffectFraming) formData.append("freepikEffectFraming", formSnapshot.freepikEffectFraming);
+
     startTransition(() => {
       imageAction(formData);
     });
   };
-
 
   return (
     <AppShell>
       <div className="max-w-4xl mx-auto">
         <CardHeader className="px-0 mb-6">
           <div className="flex items-center space-x-3">
-              <Palette className="w-10 h-10 text-primary" />
+              <Paintbrush className="w-10 h-10 text-primary" /> {/* Changed Icon */}
               <div>
                 <CardTitle className="text-3xl font-bold">Content Studio</CardTitle>
                 <p className="text-lg text-muted-foreground">
@@ -489,10 +482,10 @@ ${compositionGuidance}
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>Generate Brand Images</CardTitle>
-                <p className="text-sm text-muted-foreground">Create unique images based on your brand. Uses brand description, industry, and style. Optionally use an example image from your Brand Profile.</p>
+                <p className="text-sm text-muted-foreground">Create unique images. Uses brand description, industry, and style. Optionally use an example image from your Brand Profile. Some advanced options are Freepik-specific.</p>
               </CardHeader>
               {!isPreviewingPrompt ? (
-                <div id="imageGenerationFormFields"> {/* Wrapper for fields, not a form itself */}
+                <div id="imageGenerationFormFields"> {/* Wrapper for fields */}
                   <CardContent className="space-y-6">
                     <div>
                       <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description</Label>
@@ -520,14 +513,14 @@ ${compositionGuidance}
                     </div>
                     
                     <div>
-                      <Label htmlFor="imageGenImageStylePresetSelect" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Image Style Preset</Label>
+                      <Label htmlFor="imageGenImageStylePresetSelect" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Image Style Preset (Freepik Compatible)</Label>
                       <Select value={selectedImageStylePreset} onValueChange={setSelectedImageStylePreset} name="imageStylePresetSelectName">
                           <SelectTrigger id="imageGenImageStylePresetSelect">
                               <SelectValue placeholder="Select image style preset" />
                           </SelectTrigger>
                           <SelectContent>
                               <SelectGroup>
-                                  <SelectLabel>Artistic Styles (Freepik Compatible)</SelectLabel>
+                                  <SelectLabel>Freepik Artistic Styles</SelectLabel>
                                   {freepikSpecificStyles.map(style => (
                                       <SelectItem key={style.value} value={style.value}>{style.label}</SelectItem>
                                   ))}
@@ -558,7 +551,7 @@ ${compositionGuidance}
                         <Label htmlFor="imageGenExampleImageSelector" className="flex items-center mb-1">
                             <ImageIcon className="w-4 h-4 mr-2 text-primary" />Example Image from Profile (Optional)
                         </Label>
-                        {brandData?.exampleImages && brandData.exampleImages.length > 0 ? (
+                         {brandData?.exampleImages && brandData.exampleImages.length > 0 ? (
                             <div className="mt-2 space-y-2">
                                 {brandData.exampleImages.length > 1 ? (
                                     <>
@@ -584,9 +577,9 @@ ${compositionGuidance}
                                          <NextImage src={brandData.exampleImages[0]} alt={`Example 1`} width={76} height={76} className="object-contain w-full h-full rounded-sm" data-ai-hint="style example"/>
                                      </div>
                                 )}
-                                {selectedProfileImageIndexForGen !== null && brandData.exampleImages.length > 0 && (
+                                {currentExampleImageForGen && (
                                     <p className="text-xs text-muted-foreground">
-                                        Using image {selectedProfileImageIndexForGen + 1} as reference.
+                                        Using image {selectedProfileImageIndexForGen !== null && brandData.exampleImages.length > 1 ? selectedProfileImageIndexForGen + 1 : '1'} as reference.
                                     </p>
                                 )}
                             </div>
@@ -594,7 +587,6 @@ ${compositionGuidance}
                             <p className="text-xs text-muted-foreground mt-1">No example images in Brand Profile to select.</p>
                         )}
                     </div>
-
 
                     <div>
                       <Label htmlFor="imageGenNegativePrompt" className="flex items-center mb-1"><CircleSlash className="w-4 h-4 mr-2 text-primary" />Negative Prompt (Optional)</Label>
@@ -607,6 +599,49 @@ ${compositionGuidance}
                         rows={2}
                       />
                     </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <Label htmlFor="freepikDominantColorsInput" className="flex items-center mb-1"><PaletteIcon className="w-4 h-4 mr-2 text-primary" />Freepik Dominant Colors (Optional)</Label>
+                            <Input
+                                id="freepikDominantColorsInput"
+                                name="freepikDominantColorsInput"
+                                value={freepikDominantColorsInput}
+                                onChange={(e) => setFreepikDominantColorsInput(e.target.value)}
+                                placeholder="Up to 5 hex codes, e.g., #FF0000,#00FF00"
+                            />
+                            <p className="text-xs text-muted-foreground">Comma-separated hex color codes. Freepik specific.</p>
+                        </div>
+                        <div>
+                            <Label htmlFor="freepikEffectColor" className="flex items-center mb-1"><Paintbrush className="w-4 h-4 mr-2 text-primary" />Freepik Effect - Color (Optional)</Label>
+                            <Select name="freepikEffectColor" value={freepikEffectColor} onValueChange={setFreepikEffectColor}>
+                                <SelectTrigger id="freepikEffectColor"><SelectValue placeholder="Select Freepik color effect" /></SelectTrigger>
+                                <SelectContent>
+                                    {freepikEffectColors.map(effect => <SelectItem key={effect} value={effect || "none"}>{effect || "None"}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <Label htmlFor="freepikEffectLightning" className="flex items-center mb-1"><Zap className="w-4 h-4 mr-2 text-primary" />Freepik Effect - Lightning (Optional)</Label>
+                            <Select name="freepikEffectLightning" value={freepikEffectLightning} onValueChange={setFreepikEffectLightning}>
+                                <SelectTrigger id="freepikEffectLightning"><SelectValue placeholder="Select Freepik lightning effect" /></SelectTrigger>
+                                <SelectContent>
+                                    {freepikEffectLightnings.map(effect => <SelectItem key={effect} value={effect || "none"}>{effect || "None"}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <Label htmlFor="freepikEffectFraming" className="flex items-center mb-1"><Aperture className="w-4 h-4 mr-2 text-primary" />Freepik Effect - Framing (Optional)</Label>
+                            <Select name="freepikEffectFraming" value={freepikEffectFraming} onValueChange={setFreepikEffectFraming}>
+                                <SelectTrigger id="freepikEffectFraming"><SelectValue placeholder="Select Freepik framing effect" /></SelectTrigger>
+                                <SelectContent>
+                                    {freepikEffectFramings.map(effect => <SelectItem key={effect} value={effect || "none"}>{effect || "None"}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                           <Label htmlFor="imageGenAspectRatioSelect" className="flex items-center mb-1"><Ratio className="w-4 h-4 mr-2 text-primary" />Aspect Ratio</Label>
@@ -669,7 +704,7 @@ ${compositionGuidance}
                         placeholder="The constructed prompt will appear here. You can edit it before generation."
                       />
                        <p className="text-xs text-muted-foreground">
-                        Note: When using this finalized prompt, some form fields might be ignored by certain providers (e.g. Freepik's style enum vs. custom notes in this text). Aspect Ratio and Seed from form fields will still be applied by the backend if supported by the provider.
+                        Note: When using this finalized prompt, some form fields might be ignored by certain providers (e.g. Freepik's style enum vs. custom notes in this text). Aspect Ratio and Seed from form fields will still be applied by the backend if supported by the provider. Freepik specific color/effect fields above will be ignored if you edit this prompt.
                        </p>
                     </div>
                   </CardContent>
@@ -702,7 +737,7 @@ ${compositionGuidance}
                                     onClick={handleSaveSelectedGeneratedImages} 
                                     disabled={selectedGeneratedImageIndices.length === 0 }
                                     size="sm"
-                                    formAction={saveImagesAction}
+                                    formAction={saveImagesAction} // This should be part of a form if it's a submit button
                                 >
                                     <Save className="mr-2 h-4 w-4" />
                                     Save Selected to Library ({selectedGeneratedImageIndices.length})
@@ -761,7 +796,7 @@ ${compositionGuidance}
               </CardHeader>
               <form action={socialAction}>
                 <input type="hidden" name="industry" value={brandData?.industry || ""} />
-                <input type="hidden" name="selectedImageSrcForSocialPost" value={currentSocialImagePreviewUrl || ""} />
+                <input type="hidden" name="selectedImageSrcForSocialPost" value={useImageForSocialPost && currentSocialImagePreviewUrl ? currentSocialImagePreviewUrl : ""} />
                 <CardContent className="space-y-6">
                   <div className="space-y-3">
                     <div className="flex items-center space-x-2">
@@ -842,7 +877,7 @@ ${compositionGuidance}
                       </div>
                     )}
 
-                    {currentSocialImagePreviewUrl && (
+                    {currentSocialImagePreviewUrl && useImageForSocialPost && (
                         <div className="pl-6 mt-2 mb-3">
                             <p className="text-xs text-muted-foreground">Selected image for post:</p>
                             <NextImage src={currentSocialImagePreviewUrl} alt="Selected image for social post" width={100} height={100} className="rounded border object-contain" data-ai-hint="social media content"/>
@@ -1112,5 +1147,3 @@ ${compositionGuidance}
     </AppShell>
   );
 }
-
-    

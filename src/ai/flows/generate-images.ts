@@ -38,6 +38,14 @@ const GenerateImagesInputSchema = z.object({
   negativePrompt: z.string().optional().describe("Elements to avoid in the generated image."),
   seed: z.number().int().optional().describe("An optional seed for image generation to promote reproducibility."),
   finalizedTextPrompt: z.string().optional().describe("A complete, user-edited text prompt that should be used directly for image generation, potentially overriding constructed prompts."),
+  // Freepik specific styling options
+  freepikStylingColors: z.array(z.object({
+      color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a valid hex color code e.g. #FF0000"),
+      weight: z.number().min(0).max(1).default(1)
+  })).min(1).max(5).optional().describe("Up to 5 dominant hex colors for Freepik image generation, with optional weights."),
+  freepikEffectColor: z.string().optional().describe("Freepik specific color effect enum."),
+  freepikEffectLightning: z.string().optional().describe("Freepik specific lightning effect enum."),
+  freepikEffectFraming: z.string().optional().describe("Freepik specific framing effect enum."),
 });
 export type GenerateImagesInput = z.infer<typeof GenerateImagesInputSchema>;
 
@@ -95,12 +103,12 @@ async function _generateImageWithGemini(params: {
 async function _generateImageWithLeonardoAI_stub(params: {
   brandDescription: string;
   industry?: string;
-  imageStyle: string; // This is the preset style
+  imageStyle: string; 
   exampleImage?: string;
   aspectRatio?: string;
   negativePrompt?: string;
   seed?: number;
-  textPrompt: string; // This is the full text prompt including custom notes
+  textPrompt: string; 
 }): Promise<string> {
   console.warn("Leonardo.ai image generation is called but not implemented. Parameters:", params);
   throw new Error("Leonardo.ai provider is not implemented yet.");
@@ -109,24 +117,27 @@ async function _generateImageWithLeonardoAI_stub(params: {
 async function _generateImageWithImagen_stub(params: {
   brandDescription: string;
   industry?: string;
-  imageStyle: string; // This is the preset style
+  imageStyle: string;
   exampleImage?: string;
   aspectRatio?: string;
   negativePrompt?: string;
   seed?: number;
-  textPrompt: string; // This is the full text prompt including custom notes
+  textPrompt: string;
 }): Promise<string> {
   console.warn("Imagen (e.g., via Vertex AI) provider is called but not implemented. Parameters:", params);
   throw new Error("Imagen provider (e.g., via Vertex AI) is not implemented yet. This would typically involve a different Genkit plugin or direct API calls.");
 }
 
 async function _generateImageWithFreepik(params: {
-  textPrompt: string; // This is the full text prompt including custom notes
-  imageStyle: string; // This is the Freepik-specific enum style from the preset
+  textPrompt: string; 
+  imageStyle: string; // Freepik-specific enum style from preset
   negativePrompt?: string;
   seed?: number;
   aspectRatio?: string;
-  // Other params like brandDescription, industry, exampleImage are available in `params` but may not be directly used by Freepik's primary API call if not supported by specific fields. They are part of `textPrompt`.
+  freepikStylingColors?: { color: string; weight: number }[];
+  freepikEffectColor?: string;
+  freepikEffectLightning?: string;
+  freepikEffectFraming?: string;
 }): Promise<string> {
   const freepikApiKey = process.env.FREEPIK_API_KEY;
   if (!freepikApiKey) {
@@ -136,47 +147,40 @@ async function _generateImageWithFreepik(params: {
   let freepikSize = "square_1_1"; // Default
   if (params.aspectRatio) {
     switch (params.aspectRatio) {
-      case "1:1":
-        freepikSize = "square_1_1";
-        break;
-      case "4:5": 
-        freepikSize = "traditional_3_4"; // Mapped from 4:5
-        console.warn(`Mapping UI aspect ratio '4:5' to Freepik 'traditional_3_4'.`);
-        break;
-      case "16:9":
-        freepikSize = "widescreen_16_9";
-        break;
-      case "9:16":
-        freepikSize = "social_story_9_16";
-        break;
-      default:
-        console.warn(`Unsupported aspect ratio '${params.aspectRatio}' for Freepik, defaulting to square_1_1.`);
-        freepikSize = "square_1_1";
+      case "1:1": freepikSize = "square_1_1"; break;
+      case "4:5": freepikSize = "traditional_3_4"; console.warn(`Mapping UI aspect ratio '4:5' to Freepik 'traditional_3_4'.`); break; // Mapped from 4:5
+      case "16:9": freepikSize = "widescreen_16_9"; break;
+      case "9:16": freepikSize = "social_story_9_16"; break;
+      default: console.warn(`Unsupported aspect ratio '${params.aspectRatio}' for Freepik, defaulting to square_1_1.`); freepikSize = "square_1_1";
     }
   }
   
   const requestBody: any = {
-    prompt: params.textPrompt, // The full text prompt
+    prompt: params.textPrompt,
     num_images: 1,
-    image: {
-      size: freepikSize,
-    },
+    image: { size: freepikSize },
     guidance_scale: 1.0, 
     filter_nsfw: true,
+    styling: { style: params.imageStyle }, // Always include base style
   };
 
-  if (params.negativePrompt) {
-    requestBody.negative_prompt = params.negativePrompt;
-  }
-  if (params.seed !== undefined) {
-    requestBody.seed = params.seed;
+  if (params.negativePrompt) requestBody.negative_prompt = params.negativePrompt;
+  if (params.seed !== undefined) requestBody.seed = params.seed;
+
+  if (params.freepikStylingColors && params.freepikStylingColors.length > 0) {
+    if (!requestBody.styling) requestBody.styling = {};
+    requestBody.styling.colors = params.freepikStylingColors;
   }
 
-  // Use the Freepik-specific enum for styling.style
-  if (params.imageStyle) { 
-    requestBody.styling = { style: params.imageStyle };
-  }
+  const effects: any = {};
+  if (params.freepikEffectColor && params.freepikEffectColor !== "none") effects.color = params.freepikEffectColor;
+  if (params.freepikEffectLightning && params.freepikEffectLightning !== "none") effects.lightning = params.freepikEffectLightning;
+  if (params.freepikEffectFraming && params.freepikEffectFraming !== "none") effects.framing = params.freepikEffectFraming;
 
+  if (Object.keys(effects).length > 0) {
+    if (!requestBody.styling) requestBody.styling = {};
+    requestBody.styling.effects = effects;
+  }
 
   console.log("Sending request to Freepik API with body:", JSON.stringify(requestBody, null, 2));
 
@@ -208,7 +212,6 @@ async function _generateImageWithFreepik(params: {
   }
 }
 
-
 export async function generateImages(input: GenerateImagesInput): Promise<GenerateImagesOutput> {
   return generateImagesFlow(input);
 }
@@ -224,13 +227,17 @@ const generateImagesFlow = ai.defineFlow(
       brandDescription,
       industry,
       imageStyle, // This is the style preset (e.g., Freepik enum or descriptive style for Gemini)
-      // customStyleNotes is now part of finalizedTextPrompt or included in constructed textPrompt below
       exampleImage,
       aspectRatio,
       numberOfImages = 1,
       negativePrompt,
       seed,
       finalizedTextPrompt,
+      // Freepik specific
+      freepikStylingColors,
+      freepikEffectColor,
+      freepikEffectLightning,
+      freepikEffectFraming,
     } = input;
 
     const generatedImageUrls: string[] = [];
@@ -238,19 +245,14 @@ const generateImagesFlow = ai.defineFlow(
     let actualPromptUsedForFirstImage = "";
     const compositionGuidance = "IMPORTANT COMPOSITION RULE: When depicting human figures as the primary subject, the image *must* be well-composed. Avoid awkward or unintentional cropping of faces or key body parts. Ensure the figure is presented naturally and fully within the frame, unless the prompt *explicitly* requests a specific framing like 'close-up', 'headshot', 'upper body shot', or an artistic crop. Prioritize showing the entire subject if it's a person.";
 
-
     for (let i = 0; i < numberOfImages; i++) {
         let textPromptContent = "";
         const industryContext = industry ? ` The brand operates in the ${industry} industry.` : "";
-        // Custom style notes are now expected to be part of finalizedTextPrompt if provided,
-        // or they are incorporated into the textPromptContent construction if not.
-        // The `imageStyle` variable here refers to the *preset* selected.
         
         if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
             console.log(`Using finalized text prompt for image ${i+1}: "${finalizedTextPrompt.substring(0,100)}..."`);
             textPromptContent = finalizedTextPrompt;
             
-            // For Gemini, structural elements might still be appended if not detected in the finalized prompt
             if (imageGenerationProvider.toUpperCase() === 'GEMINI') {
                 if (aspectRatio && !finalizedTextPrompt.toLowerCase().includes("aspect ratio")) {
                   textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
@@ -262,26 +264,12 @@ const generateImagesFlow = ai.defineFlow(
                     textPromptContent += `\n\n${compositionGuidance}`;
                 }
             }
-            // For Freepik, the finalizedTextPrompt is used as the main 'prompt'.
-            // The `imageStyle` (preset) is passed separately to `_generateImageWithFreepik`.
-            // Negative prompt, aspect ratio, seed are also passed separately if available and handled by the Freepik helper.
         } else {
             console.log(`Constructing prompt for image ${i+1} as no finalized prompt was provided or it was empty.`);
-            if (!brandDescription || !imageStyle) { // imageStyle here is the preset
+            if (!brandDescription || !imageStyle) {
                 throw new Error("Brand description and image style preset are required if not providing/using a finalized text prompt.");
             }
             
-            // This constructed prompt will include customStyleNotes if they were part of the input.brandDescription/imageStyle
-            // However, customStyleNotes are now baked into the client-side preview prompt construction.
-            // So, the `brandDescription` from input already includes custom notes if previewed.
-            // If not previewed, `imageStyle` from input is preset, and `brandDescription` is just brand desc.
-            // For consistency, assume customStyleNotes (if any) are already part of the `brandDescription` or `imageStyle` if passed to this backend construction.
-            // The client-side `handlePreviewPromptClick` now bakes custom notes into the text.
-            // And `handleImageGenerationSubmit` passes the main imageStyle preset separately.
-
-            // The client-side preview prompt logic (handlePreviewPromptClick) now embeds customStyleNotes into the text.
-            // So, the 'imageStyle' here is the preset, and 'brandDescription' here already contains customStyleNotes if preview was used.
-            // This constructed prompt is a fallback if no finalizedTextPrompt is provided.
             if (exampleImage) {
                 textPromptContent = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
@@ -319,8 +307,6 @@ ${compositionGuidance}
                 textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
             }
             
-            // Append structural elements only if NOT using Freepik (Freepik handles these as separate params)
-            // OR if using Gemini (which takes them in the text prompt)
             if (imageGenerationProvider.toUpperCase() === 'GEMINI' ) { 
                 if (aspectRatio) {
                   textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
@@ -335,7 +321,6 @@ ${compositionGuidance}
              textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
         }
 
-
         if (i === 0) {
             actualPromptUsedForFirstImage = textPromptContent;
         }
@@ -344,19 +329,6 @@ ${compositionGuidance}
 
         try {
             let imageUrl = "";
-            
-            // Base parameters passed to all provider-specific helper functions
-            const baseGenerationParams = {
-                brandDescription: brandDescription || "", // Fallback for Freepik if needed, though textPrompt has it
-                industry,
-                imageStyle: imageStyle || "", // This is the preset (Freepik enum or descriptive for Gemini)
-                exampleImage,
-                aspectRatio,
-                negativePrompt,
-                seed,
-                textPrompt: textPromptContent, // The fully constructed or finalized text prompt
-            };
-
             const finalPromptPartsForGemini: ({text: string} | {media: {url: string}})[] = [];
             if (exampleImage && imageGenerationProvider.toUpperCase() === 'GEMINI') { 
                 finalPromptPartsForGemini.push({ media: { url: exampleImage } });
@@ -372,20 +344,23 @@ ${compositionGuidance}
                     });
                     break;
                 case 'LEONARDO_AI':
-                    imageUrl = await _generateImageWithLeonardoAI_stub(baseGenerationParams);
+                    imageUrl = await _generateImageWithLeonardoAI_stub({ brandDescription, industry, imageStyle, exampleImage, aspectRatio, negativePrompt, seed, textPrompt: textPromptContent });
                     break;
                 case 'IMAGEN': 
-                    imageUrl = await _generateImageWithImagen_stub(baseGenerationParams);
+                    imageUrl = await _generateImageWithImagen_stub({ brandDescription, industry, imageStyle, exampleImage, aspectRatio, negativePrompt, seed, textPrompt: textPromptContent });
                     break;
                 case 'FREEPIK':
-                     console.log("Attempting Freepik image generation with params:", JSON.stringify(baseGenerationParams, null, 2));
-                     // Freepik helper receives the main `textPrompt` and specific `imageStyle` for its enum.
+                     console.log("Attempting Freepik image generation with params:", JSON.stringify({ textPrompt: textPromptContent, imageStyle, negativePrompt, seed, aspectRatio, freepikStylingColors, freepikEffectColor, freepikEffectLightning, freepikEffectFraming }, null, 2));
                     imageUrl = await _generateImageWithFreepik({
                         textPrompt: textPromptContent,
                         imageStyle: imageStyle, // The preset enum for Freepik
                         negativePrompt: negativePrompt,
                         seed: seed,
                         aspectRatio: aspectRatio,
+                        freepikStylingColors: freepikStylingColors,
+                        freepikEffectColor: freepikEffectColor,
+                        freepikEffectLightning: freepikEffectLightning,
+                        freepikEffectFraming: freepikEffectFraming,
                     });
                     break;
                 default:
@@ -406,5 +381,3 @@ ${compositionGuidance}
     return {generatedImages: generatedImageUrls, promptUsed: actualPromptUsedForFirstImage };
   }
 );
-
-    

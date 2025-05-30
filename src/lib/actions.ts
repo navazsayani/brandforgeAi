@@ -12,7 +12,6 @@ import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
-
 // Generic type for form state with error
 export interface FormState<T = any> {
   data?: T;
@@ -33,8 +32,20 @@ export async function handleGenerateImagesAction(
     const seed = seedStr && !isNaN(parseInt(seedStr, 10)) ? parseInt(seedStr, 10) : undefined;
     
     let finalizedTextPromptValue = formData.get("finalizedTextPrompt") as string | undefined | null;
-     if (finalizedTextPromptValue === "" || finalizedTextPromptValue === null) {
+     if (finalizedTextPromptValue === "" || finalizedTextPromptValue === null) { // Explicitly check for empty string
       finalizedTextPromptValue = undefined;
+    }
+
+    const freepikDominantColorsInput = formData.get("freepikDominantColorsInput") as string | null;
+    let freepikStylingColors: GenerateImagesInput['freepikStylingColors'] = undefined;
+    if (freepikDominantColorsInput && freepikDominantColorsInput.trim() !== "") {
+        freepikStylingColors = freepikDominantColorsInput
+            .split(',')
+            .map(color => color.trim())
+            .filter(color => /^#[0-9a-fA-F]{6}$/.test(color)) // Basic hex validation
+            .slice(0, 5) // Max 5 colors
+            .map(color => ({ color, weight: 1 })); // Assuming weight 1
+        if (freepikStylingColors.length === 0) freepikStylingColors = undefined; // if no valid colors, make it undefined
     }
 
 
@@ -48,6 +59,11 @@ export async function handleGenerateImagesAction(
       negativePrompt: negativePromptValue === null || negativePromptValue === "" ? undefined : negativePromptValue,
       seed: seed,
       finalizedTextPrompt: finalizedTextPromptValue,
+      // Freepik specific fields
+      freepikStylingColors: freepikStylingColors,
+      freepikEffectColor: formData.get("freepikEffectColor") as string || undefined,
+      freepikEffectLightning: formData.get("freepikEffectLightning") as string || undefined,
+      freepikEffectFraming: formData.get("freepikEffectFraming") as string || undefined,
     };
 
     if (!input.finalizedTextPrompt && (!input.brandDescription || !input.imageStyle)) {
@@ -56,7 +72,9 @@ export async function handleGenerateImagesAction(
     if (input.exampleImage === "") delete input.exampleImage;
     if (input.aspectRatio === "" || input.aspectRatio === undefined) delete input.aspectRatio;
     if (input.industry === "" || input.industry === undefined) delete input.industry;
-    if (input.negativePrompt === "") delete input.negativePrompt;
+    if (input.freepikEffectColor === "none") delete input.freepikEffectColor;
+    if (input.freepikEffectLightning === "none") delete input.freepikEffectLightning;
+    if (input.freepikEffectFraming === "none") delete input.freepikEffectFraming;
 
 
     console.log("Calling generateImages with input:", JSON.stringify(input, null, 2));
@@ -196,7 +214,6 @@ export async function handleGenerateAdCampaignAction(
         return { error: "Budget must be a valid number." };
     }
 
-
     const input: GenerateAdCampaignInput = {
       brandName: formData.get("brandName") as string,
       brandDescription: formData.get("brandDescription") as string,
@@ -247,72 +264,78 @@ export async function handleSaveGeneratedImagesAction(
   prevState: FormState<{savedCount: number}>,
   formData: FormData
 ): Promise<FormState<{savedCount: number}>> {
-  const imagesToSaveJson = formData.get('imagesToSaveJson') as string;
-  const brandProfileDocId = formData.get('brandProfileDocId') as string || 'defaultBrandProfile';
-
-  if (!imagesToSaveJson) {
-    console.error("handleSaveGeneratedImagesAction: No imagesToSaveJson received in formData.");
-    return { error: "No image data received from the client." };
-  }
-
-  let imagesToSave: { dataUri: string; prompt: string; style: string; }[];
   try {
-    imagesToSave = JSON.parse(imagesToSaveJson);
-  } catch (e: any) {
-    console.error("handleSaveGeneratedImagesAction: Failed to parse imagesToSaveJson. Received:", imagesToSaveJson, "Error:", e);
-    return { error: `Invalid image data format received from client: ${e.message}` };
-  }
+    const imagesToSaveJson = formData.get('imagesToSaveJson') as string;
+    const brandProfileDocId = formData.get('brandProfileDocId') as string || 'defaultBrandProfile';
 
-  if (!Array.isArray(imagesToSave) || imagesToSave.length === 0) {
-     console.error("handleSaveGeneratedImagesAction: Parsed imagesToSave is not an array or is empty.");
-    return { error: "No images selected or data is not in expected array format." };
-  }
-
-  let savedCount = 0;
-  const saveErrors: string[] = [];
-
-  for (const image of imagesToSave) {
-    if (!image.dataUri || !image.dataUri.startsWith('data:image')) {
-      console.error(`handleSaveGeneratedImagesAction: Invalid data URI for an image. URI starts with: ${image.dataUri?.substring(0,30)}...`);
-      saveErrors.push(`Invalid data URI for an image (prompt: ${image.prompt.substring(0,30)}...). Cannot save.`);
-      continue;
+    if (!imagesToSaveJson) {
+      console.error("handleSaveGeneratedImagesAction: No imagesToSaveJson received in formData.");
+      return { error: "No image data received from the client." };
     }
+
+    let imagesToSave: { dataUri: string; prompt: string; style: string; }[];
     try {
-      const fileExtensionMatch = image.dataUri.match(/^data:image\/([a-zA-Z+]+);base64,/);
-      const fileExtension = fileExtensionMatch ? fileExtensionMatch[1] : 'png';
-      const filePath = `generatedLibraryImages/${brandProfileDocId}/${Date.now()}_${generateFilenamePart()}.${fileExtension}`;
-      const imageStorageRef = storageRef(storage, filePath);
-      
-      console.log(`handleSaveGeneratedImagesAction: Attempting to upload image to: ${filePath}`);
-      const snapshot = await uploadString(imageStorageRef, image.dataUri, 'data_url');
-      console.log(`handleSaveGeneratedImagesAction: Successfully uploaded image: ${filePath}, snapshot:`, snapshot);
-      
-      const downloadURL = await getDownloadURL(snapshot.ref);
-      console.log(`handleSaveGeneratedImagesAction: Obtained download URL: ${downloadURL}`);
-
-      const firestoreCollectionRef = collection(db, `brandProfiles/${brandProfileDocId}/savedLibraryImages`);
-      await addDoc(firestoreCollectionRef, {
-        storageUrl: downloadURL,
-        prompt: image.prompt || "N/A",
-        style: image.style || "N/A",
-        createdAt: serverTimestamp(),
-      });
-      console.log(`handleSaveGeneratedImagesAction: Successfully saved image metadata to Firestore for: ${filePath}`);
-      savedCount++;
+      imagesToSave = JSON.parse(imagesToSaveJson);
     } catch (e: any) {
-      console.error(`handleSaveGeneratedImagesAction: Failed to save one image (prompt: ${image.prompt.substring(0,50)}...). Full error:`, JSON.stringify(e, Object.getOwnPropertyNames(e)));
-      saveErrors.push(`Failed to save image (prompt: ${image.prompt.substring(0,30)}...): ${e.message?.substring(0,100)}`);
+      console.error("handleSaveGeneratedImagesAction: Failed to parse imagesToSaveJson. Received:", imagesToSaveJson, "Error:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
+      return { error: `Invalid image data format received from client: ${e.message}` };
     }
-  }
 
-  if (savedCount > 0 && saveErrors.length > 0) {
-    return { data: {savedCount}, message: `Successfully saved ${savedCount} image(s). Some errors occurred: ${saveErrors.join('. ')}` };
-  } else if (savedCount > 0) {
-    return { data: {savedCount}, message: `${savedCount} image(s) saved successfully to your library!` };
-  } else if (saveErrors.length > 0) {
-    return { error: `Failed to save any images. Errors: ${saveErrors.join('. ')}` };
-  } else {
-     return { error: "No images were processed or saved. This might be due to an issue with the input data or no images being selected."};
+    if (!Array.isArray(imagesToSave) || imagesToSave.length === 0) {
+      console.error("handleSaveGeneratedImagesAction: Parsed imagesToSave is not an array or is empty.");
+      return { error: "No images selected or data is not in expected array format." };
+    }
+
+    let savedCount = 0;
+    const saveErrors: string[] = [];
+
+    for (const image of imagesToSave) {
+      if (!image.dataUri || !image.dataUri.startsWith('data:image')) {
+        const promptSnippet = image.prompt ? image.prompt.substring(0,30) + "..." : "N/A";
+        console.error(`handleSaveGeneratedImagesAction: Invalid data URI for an image. URI starts with: ${image.dataUri?.substring(0,30)}... Prompt: ${promptSnippet}`);
+        saveErrors.push(`Invalid data URI for an image (prompt: ${promptSnippet}). Cannot save.`);
+        continue;
+      }
+      try {
+        const fileExtensionMatch = image.dataUri.match(/^data:image\/([a-zA-Z+]+);base64,/);
+        const fileExtension = fileExtensionMatch ? fileExtensionMatch[1] : 'png';
+        const filePath = `generatedLibraryImages/${brandProfileDocId}/${Date.now()}_${generateFilenamePart()}.${fileExtension}`;
+        const imageStorageRef = storageRef(storage, filePath);
+        
+        console.log(`handleSaveGeneratedImagesAction: Attempting to upload image to: ${filePath}`);
+        const snapshot = await uploadString(imageStorageRef, image.dataUri, 'data_url');
+        console.log(`handleSaveGeneratedImagesAction: Successfully uploaded image: ${filePath}`);
+        
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        console.log(`handleSaveGeneratedImagesAction: Obtained download URL: ${downloadURL}`);
+
+        const firestoreCollectionRef = collection(db, `brandProfiles/${brandProfileDocId}/savedLibraryImages`);
+        await addDoc(firestoreCollectionRef, {
+          storageUrl: downloadURL,
+          prompt: image.prompt || "N/A",
+          style: image.style || "N/A",
+          createdAt: serverTimestamp(),
+        });
+        console.log(`handleSaveGeneratedImagesAction: Successfully saved image metadata to Firestore for: ${filePath}`);
+        savedCount++;
+      } catch (e: any) {
+        const promptSnippet = image.prompt ? image.prompt.substring(0,50) + "..." : "N/A";
+        console.error(`handleSaveGeneratedImagesAction: Failed to save one image (prompt: ${promptSnippet}). Full error:`, JSON.stringify(e, Object.getOwnPropertyNames(e)));
+        saveErrors.push(`Failed to save image (prompt: ${promptSnippet}): ${e.message?.substring(0,100)}`);
+      }
+    }
+
+    if (savedCount > 0 && saveErrors.length > 0) {
+      return { data: {savedCount}, message: `Successfully saved ${savedCount} image(s). Some errors occurred: ${saveErrors.join('. ')}` };
+    } else if (savedCount > 0) {
+      return { data: {savedCount}, message: `${savedCount} image(s) saved successfully to your library!` };
+    } else if (saveErrors.length > 0) {
+      return { error: `Failed to save any images. Errors: ${saveErrors.join('. ')}` };
+    } else {
+      return { error: "No images were processed or saved. This might be due to an issue with the input data or no images being selected."};
+    }
+  } catch (e: any) {
+      console.error("Critical error in handleSaveGeneratedImagesAction (outside loop):", JSON.stringify(e, Object.getOwnPropertyNames(e)));
+      return { error: `A critical server error occurred during image saving: ${e.message}. Please check server logs.` };
   }
 }
-    
