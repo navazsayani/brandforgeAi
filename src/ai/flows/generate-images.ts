@@ -302,7 +302,6 @@ const generateImagesFlow = ai.defineFlow(
         if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
             console.log(`Using finalized text prompt for Freepik batch: "${finalizedTextPrompt.substring(0,100)}..."`);
             textPromptForFreepik = finalizedTextPrompt;
-            // Conditionally add composition guidance if not explicitly handled in finalized prompt
              if (
                 !finalizedTextPrompt.toLowerCase().includes("human figure") &&
                 !finalizedTextPrompt.toLowerCase().includes("crop") &&
@@ -327,11 +326,11 @@ const generateImagesFlow = ai.defineFlow(
             } else {
                 baseFreepikPrompt = `Generate new, high-quality, visually appealing images suitable for social media platforms like Instagram.\n\nConcept: "${brandDescription}".${industryContext}\nDesired artistic style for these new images is: "${imageStyle}".`;
             }
-
             textPromptForFreepik = baseFreepikPrompt;
-            // Negative prompt is handled structurally for Freepik, but can be added here for other models or as fallback
-            // if (negativePrompt) { textPromptForFreepik += `\n\nAvoid: ${negativePrompt}.`; }
-            textPromptForFreepik +=`\n\n${compositionGuidance}`;
+            if (negativePrompt) { // Freepik handles negative_prompt structurally, but also good for text.
+                 textPromptForFreepik += `\n\nAvoid: ${negativePrompt}.`;
+            }
+            textPromptForFreepik +=`\n\n${compositionGuidance}`; // Composition guidance is always textual
         }
         actualPromptUsedForFirstImage = textPromptForFreepik;
         console.log(`Text component of prompt for Freepik batch: "${textPromptForFreepik.substring(0,200)}..."`);
@@ -339,15 +338,15 @@ const generateImagesFlow = ai.defineFlow(
         try {
             const freepikTask = await _initiateFreepikImageTask({
                 textPrompt: textPromptForFreepik,
-                imageStyle: imageStyle, // This is the combined style (preset + custom notes)
-                exampleImage: exampleImage, // Passed for logging, but flux-dev might ignore it
-                negativePrompt: negativePrompt, // Passed to be handled structurally by Freepik
+                imageStyle: imageStyle, 
+                exampleImage: exampleImage, 
+                negativePrompt: negativePrompt, 
                 aspectRatio: aspectRatio,
                 freepikStylingColors: freepikStylingColors,
                 freepikEffectColor: freepikEffectColor,
                 freepikEffectLightning: freepikEffectLightning,
                 freepikEffectFraming: freepikEffectFraming,
-                numberOfImages: numberOfImages, // Pass the desired number of images
+                numberOfImages: numberOfImages,
             });
             
             if (freepikTask.generatedUrls && freepikTask.generatedUrls.length > 0) {
@@ -363,7 +362,6 @@ const generateImagesFlow = ai.defineFlow(
             }
         } catch (error: any) {
              console.error(`Error during Freepik batch generation. Full error:`, JSON.stringify(error, Object.getOwnPropertyNames(error)));
-             // If batch fails, add error placeholders for the number of images requested
              for (let i = 0; i < numberOfImages; i++) { 
                  generatedImageResults.push(`error:Failed to process Freepik batch item ${i+1}. ${error.message || 'Unknown error'}`);
              }
@@ -378,7 +376,6 @@ const generateImagesFlow = ai.defineFlow(
                 console.log(`Using finalized text prompt for image ${i+1}: "${finalizedTextPrompt.substring(0,100)}..." (Provider: ${chosenProvider})`);
                 textPromptContent = finalizedTextPrompt;
                 
-                // For Gemini, append structural/guidance elements if not likely handled in finalized prompt
                 if (chosenProvider === 'GEMINI') {
                     if (aspectRatio && !finalizedTextPrompt.toLowerCase().includes("aspect ratio")) {
                       textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally, and the image content itself must fully occupy this ${aspectRatio} frame, without any artificial letterboxing or pillarboxing.`;
@@ -433,7 +430,6 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
                 baseTextPrompt = `Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.\n\n`;
                 textPromptContent = `${baseTextPrompt}${coreInstructions}`;
                 
-                // Append these only if not using Freepik (which handles them structurally)
                 if (chosenProvider !== 'FREEPIK') { 
                   if (negativePrompt) {
                       textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
@@ -535,3 +531,4 @@ Action.define(generateImagesFlow, {
         schema: GenerateImagesOutputSchema,
     },
 });
+
