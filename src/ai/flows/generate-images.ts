@@ -57,6 +57,7 @@ const GenerateImagesOutputSchema = z.object({
     )
   ),
   promptUsed: z.string().describe("The text prompt that was used to generate the first image in the batch."),
+  providerUsed: z.string().describe("The image generation provider that was used."),
 });
 export type GenerateImagesOutput = z.infer<typeof GenerateImagesOutputSchema>;
 
@@ -114,7 +115,7 @@ async function _generateImageWithLeonardoAI_stub(params: {
   throw new Error("Leonardo.ai provider is not implemented yet.");
 }
 
-async function _generateImageWithImagen_stub(params: {
+async function _generateImageWithImagen_stub(params: { // Renamed from _generateImageWithImageGen_stub
   brandDescription: string;
   industry?: string;
   imageStyle: string;
@@ -128,9 +129,11 @@ async function _generateImageWithImagen_stub(params: {
   throw new Error("Imagen provider (e.g., via Vertex AI) is not implemented yet. This would typically involve a different Genkit plugin or direct API calls.");
 }
 
+const freepikValidStyles = ["photo", "digital-art", "3d", "painting", "low-poly", "pixel-art", "anime", "cyberpunk", "comic", "vintage", "cartoon", "vector", "studio-shot", "dark", "sketch", "mockup", "2000s-pone", "70s-vibe", "watercolor", "art-nouveau", "origami", "surreal", "fantasy", "traditional-japan"];
+
 async function _generateImageWithFreepik(params: {
   textPrompt: string; 
-  imageStyle: string; // Freepik-specific enum style from preset
+  imageStyle: string; 
   negativePrompt?: string;
   seed?: number;
   aspectRatio?: string;
@@ -144,24 +147,31 @@ async function _generateImageWithFreepik(params: {
     throw new Error("FREEPIK_API_KEY is not set in environment variables.");
   }
 
-  let freepikSize = "square_1_1"; // Default
+  let freepikSize = "square_1_1"; 
   if (params.aspectRatio) {
     switch (params.aspectRatio) {
       case "1:1": freepikSize = "square_1_1"; break;
-      case "4:5": freepikSize = "traditional_3_4"; console.warn(`Mapping UI aspect ratio '4:5' to Freepik 'traditional_3_4'.`); break; // Mapped from 4:5
+      case "4:5": freepikSize = "traditional_3_4"; console.warn(`Mapping UI aspect ratio '4:5' to Freepik 'traditional_3_4'.`); break; 
       case "16:9": freepikSize = "widescreen_16_9"; break;
       case "9:16": freepikSize = "social_story_9_16"; break;
       default: console.warn(`Unsupported aspect ratio '${params.aspectRatio}' for Freepik, defaulting to square_1_1.`); freepikSize = "square_1_1";
     }
   }
   
+  let finalFreepikStyle = params.imageStyle;
+  if (!freepikValidStyles.includes(params.imageStyle.toLowerCase())) {
+    console.warn(`Provided imageStyle "${params.imageStyle}" is not a specific Freepik style enum. Defaulting to "photo" for Freepik. Original style notes still in text prompt.`);
+    finalFreepikStyle = "photo"; 
+  }
+
+
   const requestBody: any = {
     prompt: params.textPrompt,
     num_images: 1,
     image: { size: freepikSize },
     guidance_scale: 1.0, 
     filter_nsfw: true,
-    styling: { style: params.imageStyle }, // Always include base style
+    styling: { style: finalFreepikStyle }, 
   };
 
   if (params.negativePrompt) requestBody.negative_prompt = params.negativePrompt;
@@ -226,7 +236,7 @@ const generateImagesFlow = ai.defineFlow(
     const {
       brandDescription,
       industry,
-      imageStyle, // This is the style preset (e.g., Freepik enum or descriptive style for Gemini)
+      imageStyle, 
       exampleImage,
       aspectRatio,
       numberOfImages = 1,
@@ -307,10 +317,13 @@ ${compositionGuidance}
                 textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
             }
             
-            if (imageGenerationProvider.toUpperCase() === 'GEMINI' ) { 
+            // Append aspect ratio and seed only if not using Freepik or if Freepik needs them in text
+            if (imageGenerationProvider.toUpperCase() !== 'FREEPIK' || (imageGenerationProvider.toUpperCase() === 'FREEPIK' && !aspectRatio) ) { // Freepik handles aspect ratio via 'image.size'
                 if (aspectRatio) {
                   textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
                 }
+            }
+             if (imageGenerationProvider.toUpperCase() !== 'FREEPIK' || (imageGenerationProvider.toUpperCase() === 'FREEPIK' && seed === undefined) ) { // Freepik handles seed via parameter
                 if (seed !== undefined) {
                   textPromptContent += `\n\nUse seed: ${seed}.`;
                 }
@@ -337,7 +350,6 @@ ${compositionGuidance}
 
             switch (imageGenerationProvider.toUpperCase()) {
                 case 'GEMINI':
-                    console.log("Attempting Gemini image generation with prompt parts:", JSON.stringify(finalPromptPartsForGemini, null, 2));
                     imageUrl = await _generateImageWithGemini({
                         aiInstance: ai,
                         promptParts: finalPromptPartsForGemini
@@ -350,10 +362,9 @@ ${compositionGuidance}
                     imageUrl = await _generateImageWithImagen_stub({ brandDescription, industry, imageStyle, exampleImage, aspectRatio, negativePrompt, seed, textPrompt: textPromptContent });
                     break;
                 case 'FREEPIK':
-                     console.log("Attempting Freepik image generation with params:", JSON.stringify({ textPrompt: textPromptContent, imageStyle, negativePrompt, seed, aspectRatio, freepikStylingColors, freepikEffectColor, freepikEffectLightning, freepikEffectFraming }, null, 2));
                     imageUrl = await _generateImageWithFreepik({
                         textPrompt: textPromptContent,
-                        imageStyle: imageStyle, // The preset enum for Freepik
+                        imageStyle: imageStyle, 
                         negativePrompt: negativePrompt,
                         seed: seed,
                         aspectRatio: aspectRatio,
@@ -378,6 +389,9 @@ ${compositionGuidance}
         throw new Error("AI failed to generate any images for the batch.");
     }
 
-    return {generatedImages: generatedImageUrls, promptUsed: actualPromptUsedForFirstImage };
+    return {generatedImages: generatedImageUrls, promptUsed: actualPromptUsedForFirstImage, providerUsed: imageGenerationProvider };
   }
 );
+
+
+    

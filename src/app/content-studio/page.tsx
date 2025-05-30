@@ -24,9 +24,10 @@ import type { GenerateBlogOutlineOutput } from "@/ai/flows/generate-blog-outline
 import type { GenerateImagesInput } from '@/ai/flows/generate-images';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; 
-import { FormDescription } from '@/components/ui/form';
+// Removed FormDescription as it's causing issues when not in a FormProvider context
+// We'll use <p className="text-sm text-muted-foreground">...</p> instead for descriptions.
 
-const initialImageFormState: FormState<{ generatedImages: string[]; promptUsed: string; }> = { error: undefined, data: undefined, message: undefined };
+const initialImageFormState: FormState<{ generatedImages: string[]; promptUsed: string; providerUsed: string; }> = { error: undefined, data: undefined, message: undefined };
 const initialSocialFormState: FormState<{ caption: string; hashtags: string; imageSrc: string | null }> = { error: undefined, data: undefined, message: undefined };
 const initialBlogFormState: FormState<{ title: string; content: string; tags: string }> = { error: undefined, data: undefined, message: undefined };
 const initialDescribeImageState: FormState<DescribeImageOutput> = { error: undefined, data: undefined, message: undefined };
@@ -35,36 +36,29 @@ const initialSaveImagesState: FormState<{ savedCount: number }> = { error: undef
 
 type SocialImageChoice = 'generated' | 'profile' | null;
 
-const freepikSpecificStyles = [
-  { value: "photo", label: "Photo (Freepik)" },
-  { value: "digital-art", label: "Digital Art (Freepik)" },
-  { value: "3d", label: "3D (Freepik)" },
-  { value: "painting", label: "Painting (Freepik)" },
-  { value: "low-poly", label: "Low Poly (Freepik)" },
-  { value: "pixel-art", label: "Pixel Art (Freepik)" },
-  { value: "anime", label: "Anime (Freepik)" },
-  { value: "cyberpunk", label: "Cyberpunk (Freepik)" },
-  { value: "comic", label: "Comic (Freepik)" },
-  { value: "vintage", label: "Vintage (Freepik)" },
-  { value: "cartoon", label: "Cartoon (Freepik)" },
-  { value: "vector", label: "Vector (Freepik)" },
-  { value: "studio-shot", label: "Studio Shot (Freepik)" },
-  { value: "dark", label: "Dark (Freepik)" },
-  { value: "sketch", label: "Sketch (Freepik)" },
-  { value: "mockup", label: "Mockup (Freepik)" },
-  { value: "2000s-pone", label: "2000s Phone (Freepik)" },
-  { value: "70s-vibe", label: "70s Vibe (Freepik)" },
-  { value: "watercolor", label: "Watercolor (Freepik)" },
-  { value: "art-nouveau", label: "Art Nouveau (Freepik)" },
-  { value: "origami", label: "Origami (Freepik)" },
-  { value: "surreal", label: "Surreal (Freepik)" },
-  { value: "fantasy", label: "Fantasy (Freepik)" },
-  { value: "traditional-japan", label: "Traditional Japan (Freepik)" },
+const imageStylePresets = [
+  { value: "photorealistic", label: "Photorealistic" },
+  { value: "digital-art", label: "Digital Art" },
+  { value: "3d", label: "3D Render" },
+  { value: "painting", label: "Painting" },
+  { value: "vector", label: "Vector Art" },
+  { value: "minimalist", label: "Minimalist" },
+  { value: "abstract", label: "Abstract" },
+  { value: "cartoon", label: "Cartoon / Comic" },
+  { value: "anime", label: "Anime / Manga (Freepik specific)" },
+  { value: "vintage", label: "Vintage / Retro" },
+  { value: "cyberpunk", label: "Cyberpunk (Freepik specific)" },
+  { value: "fantasy", label: "Fantasy Art" },
+  { value: "surreal", label: "Surreal" },
+  { value: "watercolor", label: "Watercolor" },
+  { value: "sketch", label: "Sketch / Drawing" },
+  { value: "photo", label: "Photo (Generic - Freepik)" },
+  { value: "studio-shot", label: "Studio Shot (Freepik)"},
 ];
 
-const freepikEffectColors = ["", "b&w", "pastel", "sepia", "dramatic", "vibrant", "orange&teal", "film-filter", "split", "electric", "pastel-pink", "gold-glow", "autumn", "muted-green", "deep-teal", "duotone", "terracotta&teal", "red&blue", "cold-neon", "burgundy&blue"];
-const freepikEffectLightnings = ["", "studio", "warm", "cinematic", "volumetric", "golden-hour", "long-exposure", "cold", "iridescent", "dramatic", "hardlight", "redscale", "indoor-light"];
-const freepikEffectFramings = ["", "portrait", "macro", "panoramic", "aerial-view", "close-up", "cinematic", "high-angle", "low-angle", "symmetry", "fish-eye", "first-person"];
+const freepikEffectColors = ["none", "b&w", "pastel", "sepia", "dramatic", "vibrant", "orange&teal", "film-filter", "split", "electric", "pastel-pink", "gold-glow", "autumn", "muted-green", "deep-teal", "duotone", "terracotta&teal", "red&blue", "cold-neon", "burgundy&blue"];
+const freepikEffectLightnings = ["none", "studio", "warm", "cinematic", "volumetric", "golden-hour", "long-exposure", "cold", "iridescent", "dramatic", "hardlight", "redscale", "indoor-light"];
+const freepikEffectFramings = ["none", "portrait", "macro", "panoramic", "aerial-view", "close-up", "cinematic", "high-angle", "low-angle", "symmetry", "fish-eye", "first-person"];
 
 const blogTones = [
     { value: "Informative", label: "Informative" },
@@ -89,6 +83,7 @@ export default function ContentStudioPage() {
   
   const [lastSuccessfulGeneratedImageUrls, setLastSuccessfulGeneratedImageUrls] = useState<string[]>([]);
   const [lastUsedImageGenPrompt, setLastUsedImageGenPrompt] = useState<string | null>(null);
+  const [lastUsedImageProvider, setLastUsedImageProvider] = useState<string | null>(null);
   const [generatedSocialPost, setGeneratedSocialPost] = useState<{caption: string, hashtags: string, imageSrc: string | null} | null>(null);
   const [generatedBlogPost, setGeneratedBlogPost] = useState<{title: string, content: string, tags: string} | null>(null);
   const [generatedBlogOutline, setGeneratedBlogOutline] = useState<string>("");
@@ -107,19 +102,19 @@ export default function ContentStudioPage() {
   const [selectedProfileImageIndexForGen, setSelectedProfileImageIndexForGen] = useState<number | null>(null);
   const [selectedProfileImageIndexForSocial, setSelectedProfileImageIndexForSocial] = useState<number | null>(null);
 
-  // State for Image Generation Form Fields
+  // State for Image Generation Form Fields (Controlled Components)
   const [imageGenBrandDescription, setImageGenBrandDescription] = useState<string>("");
   const [imageGenIndustry, setImageGenIndustry] = useState<string>("");
-  const [selectedImageStylePreset, setSelectedImageStylePreset] = useState<string>(freepikSpecificStyles[0].value);
+  const [selectedImageStylePreset, setSelectedImageStylePreset] = useState<string>(imageStylePresets[0].value);
   const [customStyleNotesInput, setCustomStyleNotesInput] = useState<string>("");
   const [imageGenNegativePrompt, setImageGenNegativePrompt] = useState<string>("");
   const [imageGenSeed, setImageGenSeed] = useState<string>("");
   
   // State for Freepik specific styling options
   const [freepikDominantColorsInput, setFreepikDominantColorsInput] = useState<string>("");
-  const [freepikEffectColor, setFreepikEffectColor] = useState<string>("");
-  const [freepikEffectLightning, setFreepikEffectLightning] = useState<string>("");
-  const [freepikEffectFraming, setFreepikEffectFraming] = useState<string>("");
+  const [freepikEffectColor, setFreepikEffectColor] = useState<string>("none");
+  const [freepikEffectLightning, setFreepikEffectLightning] = useState<string>("none");
+  const [freepikEffectFraming, setFreepikEffectFraming] = useState<string>("none");
 
 
   const [isPreviewingPrompt, setIsPreviewingPrompt] = useState<boolean>(false);
@@ -128,7 +123,7 @@ export default function ContentStudioPage() {
 
   const [selectedGeneratedImageIndices, setSelectedGeneratedImageIndices] = useState<number[]>([]);
   
-  // Refs for blog form fields
+  // Refs for blog form fields (though now mostly handled by form submission directly)
   const blogBrandNameRef = useRef<HTMLInputElement>(null);
   const blogBrandDescriptionRef = useRef<HTMLTextAreaElement>(null);
   const blogIndustryRef = useRef<HTMLInputElement>(null);
@@ -140,7 +135,9 @@ export default function ContentStudioPage() {
     if (brandData) {
         setImageGenBrandDescription(brandData.brandDescription || "");
         setImageGenIndustry(brandData.industry || "");
-        const initialStyle = brandData.imageStyle && freepikSpecificStyles.some(s => s.value === brandData.imageStyle) ? brandData.imageStyle : freepikSpecificStyles[0].value;
+        const initialStyle = brandData.imageStyle && imageStylePresets.some(s => s.value === brandData.imageStyle) 
+                             ? brandData.imageStyle 
+                             : (imageStylePresets.length > 0 ? imageStylePresets[0].value : "");
         setSelectedImageStylePreset(initialStyle);
         setCustomStyleNotesInput(brandData.imageStyleNotes || "");
 
@@ -152,7 +149,7 @@ export default function ContentStudioPage() {
             setSelectedProfileImageIndexForSocial(null);
         }
     } else {
-         setSelectedImageStylePreset(freepikSpecificStyles[0].value);
+         setSelectedImageStylePreset(imageStylePresets.length > 0 ? imageStylePresets[0].value : "");
     }
   }, [brandData]);
 
@@ -161,6 +158,7 @@ export default function ContentStudioPage() {
       const newImageUrls = imageState.data.generatedImages;
       setLastSuccessfulGeneratedImageUrls(newImageUrls);
       setLastUsedImageGenPrompt(imageState.data.promptUsed);
+      setLastUsedImageProvider(imageState.data.providerUsed);
       setSelectedGeneratedImageIndices([]); 
       
       newImageUrls.forEach(url => { 
@@ -177,7 +175,7 @@ export default function ContentStudioPage() {
     }
     if (imageState.error) {
       toast({ title: "Error generating images", description: imageState.error, variant: "destructive" });
-      setIsPreviewingPrompt(false); // Also hide preview on error
+      setIsPreviewingPrompt(false); 
     }
   }, [imageState, toast, addGeneratedImage, selectedImageStylePreset, customStyleNotesInput]);
 
@@ -259,6 +257,7 @@ export default function ContentStudioPage() {
   const handleClearGeneratedImages = () => {
     setLastSuccessfulGeneratedImageUrls([]);
     setLastUsedImageGenPrompt(null);
+    setLastUsedImageProvider(null);
     setSelectedGeneratedImageIndices([]);
     setFormSnapshot(null); 
     setIsPreviewingPrompt(false); 
@@ -295,7 +294,7 @@ export default function ContentStudioPage() {
     if (lastSuccessfulGeneratedImageUrls.length > 0) {
       setUseImageForSocialPost(true);
       setSocialImageChoice('generated'); 
-      setSelectedProfileImageIndexForSocial(null); // Ensure profile image choice is reset
+      setSelectedProfileImageIndexForSocial(null); 
       setActiveTab('social'); 
       toast({title: "Image Selected", description: "First generated image selected for social post."});
     } else {
@@ -320,12 +319,6 @@ export default function ContentStudioPage() {
     }
     setIsGeneratingDescription(true);
     const formData = new FormData();
-    if (currentSocialImagePreviewUrl.startsWith('http')) {
-       if (!currentSocialImagePreviewUrl.startsWith('data:')) {
-            // This toast is a bit noisy, can be removed if not strictly needed
-            // toast({ title: "AI Describe Info", description: "AI description for profile images (non-data URI) uses the image URL directly. Generation for newly generated images uses data URI.", variant: "informative" });
-       }
-    }
     formData.append("imageDataUri", currentSocialImagePreviewUrl); 
     startTransition(() => {
         describeImageAction(formData);
@@ -346,7 +339,9 @@ export default function ContentStudioPage() {
     const aspect = selectedAspectRatio;
     const numImages = parseInt(numberOfImagesToGenerate, 10);
     const seedValue = seedValueStr && !isNaN(parseInt(seedValueStr)) ? parseInt(seedValueStr, 10) : undefined;
-    const exampleImg = currentExampleImageForGen;
+    const exampleImg = (brandData?.exampleImages && selectedProfileImageIndexForGen !== null && brandData.exampleImages[selectedProfileImageIndexForGen]) || "";
+
+    const combinedStyle = stylePreset + (customNotes ? `. ${customNotes}` : "");
     const compositionGuidance = "IMPORTANT COMPOSITION RULE: When depicting human figures as the primary subject, the image *must* be well-composed. Avoid awkward or unintentional cropping of faces or key body parts. Ensure the figure is presented naturally and fully within the frame, unless the prompt *explicitly* requests a specific framing like 'close-up', 'headshot', 'upper body shot', or an artistic crop. Prioritize showing the entire subject if it's a person.";
 
     let textPromptContent = "";
@@ -361,8 +356,8 @@ The provided example image (sent first) serves ONE primary purpose: to identify 
 Your task is to generate a *completely new item* belonging to this *same category*.
 
 The *design, appearance, theme, specific characteristics, and unique elements* of this NEW item must be **primarily and heavily derived** from the following inputs:
-1.  **Brand Description**: "${brandDesc}"${industryContext}. ${customNotes ? `Additional creative direction: "${customNotes}".` : ""} This description informs the *theme, conceptual elements, and unique characteristics* of the new item.
-2.  **Desired Artistic Style**: "${stylePreset}". This dictates the overall visual execution, including aspects like color palette (unless the brand description very strongly and specifically dictates a color scheme), lighting, and rendering style. If this style suggests realism (e.g., "photorealistic", "realistic photo", "photo"), the output *must* be highly realistic and look like a real product photo.
+1.  **Brand Description**: "${brandDesc}"${industryContext}. This description informs the *theme, conceptual elements, and unique characteristics* of the new item.
+2.  **Desired Artistic Style**: "${combinedStyle}". This dictates the overall visual execution, including aspects like color palette (unless the brand description very strongly and specifically dictates a color scheme), lighting, and rendering style. If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic and look like a real product photo.
 
 **Important Note on Color and Style**: While the brand description provides thematic guidance, strive for visual variety and avoid over-relying on a narrow color palette (like exclusively black and gold) unless the brand description *and* desired artistic style overwhelmingly and explicitly demand it. The goal is a fresh interpretation that fits the brand's *overall essence* and the *chosen artistic style*.
 
@@ -377,8 +372,8 @@ ${compositionGuidance}
     } else { // No example image
         textPromptContent = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
-The image should be based on the following concept: "${brandDesc}".${industryContext} ${customNotes ? `Additional creative direction: "${customNotes}".` : ""}
-The desired artistic style for this new image is: "${stylePreset}". If this style suggests realism (e.g., "photorealistic", "realistic photo", "photo"), the output *must* be highly realistic.
+The image should be based on the following concept: "${brandDesc}".${industryContext}
+The desired artistic style for this new image is: "${combinedStyle}". If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic.
 **Important Note on Color and Style**: Strive for visual variety that aligns with the brand description and artistic style. Avoid defaulting to a narrow or stereotypical color palette unless the inputs strongly and explicitly demand it.
 
 ${compositionGuidance}
@@ -404,26 +399,22 @@ ${compositionGuidance}
     setFormSnapshot({
         brandDescription: brandDesc,
         industry: industryValue,
-        imageStyle: stylePreset, 
-        // The combined style (preset + custom notes) is already part of textPromptContent construction here.
-        // For the backend, we send the individual preset and custom notes, or finalized text.
-        // Let's ensure formSnapshot has the combined style if used for submission.
+        imageStyle: combinedStyle, 
         exampleImage: exampleImg === "" ? undefined : exampleImg,
         aspectRatio: aspect,
         numberOfImages: numImages,
         negativePrompt: negPrompt === "" ? undefined : negPrompt,
         seed: seedValue,
-        // Freepik specific fields from state
-        freepikStylingColors: freepikDominantColorsInput ? [{color: freepikDominantColorsInput, weight:1}] : undefined, // Simplified for snapshot, actual parsing in action
-        freepikEffectColor: freepikEffectColor || undefined,
-        freepikEffectLightning: freepikEffectLightning || undefined,
-        freepikEffectFraming: freepikEffectFraming || undefined,
+        freepikStylingColors: freepikDominantColorsInput ? freepikDominantColorsInput.split(',').map(c => ({color: c.trim(), weight:1})) : undefined,
+        freepikEffectColor: freepikEffectColor === "none" ? undefined : freepikEffectColor,
+        freepikEffectLightning: freepikEffectLightning === "none" ? undefined : freepikEffectLightning,
+        freepikEffectFraming: freepikEffectFraming === "none" ? undefined : freepikEffectFraming,
     });
     setIsPreviewingPrompt(true);
   };
 
  const handleImageGenerationSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault(); // Prevent default form submission
+    event.preventDefault(); 
     
     const formData = new FormData();
 
@@ -434,16 +425,12 @@ ${compositionGuidance}
     
     formData.append("finalizedTextPrompt", currentTextPromptForEditing || "");
     
-    // Append values from formSnapshot if available, otherwise from current state/brandData
     formData.append("brandDescription", formSnapshot?.brandDescription || imageGenBrandDescription || brandData?.brandDescription || "");
     formData.append("industry", formSnapshot?.industry || imageGenIndustry || brandData?.industry || "");
+    formData.append("imageStyle", formSnapshot?.imageStyle || (selectedImageStylePreset + (customStyleNotesInput ? `. ${customStyleNotesInput}` : "")));
     
-    // For 'imageStyle', send the preset. Custom notes are part of 'finalizedTextPrompt' if edited,
-    // or handled by backend logic if not.
-    formData.append("imageStyle", formSnapshot?.imageStyle || selectedImageStylePreset);
-    
-    if (formSnapshot?.exampleImage) formData.append("exampleImage", formSnapshot.exampleImage);
-    else if (currentExampleImageForGen) formData.append("exampleImage", currentExampleImageForGen);
+    const exampleImg = (formSnapshot?.exampleImage) || ((brandData?.exampleImages && selectedProfileImageIndexForGen !== null && brandData.exampleImages[selectedProfileImageIndexForGen]) || "");
+    if (exampleImg) formData.append("exampleImage", exampleImg);
 
     formData.append("aspectRatio", formSnapshot?.aspectRatio || selectedAspectRatio);
     formData.append("numberOfImages", String(formSnapshot?.numberOfImages || parseInt(numberOfImagesToGenerate,10)));
@@ -454,19 +441,26 @@ ${compositionGuidance}
     const seedValueNum = formSnapshot?.seed !== undefined ? formSnapshot.seed : (imageGenSeed && !isNaN(parseInt(imageGenSeed)) ? parseInt(imageGenSeed) : undefined);
     if (seedValueNum !== undefined) formData.append("seed", String(seedValueNum));
 
-    // Add Freepik specific fields from snapshot or current state
-    formData.append("freepikDominantColorsInput", formSnapshot?.freepikDominantColorsInput?.map(c => c.color).join(',') || freepikDominantColorsInput);
-    formData.append("freepikEffectColor", formSnapshot?.freepikEffectColor || freepikEffectColor || "none");
-    formData.append("freepikEffectLightning", formSnapshot?.freepikEffectLightning || freepikEffectLightning || "none");
-    formData.append("freepikEffectFraming", formSnapshot?.freepikEffectFraming || freepikEffectFraming || "none");
-    formData.append("customStyleNotes", customStyleNotesInput); // Send custom notes separately
+    const fColors = formSnapshot?.freepikStylingColors?.map(c=>c.color).join(',') || freepikDominantColorsInput;
+    if (fColors) formData.append("freepikDominantColorsInput", fColors);
+    
+    const fEffectColor = formSnapshot?.freepikEffectColor || freepikEffectColor;
+    if (fEffectColor && fEffectColor !== "none") formData.append("freepikEffectColor", fEffectColor);
+    
+    const fEffectLightning = formSnapshot?.freepikEffectLightning || freepikEffectLightning;
+    if (fEffectLightning && fEffectLightning !== "none") formData.append("freepikEffectLightning", fEffectLightning);
+
+    const fEffectFraming = formSnapshot?.freepikEffectFraming || freepikEffectFraming;
+    if (fEffectFraming && fEffectFraming !== "none") formData.append("freepikEffectFraming", fEffectFraming);
+    
+    formData.append("customStyleNotes", customStyleNotesInput);
 
 
     startTransition(() => {
       imageAction(formData);
     });
   };
-
+  
   const handleGenerateBlogOutline = () => {
     const formData = new FormData();
     formData.append('brandName', blogBrandNameRef.current?.value || brandData?.brandName || "");
@@ -514,7 +508,8 @@ ${compositionGuidance}
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>Generate Brand Images</CardTitle>
-                <p className="text-sm text-muted-foreground">Create unique images. Uses brand description, industry, and style. Optionally use an example image from your Brand Profile. Some advanced options are Freepik-specific.</p>
+                <p className="text-sm text-muted-foreground">Create unique images. Uses brand description, industry, and style. Optionally use an example image from your Brand Profile.</p>
+                 {lastUsedImageProvider && <p className="text-xs text-primary mt-1">Image(s) generated using: {lastUsedImageProvider}</p>}
               </CardHeader>
               {!isPreviewingPrompt ? (
                 <div id="imageGenerationFormFields"> {/* Wrapper for fields */}
@@ -544,30 +539,34 @@ ${compositionGuidance}
                     </div>
                     
                     <div>
-                      <Label htmlFor="imageGenImageStylePresetSelect" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Image Style Preset (Freepik Compatible)</Label>
-                      <Select value={selectedImageStylePreset} onValueChange={setSelectedImageStylePreset} name="imageStylePresetSelectName">
+                      <Label htmlFor="imageGenImageStylePresetSelect" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Image Style Preset</Label>
+                      <Select 
+                        value={selectedImageStylePreset} 
+                        onValueChange={setSelectedImageStylePreset} 
+                        name="imageStylePresetSelectName" /* Name for form submission if not using hidden input */
+                      >
                           <SelectTrigger id="imageGenImageStylePresetSelect">
                               <SelectValue placeholder="Select image style preset" />
                           </SelectTrigger>
                           <SelectContent>
                               <SelectGroup>
-                                  <SelectLabel>Freepik Artistic Styles</SelectLabel>
-                                  {freepikSpecificStyles.map(style => (
+                                  <SelectLabel>Artistic Styles</SelectLabel>
+                                  {imageStylePresets.map(style => (
                                       <SelectItem key={style.value} value={style.value}>{style.label}</SelectItem>
                                   ))}
                               </SelectGroup>
                           </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        Profile preset: {brandData?.imageStyle ? (freepikSpecificStyles.find(s => s.value === brandData.imageStyle)?.label || brandData.imageStyle) : 'Not set in profile'}
+                        Profile preset: {brandData?.imageStyle ? (imageStylePresets.find(s => s.value === brandData.imageStyle)?.label || brandData.imageStyle) : 'Not set in profile'}
                       </p>
                     </div>
 
                     <div>
-                      <Label htmlFor="imageGenCustomStyleNotes" className="flex items-center mb-1"><Edit className="w-4 h-4 mr-2 text-primary" />Custom Style Notes (for text prompt)</Label>
+                      <Label htmlFor="imageGenCustomStyleNotes" className="flex items-center mb-1"><Edit className="w-4 h-4 mr-2 text-primary" />Custom Style Notes</Label>
                       <Textarea
                         id="imageGenCustomStyleNotes"
-                        name="imageStyleNotes"
+                        name="imageStyleNotes" /* Name for form submission if not using hidden input */
                         value={customStyleNotesInput}
                         onChange={(e) => setCustomStyleNotesInput(e.target.value)}
                         placeholder="E.g., 'add a touch of vintage', 'focus on metallic textures'. These notes are added to the main text prompt."
@@ -608,7 +607,7 @@ ${compositionGuidance}
                                          <NextImage src={brandData.exampleImages[0]} alt={`Example 1`} width={76} height={76} className="object-contain w-full h-full rounded-sm" data-ai-hint="style example"/>
                                      </div>
                                 )}
-                                {currentExampleImageForGen && (
+                                { (brandData?.exampleImages && selectedProfileImageIndexForGen !== null && brandData.exampleImages[selectedProfileImageIndexForGen]) && (
                                     <p className="text-xs text-muted-foreground">
                                         Using image {selectedProfileImageIndexForGen !== null && brandData.exampleImages && brandData.exampleImages.length > 1 ? selectedProfileImageIndexForGen + 1 : '1'} as reference.
                                     </p>
@@ -651,6 +650,7 @@ ${compositionGuidance}
                                     {freepikEffectColors.map(effect => <SelectItem key={effect} value={effect || "none"}>{effect || "None"}</SelectItem>)}
                                 </SelectContent>
                             </Select>
+                             <p className="text-xs text-muted-foreground">Freepik specific.</p>
                         </div>
                         <div>
                             <Label htmlFor="freepikEffectLightning" className="flex items-center mb-1"><Zap className="w-4 h-4 mr-2 text-primary" />Freepik Effect - Lightning (Optional)</Label>
@@ -660,6 +660,7 @@ ${compositionGuidance}
                                     {freepikEffectLightnings.map(effect => <SelectItem key={effect} value={effect || "none"}>{effect || "None"}</SelectItem>)}
                                 </SelectContent>
                             </Select>
+                             <p className="text-xs text-muted-foreground">Freepik specific.</p>
                         </div>
                         <div>
                             <Label htmlFor="freepikEffectFraming" className="flex items-center mb-1"><Aperture className="w-4 h-4 mr-2 text-primary" />Freepik Effect - Framing (Optional)</Label>
@@ -669,6 +670,7 @@ ${compositionGuidance}
                                     {freepikEffectFramings.map(effect => <SelectItem key={effect} value={effect || "none"}>{effect || "None"}</SelectItem>)}
                                 </SelectContent>
                             </Select>
+                             <p className="text-xs text-muted-foreground">Freepik specific.</p>
                         </div>
                     </div>
 
@@ -735,7 +737,7 @@ ${compositionGuidance}
                         placeholder="The constructed prompt will appear here. You can edit it before generation."
                       />
                        <p className="text-xs text-muted-foreground">
-                        Note: When using this finalized prompt, some form fields might be ignored by certain providers (e.g. Freepik's style enum vs. custom notes in this text). Aspect Ratio and Seed from form fields will still be applied by the backend if supported by the provider. Freepik specific color/effect fields above will be ignored if you edit this prompt.
+                        Note: If Freepik is used, some structural parameters like aspect ratio from the form fields will still be applied by the backend. For Gemini, editing this prompt gives full control over the text portion.
                        </p>
                     </div>
                   </CardContent>
@@ -757,6 +759,7 @@ ${compositionGuidance}
                             <CardTitle className="text-xl flex items-center">
                                 <ImageIcon className="w-5 h-5 mr-2 text-primary" />
                                 Generated Image{lastSuccessfulGeneratedImageUrls.length > 1 ? 's' : ''}
+                                {lastUsedImageProvider && <span className="text-xs text-muted-foreground ml-2">(via {lastUsedImageProvider})</span>}
                             </CardTitle>
                             <Button variant="outline" size="sm" onClick={handleClearGeneratedImages}>
                                 <Trash2 className="mr-2 h-4 w-4" /> Clear Image{lastSuccessfulGeneratedImageUrls.length > 1 ? 's' : ''}
@@ -764,7 +767,7 @@ ${compositionGuidance}
                         </div>
                          {lastSuccessfulGeneratedImageUrls.length > 0 && (
                             <div className="mt-2 flex items-center gap-2">
-                                <form> {/* Form wrapper for save button if it uses formAction */}
+                                <form> {}
                                     <input type="hidden" name="imagesToSaveJson" value={JSON.stringify(selectedGeneratedImageIndices.map(index => ({
                                         dataUri: lastSuccessfulGeneratedImageUrls[index],
                                         prompt: lastUsedImageGenPrompt || "N/A", 
@@ -774,7 +777,7 @@ ${compositionGuidance}
                                     <SubmitButton 
                                         onClick={handleSaveSelectedGeneratedImages} 
                                         formAction={saveImagesAction}
-                                        disabled={selectedGeneratedImageIndices.length === 0 }
+                                        disabled={selectedGeneratedImageIndices.length === 0 || saveImagesState.message === 'Saving...' } // Simple loading state check
                                         size="sm"
                                     >
                                         <Save className="mr-2 h-4 w-4" />
@@ -1166,7 +1169,7 @@ ${compositionGuidance}
                         <div>
                             <h4 className="text-sm font-medium mb-1 text-muted-foreground">Content:</h4>
                             <div className="p-3 prose border rounded-md bg-muted/50 max-w-none max-h-96 overflow-y-auto">
-                                <p className="whitespace-pre-wrap">{generatedBlogPost.content}</p>
+                                <p className="whitespace-pre-wrap">{generatedBlogPost.content}</p> {}
                             </div>
                             <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedBlogPost.content, "Content")} className="mt-1 text-muted-foreground hover:text-primary">
                                 <Copy className="w-3 h-3 mr-1" /> Copy Content
@@ -1191,3 +1194,6 @@ ${compositionGuidance}
     </AppShell>
   );
 }
+
+
+    

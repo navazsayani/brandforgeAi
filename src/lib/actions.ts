@@ -20,9 +20,9 @@ export interface FormState<T = any> {
 }
 
 export async function handleGenerateImagesAction(
-  prevState: FormState<{ generatedImages: string[]; promptUsed: string; }>,
+  prevState: FormState<{ generatedImages: string[]; promptUsed: string; providerUsed: string; }>,
   formData: FormData
-): Promise<FormState<{ generatedImages: string[]; promptUsed: string; }>> {
+): Promise<FormState<{ generatedImages: string[]; promptUsed: string; providerUsed: string; }>> {
   try {
     const numberOfImagesStr = formData.get("numberOfImages") as string;
     const numberOfImages = parseInt(numberOfImagesStr, 10) || 1;
@@ -32,7 +32,7 @@ export async function handleGenerateImagesAction(
     const seed = seedStr && !isNaN(parseInt(seedStr, 10)) ? parseInt(seedStr, 10) : undefined;
     
     let finalizedTextPromptValue = formData.get("finalizedTextPrompt") as string | undefined | null;
-     if (finalizedTextPromptValue === "" || finalizedTextPromptValue === null) { // Explicitly check for empty string
+     if (finalizedTextPromptValue === "" || finalizedTextPromptValue === null) { 
       finalizedTextPromptValue = undefined;
     }
 
@@ -42,10 +42,10 @@ export async function handleGenerateImagesAction(
         freepikStylingColors = freepikDominantColorsInput
             .split(',')
             .map(color => color.trim())
-            .filter(color => /^#[0-9a-fA-F]{6}$/.test(color)) // Basic hex validation
-            .slice(0, 5) // Max 5 colors
-            .map(color => ({ color, weight: 1 })); // Assuming weight 1
-        if (freepikStylingColors.length === 0) freepikStylingColors = undefined; // if no valid colors, make it undefined
+            .filter(color => /^#[0-9a-fA-F]{6}$/.test(color)) 
+            .slice(0, 5) 
+            .map(color => ({ color, weight: 1 })); 
+        if (freepikStylingColors.length === 0) freepikStylingColors = undefined; 
     }
 
 
@@ -61,9 +61,9 @@ export async function handleGenerateImagesAction(
       finalizedTextPrompt: finalizedTextPromptValue,
       // Freepik specific fields
       freepikStylingColors: freepikStylingColors,
-      freepikEffectColor: formData.get("freepikEffectColor") as string || undefined,
-      freepikEffectLightning: formData.get("freepikEffectLightning") as string || undefined,
-      freepikEffectFraming: formData.get("freepikEffectFraming") as string || undefined,
+      freepikEffectColor: (formData.get("freepikEffectColor") as string === "none" ? undefined : formData.get("freepikEffectColor") as string | undefined) || undefined,
+      freepikEffectLightning: (formData.get("freepikEffectLightning") as string === "none" ? undefined : formData.get("freepikEffectLightning") as string | undefined) || undefined,
+      freepikEffectFraming: (formData.get("freepikEffectFraming") as string === "none" ? undefined : formData.get("freepikEffectFraming") as string | undefined) || undefined,
     };
 
     if (!input.finalizedTextPrompt && (!input.brandDescription || !input.imageStyle)) {
@@ -72,17 +72,13 @@ export async function handleGenerateImagesAction(
     if (input.exampleImage === "") delete input.exampleImage;
     if (input.aspectRatio === "" || input.aspectRatio === undefined) delete input.aspectRatio;
     if (input.industry === "" || input.industry === undefined) delete input.industry;
-    if (input.freepikEffectColor === "none") delete input.freepikEffectColor;
-    if (input.freepikEffectLightning === "none") delete input.freepikEffectLightning;
-    if (input.freepikEffectFraming === "none") delete input.freepikEffectFraming;
 
 
-    console.log("Calling generateImages with input:", JSON.stringify(input, null, 2));
     const result = await generateImages(input);
     const message = result.generatedImages.length > 1
-        ? `${result.generatedImages.length} images generated successfully!`
-        : "Image generated successfully!";
-    return { data: { generatedImages: result.generatedImages, promptUsed: result.promptUsed }, message: message };
+        ? `${result.generatedImages.length} images generated successfully using ${result.providerUsed}!`
+        : `Image generated successfully using ${result.providerUsed}!`;
+    return { data: { generatedImages: result.generatedImages, promptUsed: result.promptUsed, providerUsed: result.providerUsed }, message: message };
   } catch (e: any) {
     console.error("Error in handleGenerateImagesAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
     return { error: e.message || "Failed to generate image(s). Check server logs for details." };
@@ -244,18 +240,18 @@ export async function handleExtractBrandInfoFromUrlAction(
   prevState: FormState<ExtractBrandInfoFromUrlOutput>,
   formData: FormData
 ): Promise<FormState<ExtractBrandInfoFromUrlOutput>> {
-    const websiteUrl = formData.get("websiteUrl") as string;
-    if (!websiteUrl) {
-        return { error: "Website URL is required." };
-    }
-    try {
-        const input: ExtractBrandInfoFromUrlInput = { websiteUrl };
-        const result = await extractBrandInfoFromUrl(input);
-        return { data: result, message: "Brand information extracted successfully." };
-    } catch (e: any)        {
-        console.error("Error in handleExtractBrandInfoFromUrlAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
-        return { error: e.message || "Failed to extract brand information from URL. Check server logs for details." };
-    }
+  const websiteUrl = formData.get("websiteUrl") as string;
+  if (!websiteUrl) {
+      return { error: "Website URL is required." };
+  }
+  try {
+      const input: ExtractBrandInfoFromUrlInput = { websiteUrl };
+      const result = await extractBrandInfoFromUrl(input);
+      return { data: result, message: "Brand information extracted successfully." };
+  } catch (e: any) {
+      console.error("Error in handleExtractBrandInfoFromUrlAction (Outer):", JSON.stringify(e, Object.getOwnPropertyNames(e)));
+      return { error: e.message || "Failed to extract brand information from URL. Check server logs for details." };
+  }
 }
 
 const generateFilenamePart = () => Math.random().toString(36).substring(2, 10);
@@ -290,33 +286,38 @@ export async function handleSaveGeneratedImagesAction(
     const saveErrors: string[] = [];
 
     for (const image of imagesToSave) {
-      if (!image.dataUri || !image.dataUri.startsWith('data:image')) {
+      if (!image.dataUri || !(image.dataUri.startsWith('data:image') || image.dataUri.startsWith('http'))) { // Allow http for Freepik URLs
         const promptSnippet = image.prompt ? image.prompt.substring(0,30) + "..." : "N/A";
-        console.error(`handleSaveGeneratedImagesAction: Invalid data URI for an image. URI starts with: ${image.dataUri?.substring(0,30)}... Prompt: ${promptSnippet}`);
-        saveErrors.push(`Invalid data URI for an image (prompt: ${promptSnippet}). Cannot save.`);
+        console.error(`handleSaveGeneratedImagesAction: Invalid data URI or URL for an image. URI starts with: ${image.dataUri?.substring(0,30)}... Prompt: ${promptSnippet}`);
+        saveErrors.push(`Invalid data URI or URL for an image (prompt: ${promptSnippet}). Cannot save.`);
         continue;
       }
       try {
-        const fileExtensionMatch = image.dataUri.match(/^data:image\/([a-zA-Z+]+);base64,/);
-        const fileExtension = fileExtensionMatch ? fileExtensionMatch[1] : 'png';
-        const filePath = `generatedLibraryImages/${brandProfileDocId}/${Date.now()}_${generateFilenamePart()}.${fileExtension}`;
-        const imageStorageRef = storageRef(storage, filePath);
-        
-        console.log(`handleSaveGeneratedImagesAction: Attempting to upload image to: ${filePath}`);
-        const snapshot = await uploadString(imageStorageRef, image.dataUri, 'data_url');
-        console.log(`handleSaveGeneratedImagesAction: Successfully uploaded image: ${filePath}`);
-        
-        const downloadURL = await getDownloadURL(snapshot.ref);
-        console.log(`handleSaveGeneratedImagesAction: Obtained download URL: ${downloadURL}`);
+        let imageUrlToSave = image.dataUri;
+        if (image.dataUri.startsWith('data:image')) { // Only upload if it's a data URI
+            const fileExtensionMatch = image.dataUri.match(/^data:image\/([a-zA-Z+]+);base64,/);
+            const fileExtension = fileExtensionMatch ? fileExtensionMatch[1] : 'png';
+            const filePath = `generatedLibraryImages/${brandProfileDocId}/${Date.now()}_${generateFilenamePart()}.${fileExtension}`;
+            const imageStorageRef = storageRef(storage, filePath);
+            
+            console.log(`handleSaveGeneratedImagesAction: Attempting to upload image to: ${filePath}`);
+            const snapshot = await uploadString(imageStorageRef, image.dataUri, 'data_url');
+            console.log(`handleSaveGeneratedImagesAction: Successfully uploaded image: ${filePath}`);
+            imageUrlToSave = await getDownloadURL(snapshot.ref);
+            console.log(`handleSaveGeneratedImagesAction: Obtained download URL: ${imageUrlToSave}`);
+        } else {
+            console.log(`handleSaveGeneratedImagesAction: Image is already a URL, not uploading to storage: ${imageUrlToSave}`);
+        }
+
 
         const firestoreCollectionRef = collection(db, `brandProfiles/${brandProfileDocId}/savedLibraryImages`);
         await addDoc(firestoreCollectionRef, {
-          storageUrl: downloadURL,
+          storageUrl: imageUrlToSave, // Save the Firebase URL or original public URL
           prompt: image.prompt || "N/A",
           style: image.style || "N/A",
           createdAt: serverTimestamp(),
         });
-        console.log(`handleSaveGeneratedImagesAction: Successfully saved image metadata to Firestore for: ${filePath}`);
+        console.log(`handleSaveGeneratedImagesAction: Successfully saved image metadata to Firestore for URL: ${imageUrlToSave}`);
         savedCount++;
       } catch (e: any) {
         const promptSnippet = image.prompt ? image.prompt.substring(0,50) + "..." : "N/A";
@@ -339,3 +340,6 @@ export async function handleSaveGeneratedImagesAction(
       return { error: `A critical server error occurred during image saving: ${e.message}. Please check server logs.` };
   }
 }
+
+
+    

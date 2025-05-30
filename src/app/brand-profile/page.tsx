@@ -23,32 +23,26 @@ import { handleExtractBrandInfoFromUrlAction, type FormState as ExtractFormState
 import { storage } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useActionState, startTransition } from 'react';
+import { Alert, AlertTitle } from '@/components/ui/alert';
 
-const freepikSpecificStyles = [
-  { value: "photo", label: "Photo (Freepik)" },
-  { value: "digital-art", label: "Digital Art (Freepik)" },
-  { value: "3d", label: "3D (Freepik)" },
-  { value: "painting", label: "Painting (Freepik)" },
-  { value: "low-poly", label: "Low Poly (Freepik)" },
-  { value: "pixel-art", label: "Pixel Art (Freepik)" },
-  { value: "anime", label: "Anime (Freepik)" },
-  { value: "cyberpunk", label: "Cyberpunk (Freepik)" },
-  { value: "comic", label: "Comic (Freepik)" },
-  { value: "vintage", label: "Vintage (Freepik)" },
-  { value: "cartoon", label: "Cartoon (Freepik)" },
-  { value: "vector", label: "Vector (Freepik)" },
-  { value: "studio-shot", label: "Studio Shot (Freepik)" },
-  { value: "dark", label: "Dark (Freepik)" },
-  { value: "sketch", label: "Sketch (Freepik)" },
-  { value: "mockup", label: "Mockup (Freepik)" },
-  { value: "2000s-pone", label: "2000s Phone (Freepik)" }, // Assuming "2000s-pone" might be a typo for phone aesthetics
-  { value: "70s-vibe", label: "70s Vibe (Freepik)" },
-  { value: "watercolor", label: "Watercolor (Freepik)" },
-  { value: "art-nouveau", label: "Art Nouveau (Freepik)" },
-  { value: "origami", label: "Origami (Freepik)" },
-  { value: "surreal", label: "Surreal (Freepik)" },
-  { value: "fantasy", label: "Fantasy (Freepik)" },
-  { value: "traditional-japan", label: "Traditional Japan (Freepik)" },
+const imageStylePresets = [
+  { value: "photorealistic", label: "Photorealistic" },
+  { value: "digital-art", label: "Digital Art" },
+  { value: "3d", label: "3D Render" },
+  { value: "painting", label: "Painting" },
+  { value: "vector", label: "Vector Art" },
+  { value: "minimalist", label: "Minimalist" },
+  { value: "abstract", label: "Abstract" },
+  { value: "cartoon", label: "Cartoon / Comic" },
+  { value: "anime", label: "Anime / Manga" },
+  { value: "vintage", label: "Vintage / Retro" },
+  { value: "cyberpunk", label: "Cyberpunk" },
+  { value: "fantasy", label: "Fantasy Art" },
+  { value: "surreal", label: "Surreal" },
+  { value: "watercolor", label: "Watercolor" },
+  { value: "sketch", label: "Sketch / Drawing" },
+  { value: "photo", label: "Photo (Generic - Freepik)" }, // Added Freepik specific as example
+  { value: "studio-shot", label: "Studio Shot (Freepik)"},
 ];
 
 
@@ -74,9 +68,9 @@ const brandProfileSchema = z.object({
   websiteUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   brandDescription: z.string().min(10, { message: "Description must be at least 10 characters." }),
   industry: z.string().optional(),
-  imageStyle: z.string().min(1, { message: "Please select an image style preset." }).optional(),
+  imageStyle: z.string().optional(),
   imageStyleNotes: z.string().optional(),
-  exampleImages: z.array(z.string().url({ message: "Each image must be a valid URL." })).optional(),
+  exampleImages: z.array(z.string().url({ message: "Each image must be a valid URL." })).max(5, {message: "You can upload a maximum of 5 example images."}).optional(),
   targetKeywords: z.string().optional(),
 });
 
@@ -87,7 +81,7 @@ const defaultFormValues: BrandProfileFormData = {
   websiteUrl: "",
   brandDescription: "",
   industry: "",
-  imageStyle: freepikSpecificStyles.length > 0 ? freepikSpecificStyles[0].value : "",
+  imageStyle: imageStylePresets.length > 0 ? imageStylePresets[0].value : "",
   imageStyleNotes: "",
   exampleImages: [],
   targetKeywords: "",
@@ -218,26 +212,50 @@ export default function BrandProfilePage() {
   const handleImageFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
       const files = Array.from(event.target.files);
+      const currentSavedImages = form.getValues("exampleImages") || [];
+      
+      if (currentSavedImages.length + files.length > 5) {
+        toast({
+          title: "Upload Limit Exceeded",
+          description: "You can upload a maximum of 5 example images.",
+          variant: "destructive",
+        });
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ""; 
+        }
+        return;
+      }
+      
       const currentSelectedFileNames = files.map(file => file.name);
-      setSelectedFileNames(currentSelectedFileNames);
+      setSelectedFileNames(prev => [...prev.slice(0, currentSavedImages.length), ...currentSelectedFileNames]); // More robust name update
       setIsUploading(true);
       setUploadProgress(0);
 
+      // For local previews before upload completes, create object URLs.
+      // These will be replaced by Firebase URLs upon successful upload.
       const newLocalPreviews = files.map(file => URL.createObjectURL(file));
-      const currentSavedImages = form.getValues("exampleImages") || [];
-      setPreviewImages([...currentSavedImages, ...newLocalPreviews]);
+      setPreviewImages(prev => [...prev, ...newLocalPreviews]);
 
 
       const uploadPromises = files.map((file, index) => uploadImageToStorage(file, index, files.length));
       
       try {
-        const downloadURLs = await Promise.all(uploadPromises);
-        const updatedImages = [...currentSavedImages, ...downloadURLs];
+        const successfullyUploadedURLs = await Promise.all(uploadPromises);
+        
+        // Filter out old local previews and add new Firebase URLs
+        const updatedImages = [
+            ...currentSavedImages, 
+            ...successfullyUploadedURLs
+        ];
+        
         form.setValue('exampleImages', updatedImages, { shouldValidate: true });
         setPreviewImages(updatedImages); 
-        toast({ title: "Images Uploaded", description: `${files.length} image(s) uploaded successfully. Save profile to persist changes.` });
+        
+        toast({ title: "Images Uploaded", description: `${successfullyUploadedURLs.length} image(s) uploaded successfully. Save profile to persist changes.` });
       } catch (error) {
+        // Error already toasted in uploadImageToStorage
         toast({ title: "Some Uploads Failed", description: "Not all images were uploaded successfully. Check individual error messages.", variant: "destructive" });
+        // Revert previews to only successfully uploaded and saved images
         setPreviewImages(form.getValues("exampleImages") || []); 
       } finally {
         setIsUploading(false);
@@ -245,6 +263,7 @@ export default function BrandProfilePage() {
         if (fileInputRef.current) {
           fileInputRef.current.value = ""; 
         }
+        // Revoke temporary object URLs
         newLocalPreviews.forEach(url => URL.revokeObjectURL(url));
       }
     }
@@ -253,11 +272,15 @@ export default function BrandProfilePage() {
   const handleDeleteImage = async (imageUrlToDelete: string, indexToDelete: number) => {
     const currentImages = form.getValues("exampleImages") || [];
     
+    // Optimistically update UI
     const updatedFormImages = currentImages.filter((_, index) => index !== indexToDelete);
     form.setValue("exampleImages", updatedFormImages, { shouldValidate: true });
     setPreviewImages(updatedFormImages);
+    setSelectedFileNames(prev => prev.filter((_,index) => index !== indexToDelete));
+
 
     try {
+      // Attempt to delete from Firebase Storage only if it's a Firebase URL
       if (imageUrlToDelete.includes("firebasestorage.googleapis.com")) {
         const imageRef = storageRef(storage, imageUrlToDelete);
         await deleteObject(imageRef);
@@ -266,8 +289,12 @@ export default function BrandProfilePage() {
     } catch (error: any) {
       console.error("Error deleting image from Firebase Storage:", error);
       toast({ title: "Deletion Error", description: `Failed to delete image from storage: ${error.message}. Reverting UI.`, variant: "destructive" });
+      // Revert UI if deletion failed
       form.setValue("exampleImages", currentImages, { shouldValidate: true });
       setPreviewImages(currentImages);
+      // Re-evaluate selectedFileNames based on currentImages (might be complex if names are dynamic)
+      // For simplicity, let's just clear it or re-map from currentImages if names were stable
+      setSelectedFileNames(currentImages.map((_,i) => `Saved image ${i+1}`));
     }
   };
 
@@ -422,7 +449,11 @@ export default function BrandProfilePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><Palette className="w-5 h-5 mr-2 text-primary"/>Image Style Preset</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || ""} disabled={isBrandContextLoading || isUploading || isExtracting}>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value || (imageStylePresets.length > 0 ? imageStylePresets[0].value : "")} 
+                        disabled={isBrandContextLoading || isUploading || isExtracting}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select an artistic style preset" />
@@ -430,15 +461,16 @@ export default function BrandProfilePage() {
                         </FormControl>
                         <SelectContent>
                           <SelectGroup>
-                            <SelectLabel>Artistic Styles (Freepik)</SelectLabel>
-                            {freepikSpecificStyles.map(style => (
+                            <SelectLabel>Artistic Styles</SelectLabel>
+                            {imageStylePresets.map(style => (
                               <SelectItem key={style.value} value={style.value}>{style.label}</SelectItem>
                             ))}
                           </SelectGroup>
                         </SelectContent>
                       </Select>
                       <FormDescription>
-                        Choose a base style for Freepik. Other providers might interpret this differently.
+                        Choose a base style for image generation. 
+                        Some styles might be provider-specific (e.g., certain Freepik styles).
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -468,14 +500,14 @@ export default function BrandProfilePage() {
                 />
                 
                 <FormItem>
-                  <FormLabel className="flex items-center text-base"><UploadCloud className="w-5 h-5 mr-2 text-primary"/>Upload Example Images (Optional)</FormLabel>
+                  <FormLabel className="flex items-center text-base"><UploadCloud className="w-5 h-5 mr-2 text-primary"/>Upload Example Images (Optional, up to 5)</FormLabel>
                    <FormControl>
                     <div className="flex items-center justify-center w-full">
                         <Label htmlFor="dropzone-file" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer border-border bg-card hover:bg-secondary ${isBrandContextLoading || isUploading || isExtracting ? 'opacity-50 cursor-not-allowed' : ''}`}>
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                 {isUploading ? <Loader2 className="w-8 h-8 mb-2 text-muted-foreground animate-spin" /> : <UploadCloud className="w-8 h-8 mb-2 text-muted-foreground" />}
                                 <p className="mb-1 text-sm text-muted-foreground">
-                                  {isUploading ? `Uploading ${selectedFileNames.join(', ').substring(0,30)}...` : (selectedFileNames.length > 0 ? selectedFileNames.join(', ') : <><span className="font-semibold">Click to upload</span> or drag and drop</>)}
+                                  {isUploading ? `Uploading ${selectedFileNames.join(', ').substring(0,30)}...` : (selectedFileNames.length > 0 && previewImages.length === selectedFileNames.length ? selectedFileNames.map((name, idx) => name === `Saved image ${idx+1}` ? `Image ${idx+1}` : name).join(', ').substring(0,50) + (selectedFileNames.join(', ').length > 50 ? '...' : '') : <><span className="font-semibold">Click to upload</span> or drag and drop</>)}
                                 </p>
                                 {selectedFileNames.length === 0 && !isUploading && <p className="text-xs text-muted-foreground">SVG, PNG, JPG, GIF (Max 5MB per file recommended)</p>}
                             </div>
@@ -486,7 +518,7 @@ export default function BrandProfilePage() {
                                 className="hidden" 
                                 onChange={handleImageFileChange} 
                                 accept="image/*" 
-                                disabled={isBrandContextLoading || isUploading || isExtracting}
+                                disabled={isBrandContextLoading || isUploading || isExtracting || (form.getValues("exampleImages")?.length || 0) >= 5}
                                 ref={fileInputRef} 
                             />
                         </Label>
@@ -500,12 +532,15 @@ export default function BrandProfilePage() {
                     name="exampleImages"
                     render={() => ( <FormMessage /> )}
                    />
+                   { (form.getValues("exampleImages")?.length || 0) >= 5 && !isUploading &&
+                    <p className="text-xs text-destructive mt-1">Maximum 5 images allowed.</p>
+                   }
                 </FormItem>
 
                 {previewImages.length > 0 && (
                   <div className="mt-2 space-y-3">
-                      <p className="text-sm text-muted-foreground mb-1">Current Example Image Previews:</p>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      <p className="text-sm text-muted-foreground mb-1">Current Example Image Previews ({previewImages.length}/5):</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {previewImages.map((src, index) => (
                           <div key={src || index} className="relative group aspect-square"> {/* Ensure key is unique */}
                             <NextImage src={src} alt={`Example image preview ${index + 1}`} fill style={{objectFit: 'contain'}} className="rounded border" data-ai-hint="brand example"/>
@@ -535,9 +570,9 @@ export default function BrandProfilePage() {
                       <FormControl>
                         <Input placeholder="E.g., innovation, tech solutions, eco-friendly (comma-separated)" {...field} disabled={isBrandContextLoading || isUploading || isExtracting}/>
                       </FormControl>
-                       <FormDescription>
+                       <p className="text-sm text-muted-foreground">
                         Comma-separated keywords related to your brand and industry.
-                      </FormDescription>
+                      </p>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -559,5 +594,6 @@ export default function BrandProfilePage() {
     </AppShell>
   );
 }
+    
 
     
