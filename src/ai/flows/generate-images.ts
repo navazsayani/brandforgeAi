@@ -11,7 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type {Action} from 'genkit'; // Imported Action
+import { Action } from 'genkit'; // CORRECTED IMPORT
 
 const GenerateImagesInputSchema = z.object({
   provider: z.enum(['GEMINI', 'FREEPIK', 'LEONARDO_AI', 'IMAGEN']).optional().describe("The image generation provider to use."),
@@ -147,7 +147,7 @@ const freepikValidStyles = ["photo", "digital-art", "3d", "painting", "low-poly"
 async function _initiateFreepikImageTask(params: { 
   textPrompt: string; 
   imageStyle: string; 
-  exampleImage?: string; // Still passed, though Imagen3 text-to-image might ignore it. Description is used in prompt.
+  exampleImage?: string; 
   negativePrompt?: string;
   aspectRatio?: string; 
   freepikStylingColors?: { color: string; weight: number }[];
@@ -269,7 +269,7 @@ const generateImagesFlow = ai.defineFlow(
       industry,
       imageStyle, 
       exampleImage,
-      exampleImageDescription, // New field
+      exampleImageDescription, 
       aspectRatio,
       numberOfImages = 1,
       negativePrompt,
@@ -294,7 +294,6 @@ const generateImagesFlow = ai.defineFlow(
         if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
             console.log(`Using finalized text prompt for Freepik batch: "${finalizedTextPrompt.substring(0,100)}..."`);
             textPromptForFreepik = finalizedTextPrompt;
-            // Append composition guidance if not obviously handled by user
              if (
                 !finalizedTextPrompt.toLowerCase().includes("human figure") &&
                 !finalizedTextPrompt.toLowerCase().includes("crop") &&
@@ -314,18 +313,17 @@ const generateImagesFlow = ai.defineFlow(
             
             let baseFreepikPrompt = "";
             if (exampleImageDescription) {
+                console.log(`Freepik prompt using example image description: "${exampleImageDescription.substring(0,100)}..."`);
                 baseFreepikPrompt = `The user provided an example image which is described as: "${exampleImageDescription}". Using that as primary inspiration for the subject and visual elements, generate an image based on the following concept: "${brandDescription}".${industryContext}\nDesired artistic style for these new images is: "${imageStyle}".`;
             } else {
                 baseFreepikPrompt = `Generate new, high-quality, visually appealing images suitable for social media platforms like Instagram.\n\nConcept: "${brandDescription}".${industryContext}\nDesired artistic style for these new images is: "${imageStyle}".`;
             }
 
             textPromptForFreepik = baseFreepikPrompt;
-            if (negativePrompt) { 
-                // Negative prompt is handled structurally for Freepik, but including it in text if not finalized might be an option
-                // For now, we assume structural negative_prompt is sufficient for Freepik if finalizedTextPrompt isn't used
-                // textPromptForFreepik += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
+             if (negativePrompt) { 
+                textPromptForFreepik += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
             }
-            textPromptForFreepik +=`\n\n${compositionGuidance}`; // Composition guidance is always good textually
+            textPromptForFreepik +=`\n\n${compositionGuidance}`;
         }
         actualPromptUsedForFirstImage = textPromptForFreepik;
         console.log(`Text component of prompt for Freepik batch: "${textPromptForFreepik.substring(0,200)}..."`);
@@ -357,12 +355,12 @@ const generateImagesFlow = ai.defineFlow(
             }
         } catch (error: any) {
              console.error(`Error during Freepik batch generation. Full error:`, JSON.stringify(error, Object.getOwnPropertyNames(error)));
-             for (let i = 0; i < numberOfImages; i++) { // Push an error for each expected image if batch init fails
+             for (let i = 0; i < numberOfImages; i++) { 
                  generatedImageResults.push(`error:Failed to process Freepik batch item ${i+1}. ${error.message || 'Unknown error'}`);
              }
         }
 
-    } else { // For Gemini or other providers that generate one image per call
+    } else { 
         for (let i = 0; i < numberOfImages; i++) {
             let textPromptContent = "";
             const industryContext = industry ? ` The brand operates in the ${industry} industry.` : "";
@@ -371,7 +369,6 @@ const generateImagesFlow = ai.defineFlow(
                 console.log(`Using finalized text prompt for image ${i+1}: "${finalizedTextPrompt.substring(0,100)}..." (Provider: ${chosenProvider})`);
                 textPromptContent = finalizedTextPrompt;
                 
-                // For Gemini, append structural parameters if not already in the finalized prompt
                 if (chosenProvider === 'GEMINI') {
                     if (aspectRatio && !finalizedTextPrompt.toLowerCase().includes("aspect ratio")) {
                       textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally, and the image content itself must fully occupy this ${aspectRatio} frame, without any artificial letterboxing or pillarboxing.`;
@@ -379,7 +376,7 @@ const generateImagesFlow = ai.defineFlow(
                     if (seed !== undefined && !finalizedTextPrompt.toLowerCase().includes("seed:")) {
                       textPromptContent += `\n\nUse seed: ${seed}.`;
                     }
-                    if (
+                     if (
                         !finalizedTextPrompt.toLowerCase().includes("human figure") &&
                         !finalizedTextPrompt.toLowerCase().includes("crop") &&
                         !finalizedTextPrompt.toLowerCase().includes("close-up") &&
@@ -397,7 +394,7 @@ const generateImagesFlow = ai.defineFlow(
                     throw new Error("Brand description and image style are required if not providing/using a finalized text prompt.");
                 }
                 
-                let baseTextPrompt = `Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.\n\n`;
+                let baseTextPrompt = ``;
                 let coreInstructions = "";
 
                 if (exampleImage) { 
@@ -423,14 +420,13 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
 **Important Note on Color and Style**: Strive for visual variety that aligns with the brand description and artistic style. Avoid defaulting to a narrow or stereotypical color palette unless the inputs strongly and explicitly demand it.
 `;
                 }
+                baseTextPrompt = `Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.\n\n`;
                 textPromptContent = `${baseTextPrompt}${coreInstructions}`;
-                // Negative prompt for Gemini
-                if (negativePrompt && chosenProvider !== 'FREEPIK') { 
-                    textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
-                }
-                // Composition guidance for Gemini
-                if (chosenProvider !== 'FREEPIK') {
-                  textPromptContent +=`\n\n${compositionGuidance}`; 
+                
+                if (chosenProvider !== 'FREEPIK') { 
+                  if (negativePrompt) {
+                      textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
+                  }
                   if (aspectRatio) {
                     textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally, and the image content itself must fully occupy this ${aspectRatio} frame, without any artificial letterboxing or pillarboxing.`;
                   }
@@ -438,9 +434,10 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
                     textPromptContent += `\n\nUse seed: ${seed}.`;
                   }
                 }
+                 textPromptContent +=`\n\n${compositionGuidance}`;
             }
             
-            if (numberOfImages > 1 && chosenProvider !== 'FREEPIK' && (!finalizedTextPrompt || (!finalizedTextPrompt.toLowerCase().includes("batch generation") && !finalizedTextPrompt.toLowerCase().includes(`image ${i+1}`)))) {
+            if (numberOfImages > 1 && chosenProvider !== 'FREEPIK' && (!finalizedTextPrompt || (!finalizedTextPrompt.toLowerCase().includes("batch generation") && !finalizedTextPrompt.toLowerCase().includes(`image ${i+1}`))) ) {
                 textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
             }
 
@@ -493,14 +490,13 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
     }
     if (errorsEncountered.length > 0) {
       console.warn(`Some images/tasks in the batch failed: ${errorsEncountered.join('; ')}`);
-      // You might still want to return successfully generated images even if some failed.
     }
 
     return {generatedImages: finalGeneratedImages, promptUsed: actualPromptUsedForFirstImage, providerUsed: chosenProvider };
   }
 );
 
-Action.define(generateImagesFlow, { // For testing with genkit eval
+Action.define(generateImagesFlow, { 
     name: 'testGenerateImages',
     input: {
         schema: GenerateImagesInputSchema,
@@ -516,9 +512,9 @@ Action.define(generateImagesFlow, { // For testing with genkit eval
             {
                 provider: 'FREEPIK',
                 brandDescription: 'A luxury Italian coffee brand.',
-                imageStyle: 'photo',
+                imageStyle: 'photo', // This should be one of Freepik's valid enums
                 numberOfImages: 2,
-                aspectRatio: 'square_1_1', // This should be one of Freepik's valid enums for image.size
+                aspectRatio: 'square_1_1', 
                 freepikEffectColor: 'sepia',
                 freepikEffectFraming: 'close-up'
             }
