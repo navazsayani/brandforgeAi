@@ -48,8 +48,8 @@ export async function handleGenerateImagesAction(
         if (freepikStylingColors.length === 0) freepikStylingColors = undefined; 
     }
 
-
     const input: GenerateImagesInput = {
+      provider: formData.get("provider") as GenerateImagesInput['provider'] || undefined,
       brandDescription: formData.get("brandDescription") as string,
       industry: formData.get("industry") as string | undefined,
       imageStyle: formData.get("imageStyle") as string, 
@@ -59,20 +59,19 @@ export async function handleGenerateImagesAction(
       negativePrompt: negativePromptValue === null || negativePromptValue === "" ? undefined : negativePromptValue,
       seed: seed,
       finalizedTextPrompt: finalizedTextPromptValue,
-      // Freepik specific fields
       freepikStylingColors: freepikStylingColors,
       freepikEffectColor: (formData.get("freepikEffectColor") as string === "none" ? undefined : formData.get("freepikEffectColor") as string | undefined) || undefined,
       freepikEffectLightning: (formData.get("freepikEffectLightning") as string === "none" ? undefined : formData.get("freepikEffectLightning") as string | undefined) || undefined,
       freepikEffectFraming: (formData.get("freepikEffectFraming") as string === "none" ? undefined : formData.get("freepikEffectFraming") as string | undefined) || undefined,
     };
-
+    
+    if (input.provider === "") delete input.provider;
     if (!input.finalizedTextPrompt && (!input.brandDescription || !input.imageStyle)) {
       return { error: "Brand description and image style are required if not providing a finalized text prompt." };
     }
     if (input.exampleImage === "") delete input.exampleImage;
     if (input.aspectRatio === "" || input.aspectRatio === undefined) delete input.aspectRatio;
     if (input.industry === "" || input.industry === undefined) delete input.industry;
-
 
     const result = await generateImages(input);
     const message = result.generatedImages.length > 1
@@ -129,7 +128,8 @@ export async function handleGenerateSocialMediaCaptionAction(
 
     const result = await generateSocialMediaCaption(input);
     return { data: { ...result, imageSrc: imageSrc }, message: "Social media content generated!" };
-  } catch (e: any) {
+  } catch (e: any)
+     {
     console.error("Error in handleGenerateSocialMediaCaptionAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
     return { error: e.message || "Failed to generate social media caption. Check server logs for details." };
   }
@@ -286,15 +286,15 @@ export async function handleSaveGeneratedImagesAction(
     const saveErrors: string[] = [];
 
     for (const image of imagesToSave) {
-      if (!image.dataUri || !(image.dataUri.startsWith('data:image') || image.dataUri.startsWith('http'))) { // Allow http for Freepik URLs
+      if (!image.dataUri || !(image.dataUri.startsWith('data:image') || image.dataUri.startsWith('http'))) { 
         const promptSnippet = image.prompt ? image.prompt.substring(0,30) + "..." : "N/A";
-        console.error(`handleSaveGeneratedImagesAction: Invalid data URI or URL for an image. URI starts with: ${image.dataUri?.substring(0,30)}... Prompt: ${promptSnippet}`);
-        saveErrors.push(`Invalid data URI or URL for an image (prompt: ${promptSnippet}). Cannot save.`);
+        console.warn(`handleSaveGeneratedImagesAction: Invalid data URI or URL for an image (prompt: ${promptSnippet}). Skipping save for this image. URI starts with: ${image.dataUri?.substring(0,30)}...`);
+        saveErrors.push(`Invalid data URI/URL for image (prompt: ${promptSnippet})`);
         continue;
       }
       try {
         let imageUrlToSave = image.dataUri;
-        if (image.dataUri.startsWith('data:image')) { // Only upload if it's a data URI
+        if (image.dataUri.startsWith('data:image')) { 
             const fileExtensionMatch = image.dataUri.match(/^data:image\/([a-zA-Z+]+);base64,/);
             const fileExtension = fileExtensionMatch ? fileExtensionMatch[1] : 'png';
             const filePath = `generatedLibraryImages/${brandProfileDocId}/${Date.now()}_${generateFilenamePart()}.${fileExtension}`;
@@ -312,7 +312,7 @@ export async function handleSaveGeneratedImagesAction(
 
         const firestoreCollectionRef = collection(db, `brandProfiles/${brandProfileDocId}/savedLibraryImages`);
         await addDoc(firestoreCollectionRef, {
-          storageUrl: imageUrlToSave, // Save the Firebase URL or original public URL
+          storageUrl: imageUrlToSave, 
           prompt: image.prompt || "N/A",
           style: image.style || "N/A",
           createdAt: serverTimestamp(),
@@ -321,8 +321,9 @@ export async function handleSaveGeneratedImagesAction(
         savedCount++;
       } catch (e: any) {
         const promptSnippet = image.prompt ? image.prompt.substring(0,50) + "..." : "N/A";
-        console.error(`handleSaveGeneratedImagesAction: Failed to save one image (prompt: ${promptSnippet}). Full error:`, JSON.stringify(e, Object.getOwnPropertyNames(e)));
-        saveErrors.push(`Failed to save image (prompt: ${promptSnippet}): ${e.message?.substring(0,100)}`);
+        const specificError = `Failed to save image (prompt: ${promptSnippet}): ${(e as Error).message?.substring(0,100)}`;
+        console.error(`handleSaveGeneratedImagesAction: ${specificError}. Full error:`, JSON.stringify(e, Object.getOwnPropertyNames(e)));
+        saveErrors.push(specificError);
       }
     }
 
@@ -337,9 +338,7 @@ export async function handleSaveGeneratedImagesAction(
     }
   } catch (e: any) {
       console.error("Critical error in handleSaveGeneratedImagesAction (outside loop):", JSON.stringify(e, Object.getOwnPropertyNames(e)));
-      return { error: `A critical server error occurred during image saving: ${e.message}. Please check server logs.` };
+      return { error: `A critical server error occurred during image saving: ${(e as Error).message}. Please check server logs.` };
   }
 }
 
-
-    

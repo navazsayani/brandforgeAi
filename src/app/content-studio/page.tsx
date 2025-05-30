@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useActionState, startTransition, useRef } from 'react';
 import NextImage from 'next/image';
 import { AppShell } from '@/components/AppShell';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,17 +15,15 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon } from 'lucide-react';
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server } from 'lucide-react';
 import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
-import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage } from '@/types';
+import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
 import type { DescribeImageOutput } from "@/ai/flows/describe-image-flow";
 import type { GenerateBlogOutlineOutput } from "@/ai/flows/generate-blog-outline-flow";
 import type { GenerateImagesInput } from '@/ai/flows/generate-images';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; 
-// Removed FormDescription as it's causing issues when not in a FormProvider context
-// We'll use <p className="text-sm text-muted-foreground">...</p> instead for descriptions.
 
 const initialImageFormState: FormState<{ generatedImages: string[]; promptUsed: string; providerUsed: string; }> = { error: undefined, data: undefined, message: undefined };
 const initialSocialFormState: FormState<{ caption: string; hashtags: string; imageSrc: string | null }> = { error: undefined, data: undefined, message: undefined };
@@ -45,16 +43,17 @@ const imageStylePresets = [
   { value: "minimalist", label: "Minimalist" },
   { value: "abstract", label: "Abstract" },
   { value: "cartoon", label: "Cartoon / Comic" },
-  { value: "anime", label: "Anime / Manga (Freepik specific)" },
+  { value: "anime", label: "Anime / Manga" }, // Generic, Freepik might interpret
   { value: "vintage", label: "Vintage / Retro" },
-  { value: "cyberpunk", label: "Cyberpunk (Freepik specific)" },
+  { value: "cyberpunk", label: "Cyberpunk" }, // Generic, Freepik might interpret
   { value: "fantasy", label: "Fantasy Art" },
   { value: "surreal", label: "Surreal" },
   { value: "watercolor", label: "Watercolor" },
   { value: "sketch", label: "Sketch / Drawing" },
-  { value: "photo", label: "Photo (Generic - Freepik)" },
-  { value: "studio-shot", label: "Studio Shot (Freepik)"},
+  { value: "photo", label: "Photo (Generic)" },
+  { value: "studio-shot", label: "Studio Shot"},
 ];
+
 
 const freepikEffectColors = ["none", "b&w", "pastel", "sepia", "dramatic", "vibrant", "orange&teal", "film-filter", "split", "electric", "pastel-pink", "gold-glow", "autumn", "muted-green", "deep-teal", "duotone", "terracotta&teal", "red&blue", "cold-neon", "burgundy&blue"];
 const freepikEffectLightnings = ["none", "studio", "warm", "cinematic", "volumetric", "golden-hour", "long-exposure", "cold", "iridescent", "dramatic", "hardlight", "redscale", "indoor-light"];
@@ -68,6 +67,13 @@ const blogTones = [
     { value: "Persuasive", label: "Persuasive" },
     { value: "Storytelling", label: "Storytelling" },
     { value: "Technical", label: "Technical" },
+];
+
+const imageGenerationProviders = [
+    { value: "GEMINI", label: "Gemini (Google AI)" },
+    { value: "FREEPIK", label: "Freepik API" },
+    { value: "LEONARDO_AI", label: "Leonardo.ai (Not Implemented)", disabled: true },
+    { value: "IMAGEN", label: "Imagen (Not Implemented)", disabled: true },
 ];
 
 export default function ContentStudioPage() {
@@ -103,6 +109,7 @@ export default function ContentStudioPage() {
   const [selectedProfileImageIndexForSocial, setSelectedProfileImageIndexForSocial] = useState<number | null>(null);
 
   // State for Image Generation Form Fields (Controlled Components)
+  const [selectedImageProvider, setSelectedImageProvider] = useState<string>(imageGenerationProviders[0].value);
   const [imageGenBrandDescription, setImageGenBrandDescription] = useState<string>("");
   const [imageGenIndustry, setImageGenIndustry] = useState<string>("");
   const [selectedImageStylePreset, setSelectedImageStylePreset] = useState<string>(imageStylePresets[0].value);
@@ -119,18 +126,11 @@ export default function ContentStudioPage() {
 
   const [isPreviewingPrompt, setIsPreviewingPrompt] = useState<boolean>(false);
   const [currentTextPromptForEditing, setCurrentTextPromptForEditing] = useState<string>("");
-  const [formSnapshot, setFormSnapshot] = useState<Partial<GenerateImagesInput> | null>(null);
+  const [formSnapshot, setFormSnapshot] = useState<Partial<GenerateImagesInput> & { provider?: string } | null>(null);
+
 
   const [selectedGeneratedImageIndices, setSelectedGeneratedImageIndices] = useState<number[]>([]);
   
-  // Refs for blog form fields (though now mostly handled by form submission directly)
-  const blogBrandNameRef = useRef<HTMLInputElement>(null);
-  const blogBrandDescriptionRef = useRef<HTMLTextAreaElement>(null);
-  const blogIndustryRef = useRef<HTMLInputElement>(null);
-  const blogKeywordsRef = useRef<HTMLInputElement>(null);
-  const blogWebsiteUrlRef = useRef<HTMLInputElement>(null);
-
-
   useEffect(() => {
     if (brandData) {
         setImageGenBrandDescription(brandData.brandDescription || "");
@@ -158,7 +158,7 @@ export default function ContentStudioPage() {
       const newImageUrls = imageState.data.generatedImages;
       setLastSuccessfulGeneratedImageUrls(newImageUrls);
       setLastUsedImageGenPrompt(imageState.data.promptUsed);
-      setLastUsedImageProvider(imageState.data.providerUsed);
+      setLastUsedImageProvider(imageState.data.providerUsed); // Set the provider used
       setSelectedGeneratedImageIndices([]); 
       
       newImageUrls.forEach(url => { 
@@ -391,12 +391,13 @@ ${compositionGuidance}
       textPromptContent += `\n\nUse seed: ${seedValue}.`;
     }
 
-    if (numImages > 1) {
+    if (numImages > 1 && (!textPromptContent.toLowerCase().includes("batch generation") && !textPromptContent.toLowerCase().includes(`image ${0 + 1}`))) {
         textPromptContent += `\n\nImportant for batch generation: You are generating image 1 of a set of ${numImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (1/${numImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
     }
     
     setCurrentTextPromptForEditing(textPromptContent);
     setFormSnapshot({
+        provider: selectedImageProvider, // Include selected provider
         brandDescription: brandDesc,
         industry: industryValue,
         imageStyle: combinedStyle, 
@@ -415,59 +416,56 @@ ${compositionGuidance}
 
  const handleImageGenerationSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault(); 
-    
-    const formData = new FormData();
-
-    if (!currentTextPromptForEditing && !formSnapshot?.brandDescription && !imageGenBrandDescription) { 
-        toast({ title: "Error", description: "Prompt text or brand description is missing. Please fill fields or preview and edit prompt.", variant: "destructive"});
-        return;
-    }
-    
-    formData.append("finalizedTextPrompt", currentTextPromptForEditing || "");
-    
-    formData.append("brandDescription", formSnapshot?.brandDescription || imageGenBrandDescription || brandData?.brandDescription || "");
-    formData.append("industry", formSnapshot?.industry || imageGenIndustry || brandData?.industry || "");
-    formData.append("imageStyle", formSnapshot?.imageStyle || (selectedImageStylePreset + (customStyleNotesInput ? `. ${customStyleNotesInput}` : "")));
-    
-    const exampleImg = (formSnapshot?.exampleImage) || ((brandData?.exampleImages && selectedProfileImageIndexForGen !== null && brandData.exampleImages[selectedProfileImageIndexForGen]) || "");
-    if (exampleImg) formData.append("exampleImage", exampleImg);
-
-    formData.append("aspectRatio", formSnapshot?.aspectRatio || selectedAspectRatio);
-    formData.append("numberOfImages", String(formSnapshot?.numberOfImages || parseInt(numberOfImagesToGenerate,10)));
-    
-    const negPromptValue = formSnapshot?.negativePrompt || imageGenNegativePrompt;
-    if (negPromptValue) formData.append("negativePrompt", negPromptValue);
-
-    const seedValueNum = formSnapshot?.seed !== undefined ? formSnapshot.seed : (imageGenSeed && !isNaN(parseInt(imageGenSeed)) ? parseInt(imageGenSeed) : undefined);
-    if (seedValueNum !== undefined) formData.append("seed", String(seedValueNum));
-
-    const fColors = formSnapshot?.freepikStylingColors?.map(c=>c.color).join(',') || freepikDominantColorsInput;
-    if (fColors) formData.append("freepikDominantColorsInput", fColors);
-    
-    const fEffectColor = formSnapshot?.freepikEffectColor || freepikEffectColor;
-    if (fEffectColor && fEffectColor !== "none") formData.append("freepikEffectColor", fEffectColor);
-    
-    const fEffectLightning = formSnapshot?.freepikEffectLightning || freepikEffectLightning;
-    if (fEffectLightning && fEffectLightning !== "none") formData.append("freepikEffectLightning", fEffectLightning);
-
-    const fEffectFraming = formSnapshot?.freepikEffectFraming || freepikEffectFraming;
-    if (fEffectFraming && fEffectFraming !== "none") formData.append("freepikEffectFraming", fEffectFraming);
-    
-    formData.append("customStyleNotes", customStyleNotesInput);
-
-
     startTransition(() => {
-      imageAction(formData);
+        const formData = new FormData();
+
+        if (!currentTextPromptForEditing && !formSnapshot?.brandDescription && !imageGenBrandDescription) { 
+            toast({ title: "Error", description: "Prompt text or brand description is missing. Please fill fields or preview and edit prompt.", variant: "destructive"});
+            return;
+        }
+        
+        formData.append("finalizedTextPrompt", currentTextPromptForEditing || "");
+        
+        formData.append("provider", formSnapshot?.provider || selectedImageProvider);
+        formData.append("brandDescription", formSnapshot?.brandDescription || imageGenBrandDescription || brandData?.brandDescription || "");
+        formData.append("industry", formSnapshot?.industry || imageGenIndustry || brandData?.industry || "");
+        formData.append("imageStyle", formSnapshot?.imageStyle || (selectedImageStylePreset + (customStyleNotesInput ? `. ${customStyleNotesInput}` : "")));
+        
+        const exampleImg = (formSnapshot?.exampleImage) || ((brandData?.exampleImages && selectedProfileImageIndexForGen !== null && brandData.exampleImages[selectedProfileImageIndexForGen]) || "");
+        if (exampleImg) formData.append("exampleImage", exampleImg);
+
+        formData.append("aspectRatio", formSnapshot?.aspectRatio || selectedAspectRatio);
+        formData.append("numberOfImages", String(formSnapshot?.numberOfImages || parseInt(numberOfImagesToGenerate,10)));
+        
+        const negPromptValue = formSnapshot?.negativePrompt || imageGenNegativePrompt;
+        if (negPromptValue) formData.append("negativePrompt", negPromptValue);
+
+        const seedValueNum = formSnapshot?.seed !== undefined ? formSnapshot.seed : (imageGenSeed && !isNaN(parseInt(imageGenSeed)) ? parseInt(imageGenSeed) : undefined);
+        if (seedValueNum !== undefined) formData.append("seed", String(seedValueNum));
+
+        const fColors = formSnapshot?.freepikStylingColors?.map(c=>c.color).join(',') || freepikDominantColorsInput;
+        if (fColors) formData.append("freepikDominantColorsInput", fColors);
+        
+        const fEffectColor = formSnapshot?.freepikEffectColor || freepikEffectColor;
+        if (fEffectColor && fEffectColor !== "none") formData.append("freepikEffectColor", fEffectColor);
+        
+        const fEffectLightning = formSnapshot?.freepikEffectLightning || freepikEffectLightning;
+        if (fEffectLightning && fEffectLightning !== "none") formData.append("freepikEffectLightning", fEffectLightning);
+
+        const fEffectFraming = formSnapshot?.freepikEffectFraming || freepikEffectFraming;
+        if (fEffectFraming && fEffectFraming !== "none") formData.append("freepikEffectFraming", fEffectFraming);
+        
+        imageAction(formData);
     });
   };
   
   const handleGenerateBlogOutline = () => {
     const formData = new FormData();
-    formData.append('brandName', blogBrandNameRef.current?.value || brandData?.brandName || "");
-    formData.append('blogBrandDescription', blogBrandDescriptionRef.current?.value || brandData?.brandDescription || "");
-    formData.append('industry', blogIndustryRef.current?.value || brandData?.industry || "");
-    formData.append('blogKeywords', blogKeywordsRef.current?.value || brandData?.targetKeywords || "");
-    formData.append('blogWebsiteUrl', blogWebsiteUrlRef.current?.value || brandData?.websiteUrl || "");
+    formData.append('brandName', (document.getElementById('blogBrandName') as HTMLInputElement)?.value || brandData?.brandName || "");
+    formData.append('blogBrandDescription', (document.getElementById('blogBrandDescription') as HTMLTextAreaElement)?.value || brandData?.brandDescription || "");
+    formData.append('industry', (document.getElementById('blogIndustry') as HTMLInputElement)?.value || brandData?.industry || "");
+    formData.append('blogKeywords', (document.getElementById('blogKeywords') as HTMLInputElement)?.value || brandData?.targetKeywords || "");
+    formData.append('blogWebsiteUrl', (document.getElementById('blogWebsiteUrl') as HTMLInputElement)?.value || brandData?.websiteUrl || "");
     
     if (!formData.get('brandName') && !formData.get('blogBrandDescription') && !formData.get('blogKeywords')) {
         toast({title: "Missing Info", description: "Please provide Brand Name, Description, and Keywords for outline generation.", variant: "destructive"});
@@ -515,6 +513,25 @@ ${compositionGuidance}
                 <div id="imageGenerationFormFields"> {/* Wrapper for fields */}
                   <CardContent className="space-y-6">
                     <div>
+                        <Label htmlFor="imageGenProviderSelect" className="flex items-center mb-1"><Server className="w-4 h-4 mr-2 text-primary" />Image Generation Provider</Label>
+                        <Select name="provider" value={selectedImageProvider} onValueChange={setSelectedImageProvider}>
+                            <SelectTrigger id="imageGenProviderSelect">
+                                <SelectValue placeholder="Select image generation provider" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectLabel>Providers</SelectLabel>
+                                    {imageGenerationProviders.map(provider => (
+                                        <SelectItem key={provider.value} value={provider.value} disabled={provider.disabled}>
+                                            {provider.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div>
                       <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description</Label>
                       <Textarea
                         id="imageGenBrandDescription"
@@ -543,7 +560,7 @@ ${compositionGuidance}
                       <Select 
                         value={selectedImageStylePreset} 
                         onValueChange={setSelectedImageStylePreset} 
-                        name="imageStylePresetSelectName" /* Name for form submission if not using hidden input */
+                        name="imageStylePresetSelectName" 
                       >
                           <SelectTrigger id="imageGenImageStylePresetSelect">
                               <SelectValue placeholder="Select image style preset" />
@@ -566,7 +583,7 @@ ${compositionGuidance}
                       <Label htmlFor="imageGenCustomStyleNotes" className="flex items-center mb-1"><Edit className="w-4 h-4 mr-2 text-primary" />Custom Style Notes</Label>
                       <Textarea
                         id="imageGenCustomStyleNotes"
-                        name="imageStyleNotes" /* Name for form submission if not using hidden input */
+                        name="imageStyleNotes" 
                         value={customStyleNotesInput}
                         onChange={(e) => setCustomStyleNotesInput(e.target.value)}
                         placeholder="E.g., 'add a touch of vintage', 'focus on metallic textures'. These notes are added to the main text prompt."
@@ -629,50 +646,55 @@ ${compositionGuidance}
                         rows={2}
                       />
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <Label htmlFor="freepikDominantColorsInput" className="flex items-center mb-1"><PaletteIcon className="w-4 h-4 mr-2 text-primary" />Freepik Dominant Colors (Optional)</Label>
-                            <Input
-                                id="freepikDominantColorsInput"
-                                name="freepikDominantColorsInput"
-                                value={freepikDominantColorsInput}
-                                onChange={(e) => setFreepikDominantColorsInput(e.target.value)}
-                                placeholder="Up to 5 hex codes, e.g., #FF0000,#00FF00"
-                            />
-                            <p className="text-xs text-muted-foreground">Comma-separated hex color codes. Freepik specific.</p>
-                        </div>
-                        <div>
-                            <Label htmlFor="freepikEffectColor" className="flex items-center mb-1"><Paintbrush className="w-4 h-4 mr-2 text-primary" />Freepik Effect - Color (Optional)</Label>
-                            <Select name="freepikEffectColor" value={freepikEffectColor} onValueChange={setFreepikEffectColor}>
-                                <SelectTrigger id="freepikEffectColor"><SelectValue placeholder="Select Freepik color effect" /></SelectTrigger>
-                                <SelectContent>
-                                    {freepikEffectColors.map(effect => <SelectItem key={effect} value={effect || "none"}>{effect || "None"}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                             <p className="text-xs text-muted-foreground">Freepik specific.</p>
-                        </div>
-                        <div>
-                            <Label htmlFor="freepikEffectLightning" className="flex items-center mb-1"><Zap className="w-4 h-4 mr-2 text-primary" />Freepik Effect - Lightning (Optional)</Label>
-                            <Select name="freepikEffectLightning" value={freepikEffectLightning} onValueChange={setFreepikEffectLightning}>
-                                <SelectTrigger id="freepikEffectLightning"><SelectValue placeholder="Select Freepik lightning effect" /></SelectTrigger>
-                                <SelectContent>
-                                    {freepikEffectLightnings.map(effect => <SelectItem key={effect} value={effect || "none"}>{effect || "None"}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                             <p className="text-xs text-muted-foreground">Freepik specific.</p>
-                        </div>
-                        <div>
-                            <Label htmlFor="freepikEffectFraming" className="flex items-center mb-1"><Aperture className="w-4 h-4 mr-2 text-primary" />Freepik Effect - Framing (Optional)</Label>
-                            <Select name="freepikEffectFraming" value={freepikEffectFraming} onValueChange={setFreepikEffectFraming}>
-                                <SelectTrigger id="freepikEffectFraming"><SelectValue placeholder="Select Freepik framing effect" /></SelectTrigger>
-                                <SelectContent>
-                                    {freepikEffectFramings.map(effect => <SelectItem key={effect} value={effect || "none"}>{effect || "None"}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                             <p className="text-xs text-muted-foreground">Freepik specific.</p>
-                        </div>
-                    </div>
+                    
+                    {/* Freepik Specific Options - Conditionally Rendered */}
+                    {selectedImageProvider === 'FREEPIK' && (
+                        <>
+                            <div className="pt-4 mt-4 border-t">
+                                <h4 className="text-md font-semibold mb-3 text-primary flex items-center"><Paintbrush className="w-5 h-5 mr-2"/>Freepik Specific Styling</h4>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <Label htmlFor="freepikDominantColorsInput" className="flex items-center mb-1"><PaletteIcon className="w-4 h-4 mr-2 text-primary" />Dominant Colors</Label>
+                                    <Input
+                                        id="freepikDominantColorsInput"
+                                        name="freepikDominantColorsInput"
+                                        value={freepikDominantColorsInput}
+                                        onChange={(e) => setFreepikDominantColorsInput(e.target.value)}
+                                        placeholder="Up to 5 hex codes, e.g., #FF0000,#00FF00"
+                                    />
+                                    <p className="text-xs text-muted-foreground">Comma-separated hex codes. Freepik specific.</p>
+                                </div>
+                                <div>
+                                    <Label htmlFor="freepikEffectColor" className="flex items-center mb-1"><Paintbrush className="w-4 h-4 mr-2 text-primary" />Effect - Color</Label>
+                                    <Select name="freepikEffectColor" value={freepikEffectColor} onValueChange={setFreepikEffectColor}>
+                                        <SelectTrigger id="freepikEffectColor"><SelectValue placeholder="Select Freepik color effect" /></SelectTrigger>
+                                        <SelectContent>
+                                            {freepikEffectColors.map(effect => <SelectItem key={effect} value={effect || "none"}>{effect || "None"}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Label htmlFor="freepikEffectLightning" className="flex items-center mb-1"><Zap className="w-4 h-4 mr-2 text-primary" />Effect - Lightning</Label>
+                                    <Select name="freepikEffectLightning" value={freepikEffectLightning} onValueChange={setFreepikEffectLightning}>
+                                        <SelectTrigger id="freepikEffectLightning"><SelectValue placeholder="Select Freepik lightning effect" /></SelectTrigger>
+                                        <SelectContent>
+                                            {freepikEffectLightnings.map(effect => <SelectItem key={effect} value={effect || "none"}>{effect || "None"}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Label htmlFor="freepikEffectFraming" className="flex items-center mb-1"><Aperture className="w-4 h-4 mr-2 text-primary" />Effect - Framing</Label>
+                                    <Select name="freepikEffectFraming" value={freepikEffectFraming} onValueChange={setFreepikEffectFraming}>
+                                        <SelectTrigger id="freepikEffectFraming"><SelectValue placeholder="Select Freepik framing effect" /></SelectTrigger>
+                                        <SelectContent>
+                                            {freepikEffectFramings.map(effect => <SelectItem key={effect} value={effect || "none"}>{effect || "None"}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        </>
+                    )}
 
 
                     <div className="grid grid-cols-2 gap-4">
@@ -767,7 +789,7 @@ ${compositionGuidance}
                         </div>
                          {lastSuccessfulGeneratedImageUrls.length > 0 && (
                             <div className="mt-2 flex items-center gap-2">
-                                <form> {}
+                                <form> {/* Form wrapper for SubmitButton if using formAction */}
                                     <input type="hidden" name="imagesToSaveJson" value={JSON.stringify(selectedGeneratedImageIndices.map(index => ({
                                         dataUri: lastSuccessfulGeneratedImageUrls[index],
                                         prompt: lastUsedImageGenPrompt || "N/A", 
@@ -777,8 +799,9 @@ ${compositionGuidance}
                                     <SubmitButton 
                                         onClick={handleSaveSelectedGeneratedImages} 
                                         formAction={saveImagesAction}
-                                        disabled={selectedGeneratedImageIndices.length === 0 || saveImagesState.message === 'Saving...' } // Simple loading state check
+                                        disabled={selectedGeneratedImageIndices.length === 0 || saveImagesState.message?.startsWith('Saving...') } 
                                         size="sm"
+                                        loadingText="Saving..."
                                     >
                                         <Save className="mr-2 h-4 w-4" />
                                         Save Selected to Library ({selectedGeneratedImageIndices.length})
@@ -1042,7 +1065,6 @@ ${compositionGuidance}
                     <Input
                       id="blogBrandName"
                       name="brandName" 
-                      ref={blogBrandNameRef}
                       defaultValue={brandData?.brandName || ""}
                       placeholder="Your brand's name"
                     />
@@ -1052,7 +1074,6 @@ ${compositionGuidance}
                     <Textarea
                       id="blogBrandDescription"
                       name="blogBrandDescription" 
-                      ref={blogBrandDescriptionRef}
                       defaultValue={brandData?.brandDescription || ""}
                       placeholder="Detailed brand description"
                       rows={3}
@@ -1063,7 +1084,6 @@ ${compositionGuidance}
                         <Input
                             id="blogIndustry"
                             name="industry" 
-                            ref={blogIndustryRef}
                             defaultValue={brandData?.industry || ""}
                             placeholder="e.g., Fashion, Technology"
                         />
@@ -1073,7 +1093,6 @@ ${compositionGuidance}
                     <Input
                       id="blogKeywords"
                       name="blogKeywords" 
-                      ref={blogKeywordsRef}
                       defaultValue={brandData?.targetKeywords || ""}
                       placeholder="Comma-separated keywords (e.g., AI, marketing, branding)"
                     />
@@ -1083,7 +1102,6 @@ ${compositionGuidance}
                       <Input
                         id="blogWebsiteUrl"
                         name="blogWebsiteUrl" 
-                        ref={blogWebsiteUrlRef}
                         defaultValue={brandData?.websiteUrl || ""}
                         placeholder="https://www.example.com"
                       />
@@ -1169,7 +1187,7 @@ ${compositionGuidance}
                         <div>
                             <h4 className="text-sm font-medium mb-1 text-muted-foreground">Content:</h4>
                             <div className="p-3 prose border rounded-md bg-muted/50 max-w-none max-h-96 overflow-y-auto">
-                                <p className="whitespace-pre-wrap">{generatedBlogPost.content}</p> {}
+                                <p className="whitespace-pre-wrap">{generatedBlogPost.content}</p> 
                             </div>
                             <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedBlogPost.content, "Content")} className="mt-1 text-muted-foreground hover:text-primary">
                                 <Copy className="w-3 h-3 mr-1" /> Copy Content
@@ -1195,5 +1213,3 @@ ${compositionGuidance}
   );
 }
 
-
-    
