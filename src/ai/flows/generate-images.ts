@@ -45,7 +45,7 @@ const GenerateImagesOutputSchema = z.object({
   generatedImages: z.array(z
     .string()
     .describe(
-      "A generated image as a data URI that includes a MIME type and uses Base64 encoding. The format will be: 'data:<mimetype>;base64,<encoded_data>'."
+      "A generated image as a data URI that includes a MIME type and uses Base64 encoding. The format will be: 'data:<mimetype>;base64,<encoded_data>', or a public URL if from a third-party provider."
     )
   ),
   promptUsed: z.string().describe("The text prompt that was used to generate the first image in the batch."),
@@ -81,9 +81,9 @@ async function _generateImageWithGemini(params: {
       console.error(`AI image generation failed after generate call. Media object or URL is missing. Response media:`, JSON.stringify(media, null, 2));
       throw new Error(`AI failed to generate image or returned an invalid image format after successful API call. Check server logs for details.`);
     }
-    if (typeof media.url !== 'string' || !media.url.startsWith('data:')) {
-      console.error(`AI image generation failed after generate call. Media URL is not a valid data URI. Received URL:`, media.url);
-      throw new Error(`AI returned image, but its format (URL) is invalid after successful API call. Expected a data URI. Check server logs for details.`);
+    if (typeof media.url !== 'string' || !(media.url.startsWith('data:') || media.url.startsWith('http'))) {
+      console.error(`AI image generation failed after generate call. Media URL is not a valid data URI or HTTP(S) URL. Received URL:`, media.url);
+      throw new Error(`AI returned image, but its format (URL) is invalid after successful API call. Expected a data URI or HTTP(S) URL. Check server logs for details.`);
     }
     return media.url;
   } catch (error: any) {
@@ -120,42 +120,91 @@ async function _generateImageWithImagen_stub(params: {
   throw new Error("Imagen provider (e.g., via Vertex AI) is not implemented yet. This would typically involve a different Genkit plugin or direct API calls.");
 }
 
-async function _generateImageWithFreepik_stub(params: {
-  brandDescription: string;
-  industry?: string;
-  imageStyle: string;
-  exampleImage?: string;
-  aspectRatio?: string;
+async function _generateImageWithFreepik(params: {
+  textPrompt: string;
   negativePrompt?: string;
   seed?: number;
-  textPrompt: string;
+  aspectRatio?: string;
+  imageStyle?: string;
+  // Other params like brandDescription, industry, exampleImage are available in `params` but may not be directly used by Freepik's primary API call if not supported.
 }): Promise<string> {
-  console.warn("Freepik API image generation is called but not implemented. You would need a FREEPIK_API_KEY. Parameters:", params);
-  // Here you would implement the call to the Freepik API
-  // Example:
-  // const freepikApiKey = process.env.FREEPIK_API_KEY;
-  // if (!freepikApiKey) {
-  //   throw new Error("FREEPIK_API_KEY is not set in environment variables.");
-  // }
-  // const response = await fetch("https://api.freepik.com/v1/images/generate", { // Fictional endpoint
-  //   method: 'POST',
-  //   headers: {
-  //     'Authorization': `Bearer ${freepikApiKey}`,
-  //     'Content-Type': 'application/json'
-  //   },
-  //   body: JSON.stringify({
-  //     prompt: params.textPrompt,
-  //     style: params.imageStyle,
-  //     // ... other Freepik specific parameters
-  //   })
-  // });
-  // if (!response.ok) {
-  //   const errorData = await response.text();
-  //   throw new Error(`Freepik API error: ${response.status} - ${errorData}`);
-  // }
-  // const result = await response.json();
-  // return result.imageDataUri; // Assuming Freepik returns a data URI
-  throw new Error("Freepik API provider is not implemented yet.");
+  const freepikApiKey = process.env.FREEPIK_API_KEY;
+  if (!freepikApiKey) {
+    throw new Error("FREEPIK_API_KEY is not set in environment variables.");
+  }
+
+  let freepikSize = "square_1_1"; // Default
+  if (params.aspectRatio) {
+    switch (params.aspectRatio) {
+      case "1:1":
+        freepikSize = "square_1_1";
+        break;
+      case "4:5":
+        freepikSize = "portrait_4_5"; // Assuming this is valid
+        break;
+      case "16:9":
+        freepikSize = "landscape_16_9";
+        break;
+      case "9:16":
+        freepikSize = "portrait_9_16"; // Assuming this is valid
+        break;
+      default:
+        console.warn(`Unsupported aspect ratio '${params.aspectRatio}' for Freepik, defaulting to square_1_1.`);
+        freepikSize = "square_1_1";
+    }
+  }
+  
+  const requestBody: any = {
+    prompt: params.textPrompt,
+    num_images: 1, // Our flow handles batching by calling this multiple times
+    image: {
+      size: freepikSize,
+    },
+    filter_nsfw: true,
+    guidance_scale: 7, // Common default, can be adjusted. Example used 1.
+  };
+
+  if (params.negativePrompt) {
+    requestBody.negative_prompt = params.negativePrompt;
+  }
+  if (params.seed !== undefined) {
+    requestBody.seed = params.seed;
+  }
+  if (params.imageStyle) {
+    requestBody.styling = { style: params.imageStyle };
+  }
+
+  console.log("Sending request to Freepik API with body:", JSON.stringify(requestBody, null, 2));
+
+  try {
+    const response = await fetch("https://api.freepik.com/v1/ai/text-to-image", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-freepik-api-key': freepikApiKey,
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    const responseData = await response.json();
+    console.log("Response from Freepik API:", JSON.stringify(responseData, null, 2));
+
+    if (!response.ok) {
+      throw new Error(`Freepik API error: ${response.status} - ${responseData.title || responseData.detail || JSON.stringify(responseData)}`);
+    }
+
+    if (responseData.data && responseData.data.length > 0 && responseData.data[0].url) {
+      // Freepik might return a temporary URL which then processes. For now, we assume direct image URL.
+      // If it's a job ID, further polling would be needed.
+      // The cURL suggests it's a direct image generation.
+      return responseData.data[0].url;
+    } else {
+      throw new Error("Freepik API did not return image URL in expected format.");
+    }
+  } catch (error: any) {
+    console.error("Error calling Freepik API:", error);
+    throw new Error(`Freepik API request failed: ${error.message}`);
+  }
 }
 
 
@@ -185,26 +234,32 @@ const generateImagesFlow = ai.defineFlow(
     const generatedImageUrls: string[] = [];
     const imageGenerationProvider = process.env.IMAGE_GENERATION_PROVIDER || 'GEMINI';
     let actualPromptUsedForFirstImage = "";
+    const compositionGuidance = "IMPORTANT COMPOSITION RULE: When depicting human figures as the primary subject, the image *must* be well-composed. Avoid awkward or unintentional cropping of faces or key body parts. Ensure the figure is presented naturally and fully within the frame, unless the prompt *explicitly* requests a specific framing like 'close-up', 'headshot', 'upper body shot', or an artistic crop. Prioritize showing the entire subject if it's a person.";
+
 
     for (let i = 0; i < numberOfImages; i++) {
         let textPromptContent = "";
         const industryContext = industry ? ` The brand operates in the ${industry} industry.` : "";
-        const compositionGuidance = "IMPORTANT COMPOSITION RULE: When depicting human figures as the primary subject, the image *must* be well-composed. Avoid awkward or unintentional cropping of faces or key body parts. Ensure the figure is presented naturally and fully within the frame, unless the prompt *explicitly* requests a specific framing like 'close-up', 'headshot', 'upper body shot', or an artistic crop. Prioritize showing the entire subject if it's a person.";
-
+        
         if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
             console.log(`Using finalized text prompt for image ${i+1}: "${finalizedTextPrompt.substring(0,100)}..."`);
             textPromptContent = finalizedTextPrompt;
             
-            if (aspectRatio && !finalizedTextPrompt.toLowerCase().includes("aspect ratio")) {
-              textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
+            // Aspect ratio & seed are structural parameters for the model,
+            // they are often appended or handled separately even with a finalized prompt.
+            // For Freepik, these might be top-level params not appended to text.
+            // For Gemini, we append them.
+            if (imageGenerationProvider.toUpperCase() === 'GEMINI') {
+                if (aspectRatio && !finalizedTextPrompt.toLowerCase().includes("aspect ratio")) {
+                  textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
+                }
+                if (seed !== undefined && !finalizedTextPrompt.toLowerCase().includes("seed:")) {
+                  textPromptContent += `\n\nUse seed: ${seed}.`;
+                }
+                 if (!finalizedTextPrompt.toLowerCase().includes("crop") && !finalizedTextPrompt.toLowerCase().includes("close-up") && !finalizedTextPrompt.toLowerCase().includes("headshot") && !finalizedTextPrompt.toLowerCase().includes("portrait") && !finalizedTextPrompt.toLowerCase().includes("figure framing") && !finalizedTextPrompt.toLowerCase().includes("composition")) {
+                    textPromptContent += `\n\n${compositionGuidance}`;
+                }
             }
-            if (seed !== undefined && !finalizedTextPrompt.toLowerCase().includes("seed:")) {
-              textPromptContent += `\n\nUse seed: ${seed}.`;
-            }
-            if (!finalizedTextPrompt.toLowerCase().includes("crop") && !finalizedTextPrompt.toLowerCase().includes("close-up") && !finalizedTextPrompt.toLowerCase().includes("headshot") && !finalizedTextPrompt.toLowerCase().includes("portrait") && !finalizedTextPrompt.toLowerCase().includes("figure framing") && !finalizedTextPrompt.toLowerCase().includes("composition")) {
-                textPromptContent += `\n\n${compositionGuidance}`;
-            }
-
         } else {
             console.log(`Constructing prompt for image ${i+1} as no finalized prompt was provided or it was empty.`);
             if (!brandDescription || !imageStyle) {
@@ -247,15 +302,18 @@ ${compositionGuidance}
             if (negativePrompt) {
                 textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
             }
-            if (aspectRatio) {
-              textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
-            }
-            if (seed !== undefined) {
-              textPromptContent += `\n\nUse seed: ${seed}.`;
+             // Aspect ratio and seed for non-finalized prompts are typically appended for Gemini
+            if (imageGenerationProvider.toUpperCase() === 'GEMINI' || imageGenerationProvider.toUpperCase() === 'FREEPIK') { // Freepik also gets text instructions, but might ignore if structure is different
+                if (aspectRatio) {
+                  textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
+                }
+                if (seed !== undefined) {
+                  textPromptContent += `\n\nUse seed: ${seed}.`;
+                }
             }
         }
         
-        if (numberOfImages > 1 && (!finalizedTextPrompt || !finalizedTextPrompt.toLowerCase().includes("batch generation")) && (!finalizedTextPrompt || !finalizedTextPrompt.toLowerCase().includes(`image ${i+1}`))) {
+        if (numberOfImages > 1 && imageGenerationProvider.toUpperCase() === 'GEMINI' && (!finalizedTextPrompt || (!finalizedTextPrompt.toLowerCase().includes("batch generation") && !finalizedTextPrompt.toLowerCase().includes(`image ${i+1}`)))) {
              textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
         }
 
@@ -268,7 +326,7 @@ ${compositionGuidance}
 
         try {
             let imageUrl = "";
-            const baseGenerationParamsForStubs = {
+            const baseGenerationParams = {
                 brandDescription: brandDescription || "",
                 industry,
                 imageStyle: imageStyle || "",
@@ -279,28 +337,29 @@ ${compositionGuidance}
                 textPrompt: textPromptContent,
             };
 
-            const finalPromptParts: ({text: string} | {media: {url: string}})[] = [];
-            if (exampleImage) { 
-                finalPromptParts.push({ media: { url: exampleImage } });
+            const finalPromptPartsForGemini: ({text: string} | {media: {url: string}})[] = [];
+            if (exampleImage && imageGenerationProvider.toUpperCase() === 'GEMINI') { 
+                finalPromptPartsForGemini.push({ media: { url: exampleImage } });
             }
-            finalPromptParts.push({ text: textPromptContent }); 
+            finalPromptPartsForGemini.push({ text: textPromptContent }); 
 
             switch (imageGenerationProvider.toUpperCase()) {
                 case 'GEMINI':
-                    console.log("Attempting Gemini image generation with prompt parts:", JSON.stringify(finalPromptParts, null, 2));
+                    console.log("Attempting Gemini image generation with prompt parts:", JSON.stringify(finalPromptPartsForGemini, null, 2));
                     imageUrl = await _generateImageWithGemini({
                         aiInstance: ai,
-                        promptParts: finalPromptParts
+                        promptParts: finalPromptPartsForGemini
                     });
                     break;
                 case 'LEONARDO_AI':
-                    imageUrl = await _generateImageWithLeonardoAI_stub(baseGenerationParamsForStubs);
+                    imageUrl = await _generateImageWithLeonardoAI_stub(baseGenerationParams);
                     break;
                 case 'IMAGEN': // Use for Imagen via Vertex AI
-                    imageUrl = await _generateImageWithImagen_stub(baseGenerationParamsForStubs);
+                    imageUrl = await _generateImageWithImagen_stub(baseGenerationParams);
                     break;
                 case 'FREEPIK':
-                    imageUrl = await _generateImageWithFreepik_stub(baseGenerationParamsForStubs);
+                     console.log("Attempting Freepik image generation with params:", JSON.stringify(baseGenerationParams, null, 2));
+                    imageUrl = await _generateImageWithFreepik(baseGenerationParams);
                     break;
                 default:
                     throw new Error(`Unsupported image generation provider: ${imageGenerationProvider}`);
@@ -320,4 +379,3 @@ ${compositionGuidance}
     return {generatedImages: generatedImageUrls, promptUsed: actualPromptUsedForFirstImage };
   }
 );
-
