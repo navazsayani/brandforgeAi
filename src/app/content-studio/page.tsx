@@ -15,7 +15,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw } from 'lucide-react';
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download } from 'lucide-react'; // Added Download
 import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage } from '@/types';
@@ -33,8 +33,12 @@ const initialBlogOutlineState: FormState<GenerateBlogOutlineOutput> = { error: u
 const initialSaveImagesState: FormState<{savedCount: number}> = { error: undefined, data: undefined, message: undefined };
 const initialFreepikTaskStatusState: FormState<{ status: string; images: string[] | null; taskId: string;}> = { error: undefined, data: undefined, message: undefined };
 
-
-type SocialImageChoice = 'generated' | 'profile' | null;
+const imageGenerationProviders = [
+    { value: "GEMINI", label: "Gemini (Google AI)" },
+    { value: "FREEPIK", label: "Freepik API (imagen3)" },
+    { value: "LEONARDO_AI", label: "Leonardo.ai (Not Implemented)", disabled: true },
+    { value: "IMAGEN", label: "Imagen (via Vertex - Not Implemented)", disabled: true },
+];
 
 const imageStylePresets = [
   { value: "photorealistic", label: "Photorealistic (General)" },
@@ -66,6 +70,7 @@ const imageStylePresets = [
   { value: "traditional-japan", label: "Traditional Japan (Freepik Specific)"},
 ];
 
+// For Freepik Imagen3 model
 const freepikImagen3EffectColors = ["none", "b&w", "pastel", "sepia", "dramatic", "vibrant", "orange&teal", "film-filter", "split", "electric", "pastel-pink", "gold-glow", "autumn", "muted-green", "deep-teal", "duotone", "terracotta&teal", "red&blue", "cold-neon", "burgundy&blue"];
 const freepikImagen3EffectLightnings = ["none", "studio", "warm", "cinematic", "volumetric", "golden-hour", "long-exposure", "cold", "iridescent", "dramatic", "hardlight", "redscale", "indoor-light"];
 const freepikImagen3EffectFramings = ["none", "portrait", "macro", "panoramic", "aerial-view", "close-up", "cinematic", "high-angle", "low-angle", "symmetry", "fish-eye", "first-person"];
@@ -94,14 +99,6 @@ const blogTones = [
     { value: "Technical", label: "Technical" },
 ];
 
-const imageGenerationProviders = [
-    { value: "GEMINI", label: "Gemini (Google AI)" },
-    { value: "FREEPIK", label: "Freepik API (imagen3)" },
-    { value: "LEONARDO_AI", label: "Leonardo.ai (Not Implemented)", disabled: true },
-    { value: "IMAGEN", label: "Imagen (via Vertex - Not Implemented)", disabled: true },
-];
-
-
 export default function ContentStudioPage() {
   const { brandData, addGeneratedImage, addGeneratedSocialPost, addGeneratedBlogPost } = useBrand();
   const { toast } = useToast();
@@ -126,6 +123,7 @@ export default function ContentStudioPage() {
   const [socialImageChoice, setSocialImageChoice] = useState<SocialImageChoice>(null);
   const [socialToneValue, setSocialToneValue] = useState<string>("professional");
   const [customSocialToneNuances, setCustomSocialToneNuances] = useState<string>("");
+
   const [blogPlatformValue, setBlogPlatformValue] = useState<"Medium" | "Other">("Medium");
   const [selectedBlogTone, setSelectedBlogTone] = useState<string>(blogTones[0].value);
   
@@ -137,7 +135,6 @@ export default function ContentStudioPage() {
   const [selectedProfileImageIndexForGen, setSelectedProfileImageIndexForGen] = useState<number | null>(null);
   const [selectedProfileImageIndexForSocial, setSelectedProfileImageIndexForSocial] = useState<number | null>(null);
 
-  // States for controlled inputs in Image Generation
   const [selectedImageProvider, setSelectedImageProvider] = useState<string>(imageGenerationProviders[0].value);
   const [imageGenBrandDescription, setImageGenBrandDescription] = useState<string>("");
   const [imageGenIndustry, setImageGenIndustry] = useState<string>("");
@@ -158,7 +155,6 @@ export default function ContentStudioPage() {
   const [currentTextPromptForEditing, setCurrentTextPromptForEditing] = useState<string>("");
   const [formSnapshot, setFormSnapshot] = useState<Partial<GenerateImagesInput> & { provider?: string } | null>(null);
 
-  const [selectedGeneratedImageIndices, setSelectedGeneratedImageIndices] = useState<number[]>([]);
   const [checkingTaskId, setCheckingTaskId] = useState<string | null>(null);
   
   useEffect(() => {
@@ -193,7 +189,6 @@ export default function ContentStudioPage() {
       setLastSuccessfulGeneratedImageUrls(newImageUrls);
       setLastUsedImageGenPrompt(imageState.data.promptUsed);
       setLastUsedImageProvider(imageState.data.providerUsed);
-      setSelectedGeneratedImageIndices([]); 
       
       const displayableImages = newImageUrls.filter(url => url && (url.startsWith('data:') || url.startsWith('image_url:')));
       if (displayableImages.length > 0) {
@@ -297,8 +292,9 @@ export default function ContentStudioPage() {
     if (freepikTaskStatusState.data) {
       const { status, images, taskId } = freepikTaskStatusState.data;
       if (status === 'COMPLETED' && images && images.length > 0) {
+        const newImageUrls = images.map(url => `image_url:${url}`);
         setLastSuccessfulGeneratedImageUrls(prevUrls =>
-          prevUrls.map(url => (url === `task_id:${taskId}` ? images.map(imgUrl => `image_url:${imgUrl}`) : url)).flat()
+          prevUrls.map(url => (url === `task_id:${taskId}` ? newImageUrls : url)).flat()
         );
         toast({ title: `Task ${taskId.substring(0,8)}... Completed`, description: `${images.length} image(s) retrieved.` });
       } else if (status === 'IN_PROGRESS') {
@@ -326,25 +322,13 @@ export default function ContentStudioPage() {
     setLastSuccessfulGeneratedImageUrls([]);
     setLastUsedImageGenPrompt(null);
     setLastUsedImageProvider(null);
-    setSelectedGeneratedImageIndices([]);
     setFormSnapshot(null); 
     setIsPreviewingPrompt(false); 
     toast({title: "Cleared", description: "Generated images and prompt cleared."});
   };
 
-  const handleToggleGeneratedImageSelection = (index: number) => {
-    setSelectedGeneratedImageIndices(prev =>
-      prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
-    );
-  };
-
-  const handleSaveSelectedGeneratedImages = () => {
-    if (selectedGeneratedImageIndices.length === 0 || lastSuccessfulGeneratedImageUrls.length === 0) {
-      toast({ title: "No Images Selected", description: "Please select images to save.", variant: "destructive" });
-      return;
-    }
-    const imagesToSave = selectedGeneratedImageIndices
-        .map(index => lastSuccessfulGeneratedImageUrls[index])
+  const handleSaveAllGeneratedImages = () => {
+    const saveableImages = lastSuccessfulGeneratedImageUrls
         .filter(url => url && (url.startsWith('data:') || url.startsWith('image_url:'))) 
         .map(url => ({
             dataUri: url, 
@@ -352,18 +336,15 @@ export default function ContentStudioPage() {
             style: (formSnapshot?.imageStyle || selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")),
         }));
 
-    if (imagesToSave.length === 0) {
-        toast({ title: "No new images to save", description: "Selected images might be task IDs or invalid for saving.", variant: "default"});
+    if (saveableImages.length === 0) {
+        toast({ title: "No new images to save", description: "No valid generated images are available for saving.", variant: "default"});
         return;
     }
     
     const formData = new FormData();
-    formData.append('imagesToSaveJson', JSON.stringify(imagesToSave));
+    formData.append('imagesToSaveJson', JSON.stringify(saveableImages));
     formData.append('brandProfileDocId', 'defaultBrandProfile');
-
-    startTransition(() => {
-      saveImagesAction(formData);
-    });
+    // No need to call saveImagesAction directly here if using formAction on SubmitButton
   };
 
   const handleUseGeneratedImageForSocial = () => {
@@ -383,7 +364,7 @@ export default function ContentStudioPage() {
 
   const currentSocialImagePreviewUrl = useImageForSocialPost
     ? (socialImageChoice === 'generated'
-        ? (lastSuccessfulGeneratedImageUrls.find(url => url?.startsWith('data:') || url?.startsWith('image_url:')) || null) 
+        ? (lastSuccessfulGeneratedImageUrls.find(url => url?.startsWith('data:') || url?.startsWith('image_url:'))?.replace(/^image_url:/, '') || null) 
         : (socialImageChoice === 'profile'
             ? (brandData?.exampleImages && selectedProfileImageIndexForSocial !== null && brandData.exampleImages[selectedProfileImageIndexForSocial]) || null
             : null))
@@ -396,7 +377,7 @@ export default function ContentStudioPage() {
     }
     setIsGeneratingDescription(true);
     const formData = new FormData();
-    formData.append("imageDataUri", currentSocialImagePreviewUrl.startsWith('image_url:') ? currentSocialImagePreviewUrl.substring(10) : currentSocialImagePreviewUrl); 
+    formData.append("imageDataUri", currentSocialImagePreviewUrl); 
     startTransition(() => {
         describeImageAction(formData);
     });
@@ -452,7 +433,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
         textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negPrompt}.`;
       }
       if (aspect) {
-        textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspect} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
+        textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspect} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally, and the image content itself must fully occupy this ${aspect} frame, without any artificial letterboxing or pillarboxing.`;
       }
       if (seedValue !== undefined) {
         textPromptContent += `\n\nUse seed: ${seedValue}.`;
@@ -471,7 +452,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
         textPromptContent += `\n\n${compositionGuidance}`;
     }
     
-    if (numImages > 1 && selectedImageProvider !== 'FREEPIK' ) { 
+    if (numImages > 1 && selectedImageProvider !== 'FREEPIK' && (!currentTextPromptForEditing || (!currentTextPromptForEditing.toLowerCase().includes("batch generation") && !currentTextPromptForEditing.toLowerCase().includes("image 1 of")))) { 
         textPromptContent += `\n\nImportant for batch generation: You are generating image 1 of a set of ${numImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (1/${numImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
     }
     
@@ -499,7 +480,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
     startTransition(() => {
         const formData = new FormData();
         
-        formData.append("finalizedTextPrompt", currentTextPromptForEditing || "");
+        formData.append("finalizedTextPrompt", currentTextPromptForEditing || ""); // Use currentTextPromptForEditing
         formData.append("provider", formSnapshot?.provider || selectedImageProvider);
         formData.append("brandDescription", formSnapshot?.brandDescription || imageGenBrandDescription || brandData?.brandDescription || "");
         formData.append("industry", formSnapshot?.industry || imageGenIndustry || brandData?.industry || "");
@@ -515,21 +496,21 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
         if (negPromptValue) formData.append("negativePrompt", negPromptValue);
 
         const seedValueNum = formSnapshot?.seed !== undefined ? formSnapshot.seed : (imageGenSeed && !isNaN(parseInt(imageGenSeed)) ? parseInt(imageGenSeed) : undefined);
-        if (seedValueNum !== undefined && selectedImageProvider !== 'FREEPIK') { // Seed not sent for Freepik
+        if (seedValueNum !== undefined && (formSnapshot?.provider || selectedImageProvider) !== 'FREEPIK') { 
           formData.append("seed", String(seedValueNum));
         }
 
         const fColorsInput = formSnapshot?.freepikStylingColors?.map(c=>c.color).join(',') || freepikDominantColorsInput;
-        if (fColorsInput && selectedImageProvider === 'FREEPIK') formData.append("freepikDominantColorsInput", fColorsInput);
+        if (fColorsInput && (formSnapshot?.provider || selectedImageProvider) === 'FREEPIK') formData.append("freepikDominantColorsInput", fColorsInput);
         
         const fEffectColorValue = formSnapshot?.freepikEffectColor || freepikEffectColor;
-        if (fEffectColorValue && fEffectColorValue !== "none" && selectedImageProvider === 'FREEPIK') formData.append("freepikEffectColor", fEffectColorValue);
+        if (fEffectColorValue && fEffectColorValue !== "none" && (formSnapshot?.provider || selectedImageProvider) === 'FREEPIK') formData.append("freepikEffectColor", fEffectColorValue);
         
         const fEffectLightningValue = formSnapshot?.freepikEffectLightning || freepikEffectLightning;
-        if (fEffectLightningValue && fEffectLightningValue !== "none" && selectedImageProvider === 'FREEPIK') formData.append("freepikEffectLightning", fEffectLightningValue);
+        if (fEffectLightningValue && fEffectLightningValue !== "none" && (formSnapshot?.provider || selectedImageProvider) === 'FREEPIK') formData.append("freepikEffectLightning", fEffectLightningValue);
 
         const fEffectFramingValue = formSnapshot?.freepikEffectFraming || freepikEffectFraming;
-        if (fEffectFramingValue && fEffectFramingValue !== "none" && selectedImageProvider === 'FREEPIK') formData.append("freepikEffectFraming", fEffectFramingValue);
+        if (fEffectFramingValue && fEffectFramingValue !== "none" && (formSnapshot?.provider || selectedImageProvider) === 'FREEPIK') formData.append("freepikEffectFraming", fEffectFramingValue);
         
         imageAction(formData);
     });
@@ -563,6 +544,20 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
     });
   };
 
+  const downloadImage = (imageUrl: string, filename = "generated-image.png") => {
+    if (imageUrl.startsWith('data:')) { // Handle data URI
+      const link = document.createElement('a');
+      link.href = imageUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else { // Handle direct URL
+      // For direct URLs, this will open in a new tab. User can right-click save.
+      // A true direct download for cross-origin URLs requires server-side help or specific CORS.
+      window.open(imageUrl, '_blank');
+    }
+  };
 
   return (
     <AppShell>
@@ -595,7 +590,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                  {lastUsedImageProvider && <p className="text-xs text-primary mt-1">Image(s) last generated using: {lastUsedImageProvider}</p>}
               </CardHeader>
               {!isPreviewingPrompt ? (
-                <div id="imageGenerationFormFields"> 
+                <form id="imageGenerationFormFields"> 
                   <CardContent className="space-y-6">
                      <div>
                         <Label htmlFor="imageGenProviderSelect" className="flex items-center mb-1"><Server className="w-4 h-4 mr-2 text-primary" />Image Generation Provider</Label>
@@ -620,6 +615,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                       <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
                       <Textarea
                         id="imageGenBrandDescription"
+                        name="brandDescription"
                         value={imageGenBrandDescription}
                         onChange={(e) => setImageGenBrandDescription(e.target.value)}
                         placeholder="Detailed description of the brand and its values."
@@ -630,6 +626,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         <Label htmlFor="imageGenIndustry" className="flex items-center mb-1"><Briefcase className="w-4 h-4 mr-2 text-primary" />Industry (from Profile)</Label>
                         <Input
                             id="imageGenIndustry"
+                            name="industry"
                             value={imageGenIndustry}
                             onChange={(e) => setImageGenIndustry(e.target.value)}
                             placeholder="e.g., Fashion, Technology"
@@ -639,6 +636,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                     <div>
                       <Label htmlFor="imageGenImageStylePresetSelect" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Image Style Preset</Label>
                       <Select 
+                        name="imageStylePreset"
                         value={selectedImageStylePreset} 
                         onValueChange={setSelectedImageStylePreset}
                       >
@@ -663,6 +661,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                       <Label htmlFor="imageGenCustomStyleNotes" className="flex items-center mb-1"><Edit className="w-4 h-4 mr-2 text-primary" />Custom Style Notes (from Profile)</Label>
                       <Textarea
                         id="imageGenCustomStyleNotes"
+                        name="customStyleNotes"
                         value={customStyleNotesInput}
                         onChange={(e) => setCustomStyleNotesInput(e.target.value)}
                         placeholder="E.g., 'add a touch of vintage', 'focus on metallic textures'. These notes are added to the main text prompt."
@@ -715,6 +714,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                       <Label htmlFor="imageGenNegativePrompt" className="flex items-center mb-1"><CircleSlash className="w-4 h-4 mr-2 text-primary" />Negative Prompt (Optional)</Label>
                       <Textarea
                         id="imageGenNegativePrompt"
+                        name="negativePrompt"
                         value={imageGenNegativePrompt}
                         onChange={(e) => setImageGenNegativePrompt(e.target.value)}
                         placeholder="E.g., avoid text, ugly, disfigured, low quality"
@@ -732,6 +732,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                                     <Label htmlFor="freepikDominantColorsInput" className="flex items-center mb-1"><PaletteIcon className="w-4 h-4 mr-2 text-primary" />Dominant Colors</Label>
                                     <Input
                                         id="freepikDominantColorsInput"
+                                        name="freepikDominantColorsInput"
                                         value={freepikDominantColorsInput}
                                         onChange={(e) => setFreepikDominantColorsInput(e.target.value)}
                                         placeholder="Up to 5 hex codes, e.g., #FF0000,#00FF00"
@@ -740,7 +741,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                                 </div>
                                 <div>
                                     <Label htmlFor="freepikEffectColor" className="flex items-center mb-1"><Paintbrush className="w-4 h-4 mr-2 text-primary" />Effect - Color</Label>
-                                    <Select value={freepikEffectColor} onValueChange={setFreepikEffectColor}>
+                                    <Select name="freepikEffectColor" value={freepikEffectColor} onValueChange={setFreepikEffectColor}>
                                         <SelectTrigger id="freepikEffectColor"><SelectValue placeholder="Select Freepik color effect" /></SelectTrigger>
                                         <SelectContent>
                                             {freepikImagen3EffectColors.map(effect => <SelectItem key={effect} value={effect || "none"}>{effect || "None"}</SelectItem>)}
@@ -750,7 +751,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                                 </div>
                                 <div>
                                     <Label htmlFor="freepikEffectLightning" className="flex items-center mb-1"><Zap className="w-4 h-4 mr-2 text-primary" />Effect - Lightning</Label>
-                                    <Select value={freepikEffectLightning} onValueChange={setFreepikEffectLightning}>
+                                    <Select name="freepikEffectLightning" value={freepikEffectLightning} onValueChange={setFreepikEffectLightning}>
                                         <SelectTrigger id="freepikEffectLightning"><SelectValue placeholder="Select Freepik lightning effect" /></SelectTrigger>
                                         <SelectContent>
                                             {freepikImagen3EffectLightnings.map(effect => <SelectItem key={effect} value={effect || "none"}>{effect || "None"}</SelectItem>)}
@@ -760,7 +761,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                                 </div>
                                 <div>
                                     <Label htmlFor="freepikEffectFraming" className="flex items-center mb-1"><Aperture className="w-4 h-4 mr-2 text-primary" />Effect - Framing</Label>
-                                    <Select value={freepikEffectFraming} onValueChange={setFreepikEffectFraming}>
+                                    <Select name="freepikEffectFraming" value={freepikEffectFraming} onValueChange={setFreepikEffectFraming}>
                                         <SelectTrigger id="freepikEffectFraming"><SelectValue placeholder="Select Freepik framing effect" /></SelectTrigger>
                                         <SelectContent>
                                             {freepikImagen3EffectFramings.map(effect => <SelectItem key={effect} value={effect || "none"}>{effect || "None"}</SelectItem>)}
@@ -776,6 +777,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                       <div>
                           <Label htmlFor="imageGenAspectRatioSelect" className="flex items-center mb-1"><Ratio className="w-4 h-4 mr-2 text-primary" />Aspect Ratio</Label>
                           <Select 
+                            name="aspectRatio"
                             required 
                             value={selectedAspectRatio} 
                             onValueChange={setSelectedAspectRatio}
@@ -792,7 +794,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                       </div>
                       <div>
                           <Label htmlFor="numberOfImagesSelect" className="flex items-center mb-1"><Images className="w-4 h-4 mr-2 text-primary" />Number of Images</Label>
-                          <Select value={numberOfImagesToGenerate} onValueChange={setNumberOfImagesToGenerate}>
+                          <Select name="numberOfImages" value={numberOfImagesToGenerate} onValueChange={setNumberOfImagesToGenerate}>
                               <SelectTrigger id="numberOfImagesSelect">
                                   <SelectValue placeholder="Select number" />
                               </SelectTrigger>
@@ -808,6 +810,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                       <Label htmlFor="imageGenSeed" className="flex items-center mb-1"><Pipette className="w-4 h-4 mr-2 text-primary" />Seed (Optional)</Label>
                       <Input
                         id="imageGenSeed"
+                        name="seed"
                         type="number"
                         value={imageGenSeed}
                         onChange={(e) => setImageGenSeed(e.target.value)}
@@ -825,7 +828,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         <Eye className="mr-2 h-4 w-4" /> Preview Prompt
                     </Button>
                   </CardFooter>
-                </div>
+                </form>
               ) : (
                 <form onSubmit={handleImageGenerationSubmit}>
                   <CardContent className="space-y-6">
@@ -868,24 +871,21 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                                 <Trash2 className="mr-2 h-4 w-4" /> Clear Image{lastSuccessfulGeneratedImageUrls.length > 1 ? 's' : ''}
                             </Button>
                         </div>
-                         {lastSuccessfulGeneratedImageUrls.filter(url => url?.startsWith('data:') || url?.startsWith('image_url:')).length > 0 && (
+                         {lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url?.startsWith('image_url:')) && (
                             <div className="mt-2 flex items-center gap-2">
                                 <form> 
-                                    <input type="hidden" name="imagesToSaveJson" value={JSON.stringify(selectedGeneratedImageIndices.map(index => ({
-                                        dataUri: lastSuccessfulGeneratedImageUrls[index],
-                                        prompt: lastUsedImageGenPrompt || "N/A", 
-                                        style: (formSnapshot?.imageStyle || selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")),
-                                    })))} />
-                                    <input type="hidden" name="brandProfileDocId" value="defaultBrandProfile" />
                                     <SubmitButton 
-                                        onClick={handleSaveSelectedGeneratedImages} 
+                                        onClick={(e) => {
+                                          e.preventDefault(); // Prevent default form submission if any
+                                          handleSaveAllGeneratedImages();
+                                        }}
                                         formAction={saveImagesAction}
-                                        disabled={selectedGeneratedImageIndices.length === 0 || !!(saveImagesState.message?.startsWith('Saving...')) || lastSuccessfulGeneratedImageUrls.every(url => url.startsWith('task_id:')) } 
+                                        disabled={!lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url?.startsWith('image_url:')) || !!(saveImagesState.message?.startsWith('Saving...'))} 
                                         size="sm"
                                         loadingText="Saving..."
                                     >
                                         <Save className="mr-2 h-4 w-4" />
-                                        Save Selected to Library ({selectedGeneratedImageIndices.length})
+                                        Save All Generated Images to Library
                                     </SubmitButton>
                                 </form>
                             </div>
@@ -904,13 +904,6 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                                         style={{objectFit: 'contain'}} 
                                         data-ai-hint="brand marketing"
                                         className="transition-opacity duration-300 opacity-100 group-hover:opacity-80"
-                                    />
-                                    <Checkbox
-                                        id={`select-gen-img-${index}`}
-                                        checked={selectedGeneratedImageIndices.includes(index)}
-                                        onCheckedChange={() => handleToggleGeneratedImageSelection(index)}
-                                        className="absolute top-2 left-2 z-10 bg-background/80 data-[state=checked]:bg-primary"
-                                        aria-label={`Select image ${index + 1}`}
                                     />
                                     </>
                                 ) : url && url.startsWith('task_id:') ? (
@@ -981,7 +974,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
               </CardHeader>
               <form action={socialAction}>
                 <input type="hidden" name="industry" value={brandData?.industry || ""} />
-                <input type="hidden" name="selectedImageSrcForSocialPost" value={useImageForSocialPost && currentSocialImagePreviewUrl ? (currentSocialImagePreviewUrl.startsWith('image_url:') ? currentSocialImagePreviewUrl.substring(10) : currentSocialImagePreviewUrl) : ""} />
+                <input type="hidden" name="selectedImageSrcForSocialPost" value={useImageForSocialPost && currentSocialImagePreviewUrl ? currentSocialImagePreviewUrl : ""} />
                 <CardContent className="space-y-6">
                   <div className="space-y-3">
                     <div className="flex items-center space-x-2">
@@ -1067,7 +1060,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         <div className="pl-6 mt-2 mb-3">
                             <p className="text-xs text-muted-foreground">Selected image for post:</p>
                             <NextImage 
-                              src={currentSocialImagePreviewUrl.startsWith('image_url:') ? currentSocialImagePreviewUrl.substring(10) : currentSocialImagePreviewUrl} 
+                              src={currentSocialImagePreviewUrl} 
                               alt="Selected image for social post" 
                               width={100} height={100} 
                               className="rounded border object-contain" 
@@ -1157,20 +1150,30 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                          Image and text ready! Download the image (if applicable) and copy the caption/hashtags to post on Instagram.
+                        </p>
                         {generatedSocialPost.imageSrc && (
                              <div className="mb-4">
                                 <p className="text-sm font-medium mb-1 text-muted-foreground">Associated Image:</p>
-                                <div className="relative w-32 h-32 border rounded-md overflow-hidden">
+                                <div className="relative w-40 h-40 border rounded-md overflow-hidden mb-2">
                                     <NextImage 
-                                      src={generatedSocialPost.imageSrc.startsWith('image_url:') ? generatedSocialPost.imageSrc.substring(10) : generatedSocialPost.imageSrc} 
+                                      src={generatedSocialPost.imageSrc} 
                                       alt="Social post image" 
                                       fill 
-                                      style={{objectFit: 'cover'}} data-ai-hint="social content" />
+                                      style={{objectFit: 'contain'}} data-ai-hint="social content" />
                                 </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => downloadImage(generatedSocialPost.imageSrc || "", `social-post-${new Date().getTime()}.png`)}
+                                >
+                                  <Download className="mr-2 h-4 w-4"/> Download Image
+                                </Button>
                             </div>
                         )}
                         <div>
-                            <h4 className="text-sm font-medium mb-1 text-muted-foreground">Caption:</h4>
+                            <h4 className="text-sm font-medium mb-1 text-muted-foreground">Generated Caption:</h4>
                             <div className="p-3 border rounded-md bg-muted/50">
                                 <p className="text-sm whitespace-pre-wrap">{generatedSocialPost.caption}</p>
                             </div>
@@ -1179,7 +1182,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                             </Button>
                         </div>
                         <div>
-                            <h4 className="text-sm font-medium mb-1 text-muted-foreground">Hashtags:</h4>
+                            <h4 className="text-sm font-medium mb-1 text-muted-foreground">Generated Hashtags:</h4>
                             <div className="p-3 border rounded-md bg-muted/50">
                                 <p className="text-sm">{generatedSocialPost.hashtags}</p>
                             </div>
@@ -1195,119 +1198,119 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
 
           {/* Blog Post Tab */}
           <TabsContent value="blog">
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle>Create Blog Content</CardTitle>
-                <p className="text-sm text-muted-foreground">Generate SEO-friendly blog posts. Define an outline, choose a tone, and let AI write the content. Uses brand description and industry.</p>
-              </CardHeader>
-              <form action={blogAction} className="w-full">
-                <CardContent className="space-y-6">
-                  <div>
-                    <Label htmlFor="blogBrandName" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Name</Label>
-                    <Input
-                      id="blogBrandName"
-                      name="brandName" 
-                      defaultValue={brandData?.brandName || ""}
-                      placeholder="Your brand's name"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="blogBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description</Label>
-                    <Textarea
-                      id="blogBrandDescription"
-                      name="blogBrandDescription" 
-                      defaultValue={brandData?.brandDescription || ""}
-                      placeholder="Detailed brand description"
-                      rows={3}
-                    />
-                  </div>
-                   <div>
-                        <Label htmlFor="blogIndustry" className="flex items-center mb-1"><Briefcase className="w-4 h-4 mr-2 text-primary" />Industry</Label>
-                        <Input
-                            id="blogIndustry"
-                            name="industry" 
-                            defaultValue={brandData?.industry || ""}
-                            placeholder="e.g., Fashion, Technology"
-                        />
-                    </div>
-                  <div>
-                    <Label htmlFor="blogKeywords" className="flex items-center mb-1"><Tag className="w-4 h-4 mr-2 text-primary" />Keywords</Label>
-                    <Input
-                      id="blogKeywords"
-                      name="blogKeywords" 
-                      defaultValue={brandData?.targetKeywords || ""}
-                      placeholder="Comma-separated keywords (e.g., AI, marketing, branding)"
-                    />
-                  </div>
-                  <div>
-                      <Label htmlFor="blogWebsiteUrl" className="flex items-center mb-1"><Globe className="w-4 h-4 mr-2 text-primary" />Website URL (Optional, for SEO & Outline)</Label>
-                      <Input
-                        id="blogWebsiteUrl"
-                        name="blogWebsiteUrl" 
-                        defaultValue={brandData?.websiteUrl || ""}
-                        placeholder="https://www.example.com"
-                      />
-                  </div>
+             <Card className="shadow-lg">
+                <CardHeader>
+                    <CardTitle>Create Blog Content</CardTitle>
+                    <p className="text-sm text-muted-foreground">Generate SEO-friendly blog posts. Define an outline, choose a tone, and let AI write the content.</p>
+                </CardHeader>
+                <form action={blogAction} className="w-full">
+                    <CardContent className="space-y-6">
+                        <div>
+                            <Label htmlFor="blogBrandName" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Name (from Profile)</Label>
+                            <Input
+                            id="blogBrandName"
+                            name="brandName" 
+                            defaultValue={brandData?.brandName || ""}
+                            placeholder="Your brand's name"
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="blogBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
+                            <Textarea
+                            id="blogBrandDescription"
+                            name="blogBrandDescription" 
+                            defaultValue={brandData?.brandDescription || ""}
+                            placeholder="Detailed brand description"
+                            rows={3}
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="blogIndustry" className="flex items-center mb-1"><Briefcase className="w-4 h-4 mr-2 text-primary" />Industry (from Profile)</Label>
+                            <Input
+                                id="blogIndustry"
+                                name="industry" 
+                                defaultValue={brandData?.industry || ""}
+                                placeholder="e.g., Fashion, Technology"
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="blogKeywords" className="flex items-center mb-1"><Tag className="w-4 h-4 mr-2 text-primary" />Keywords (from Profile)</Label>
+                            <Input
+                            id="blogKeywords"
+                            name="blogKeywords" 
+                            defaultValue={brandData?.targetKeywords || ""}
+                            placeholder="Comma-separated keywords (e.g., AI, marketing, branding)"
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="blogWebsiteUrl" className="flex items-center mb-1"><Globe className="w-4 h-4 mr-2 text-primary" />Website URL (Optional, for SEO & Outline)</Label>
+                            <Input
+                                id="blogWebsiteUrl"
+                                name="blogWebsiteUrl" 
+                                defaultValue={brandData?.websiteUrl || ""}
+                                placeholder="https://www.example.com"
+                            />
+                        </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="blogToneSelect" className="flex items-center mb-1"><Mic2 className="w-4 h-4 mr-2 text-primary" />Tone/Style for Blog</Label>
-                    <Select name="blogTone" value={selectedBlogTone} onValueChange={setSelectedBlogTone}  id="blogToneSelect">
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select a tone/style" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectGroup>
-                                <SelectLabel>Blog Tones/Styles</SelectLabel>
-                                {blogTones.map(tone => (
-                                    <SelectItem key={tone.value} value={tone.value}>{tone.label}</SelectItem>
-                                ))}
-                            </SelectGroup>
-                        </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center mb-1">
-                        <Label htmlFor="blogOutline" className="flex items-center"><ListOrdered className="w-4 h-4 mr-2 text-primary" />Blog Outline</Label>
-                         <Button 
-                            type="button" 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={handleGenerateBlogOutline}
-                            disabled={isGeneratingOutline}
-                        >
-                            {isGeneratingOutline ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-                            Generate Outline with AI
-                        </Button>
-                    </div>
-                    <Textarea
-                      id="blogOutline"
-                      name="blogOutline" 
-                      placeholder="Enter your blog outline here, or generate one with AI. Markdown is supported."
-                      rows={8}
-                      value={generatedBlogOutline}
-                      onChange={(e) => setGeneratedBlogOutline(e.target.value)}
-                    />
-                    <p className="text-sm text-muted-foreground">AI will strictly follow this outline to generate the blog post.</p>
-                  </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="blogToneSelect" className="flex items-center mb-1"><Mic2 className="w-4 h-4 mr-2 text-primary" />Tone/Style for Blog</Label>
+                            <Select name="blogTone" value={selectedBlogTone} onValueChange={setSelectedBlogTone}  id="blogToneSelect">
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a tone/style" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        <SelectLabel>Blog Tones/Styles</SelectLabel>
+                                        {blogTones.map(tone => (
+                                            <SelectItem key={tone.value} value={tone.value}>{tone.label}</SelectItem>
+                                        ))}
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center mb-1">
+                                <Label htmlFor="blogOutline" className="flex items-center"><ListOrdered className="w-4 h-4 mr-2 text-primary" />Blog Outline</Label>
+                                <Button 
+                                    type="button" 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={handleGenerateBlogOutline}
+                                    disabled={isGeneratingOutline}
+                                >
+                                    {isGeneratingOutline ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+                                    Generate Outline with AI
+                                </Button>
+                            </div>
+                            <Textarea
+                            id="blogOutline"
+                            name="blogOutline" 
+                            placeholder="Enter your blog outline here, or generate one with AI. Markdown is supported."
+                            rows={8}
+                            value={generatedBlogOutline}
+                            onChange={(e) => setGeneratedBlogOutline(e.target.value)}
+                            />
+                            <p className="text-sm text-muted-foreground">AI will strictly follow this outline to generate the blog post.</p>
+                        </div>
 
-                  <div>
-                    <Label htmlFor="blogTargetPlatformSelect" className="flex items-center mb-1"><Newspaper className="w-4 h-4 mr-2 text-primary" />Target Platform</Label>
-                    <Select name="targetPlatform" value={blogPlatformValue} onValueChange={(value) => setBlogPlatformValue(value as "Medium" | "Other")} id="blogTargetPlatformSelect">
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select platform" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Medium">Medium</SelectItem>
-                        <SelectItem value="Other">Other (Generic Blog)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <SubmitButton className="w-full" loadingText="Generating Blog..." disabled={isGeneratingOutline || !generatedBlogOutline.trim()}>Generate Blog Post</SubmitButton>
-                </CardFooter>
-              </form>
+                        <div>
+                            <Label htmlFor="blogTargetPlatformSelect" className="flex items-center mb-1"><Newspaper className="w-4 h-4 mr-2 text-primary" />Target Platform</Label>
+                            <Select name="targetPlatform" value={blogPlatformValue} onValueChange={(value) => setBlogPlatformValue(value as "Medium" | "Other")} id="blogTargetPlatformSelect">
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select platform" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Medium">Medium</SelectItem>
+                                <SelectItem value="Other">Other (Generic Blog)</SelectItem>
+                            </SelectContent>
+                            </Select>
+                        </div>
+                    </CardContent>
+                    <CardFooter>
+                    <SubmitButton className="w-full" loadingText="Generating Blog..." disabled={isGeneratingOutline || !generatedBlogOutline.trim()}>Generate Blog Post</SubmitButton>
+                    </CardFooter>
+                </form>
                {generatedBlogPost && (
                  <Card className="mt-6 mx-4 mb-4 shadow-sm">
                     <CardHeader>
@@ -1318,7 +1321,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div>
-                            <h4 className="text-sm font-medium mb-1 text-muted-foreground">Title:</h4>
+                            <h4 className="text-sm font-medium mb-1 text-muted-foreground">Generated Title:</h4>
                             <div className="p-3 border rounded-md bg-muted/50">
                                 <p className="text-lg font-medium">{generatedBlogPost.title}</p>
                             </div>
@@ -1327,7 +1330,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                             </Button>
                         </div>
                         <div>
-                            <h4 className="text-sm font-medium mb-1 text-muted-foreground">Content:</h4>
+                            <h4 className="text-sm font-medium mb-1 text-muted-foreground">Generated Content:</h4>
                             <div className="p-3 prose border rounded-md bg-muted/50 max-w-none max-h-96 overflow-y-auto">
                                 <p className="whitespace-pre-wrap">{generatedBlogPost.content}</p> 
                             </div>
@@ -1336,7 +1339,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                             </Button>
                         </div>
                         <div>
-                            <h4 className="text-sm font-medium mb-1 text-muted-foreground">Tags:</h4>
+                            <h4 className="text-sm font-medium mb-1 text-muted-foreground">Generated Tags:</h4>
                             <div className="p-3 border rounded-md bg-muted/50">
                                 <p className="text-sm">{generatedBlogPost.tags}</p>
                             </div>
@@ -1354,5 +1357,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
     </AppShell>
   );
 }
+
+    
 
     
