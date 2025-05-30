@@ -11,7 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type {Action} from 'genkit';
+import type {Action} from 'genkit'; // Imported Action
 
 const GenerateImagesInputSchema = z.object({
   provider: z.enum(['GEMINI', 'FREEPIK', 'LEONARDO_AI', 'IMAGEN']).optional().describe("The image generation provider to use."),
@@ -147,7 +147,7 @@ const freepikValidStyles = ["photo", "digital-art", "3d", "painting", "low-poly"
 async function _initiateFreepikImageTask(params: { 
   textPrompt: string; 
   imageStyle: string; 
-  exampleImage?: string; 
+  exampleImage?: string; // Still passed, though Imagen3 text-to-image might ignore it. Description is used in prompt.
   negativePrompt?: string;
   aspectRatio?: string; 
   freepikStylingColors?: { color: string; weight: number }[];
@@ -294,7 +294,7 @@ const generateImagesFlow = ai.defineFlow(
         if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
             console.log(`Using finalized text prompt for Freepik batch: "${finalizedTextPrompt.substring(0,100)}..."`);
             textPromptForFreepik = finalizedTextPrompt;
-            // Append composition guidance if not obviously handled by user and Freepik is not chosen (Freepik handles via JSON params)
+            // Append composition guidance if not obviously handled by user
              if (
                 !finalizedTextPrompt.toLowerCase().includes("human figure") &&
                 !finalizedTextPrompt.toLowerCase().includes("crop") &&
@@ -321,9 +321,11 @@ const generateImagesFlow = ai.defineFlow(
 
             textPromptForFreepik = baseFreepikPrompt;
             if (negativePrompt) { 
-                textPromptForFreepik += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
+                // Negative prompt is handled structurally for Freepik, but including it in text if not finalized might be an option
+                // For now, we assume structural negative_prompt is sufficient for Freepik if finalizedTextPrompt isn't used
+                // textPromptForFreepik += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
             }
-            textPromptForFreepik +=`\n\n${compositionGuidance}`;
+            textPromptForFreepik +=`\n\n${compositionGuidance}`; // Composition guidance is always good textually
         }
         actualPromptUsedForFirstImage = textPromptForFreepik;
         console.log(`Text component of prompt for Freepik batch: "${textPromptForFreepik.substring(0,200)}..."`);
@@ -332,7 +334,7 @@ const generateImagesFlow = ai.defineFlow(
             const freepikTask = await _initiateFreepikImageTask({
                 textPrompt: textPromptForFreepik,
                 imageStyle: imageStyle, 
-                exampleImage: exampleImage, // Pass it along, _initiateFreepikImageTask will warn if it's ignored by endpoint
+                exampleImage: exampleImage, 
                 negativePrompt: negativePrompt, 
                 aspectRatio: aspectRatio,
                 freepikStylingColors: freepikStylingColors,
@@ -355,12 +357,12 @@ const generateImagesFlow = ai.defineFlow(
             }
         } catch (error: any) {
              console.error(`Error during Freepik batch generation. Full error:`, JSON.stringify(error, Object.getOwnPropertyNames(error)));
-             for (let i = 0; i < numberOfImages; i++) {
+             for (let i = 0; i < numberOfImages; i++) { // Push an error for each expected image if batch init fails
                  generatedImageResults.push(`error:Failed to process Freepik batch item ${i+1}. ${error.message || 'Unknown error'}`);
              }
         }
 
-    } else { 
+    } else { // For Gemini or other providers that generate one image per call
         for (let i = 0; i < numberOfImages; i++) {
             let textPromptContent = "";
             const industryContext = industry ? ` The brand operates in the ${industry} industry.` : "";
@@ -369,6 +371,7 @@ const generateImagesFlow = ai.defineFlow(
                 console.log(`Using finalized text prompt for image ${i+1}: "${finalizedTextPrompt.substring(0,100)}..." (Provider: ${chosenProvider})`);
                 textPromptContent = finalizedTextPrompt;
                 
+                // For Gemini, append structural parameters if not already in the finalized prompt
                 if (chosenProvider === 'GEMINI') {
                     if (aspectRatio && !finalizedTextPrompt.toLowerCase().includes("aspect ratio")) {
                       textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally, and the image content itself must fully occupy this ${aspectRatio} frame, without any artificial letterboxing or pillarboxing.`;
@@ -421,9 +424,11 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
 `;
                 }
                 textPromptContent = `${baseTextPrompt}${coreInstructions}`;
-                if (negativePrompt) { 
+                // Negative prompt for Gemini
+                if (negativePrompt && chosenProvider !== 'FREEPIK') { 
                     textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
                 }
+                // Composition guidance for Gemini
                 if (chosenProvider !== 'FREEPIK') {
                   textPromptContent +=`\n\n${compositionGuidance}`; 
                   if (aspectRatio) {
@@ -455,6 +460,7 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
                             finalPromptPartsForGemini.push({ media: { url: exampleImage } });
                         }
                         finalPromptPartsForGemini.push({ text: textPromptContent }); 
+                        console.log("Final prompt parts array for Gemini (loop):", JSON.stringify(finalPromptPartsForGemini, null, 2));
                         resultValue = await _generateImageWithGemini({
                             aiInstance: ai,
                             promptParts: finalPromptPartsForGemini
@@ -488,8 +494,6 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
     if (errorsEncountered.length > 0) {
       console.warn(`Some images/tasks in the batch failed: ${errorsEncountered.join('; ')}`);
       // You might still want to return successfully generated images even if some failed.
-      // If you want to throw an error if *any* image fails, uncomment the next line:
-      // throw new Error(`Some images/tasks in the batch failed: ${errorsEncountered.join('; ')}`);
     }
 
     return {generatedImages: finalGeneratedImages, promptUsed: actualPromptUsedForFirstImage, providerUsed: chosenProvider };
@@ -514,7 +518,7 @@ Action.define(generateImagesFlow, { // For testing with genkit eval
                 brandDescription: 'A luxury Italian coffee brand.',
                 imageStyle: 'photo',
                 numberOfImages: 2,
-                aspectRatio: 'square_1_1',
+                aspectRatio: 'square_1_1', // This should be one of Freepik's valid enums for image.size
                 freepikEffectColor: 'sepia',
                 freepikEffectFraming: 'close-up'
             }
