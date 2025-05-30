@@ -6,9 +6,9 @@ import { generateSocialMediaCaption, type GenerateSocialMediaCaptionInput } from
 import { generateBlogContent, type GenerateBlogContentInput } from '@/ai/flows/generate-blog-content';
 import { generateAdCampaign, type GenerateAdCampaignInput, type GenerateAdCampaignOutput } from '@/ai/flows/generate-ad-campaign';
 import { extractBrandInfoFromUrl, type ExtractBrandInfoFromUrlInput, type ExtractBrandInfoFromUrlOutput } from '@/ai/flows/extract-brand-info-from-url-flow';
-import { describeImage, type DescribeImageInput, type DescribeImageOutput } from '@/ai/flows/describe-image-flow';
+import { describeImage, type DescribeImageInput, type DescribeImageOutput } from '@/ai/flows/describe-image-flow'; // Import describeImage
 import { generateBlogOutline, type GenerateBlogOutlineInput, type GenerateBlogOutlineOutput } from '@/ai/flows/generate-blog-outline-flow';
-import { generateBrandLogo, type GenerateBrandLogoInput, type GenerateBrandLogoOutput } from '@/ai/flows/generate-brand-logo-flow'; // Added
+import { generateBrandLogo, type GenerateBrandLogoInput, type GenerateBrandLogoOutput } from '@/ai/flows/generate-brand-logo-flow';
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -34,7 +34,7 @@ export async function handleGenerateImagesAction(
     const seed = seedStr && !isNaN(parseInt(seedStr, 10)) ? parseInt(seedStr, 10) : undefined;
     
     let finalizedTextPromptValue = formData.get("finalizedTextPrompt") as string | undefined | null;
-     if (finalizedTextPromptValue === "" || finalizedTextPromptValue === null) { 
+    if (finalizedTextPromptValue === "" || finalizedTextPromptValue === null) { 
       finalizedTextPromptValue = undefined;
     }
 
@@ -49,18 +49,36 @@ export async function handleGenerateImagesAction(
             .map(color => ({ color, weight: 0.5 }));
         if (freepikStylingColors.length === 0) freepikStylingColors = undefined; 
     }
+    
+    const exampleImageUrl = formData.get("exampleImage") as string | undefined;
+    const chosenProvider = (formData.get("provider") as GenerateImagesInput['provider']) || process.env.IMAGE_GENERATION_PROVIDER || 'GEMINI';
+    let exampleImageDescription: string | undefined = undefined;
+
+    if (chosenProvider === 'FREEPIK' && exampleImageUrl && exampleImageUrl.trim() !== "") {
+      try {
+        console.log(`Attempting to describe example image for Freepik prompt: ${exampleImageUrl}`);
+        const descriptionOutput = await describeImage({ imageDataUri: exampleImageUrl });
+        exampleImageDescription = descriptionOutput.description;
+        console.log(`Successfully described example image: ${exampleImageDescription}`);
+      } catch (descError: any) {
+        console.warn(`Could not generate description for example image: ${descError.message}. Proceeding without it.`);
+        // Optionally, you could return an error or partial error here if description is critical
+      }
+    }
+
 
     const input: GenerateImagesInput = {
       provider: formData.get("provider") as GenerateImagesInput['provider'] || undefined,
       brandDescription: formData.get("brandDescription") as string,
       industry: formData.get("industry") as string | undefined,
       imageStyle: formData.get("imageStyle") as string, 
-      exampleImage: formData.get("exampleImage") as string | undefined,
+      exampleImage: exampleImageUrl === "" ? undefined : exampleImageUrl,
+      exampleImageDescription: exampleImageDescription, // Pass the description
       aspectRatio: formData.get("aspectRatio") as string | undefined,
       numberOfImages: numberOfImages,
       negativePrompt: negativePromptValue === null || negativePromptValue === "" ? undefined : negativePromptValue,
       seed: seed,
-      finalizedTextPrompt: finalizedTextPromptValue === "" || finalizedTextPromptValue === null ? undefined : finalizedTextPromptValue,
+      finalizedTextPrompt: finalizedTextPromptValue,
       freepikStylingColors: freepikStylingColors,
       freepikEffectColor: (formData.get("freepikEffectColor") as string === "none" ? undefined : formData.get("freepikEffectColor") as string | undefined) || undefined,
       freepikEffectLightning: (formData.get("freepikEffectLightning") as string === "none" ? undefined : formData.get("freepikEffectLightning") as string | undefined) || undefined,
@@ -68,10 +86,11 @@ export async function handleGenerateImagesAction(
     };
     
     if (input.provider === "" || input.provider === undefined) delete input.provider;
+
     if (!input.finalizedTextPrompt && (!input.brandDescription || !input.imageStyle)) {
       return { error: "Brand description and image style are required if not providing a finalized text prompt." };
     }
-    if (input.exampleImage === "") delete input.exampleImage;
+    // exampleImage can be undefined, so no explicit delete if empty
     if (input.aspectRatio === "" || input.aspectRatio === undefined) delete input.aspectRatio;
     if (input.industry === "" || input.industry === undefined) delete input.industry;
     
@@ -91,7 +110,7 @@ export async function handleDescribeImageAction(
   try {
     const imageDataUri = formData.get("imageDataUri") as string;
     if (!imageDataUri) {
-      return { error: "Image data URI is required to generate a description." };
+      return { error: "Image data URI or URL is required to generate a description." };
     }
     const input: DescribeImageInput = { imageDataUri };
     const result = await describeImage(input);
@@ -304,6 +323,7 @@ export async function handleSaveGeneratedImagesAction(
         continue;
       }
       try {
+        console.log(`Processing image for saving. Data URI starts with: ${image.dataUri.substring(0,30)}...`);
         let imageUrlToSave = image.dataUri;
         if (image.dataUri.startsWith('data:image')) { 
             const fileExtensionMatch = image.dataUri.match(/^data:image\/([a-zA-Z+]+);base64,/);
@@ -318,7 +338,7 @@ export async function handleSaveGeneratedImagesAction(
             console.log(`handleSaveGeneratedImagesAction: Obtained download URL: ${imageUrlToSave}`);
         } else if (image.dataUri.startsWith('image_url:')) {
              imageUrlToSave = image.dataUri.substring(10); 
-             console.log(`handleSaveGeneratedImagesAction: Image is a direct URL (from Freepik GET likely), not uploading to storage: ${imageUrlToSave}`);
+             console.log(`handleSaveGeneratedImagesAction: Image is a direct URL (likely from Freepik GET), not uploading to storage: ${imageUrlToSave}`);
         } else if (image.dataUri.startsWith('https://')) {
              console.log(`handleSaveGeneratedImagesAction: Image is already an HTTPS URL, not uploading to storage: ${imageUrlToSave}`);
         }
@@ -382,6 +402,7 @@ async function _checkFreepikTaskStatus(taskId: string): Promise<{ status: string
 
     if (responseData.data && responseData.data.status) {
       if (responseData.data.status === 'COMPLETED' && responseData.data.generated && responseData.data.generated.length > 0) {
+        // Assuming responseData.data.generated is an array of image URLs
         return { status: responseData.data.status, images: responseData.data.generated };
       }
       return { status: responseData.data.status, images: null };
@@ -415,7 +436,8 @@ export async function handleCheckFreepikTaskStatusAction(
     }
   } catch (e: any) {
     console.error(`Error in handleCheckFreepikTaskStatusAction for task ${taskId}:`, JSON.stringify(e, Object.getOwnPropertyNames(e)));
-    return { error: `Failed to check Freepik task status for ${taskId.substring(0,8)}...: ${e.message || 'Unknown error'}.`, taskId };
+    const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+    return { error: `Failed to check Freepik task status for ${taskId.substring(0,8)}...: ${errorMessage}.`, taskId };
   }
 }
 
@@ -445,3 +467,5 @@ export async function handleGenerateBrandLogoAction(
     return { error: `Failed to generate brand logo: ${e.message || "Unknown error. Check server logs."}` };
   }
 }
+
+    
