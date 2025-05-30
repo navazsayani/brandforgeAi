@@ -160,9 +160,11 @@ async function _generateImageWithFreepik(params: {
   }
   
   let finalFreepikStyle = params.imageStyle;
-  if (!freepikValidStyles.includes(params.imageStyle.toLowerCase())) {
-    console.warn(`Provided imageStyle "${params.imageStyle}" is not a specific Freepik style enum. Defaulting to "photo" for Freepik. Original style notes (if any) are still in the main text prompt.`);
+  if (!freepikValidStyles.includes(params.imageStyle.toLowerCase().split(/[,.]\s*/)[0])) { // Check first part of style string
+    console.warn(`Provided imageStyle "${params.imageStyle}" does not start with a specific Freepik style enum. Defaulting to "photo" for Freepik. Original style notes are still in the main text prompt.`);
     finalFreepikStyle = "photo"; 
+  } else {
+    finalFreepikStyle = params.imageStyle.toLowerCase().split(/[,.]\s*/)[0]; // Use the matched Freepik style
   }
 
 
@@ -172,8 +174,12 @@ async function _generateImageWithFreepik(params: {
     image: { size: freepikSize },
     guidance_scale: 1.0, 
     filter_nsfw: true,
-    styling: { style: finalFreepikStyle }, 
   };
+  
+  if (finalFreepikStyle) {
+    requestBody.styling = { style: finalFreepikStyle };
+  }
+
 
   if (params.negativePrompt) requestBody.negative_prompt = params.negativePrompt;
   if (params.seed !== undefined) requestBody.seed = params.seed;
@@ -189,7 +195,7 @@ async function _generateImageWithFreepik(params: {
   if (params.freepikEffectFraming && params.freepikEffectFraming !== "none") effects.framing = params.freepikEffectFraming;
 
   if (Object.keys(effects).length > 0) {
-    if (!requestBody.styling) requestBody.styling = {};
+    if (!requestBody.styling) requestBody.styling = {}; // Ensure styling object exists
     requestBody.styling.effects = effects;
   }
 
@@ -212,10 +218,13 @@ async function _generateImageWithFreepik(params: {
       throw new Error(`Freepik API error: ${response.status} - ${responseData.title || responseData.detail || JSON.stringify(responseData)}`);
     }
 
-    if (responseData.data && responseData.data.length > 0 && responseData.data[0].url) {
-      return responseData.data[0].url;
+    if (responseData.data && responseData.data.length > 0 && responseData.data[0].base64) {
+      const base64Data = responseData.data[0].base64;
+      // Freepik doesn't specify MIME type in this response, assume PNG for now.
+      // In a real scenario, you might need to infer or have a default.
+      return `data:image/png;base64,${base64Data}`; 
     } else {
-      throw new Error("Freepik API did not return image URL in expected format.");
+      throw new Error("Freepik API did not return image base64 data in expected format.");
     }
   } catch (error: any) {
     console.error("Error calling Freepik API:", error);
@@ -253,40 +262,49 @@ const generateImagesFlow = ai.defineFlow(
     } = input;
 
     const generatedImageUrls: string[] = [];
-    const chosenProvider = provider || process.env.IMAGE_GENERATION_PROVIDER || 'GEMINI';
+    const imageGenerationProvider = provider || process.env.IMAGE_GENERATION_PROVIDER || 'GEMINI';
     let actualPromptUsedForFirstImage = "";
     const compositionGuidance = "IMPORTANT COMPOSITION RULE: When depicting human figures as the primary subject, the image *must* be well-composed. Avoid awkward or unintentional cropping of faces or key body parts. Ensure the figure is presented naturally and fully within the frame, unless the prompt *explicitly* requests a specific framing like 'close-up', 'headshot', 'upper body shot', or an artistic crop. Prioritize showing the entire subject if it's a person.";
+
 
     for (let i = 0; i < numberOfImages; i++) {
         let textPromptContent = "";
         const industryContext = industry ? ` The brand operates in the ${industry} industry.` : "";
         
         if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
-            console.log(`Using finalized text prompt for image ${i+1}: "${finalizedTextPrompt.substring(0,100)}..." (Provider: ${chosenProvider})`);
+            console.log(`Using finalized text prompt for image ${i+1}: "${finalizedTextPrompt.substring(0,100)}..." (Provider: ${imageGenerationProvider})`);
             textPromptContent = finalizedTextPrompt;
             
-            if (chosenProvider.toUpperCase() === 'GEMINI') { // Gemini-specific additions to finalized prompt
+            if (imageGenerationProvider.toUpperCase() === 'GEMINI') {
                 if (aspectRatio && !finalizedTextPrompt.toLowerCase().includes("aspect ratio")) {
                   textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
                 }
                 if (seed !== undefined && !finalizedTextPrompt.toLowerCase().includes("seed:")) {
                   textPromptContent += `\n\nUse seed: ${seed}.`;
                 }
-                 if (!finalizedTextPrompt.toLowerCase().includes("crop") && !finalizedTextPrompt.toLowerCase().includes("close-up") && !finalizedTextPrompt.toLowerCase().includes("headshot") && !finalizedTextPrompt.toLowerCase().includes("portrait") && !finalizedTextPrompt.toLowerCase().includes("figure framing") && !finalizedTextPrompt.toLowerCase().includes("composition")) {
+                if (
+                    !finalizedTextPrompt.toLowerCase().includes("human figure") &&
+                    !finalizedTextPrompt.toLowerCase().includes("crop") &&
+                    !finalizedTextPrompt.toLowerCase().includes("close-up") &&
+                    !finalizedTextPrompt.toLowerCase().includes("headshot") &&
+                    !finalizedTextPrompt.toLowerCase().includes("portrait") &&
+                    !finalizedTextPrompt.toLowerCase().includes("figure framing") &&
+                    !finalizedTextPrompt.toLowerCase().includes("composition")
+                ) {
                     textPromptContent += `\n\n${compositionGuidance}`;
                 }
             }
         } else {
-            console.log(`Constructing prompt for image ${i+1} as no finalized prompt was provided or it was empty. (Provider: ${chosenProvider})`);
+            console.log(`Constructing prompt for image ${i+1} as no finalized prompt was provided or it was empty. (Provider: ${imageGenerationProvider})`);
             if (!brandDescription || !imageStyle) {
                 throw new Error("Brand description and image style are required if not providing/using a finalized text prompt.");
             }
             
-            if (exampleImage) {
-                textPromptContent = `
-Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
+            const baseTextPrompt = `Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.\n\n`;
+            let coreInstructions = "";
 
-The provided example image (sent first) serves ONE primary purpose: to identify the *category* of the item depicted (e.g., 'a handbag', 'a t-shirt', 'a piece of furniture', 'a pair of shoes').
+            if (exampleImage) {
+                coreInstructions = `The provided example image (sent first) serves ONE primary purpose: to identify the *category* of the item depicted (e.g., 'a handbag', 'a t-shirt', 'a piece of furniture', 'a pair of shoes').
 
 Your task is to generate a *completely new item* belonging to this *same category*.
 
@@ -301,37 +319,33 @@ The *design, appearance, theme, specific characteristics, and unique elements* o
 **Example of Interaction:**
 If the example image is a 'simple blue cotton t-shirt' (category: t-shirt), the Brand Description is 'luxury brand, minimalist ethos, inspired by serene nature, prefers organic materials', and the Desired Artistic Style is 'high-fashion product shot, muted earthy tones'.
 You should generate an image of a *luxury t-shirt made from organic-looking material, in muted earthy tones (e.g., moss green, stone grey, soft beige), shot in a high-fashion product style*. It should evoke serenity and minimalism. It should NOT be the original blue cotton t-shirt, nor should it default to a generic "luxury" color scheme like black and gold unless those colors are specifically requested or strongly implied by the *combination* of inputs.
-
-${compositionGuidance}
-`.trim();
+`;
             } else { // No example image
-                textPromptContent = `
-Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
-The image should be based on the following concept: "${brandDescription}".${industryContext}
+                coreInstructions = `The image should be based on the following concept: "${brandDescription}".${industryContext}
 The desired artistic style for this new image is: "${imageStyle}". If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic.
 **Important Note on Color and Style**: Strive for visual variety that aligns with the brand description and artistic style. Avoid defaulting to a narrow or stereotypical color palette unless the inputs strongly and explicitly demand it.
-
-${compositionGuidance}
-`.trim();
+`;
             }
+            textPromptContent = `${baseTextPrompt}${coreInstructions}\n${compositionGuidance}`;
+
 
             if (negativePrompt) {
                 textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
             }
             
-            if (chosenProvider.toUpperCase() !== 'FREEPIK' || (chosenProvider.toUpperCase() === 'FREEPIK' && !aspectRatio) ) { 
+            if (imageGenerationProvider.toUpperCase() !== 'FREEPIK' || (imageGenerationProvider.toUpperCase() === 'FREEPIK' && !aspectRatio) ) { 
                 if (aspectRatio) {
                   textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally.`;
                 }
             }
-             if (chosenProvider.toUpperCase() !== 'FREEPIK' || (chosenProvider.toUpperCase() === 'FREEPIK' && seed === undefined) ) { 
+             if (imageGenerationProvider.toUpperCase() !== 'FREEPIK' || (imageGenerationProvider.toUpperCase() === 'FREEPIK' && seed === undefined) ) { 
                 if (seed !== undefined) {
                   textPromptContent += `\n\nUse seed: ${seed}.`;
                 }
             }
         }
         
-        if (numberOfImages > 1 && chosenProvider.toUpperCase() === 'GEMINI' && (!finalizedTextPrompt || (!finalizedTextPrompt.toLowerCase().includes("batch generation") && !finalizedTextPrompt.toLowerCase().includes(`image ${i+1}`)))) {
+        if (numberOfImages > 1 && (!finalizedTextPrompt || (!finalizedTextPrompt.toLowerCase().includes("batch generation") && !finalizedTextPrompt.toLowerCase().includes(`image ${i+1}`)))) {
              textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
         }
 
@@ -339,18 +353,18 @@ ${compositionGuidance}
             actualPromptUsedForFirstImage = textPromptContent;
         }
         
-        console.log(`Text component of prompt for image ${i+1}/${numberOfImages} (Provider: ${chosenProvider}): "${textPromptContent.substring(0,200)}..."`);
+        console.log(`Text component of prompt for image ${i+1}/${numberOfImages} (Provider: ${imageGenerationProvider}): "${textPromptContent.substring(0,200)}..."`);
 
         try {
             let imageUrl = "";
             const finalPromptPartsForGemini: ({text: string} | {media: {url: string}})[] = [];
             
-            if (exampleImage && chosenProvider.toUpperCase() === 'GEMINI') { 
+            if (exampleImage && imageGenerationProvider.toUpperCase() === 'GEMINI') { 
                 finalPromptPartsForGemini.push({ media: { url: exampleImage } });
             }
             finalPromptPartsForGemini.push({ text: textPromptContent }); 
 
-            switch (chosenProvider.toUpperCase()) {
+            switch (imageGenerationProvider.toUpperCase()) {
                 case 'GEMINI':
                     imageUrl = await _generateImageWithGemini({
                         aiInstance: ai,
@@ -366,7 +380,7 @@ ${compositionGuidance}
                 case 'FREEPIK':
                     imageUrl = await _generateImageWithFreepik({
                         textPrompt: textPromptContent,
-                        imageStyle: imageStyle, 
+                        imageStyle: imageStyle, // This is the combined preset + custom notes
                         negativePrompt: negativePrompt,
                         seed: seed,
                         aspectRatio: aspectRatio,
@@ -377,13 +391,13 @@ ${compositionGuidance}
                     });
                     break;
                 default:
-                    throw new Error(`Unsupported image generation provider: ${chosenProvider}`);
+                    throw new Error(`Unsupported image generation provider: ${imageGenerationProvider}`);
             }
             generatedImageUrls.push(imageUrl);
         } catch (error: any) {
-             console.error(`Error during generation of image ${i+1}/${numberOfImages} with provider ${chosenProvider}. Full error:`, JSON.stringify(error, Object.getOwnPropertyNames(error)));
+             console.error(`Error during generation of image ${i+1}/${numberOfImages} with provider ${imageGenerationProvider}. Full error:`, JSON.stringify(error, Object.getOwnPropertyNames(error)));
              const failingPromptSnippet = textPromptContent.substring(0, 200) + (textPromptContent.length > 200 ? "..." : "");
-             throw new Error(`Failed to generate image ${i+1} of ${numberOfImages}. Error from provider ${chosenProvider}: ${error.message || 'Unknown error'}. Prompt snippet: "${failingPromptSnippet}".`);
+             throw new Error(`Failed to generate image ${i+1} of ${numberOfImages}. Error from provider ${imageGenerationProvider}: ${error.message || 'Unknown error'}. Prompt snippet: "${failingPromptSnippet}".`);
         }
     }
 
@@ -391,6 +405,6 @@ ${compositionGuidance}
         throw new Error("AI failed to generate any images for the batch.");
     }
 
-    return {generatedImages: generatedImageUrls, promptUsed: actualPromptUsedForFirstImage, providerUsed: chosenProvider };
+    return {generatedImages: generatedImageUrls, promptUsed: actualPromptUsedForFirstImage, providerUsed: imageGenerationProvider };
   }
 );
