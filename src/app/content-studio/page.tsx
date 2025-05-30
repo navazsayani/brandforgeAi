@@ -42,40 +42,38 @@ const imageGenerationProviders = [
 
 const imageStylePresets = [
   { value: "photorealistic", label: "Photorealistic (General)" },
-  { value: "photo", label: "Photo (Freepik)" },
-  { value: "digital-art", label: "Digital Art (Freepik)" },
-  { value: "3d", label: "3D (Freepik)" },
-  { value: "painting", label: "Painting (Freepik)" },
+  { value: "photo", label: "Photo (Freepik Specific)" },
+  { value: "digital-art", label: "Digital Art (Freepik Specific)" },
+  { value: "3d", label: "3D (Freepik Specific)" },
+  { value: "painting", label: "Painting (Freepik Specific)" },
   { value: "minimalist", label: "Minimalist (General)" },
   { value: "abstract", label: "Abstract (General)" },
-  { value: "vintage", label: "Vintage / Retro (Freepik)" },
-  { value: "surreal", label: "Surreal (Freepik)" },
-  { value: "fantasy", label: "Fantasy Art (Freepik)" },
-  { value: "low-poly", label: "Low Poly (Freepik)" },
-  { value: "pixel-art", label: "Pixel Art (Freepik)" },
-  { value: "anime", label: "Anime / Manga (Freepik)" },
-  { value: "cyberpunk", label: "Cyberpunk (Freepik)" },
-  { value: "comic", label: "Comic (Freepik)" },
-  { value: "cartoon", label: "Cartoon (General/Freepik)" },
-  { value: "vector", label: "Vector (Freepik)" },
-  { value: "studio-shot", label: "Studio Shot (Freepik)"},
-  { value: "dark", label: "Dark (Freepik)"},
-  { value: "sketch", label: "Sketch (Freepik)"},
-  { value: "mockup", label: "Mockup (Freepik)"},
-  { value: "2000s-pone", label: "2000s Pone (Freepik)"},
-  { value: "70s-vibe", label: "70s Vibe (Freepik)"},
-  { value: "watercolor", label: "Watercolor (Freepik)"},
-  { value: "art-nouveau", label: "Art Nouveau (Freepik)"},
-  { value: "origami", label: "Origami (Freepik)"},
-  { value: "traditional-japan", label: "Traditional Japan (Freepik)"},
+  { value: "vintage", label: "Vintage / Retro (Freepik Specific)" },
+  { value: "surreal", label: "Surreal (Freepik Specific)" },
+  { value: "fantasy", label: "Fantasy Art (Freepik Specific)" },
+  { value: "low-poly", label: "Low Poly (Freepik Specific)" },
+  { value: "pixel-art", label: "Pixel Art (Freepik Specific)" },
+  { value: "anime", label: "Anime / Manga (Freepik Specific)" },
+  { value: "cyberpunk", label: "Cyberpunk (Freepik Specific)" },
+  { value: "comic", label: "Comic (Freepik Specific)" },
+  { value: "cartoon", label: "Cartoon (General/Freepik Specific)" },
+  { value: "vector", label: "Vector (Freepik Specific)" },
+  { value: "studio-shot", label: "Studio Shot (Freepik Specific)"},
+  { value: "dark", label: "Dark (Freepik Specific)"},
+  { value: "sketch", label: "Sketch (Freepik Specific)"},
+  { value: "mockup", label: "Mockup (Freepik Specific)"},
+  { value: "2000s-pone", label: "2000s Pone (Freepik Specific)"},
+  { value: "70s-vibe", label: "70s Vibe (Freepik Specific)"},
+  { value: "watercolor", label: "Watercolor (Freepik Specific)"},
+  { value: "art-nouveau", label: "Art Nouveau (Freepik Specific)"},
+  { value: "origami", label: "Origami (Freepik Specific)"},
+  { value: "traditional-japan", label: "Traditional Japan (Freepik Specific)"},
 ];
 
-// Freepik Imagen3 specific options
 const freepikImagen3EffectColors = ["none", "b&w", "pastel", "sepia", "dramatic", "vibrant", "orange&teal", "film-filter", "split", "electric", "pastel-pink", "gold-glow", "autumn", "muted-green", "deep-teal", "duotone", "terracotta&teal", "red&blue", "cold-neon", "burgundy&blue"];
 const freepikImagen3EffectLightnings = ["none", "studio", "warm", "cinematic", "volumetric", "golden-hour", "long-exposure", "cold", "iridescent", "dramatic", "hardlight", "redscale", "indoor-light"];
 const freepikImagen3EffectFramings = ["none", "portrait", "macro", "panoramic", "aerial-view", "close-up", "cinematic", "high-angle", "low-angle", "symmetry", "fish-eye", "first-person"];
 
-// Aspect ratios for different providers
 const generalAspectRatios = [
   { value: "1:1", label: "Square (1:1)" },
   { value: "4:5", label: "Portrait (4:5)" },
@@ -113,7 +111,7 @@ export default function ContentStudioPage() {
   const [blogOutlineState, blogOutlineAction] = useActionState(handleGenerateBlogOutlineAction, initialBlogOutlineState);
   const [saveImagesState, saveImagesAction] = useActionState(handleSaveGeneratedImagesAction, initialSaveImagesState);
   const [freepikTaskStatusState, freepikTaskStatusAction] = useActionState(handleCheckFreepikTaskStatusAction, initialFreepikTaskStatusState);
-  
+
   const [lastSuccessfulGeneratedImageUrls, setLastSuccessfulGeneratedImageUrls] = useState<string[]>([]);
   const [lastUsedImageGenPrompt, setLastUsedImageGenPrompt] = useState<string | null>(null);
   const [lastUsedImageProvider, setLastUsedImageProvider] = useState<string | null>(null);
@@ -121,7 +119,7 @@ export default function ContentStudioPage() {
   const [generatedSocialPost, setGeneratedSocialPost] = useState<{caption: string, hashtags: string, imageSrc: string | null} | null>(null);
   const [generatedBlogPost, setGeneratedBlogPost] = useState<{title: string, content: string, tags: string} | null>(null);
   const [generatedBlogOutline, setGeneratedBlogOutline] = useState<string>("");
-  
+
   const [useImageForSocialPost, setUseImageForSocialPost] = useState<boolean>(false);
   const [socialImageChoice, setSocialImageChoice] = useState<SocialImageChoice>(null);
   const [socialToneValue, setSocialToneValue] = useState<string>("professional");
@@ -129,12 +127,12 @@ export default function ContentStudioPage() {
 
   const [blogPlatformValue, setBlogPlatformValue] = useState<"Medium" | "Other">("Medium");
   const [selectedBlogTone, setSelectedBlogTone] = useState<string>(blogTones[0].value);
-  
+
   const [numberOfImagesToGenerate, setNumberOfImagesToGenerate] = useState<string>("1");
   const [activeTab, setActiveTab] = useState<string>("image");
   const [isGeneratingDescription, setIsGeneratingDescription] = useState<boolean>(false);
   const [isGeneratingOutline, setIsGeneratingOutline] = useState<boolean>(false);
-  
+
   const [selectedProfileImageIndexForGen, setSelectedProfileImageIndexForGen] = useState<number | null>(null);
   const [selectedProfileImageIndexForSocial, setSelectedProfileImageIndexForSocial] = useState<number | null>(null);
 
@@ -146,10 +144,10 @@ export default function ContentStudioPage() {
   const [customStyleNotesInput, setCustomStyleNotesInput] = useState<string>("");
   const [imageGenNegativePrompt, setImageGenNegativePrompt] = useState<string>("");
   const [imageGenSeed, setImageGenSeed] = useState<string>("");
-  
+
   const [currentAspectRatioOptions, setCurrentAspectRatioOptions] = useState(generalAspectRatios);
   const [selectedAspectRatio, setSelectedAspectRatio] = useState<string>(generalAspectRatios[0].value);
-  
+
   const [freepikDominantColorsInput, setFreepikDominantColorsInput] = useState<string>("");
   const [freepikEffectColor, setFreepikEffectColor] = useState<string>("none");
   const [freepikEffectLightning, setFreepikEffectLightning] = useState<string>("none");
@@ -160,13 +158,14 @@ export default function ContentStudioPage() {
   const [formSnapshot, setFormSnapshot] = useState<Partial<GenerateImagesInput> & { provider?: string } | null>(null);
 
   const [checkingTaskId, setCheckingTaskId] = useState<string | null>(null);
-  
+  const [isSavingImages, setIsSavingImages] = useState(false);
+
+
   useEffect(() => {
     if (brandData) {
         setImageGenBrandDescription(brandData.brandDescription || "");
         setImageGenIndustry(brandData.industry || "");
-        // selectedImageStylePreset is a generation-time choice, defaults to first in list.
-        setCustomStyleNotesInput(brandData.imageStyleNotes || ""); 
+        setCustomStyleNotesInput(brandData.imageStyleNotes || "");
 
         if (brandData.exampleImages && brandData.exampleImages.length > 0) {
             if (selectedProfileImageIndexForGen === null) setSelectedProfileImageIndexForGen(0);
@@ -196,7 +195,7 @@ export default function ContentStudioPage() {
         setSelectedAspectRatio(generalAspectRatios[0].value);
       }
     }
-  }, [selectedImageProvider, selectedAspectRatio]); 
+  }, [selectedImageProvider, selectedAspectRatio]);
 
   useEffect(() => {
     if (imageState.data) {
@@ -204,33 +203,33 @@ export default function ContentStudioPage() {
       setLastSuccessfulGeneratedImageUrls(newImageUrls);
       setLastUsedImageGenPrompt(imageState.data.promptUsed);
       setLastUsedImageProvider(imageState.data.providerUsed);
-      
+
       const displayableImages = newImageUrls.filter(url => url && (url.startsWith('data:') || url.startsWith('image_url:')));
       if (displayableImages.length > 0) {
-        displayableImages.forEach(url => { 
+        displayableImages.forEach(url => {
             const displayUrl = url.startsWith('image_url:') ? url.substring(10) : url;
             const newImage: GeneratedImage = {
-                id: `${new Date().toISOString()}-${Math.random().toString(36).substring(2, 9)}`, 
-                src: displayUrl, 
-                prompt: imageState.data.promptUsed || "", 
+                id: `${new Date().toISOString()}-${Math.random().toString(36).substring(2, 9)}`,
+                src: displayUrl,
+                prompt: imageState.data.promptUsed || "",
                 style: selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")
             };
-            addGeneratedImage(newImage); 
+            addGeneratedImage(newImage);
         });
          toast({ title: "Success", description: `${displayableImages.length} image(s) processed using ${imageState.data.providerUsed || 'default provider'}.` });
       } else if (newImageUrls.some(url => url.startsWith('task_id:'))) {
         toast({ title: "Freepik Task Started", description: "Freepik image generation task started. Use 'Check Status' to retrieve images." });
-      } else if (imageState.error) { 
+      } else if (imageState.error) {
         toast({ title: "Error generating images", description: imageState.error, variant: "destructive" });
       } else if (!newImageUrls || newImageUrls.length === 0) {
         toast({ title: "No Images/Tasks Generated", description: `Received empty list from ${imageState.data.providerUsed || 'default provider'}.`, variant: "default" });
       }
-      setIsPreviewingPrompt(false); 
+      setIsPreviewingPrompt(false);
       setFormSnapshot(null);
     }
-    if (imageState.error && !imageState.data) { 
+    if (imageState.error && !imageState.data) {
       toast({ title: "Error generating images", description: imageState.error, variant: "destructive" });
-      setIsPreviewingPrompt(false); 
+      setIsPreviewingPrompt(false);
       setFormSnapshot(null);
     }
   }, [imageState, toast, addGeneratedImage, selectedImageStylePreset, customStyleNotesInput]);
@@ -241,8 +240,8 @@ export default function ContentStudioPage() {
       setGeneratedSocialPost({ caption: socialData.caption, hashtags: socialData.hashtags, imageSrc: socialData.imageSrc });
        const newPost: GeneratedSocialMediaPost = {
         id: new Date().toISOString(),
-        platform: 'Instagram', 
-        imageSrc: socialData.imageSrc || null, 
+        platform: 'Instagram',
+        imageSrc: socialData.imageSrc || null,
         imageDescription: (document.getElementById('socialImageDescription') as HTMLTextAreaElement)?.value || "",
         caption: socialData.caption,
         hashtags: socialData.hashtags,
@@ -297,6 +296,7 @@ export default function ContentStudioPage() {
   }, [blogOutlineState, toast]);
 
   useEffect(() => {
+    setIsSavingImages(false); // Reset saving state on action completion
     if (saveImagesState.message && !saveImagesState.error) {
       toast({ title: "Image Library", description: saveImagesState.message });
     }
@@ -305,11 +305,12 @@ export default function ContentStudioPage() {
     }
   }, [saveImagesState, toast]);
 
+
   useEffect(() => {
     if (freepikTaskStatusState.data) {
       const { status, images, taskId } = freepikTaskStatusState.data;
       if (status === 'COMPLETED' && images && images.length > 0) {
-        const newImageUrls = images.map(url => `image_url:${url}`); 
+        const newImageUrls = images.map(url => `image_url:${url}`);
         setLastSuccessfulGeneratedImageUrls(prevUrls => {
             const taskIdentifier = `task_id:${taskId}`;
             const existingTaskIndex = prevUrls.findIndex(url => url === taskIdentifier);
@@ -327,7 +328,7 @@ export default function ContentStudioPage() {
         toast({ title: `Task ${taskId.substring(0,8)}... Still In Progress`, description: "Please check again in a few moments." });
       } else if (status === 'FAILED') {
         toast({ title: `Task ${taskId.substring(0,8)}... Failed`, description: "Freepik failed to generate images for this task.", variant: "destructive" });
-         setLastSuccessfulGeneratedImageUrls(prevUrls => prevUrls.filter(url => url !== `task_id:${taskId}`)); 
+         setLastSuccessfulGeneratedImageUrls(prevUrls => prevUrls.filter(url => url !== `task_id:${taskId}`));
       } else {
          toast({ title: `Task ${taskId.substring(0,8)}... Status: ${status}`, description: "Could not retrieve images or task has an unexpected status." });
       }
@@ -349,16 +350,16 @@ export default function ContentStudioPage() {
     setLastSuccessfulGeneratedImageUrls([]);
     setLastUsedImageGenPrompt(null);
     setLastUsedImageProvider(null);
-    setFormSnapshot(null); 
-    setIsPreviewingPrompt(false); 
+    setFormSnapshot(null);
+    setIsPreviewingPrompt(false);
     toast({title: "Cleared", description: "Generated images and prompt cleared."});
   };
 
   const handleSaveAllGeneratedImages = () => {
     const saveableImages = lastSuccessfulGeneratedImageUrls
-        .filter(url => url && (url.startsWith('data:') || url.startsWith('image_url:'))) 
+        .filter(url => url && (url.startsWith('data:') || url.startsWith('image_url:')))
         .map(url => ({
-            dataUri: url, 
+            dataUri: url,
             prompt: lastUsedImageGenPrompt || "N/A",
             style: (formSnapshot?.imageStyle || selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")),
         }));
@@ -367,21 +368,24 @@ export default function ContentStudioPage() {
         toast({ title: "No new images to save", description: "No valid generated images are available for saving.", variant: "default"});
         return;
     }
-    
+
+    setIsSavingImages(true);
     const formData = new FormData();
     formData.append('imagesToSaveJson', JSON.stringify(saveableImages));
     formData.append('brandProfileDocId', 'defaultBrandProfile');
-    
-    // This will be handled by the SubmitButton's formAction
+
+    startTransition(() => {
+        saveImagesAction(formData);
+    });
   };
 
   const handleUseGeneratedImageForSocial = () => {
     const firstDisplayableImage = lastSuccessfulGeneratedImageUrls.find(url => url?.startsWith('data:') || url?.startsWith('image_url:'));
     if (firstDisplayableImage) {
       setUseImageForSocialPost(true);
-      setSocialImageChoice('generated'); 
-      setSelectedProfileImageIndexForSocial(null); 
-      setActiveTab('social'); 
+      setSocialImageChoice('generated');
+      setSelectedProfileImageIndexForSocial(null);
+      setActiveTab('social');
       toast({title: "Image Selected", description: "First available generated image selected for social post."});
     } else {
       toast({title: "No Image", description: "Please generate a displayable image first (e.g. Gemini, or completed Freepik task).", variant: "destructive"});
@@ -392,7 +396,7 @@ export default function ContentStudioPage() {
 
   const currentSocialImagePreviewUrl = useImageForSocialPost
     ? (socialImageChoice === 'generated'
-        ? (lastSuccessfulGeneratedImageUrls.find(url => url?.startsWith('data:') || url?.startsWith('image_url:'))?.replace(/^image_url:/, '') || null) 
+        ? (lastSuccessfulGeneratedImageUrls.find(url => url?.startsWith('data:') || url?.startsWith('image_url:'))?.replace(/^image_url:/, '') || null)
         : (socialImageChoice === 'profile'
             ? (brandData?.exampleImages && selectedProfileImageIndexForSocial !== null && brandData.exampleImages[selectedProfileImageIndexForSocial]) || null
             : null))
@@ -405,16 +409,17 @@ export default function ContentStudioPage() {
     }
     setIsGeneratingDescription(true);
     const formData = new FormData();
-    formData.append("imageDataUri", currentSocialImagePreviewUrl); 
+    formData.append("imageDataUri", currentSocialImagePreviewUrl);
     startTransition(() => {
         describeImageAction(formData);
     });
   };
-  
+
   const socialSubmitDisabled = socialState.data?.caption ? false : (useImageForSocialPost && !currentSocialImagePreviewUrl);
 
   const handlePreviewPromptClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
+
     const combinedStyle = selectedImageStylePreset + (customStyleNotesInput ? `. ${customStyleNotesInput}` : "");
     const exampleImg = currentExampleImageForGen;
     const aspect = selectedAspectRatio;
@@ -424,9 +429,9 @@ export default function ContentStudioPage() {
     const negPrompt = imageGenNegativePrompt;
     const industryCtx = imageGenIndustry ? ` The brand operates in the ${imageGenIndustry} industry.` : "";
     const compositionGuidance = "IMPORTANT COMPOSITION RULE: When depicting human figures as the primary subject, the image *must* be well-composed. Avoid awkward or unintentional cropping of faces or key body parts. Ensure the figure is presented naturally and fully within the frame, unless the prompt *explicitly* requests a specific framing like 'close-up', 'headshot', 'upper body shot', or an artistic crop. Prioritize showing the entire subject if it's a person.";
-    
+
     let textPromptContent = "";
-        
+
     if (selectedImageProvider === 'FREEPIK') {
         let baseFreepikPrompt = "";
         if (exampleImg) {
@@ -439,8 +444,7 @@ export default function ContentStudioPage() {
             textPromptContent += `\n\nAvoid: ${negPrompt}.`;
         }
         textPromptContent +=`\n\n${compositionGuidance}`;
-        // Aspect ratio, seed, and batch instructions are handled structurally for Freepik, so not added to textual preview.
-    } else { // Gemini or other providers that rely more on text
+    } else {
         if (exampleImg) {
             textPromptContent = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
@@ -461,7 +465,7 @@ The *design, appearance, theme, specific characteristics, and unique elements* o
 If the example image is a 'simple blue cotton t-shirt' (category: t-shirt), the Brand Description is 'luxury brand, minimalist ethos, inspired by serene nature, prefers organic materials', and the Desired Artistic Style is 'high-fashion product shot, muted earthy tones'.
 You should generate an image of a *luxury t-shirt made from organic-looking material, in muted earthy tones (e.g., moss green, stone grey, soft beige), shot in a high-fashion product style*. It should evoke serenity and minimalism. It should NOT be the original blue cotton t-shirt, nor should it default to a generic "luxury" color scheme like black and gold unless those colors are specifically requested or strongly implied by the *combination* of inputs.
 `.trim();
-        } else { 
+        } else {
             textPromptContent = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
 The image should be based on the following concept: "${imageGenBrandDescription}".${industryCtx}
@@ -469,7 +473,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
 **Important Note on Color and Style**: Strive for visual variety that aligns with the brand description and artistic style. Avoid defaulting to a narrow or stereotypical color palette unless the inputs strongly and explicitly demand it.
 `.trim();
         }
-        
+
         if (negPrompt) {
             textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negPrompt}.`;
         }
@@ -490,17 +494,16 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
           ) {
             textPromptContent += `\n\n${compositionGuidance}`;
         }
-        if (numImages > 1) { 
+        if (numImages > 1) {
             textPromptContent += `\n\nImportant for batch generation: You are generating image 1 of a set of ${numImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (1/${numImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
         }
     }
-    
-    setCurrentTextPromptForEditing(textPromptContent);
+
     setFormSnapshot({
         provider: selectedImageProvider,
         brandDescription: imageGenBrandDescription,
         industry: imageGenIndustry,
-        imageStyle: combinedStyle, 
+        imageStyle: combinedStyle,
         exampleImage: exampleImg === "" ? undefined : exampleImg,
         aspectRatio: aspect,
         numberOfImages: numImages,
@@ -511,83 +514,77 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
         freepikEffectLightning: freepikEffectLightning === "none" ? undefined : freepikEffectLightning,
         freepikEffectFraming: freepikEffectFraming === "none" ? undefined : freepikEffectFraming,
     });
+    setCurrentTextPromptForEditing(textPromptContent);
     setIsPreviewingPrompt(true);
   };
 
  const handleImageGenerationSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault(); 
+    event.preventDefault();
     startTransition(() => {
         const formData = new FormData();
-        
-        formData.append("finalizedTextPrompt", currentTextPromptForEditing || ""); 
-        
-        // Append all other necessary fields from formSnapshot or current state/brandData
+
+        formData.append("finalizedTextPrompt", currentTextPromptForEditing || "");
+
         const providerToUse = formSnapshot?.provider || selectedImageProvider;
         formData.append("provider", providerToUse);
         formData.append("brandDescription", formSnapshot?.brandDescription || imageGenBrandDescription || brandData?.brandDescription || "");
         formData.append("industry", formSnapshot?.industry || imageGenIndustry || brandData?.industry || "");
         formData.append("imageStyle", formSnapshot?.imageStyle || (selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")));
-        
+
         const exampleImgFromSnapshot = formSnapshot?.exampleImage;
         if (exampleImgFromSnapshot) formData.append("exampleImage", exampleImgFromSnapshot);
 
         formData.append("aspectRatio", formSnapshot?.aspectRatio || selectedAspectRatio);
         formData.append("numberOfImages", String(formSnapshot?.numberOfImages || parseInt(numberOfImagesToGenerate,10)));
-        
+
         const negPromptValue = formSnapshot?.negativePrompt || imageGenNegativePrompt;
         if (negPromptValue) formData.append("negativePrompt", negPromptValue);
 
         const seedValueNum = formSnapshot?.seed !== undefined ? formSnapshot.seed : (imageGenSeed && !isNaN(parseInt(imageGenSeed)) ? parseInt(imageGenSeed) : undefined);
-        if (seedValueNum !== undefined) { 
+        if (seedValueNum !== undefined) {
           formData.append("seed", String(seedValueNum));
         }
 
         if (providerToUse === 'FREEPIK') {
-            const fColorsInput = (formSnapshot?.freepikStylingColors?.map(c=>c.color).join(',')) || freepikDominantColorsInput;
+            const fColorsSnapshot = formSnapshot?.freepikStylingColors;
+            const fColorsInput = fColorsSnapshot ? fColorsSnapshot.map(c => c.color).join(',') : freepikDominantColorsInput;
             if (fColorsInput) formData.append("freepikDominantColorsInput", fColorsInput);
-            
+
             const fEffectColorValue = formSnapshot?.freepikEffectColor || freepikEffectColor;
             if (fEffectColorValue && fEffectColorValue !== "none") formData.append("freepikEffectColor", fEffectColorValue);
-            
+
             const fEffectLightningValue = formSnapshot?.freepikEffectLightning || freepikEffectLightning;
             if (fEffectLightningValue && fEffectLightningValue !== "none") formData.append("freepikEffectLightning", fEffectLightningValue);
 
             const fEffectFramingValue = formSnapshot?.freepikEffectFraming || freepikEffectFraming;
             if (fEffectFramingValue && fEffectFramingValue !== "none") formData.append("freepikEffectFraming", fEffectFramingValue);
         }
-        
+
         imageAction(formData);
     });
   };
-  
+
   const handleGenerateBlogOutline = () => {
+    setIsGeneratingOutline(true); // Set loading state
     const formData = new FormData();
-    const formElement = document.getElementById('blogPostForm') as HTMLFormElement | null;
-    if (formElement) {
-        const currentFormData = new FormData(formElement);
-        formData.append('brandName', currentFormData.get('brandName') as string || brandData?.brandName || "");
-        formData.append('blogBrandDescription', currentFormData.get('blogBrandDescription') as string || brandData?.brandDescription || "");
-        formData.append('industry', currentFormData.get('industry') as string || brandData?.industry || "");
-        formData.append('blogKeywords', currentFormData.get('blogKeywords') as string || brandData?.targetKeywords || "");
-        formData.append('blogWebsiteUrl', currentFormData.get('blogWebsiteUrl') as string || brandData?.websiteUrl || "");
-    } else {
-        formData.append('brandName', imageGenBrandDescription || brandData?.brandName || ""); // Assuming brandName might be related to brandDescription
-        formData.append('blogBrandDescription', imageGenBrandDescription || brandData?.brandDescription || "");
-        formData.append('industry', imageGenIndustry || brandData?.industry || "");
-        formData.append('blogKeywords', brandData?.targetKeywords || "");
-        formData.append('blogWebsiteUrl', brandData?.websiteUrl || "");
-    }
-    
+    // Get values directly from the form elements using their IDs
+    // This is generally okay for one-off calls not part of a larger form submission controlled by react-hook-form
+    formData.append('brandName', (document.getElementById('blogBrandName') as HTMLInputElement)?.value || brandData?.brandName || "");
+    formData.append('blogBrandDescription', (document.getElementById('blogBrandDescription') as HTMLTextAreaElement)?.value || brandData?.brandDescription || "");
+    formData.append('industry', (document.getElementById('blogIndustry') as HTMLInputElement)?.value || brandData?.industry || "");
+    formData.append('blogKeywords', (document.getElementById('blogKeywords') as HTMLInputElement)?.value || brandData?.targetKeywords || "");
+    formData.append('blogWebsiteUrl', (document.getElementById('blogWebsiteUrl') as HTMLInputElement)?.value || brandData?.websiteUrl || "");
+
     if (!formData.get('brandName') && !formData.get('blogBrandDescription') && !formData.get('blogKeywords')) {
         toast({title: "Missing Info", description: "Please provide Brand Name, Description, and Keywords for outline generation.", variant: "destructive"});
+        setIsGeneratingOutline(false); // Reset loading state
         return;
     }
-
-    setIsGeneratingOutline(true);
     startTransition(() => {
         blogOutlineAction(formData);
     });
   };
+
 
   const handleFetchFreepikResult = (taskId: string) => {
     setCheckingTaskId(taskId);
@@ -599,14 +596,14 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
   };
 
   const downloadImage = (imageUrl: string, filename = "generated-image.png") => {
-    if (imageUrl.startsWith('data:')) { 
+    if (imageUrl.startsWith('data:')) {
       const link = document.createElement('a');
       link.href = imageUrl;
       link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    } else { 
+    } else {
       window.open(imageUrl, '_blank');
     }
   };
@@ -642,7 +639,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                  {lastUsedImageProvider && <p className="text-xs text-primary mt-1">Image(s) last generated using: {lastUsedImageProvider}</p>}
               </CardHeader>
               {!isPreviewingPrompt ? (
-                <div id="imageGenerationFormFields"> 
+                <div id="imageGenerationFormFields">
                   <CardContent className="space-y-6">
                      <div>
                         <Label htmlFor="imageGenProviderSelect" className="flex items-center mb-1"><Server className="w-4 h-4 mr-2 text-primary" />Image Generation Provider</Label>
@@ -664,7 +661,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                     </div>
 
                     <div>
-                      <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description</Label>
+                      <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
                       <Textarea
                         id="imageGenBrandDescription"
                         name="brandDescription"
@@ -675,7 +672,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                       />
                     </div>
                      <div>
-                        <Label htmlFor="imageGenIndustry" className="flex items-center mb-1"><Briefcase className="w-4 h-4 mr-2 text-primary" />Industry</Label>
+                        <Label htmlFor="imageGenIndustry" className="flex items-center mb-1"><Briefcase className="w-4 h-4 mr-2 text-primary" />Industry (from Profile)</Label>
                         <Input
                             id="imageGenIndustry"
                             name="industry"
@@ -684,14 +681,13 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                             placeholder="e.g., Fashion, Technology"
                         />
                     </div>
-                    
+
                     <div>
                       <Label htmlFor="imageGenImageStylePresetSelect" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Image Style Preset</Label>
-                      <Select 
+                      <Select
                         name="imageStylePreset"
-                        value={selectedImageStylePreset} 
+                        value={selectedImageStylePreset}
                         onValueChange={setSelectedImageStylePreset}
-                        
                       >
                           <SelectTrigger id="imageGenImageStylePresetSelect">
                               <SelectValue placeholder="Select image style preset" />
@@ -705,7 +701,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                               </SelectGroup>
                           </SelectContent>
                       </Select>
-                      <p className="text-xs text-muted-foreground mt-1">Some styles may be more effective with specific providers (e.g., Freepik styles are often enum based).</p>
+                       <p className="text-xs text-muted-foreground mt-1">Some styles are more effective with specific providers. Notes below can add detail.</p>
                     </div>
 
                     <div>
@@ -719,7 +715,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         rows={2}
                       />
                     </div>
-                    
+
                     <div>
                         <Label className="flex items-center mb-1">
                             <ImageIcon className="w-4 h-4 mr-2 text-primary" />Example Image from Profile (Optional)
@@ -745,14 +741,14 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                                         ))}
                                     </div>
                                     </>
-                                 ) : ( 
+                                 ) : (
                                      <div className="w-20 h-20 rounded border-2 p-0.5 border-primary ring-2 ring-primary flex-shrink-0">
                                          <NextImage src={brandData.exampleImages[0]} alt={`Example 1`} width={76} height={76} className="object-contain w-full h-full rounded-sm" data-ai-hint="style example"/>
                                      </div>
                                  )}
                                 { currentExampleImageForGen && (
                                     <p className="text-xs text-muted-foreground">
-                                        Using image {selectedProfileImageIndexForGen !== null && brandData.exampleImages && brandData.exampleImages.length > 1 ? selectedProfileImageIndexForGen + 1 : '1'} as reference for Gemini. Freepik text-to-image ignores this.
+                                        Using image {selectedProfileImageIndexForGen !== null && brandData.exampleImages && brandData.exampleImages.length > 1 ? selectedProfileImageIndexForGen + 1 : '1'} as reference. Freepik text-to-image ignores direct image reference but uses its AI description if generated.
                                     </p>
                                 )}
                             </div>
@@ -772,7 +768,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         rows={2}
                       />
                     </div>
-                    
+
                     {selectedImageProvider === 'FREEPIK' && (
                         <>
                             <div className="pt-4 mt-4 border-t">
@@ -827,10 +823,10 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                           <Label htmlFor="imageGenAspectRatioSelect" className="flex items-center mb-1"><Ratio className="w-4 h-4 mr-2 text-primary" />Aspect Ratio</Label>
-                          <Select 
+                          <Select
                             name="aspectRatio"
-                            required 
-                            value={selectedAspectRatio} 
+                            required
+                            value={selectedAspectRatio}
                             onValueChange={setSelectedAspectRatio}
                           >
                           <SelectTrigger id="imageGenAspectRatioSelect">
@@ -879,8 +875,8 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         <Eye className="mr-2 h-4 w-4" /> Preview Prompt
                     </Button>
                   </CardFooter>
-                </div> 
-              ) : ( 
+                </div>
+              ) : (
                 <form onSubmit={handleImageGenerationSubmit}>
                   <CardContent className="space-y-6">
                     <div>
@@ -894,7 +890,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         placeholder="The constructed prompt will appear here. You can edit it before generation."
                       />
                        <p className="text-xs text-muted-foreground">
-                        Note: For Freepik, structural parameters (aspect ratio, Freepik-specific styles/effects) are set separately. Editing this prompt gives most control to Gemini.
+                        Note: For Freepik, structural parameters (aspect ratio, specific styles/effects) are set separately and won't be textually appended here. Editing this prompt gives most control to Gemini.
                        </p>
                     </div>
                   </CardContent>
@@ -923,19 +919,15 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                             </Button>
                         </div>
                          {lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url?.startsWith('image_url:')) && (
-                            <div className="mt-2"> 
-                                <form className="inline-block"> 
-                                    <SubmitButton 
-                                        formAction={saveImagesAction}
-                                        onClick={handleSaveAllGeneratedImages}
-                                        disabled={!lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url?.startsWith('image_url:')) || !!(saveImagesState.message?.startsWith('Saving...'))} 
-                                        size="sm"
-                                        loadingText="Saving..."
-                                    >
-                                        <Save className="mr-2 h-4 w-4" />
-                                        Save All Generated Images to Library
-                                    </SubmitButton>
-                                </form>
+                             <div className="mt-2">
+                                <Button
+                                    onClick={handleSaveAllGeneratedImages}
+                                    disabled={isSavingImages || !lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url.startsWith('image_url:'))}
+                                    size="sm"
+                                >
+                                    {isSavingImages ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                    Save All Generated Images to Library
+                                </Button>
                             </div>
                         )}
                     </CardHeader>
@@ -945,11 +937,11 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                             <div key={url || index} className="relative group w-full overflow-hidden border rounded-md bg-muted aspect-square">
                                 {url && (url.startsWith('data:') || url.startsWith('image_url:')) ? (
                                     <>
-                                    <NextImage 
-                                        src={url.startsWith('image_url:') ? url.substring(10) : url} 
-                                        alt={`Generated brand image ${index + 1}`} 
-                                        fill 
-                                        style={{objectFit: 'contain'}} 
+                                    <NextImage
+                                        src={url.startsWith('image_url:') ? url.substring(10) : url}
+                                        alt={`Generated brand image ${index + 1}`}
+                                        fill
+                                        style={{objectFit: 'contain'}}
                                         data-ai-hint="brand marketing"
                                         className="transition-opacity duration-300 opacity-100 group-hover:opacity-80"
                                     />
@@ -999,10 +991,10 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                             />
                         </div>
                       )}
-                       <Button 
-                        variant="outline" 
-                        className="mt-4" 
-                        onClick={handleUseGeneratedImageForSocial} 
+                       <Button
+                        variant="outline"
+                        className="mt-4"
+                        onClick={handleUseGeneratedImageForSocial}
                         disabled={!lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url?.startsWith('image_url:'))}
                       >
                         <ImageUp className="mr-2 h-4 w-4" /> Use First Image for Social Post
@@ -1026,21 +1018,21 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                 <CardContent className="space-y-6">
                   <div className="space-y-3">
                     <div className="flex items-center space-x-2">
-                        <Checkbox 
-                            id="useImageForSocialPost" 
+                        <Checkbox
+                            id="useImageForSocialPost"
                             checked={useImageForSocialPost}
                             onCheckedChange={(checked) => {
                                 const isChecked = checked as boolean;
                                 setUseImageForSocialPost(isChecked);
                                 if (!isChecked) {
-                                    setSocialImageChoice(null); 
+                                    setSocialImageChoice(null);
                                 } else if (!socialImageChoice && lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url?.startsWith('image_url:'))) {
-                                    setSocialImageChoice('generated'); 
+                                    setSocialImageChoice('generated');
                                 } else if (!socialImageChoice && brandData?.exampleImages?.[selectedProfileImageIndexForSocial !== null ? selectedProfileImageIndexForSocial : 0]) {
-                                    setSocialImageChoice('profile'); 
+                                    setSocialImageChoice('profile');
                                     if(selectedProfileImageIndexForSocial === null && brandData?.exampleImages?.length > 0) setSelectedProfileImageIndexForSocial(0);
-                                } else if (!socialImageChoice) { 
-                                     setSocialImageChoice(null); 
+                                } else if (!socialImageChoice) {
+                                     setSocialImageChoice(null);
                                 }
                             }}
                         />
@@ -1051,8 +1043,8 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
 
                     {useImageForSocialPost && (
                       <div className="pl-6 space-y-4">
-                        <RadioGroup 
-                            value={socialImageChoice || ""} 
+                        <RadioGroup
+                            value={socialImageChoice || ""}
                             onValueChange={(value) => setSocialImageChoice(value as 'generated' | 'profile' | null)}
                             className="space-y-2"
                         >
@@ -1108,10 +1100,10 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         <div className="pl-6 mt-2 mb-3">
                             <p className="text-sm font-medium mb-1 text-muted-foreground">Selected image for post:</p>
                              <div className="relative w-40 h-40 border rounded-md overflow-hidden mb-2">
-                                <NextImage 
-                                  src={currentSocialImagePreviewUrl} 
-                                  alt="Selected image for social post" 
-                                  fill 
+                                <NextImage
+                                  src={currentSocialImagePreviewUrl}
+                                  alt="Selected image for social post"
+                                  fill
                                   style={{objectFit: 'contain'}} data-ai-hint="social content" />
                             </div>
                         </div>
@@ -1132,15 +1124,15 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                       required
                     />
                   </div>
-                  
+
                   <div>
                     <div className="flex items-center justify-between mb-1">
                         <Label htmlFor="socialImageDescription" className="flex items-center"><UserSquare className="w-4 h-4 mr-2 text-primary" />Image Description {useImageForSocialPost && currentSocialImagePreviewUrl ? '' : '(Optional)'}</Label>
                         {useImageForSocialPost && currentSocialImagePreviewUrl && (
-                            <Button 
-                                type="button" 
-                                variant="outline" 
-                                size="sm" 
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
                                 onClick={handleAIDescribeImage}
                                 disabled={isGeneratingDescription}
                             >
@@ -1151,10 +1143,10 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                     </div>
                     <Textarea
                       id="socialImageDescription"
-                      name="socialImageDescription" 
+                      name="socialImageDescription"
                       placeholder={useImageForSocialPost && !!currentSocialImagePreviewUrl ? "Describe the image you're posting or use AI. Required if image used." : "Optionally describe the theme if not using an image."}
                       rows={3}
-                      required={useImageForSocialPost && !!currentSocialImagePreviewUrl} 
+                      required={useImageForSocialPost && !!currentSocialImagePreviewUrl}
                     />
                   </div>
 
@@ -1205,10 +1197,10 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                              <div className="mb-4">
                                 <p className="text-sm font-medium mb-1 text-muted-foreground">Associated Image:</p>
                                 <div className="relative w-40 h-40 border rounded-md overflow-hidden mb-2">
-                                    <NextImage 
-                                      src={generatedSocialPost.imageSrc} 
-                                      alt="Social post image" 
-                                      fill 
+                                    <NextImage
+                                      src={generatedSocialPost.imageSrc}
+                                      alt="Social post image"
+                                      fill
                                       style={{objectFit: 'contain'}} data-ai-hint="social content" />
                                 </div>
                                 <Button
@@ -1221,18 +1213,18 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                             </div>
                         )}
                         <div>
-                            <h4 className="text-sm font-medium mb-1 text-muted-foreground">Generated Caption:</h4>
+                            <Label htmlFor="generatedCaption" className="text-sm font-medium mb-1 text-muted-foreground">Generated Caption:</Label>
                             <div className="p-3 border rounded-md bg-muted/50">
-                                <p className="text-sm whitespace-pre-wrap">{generatedSocialPost.caption}</p>
+                                <p id="generatedCaption" className="text-sm whitespace-pre-wrap">{generatedSocialPost.caption}</p>
                             </div>
                             <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedSocialPost.caption, "Caption")} className="mt-1 text-muted-foreground hover:text-primary">
                                 <Copy className="w-3 h-3 mr-1" /> Copy Caption
                             </Button>
                         </div>
                         <div>
-                            <h4 className="text-sm font-medium mb-1 text-muted-foreground">Generated Hashtags:</h4>
+                            <Label htmlFor="generatedHashtags" className="text-sm font-medium mb-1 text-muted-foreground">Generated Hashtags:</Label>
                             <div className="p-3 border rounded-md bg-muted/50">
-                                <p className="text-sm">{generatedSocialPost.hashtags}</p>
+                                <p id="generatedHashtags" className="text-sm">{generatedSocialPost.hashtags}</p>
                             </div>
                             <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedSocialPost.hashtags, "Hashtags")} className="mt-1 text-muted-foreground hover:text-primary">
                                 <Copy className="w-3 h-3 mr-1" /> Copy Hashtags
@@ -1246,18 +1238,18 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
 
           {/* Blog Post Tab */}
           <TabsContent value="blog">
-             <Card className="shadow-lg">
-                <CardHeader>
-                    <CardTitle className="text-xl flex items-center"><Newspaper className="w-6 h-6 mr-2 text-primary"/>Create Blog Content</CardTitle>
-                    <p className="text-sm text-muted-foreground">Generate SEO-friendly blog posts. Define an outline, choose a tone, and let AI write the content.</p>
-                </CardHeader>
-                <form id="blogPostForm" action={blogAction} className="w-full">
+             <form action={blogAction} className="w-full">
+                <Card className="shadow-lg">
+                    <CardHeader>
+                        <CardTitle className="text-xl flex items-center"><Newspaper className="w-6 h-6 mr-2 text-primary"/>Create Blog Content</CardTitle>
+                        <p className="text-sm text-muted-foreground">Generate SEO-friendly blog posts. Define an outline, choose a tone, and let AI write the content.</p>
+                    </CardHeader>
                     <CardContent className="space-y-6">
                         <div>
                             <Label htmlFor="blogBrandName" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Name (from Profile)</Label>
                             <Input
                             id="blogBrandName"
-                            name="brandName" 
+                            name="brandName"
                             defaultValue={brandData?.brandName || ""}
                             placeholder="Your brand's name"
                             />
@@ -1266,7 +1258,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                             <Label htmlFor="blogBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
                             <Textarea
                             id="blogBrandDescription"
-                            name="blogBrandDescription" 
+                            name="blogBrandDescription"
                             defaultValue={brandData?.brandDescription || ""}
                             placeholder="Detailed brand description"
                             rows={3}
@@ -1276,7 +1268,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                             <Label htmlFor="blogIndustry" className="flex items-center mb-1"><Briefcase className="w-4 h-4 mr-2 text-primary" />Industry (from Profile)</Label>
                             <Input
                                 id="blogIndustry"
-                                name="industry" 
+                                name="industry"
                                 defaultValue={brandData?.industry || ""}
                                 placeholder="e.g., Fashion, Technology"
                             />
@@ -1285,7 +1277,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                             <Label htmlFor="blogKeywords" className="flex items-center mb-1"><Tag className="w-4 h-4 mr-2 text-primary" />Keywords (from Profile)</Label>
                             <Input
                             id="blogKeywords"
-                            name="blogKeywords" 
+                            name="blogKeywords"
                             defaultValue={brandData?.targetKeywords || ""}
                             placeholder="Comma-separated keywords (e.g., AI, marketing, branding)"
                             />
@@ -1294,7 +1286,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                             <Label htmlFor="blogWebsiteUrl" className="flex items-center mb-1"><Globe className="w-4 h-4 mr-2 text-primary" />Website URL (Optional, for SEO & Outline)</Label>
                             <Input
                                 id="blogWebsiteUrl"
-                                name="blogWebsiteUrl" 
+                                name="blogWebsiteUrl"
                                 defaultValue={brandData?.websiteUrl || ""}
                                 placeholder="https://www.example.com"
                             />
@@ -1316,14 +1308,14 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                                 </SelectContent>
                             </Select>
                         </div>
-                        
+
                         <div className="space-y-2">
                             <div className="flex justify-between items-center mb-1">
                                 <Label htmlFor="blogOutline" className="flex items-center"><ListOrdered className="w-4 h-4 mr-2 text-primary" />Blog Outline</Label>
-                                <Button 
-                                    type="button" 
-                                    variant="outline" 
-                                    size="sm" 
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
                                     onClick={handleGenerateBlogOutline}
                                     disabled={isGeneratingOutline}
                                 >
@@ -1333,7 +1325,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                             </div>
                             <Textarea
                             id="blogOutline"
-                            name="blogOutline" 
+                            name="blogOutline"
                             placeholder="Enter your blog outline here, or generate one with AI. Markdown is supported."
                             rows={8}
                             value={generatedBlogOutline}
@@ -1358,7 +1350,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                     <CardFooter>
                     <SubmitButton className="w-full" loadingText="Generating Blog..." disabled={isGeneratingOutline || !generatedBlogOutline.trim()}>Generate Blog Post</SubmitButton>
                     </CardFooter>
-                </form>
+                </Card>
                {generatedBlogPost && (
                  <Card className="mt-6 mx-4 mb-4 shadow-sm">
                     <CardHeader>
@@ -1369,27 +1361,27 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div>
-                            <h4 className="text-sm font-medium mb-1 text-muted-foreground">Generated Title:</h4>
+                            <Label htmlFor="generatedBlogTitle" className="text-sm font-medium mb-1 text-muted-foreground">Generated Title:</Label>
                             <div className="p-3 border rounded-md bg-muted/50">
-                                <p className="text-lg font-medium">{generatedBlogPost.title}</p>
+                                <p id="generatedBlogTitle" className="text-lg font-medium">{generatedBlogPost.title}</p>
                             </div>
                             <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedBlogPost.title, "Title")} className="mt-1 text-muted-foreground hover:text-primary">
                                 <Copy className="w-3 h-3 mr-1" /> Copy Title
                             </Button>
                         </div>
                         <div>
-                            <h4 className="text-sm font-medium mb-1 text-muted-foreground">Generated Content:</h4>
+                            <Label htmlFor="generatedBlogContent" className="text-sm font-medium mb-1 text-muted-foreground">Generated Content:</Label>
                             <div className="p-3 prose border rounded-md bg-muted/50 max-w-none max-h-96 overflow-y-auto">
-                                <p className="whitespace-pre-wrap">{generatedBlogPost.content}</p> 
+                                <p id="generatedBlogContent" className="whitespace-pre-wrap">{generatedBlogPost.content}</p>
                             </div>
                             <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedBlogPost.content, "Content")} className="mt-1 text-muted-foreground hover:text-primary">
                                 <Copy className="w-3 h-3 mr-1" /> Copy Content
                             </Button>
                         </div>
                         <div>
-                            <h4 className="text-sm font-medium mb-1 text-muted-foreground">Generated Tags:</h4>
+                            <Label htmlFor="generatedBlogTags" className="text-sm font-medium mb-1 text-muted-foreground">Generated Tags:</Label>
                             <div className="p-3 border rounded-md bg-muted/50">
-                                <p className="text-sm">{generatedBlogPost.tags}</p>
+                                <p id="generatedBlogTags" className="text-sm">{generatedBlogPost.tags}</p>
                             </div>
                             <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedBlogPost.tags, "Tags")} className="mt-1 text-muted-foreground hover:text-primary">
                                 <Copy className="w-3 h-3 mr-1" /> Copy Tags
@@ -1398,7 +1390,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                     </CardContent>
                  </Card>
               )}
-            </Card>
+            </form>
           </TabsContent>
         </Tabs>
       </div>
