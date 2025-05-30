@@ -34,9 +34,9 @@ export const imageStylePresets = [
   { value: "sketch", label: "Sketch (Freepik)" },
   { value: "watercolor", label: "Watercolor (Freepik)" },
   { value: "studio-shot", label: "Studio Shot (Freepik)" },
-  { value: "dark_moody", label: "Dark & Moody" }, // Generic
-  { value: "bright_airy", label: "Bright & Airy" }, // Generic
-  { value: "abstract", label: "Abstract" }, // Generic
+  { value: "dark_moody", label: "Dark & Moody" },
+  { value: "bright_airy", label: "Bright & Airy" },
+  { value: "abstract", label: "Abstract" },
   { value: "origami", label: "Origami (Freepik)" },
   { value: "low-poly", label: "Low Poly (Freepik)" },
   { value: "pixel-art", label: "Pixel Art (Freepik)" },
