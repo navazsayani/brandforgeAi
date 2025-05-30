@@ -16,7 +16,7 @@ const GenerateSocialMediaCaptionInputSchema = z.object({
   brandDescription: z.string().describe('The description of the brand.'),
   industry: z.string().optional().describe('The industry of the brand (e.g., Fashion, Technology). This helps tailor the tone and hashtags.'),
   imageDescription: z.string().optional().describe('The description of the image to be posted. Only provided if an image is associated with the post.'),
-  tone: z.string().describe('The desired tone of the caption (e.g., professional, funny, informative).'),
+  tone: z.string().describe('The desired tone of the caption (e.g., professional, funny, informative, professional but slightly urgent).'),
 });
 export type GenerateSocialMediaCaptionInput = z.infer<typeof GenerateSocialMediaCaptionInputSchema>;
 
@@ -37,7 +37,7 @@ const prompt = ai.definePrompt({
   prompt: `You are an expert social media manager.
 
 You will generate an engaging caption and relevant hashtags for a social media post.
-Consider the brand's description, its industry (if provided), the desired tone, and an optional image description.
+Consider the brand's description, its industry (if provided), the desired tone (which may include nuances), and an optional image description.
 
 Brand Description: {{{brandDescription}}}
 {{#if industry}}
@@ -54,6 +54,7 @@ Desired Tone: {{{tone}}}
 
 Generate a suitable caption and a comma-separated list of 3-5 relevant hashtags.
 The hashtags should be optimized for the brand's industry and target audience.
+The caption should reflect the nuances in the "Desired Tone" if any are provided (e.g., "professional but witty").
 
 Caption:
 Hashtags:`,
@@ -73,3 +74,5 @@ const generateSocialMediaCaptionFlow = ai.defineFlow(
     return output;
   }
 );
+
+    

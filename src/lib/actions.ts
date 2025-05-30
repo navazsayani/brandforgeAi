@@ -45,7 +45,7 @@ export async function handleGenerateImagesAction(
             .map(color => color.trim())
             .filter(color => /^#[0-9a-fA-F]{6}$/.test(color)) 
             .slice(0, 5) 
-            .map(color => ({ color, weight: 0.5 }));
+            .map(color => ({ color, weight: 0.5 })); // Default weight, Freepik schema updated
         if (freepikStylingColors.length === 0) freepikStylingColors = undefined; 
     }
 
@@ -59,7 +59,7 @@ export async function handleGenerateImagesAction(
       numberOfImages: numberOfImages,
       negativePrompt: negativePromptValue === null || negativePromptValue === "" ? undefined : negativePromptValue,
       seed: seed,
-      finalizedTextPrompt: finalizedTextPromptValue,
+      finalizedTextPrompt: finalizedTextPromptValue === "" ? undefined : finalizedTextPromptValue,
       freepikStylingColors: freepikStylingColors,
       freepikEffectColor: (formData.get("freepikEffectColor") as string === "none" ? undefined : formData.get("freepikEffectColor") as string | undefined) || undefined,
       freepikEffectLightning: (formData.get("freepikEffectLightning") as string === "none" ? undefined : formData.get("freepikEffectLightning") as string | undefined) || undefined,
@@ -74,11 +74,8 @@ export async function handleGenerateImagesAction(
     if (input.aspectRatio === "" || input.aspectRatio === undefined) delete input.aspectRatio;
     if (input.industry === "" || input.industry === undefined) delete input.industry;
     
-    console.log("Input to generateImages flow:", JSON.stringify(input, null, 2));
     const result = await generateImages(input);
-    const message = result.generatedImages.length > 1
-        ? `${result.generatedImages.length} image(s)/task(s) processed using ${result.providerUsed}.`
-        : `Image/task processed successfully using ${result.providerUsed}.`;
+    const message = `Image(s)/task(s) processed using ${result.providerUsed}.`;
     return { data: { generatedImages: result.generatedImages, promptUsed: result.promptUsed, providerUsed: result.providerUsed }, message: message };
   } catch (e: any) {
     console.error("Error in handleGenerateImagesAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
@@ -112,12 +109,19 @@ export async function handleGenerateSocialMediaCaptionAction(
     const selectedImageSrc = formData.get("selectedImageSrcForSocialPost") as string;
     const imageSrc = selectedImageSrc && selectedImageSrc.trim() !== "" ? selectedImageSrc : null;
     const imageDescription = formData.get("socialImageDescription") as string;
+    const presetTone = formData.get("tone") as string;
+    const customNuances = formData.get("customSocialToneNuances") as string | null;
 
+    let finalTone = presetTone;
+    if (customNuances && customNuances.trim() !== "") {
+      finalTone = `${presetTone} ${customNuances.trim()}`;
+    }
+    
     const input: GenerateSocialMediaCaptionInput = {
       brandDescription: formData.get("brandDescription") as string,
       industry: formData.get("industry") as string | undefined,
       imageDescription: imageSrc ? imageDescription : undefined, 
-      tone: formData.get("tone") as string,
+      tone: finalTone,
     };
 
     if (!input.brandDescription || !input.tone) {
@@ -130,7 +134,8 @@ export async function handleGenerateSocialMediaCaptionAction(
 
     const result = await generateSocialMediaCaption(input);
     return { data: { ...result, imageSrc: imageSrc }, message: "Social media content generated!" };
-  } catch (e: any) {
+  } catch (e: any)
+   {
     console.error("Error in handleGenerateSocialMediaCaptionAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
     return { error: `Failed to generate social media caption: ${e.message || "Unknown error. Check server logs."}` };
   }
@@ -311,7 +316,7 @@ export async function handleSaveGeneratedImagesAction(
             imageUrlToSave = await getDownloadURL(snapshot.ref);
             console.log(`handleSaveGeneratedImagesAction: Obtained download URL: ${imageUrlToSave}`);
         } else if (image.dataUri.startsWith('image_url:')) {
-             imageUrlToSave = image.dataUri.substring(10); // Remove 'image_url:' prefix
+             imageUrlToSave = image.dataUri.substring(10); 
              console.log(`handleSaveGeneratedImagesAction: Image is a direct URL (from Freepik GET likely), not uploading to storage: ${imageUrlToSave}`);
         } else if (image.dataUri.startsWith('https://')) {
              console.log(`handleSaveGeneratedImagesAction: Image is already an HTTPS URL, not uploading to storage: ${imageUrlToSave}`);
@@ -376,6 +381,7 @@ async function _checkFreepikTaskStatus(taskId: string): Promise<{ status: string
 
     if (responseData.data && responseData.data.status) {
       if (responseData.data.status === 'COMPLETED' && responseData.data.generated && responseData.data.generated.length > 0) {
+        // Expecting URLs directly from Freepik GET as per last correction
         return { status: responseData.data.status, images: responseData.data.generated };
       }
       return { status: responseData.data.status, images: null };
@@ -389,7 +395,7 @@ async function _checkFreepikTaskStatus(taskId: string): Promise<{ status: string
 }
 
 export async function handleCheckFreepikTaskStatusAction(
-  prevState: FormState<{ status: string; images: string[] | null }>, // taskId removed from here, will be in returned object
+  prevState: FormState<{ status: string; images: string[] | null; taskId: string }>,
   formData: FormData
 ): Promise<FormState<{ status: string; images: string[] | null; taskId: string }>> {
   const taskId = formData.get("taskId") as string;
@@ -399,7 +405,7 @@ export async function handleCheckFreepikTaskStatusAction(
   try {
     const result = await _checkFreepikTaskStatus(taskId);
     if (result.status === 'COMPLETED' && result.images && result.images.length > 0) {
-      return { data: { ...result, taskId }, message: `Task ${taskId.substring(0,8)}... completed. Images retrieved.` };
+      return { data: { ...result, taskId }, message: `Task ${taskId.substring(0,8)}... completed. Image(s) retrieved.` };
     } else if (result.status === 'IN_PROGRESS') {
       return { data: { ...result, taskId }, message: `Task ${taskId.substring(0,8)}... is still in progress.` };
     } else if (result.status === 'FAILED') {
