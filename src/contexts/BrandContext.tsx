@@ -47,20 +47,17 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         setBrandDataState({ 
           ...fetchedData, 
           industry: fetchedData.industry || "",
-          exampleImages: fetchedData.exampleImages || [],
-          imageStyle: fetchedData.imageStyle || "",
           imageStyleNotes: fetchedData.imageStyleNotes || "",
+          exampleImages: fetchedData.exampleImages || [],
         });
       } else {
-        // Initialize with all fields, including new ones, to avoid undefined issues
         setBrandDataState({ 
             brandName: "", 
             websiteUrl: "", 
             brandDescription: "", 
             industry: "", 
-            exampleImages: [] , 
-            imageStyle: "", 
             imageStyleNotes: "", 
+            exampleImages: [] , 
             targetKeywords: ""
         });
       }
@@ -90,13 +87,12 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
       const dataToSave: BrandData = { 
         ...data, 
         industry: data.industry || "",
-        exampleImages: data.exampleImages || [],
-        imageStyle: data.imageStyle || "",
         imageStyleNotes: data.imageStyleNotes || "",
+        exampleImages: data.exampleImages || [],
       };
       const brandDocRef = doc(db, "brandProfiles", BRAND_PROFILE_DOC_ID);
       await setDoc(brandDocRef, dataToSave, { merge: true });
-      setBrandDataState(dataToSave); // Update local state with the successfully saved data
+      setBrandDataState(dataToSave); 
     } catch (e: any) {
       console.error("Error saving brand data to Firestore:", e);
       let specificError = `Failed to save brand profile: ${e.message || "Unknown error. Check console."}`;
@@ -107,26 +103,26 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
           specificError = "Failed to save data due to database permission error. Check Firestore security rules.";
       }
       setError(specificError);
-      throw e; // Re-throw to allow form handling to catch it if necessary
+      throw e; 
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   const addGeneratedImageCB = useCallback((image: GeneratedImage) => {
-    setGeneratedImages(prev => [image, ...prev.slice(0,19)]); // Keep last 20
+    setGeneratedImages(prev => [image, ...prev.slice(0,19)]); 
   }, []);
 
   const addGeneratedSocialPostCB = useCallback((post: GeneratedSocialMediaPost) => {
-    setGeneratedSocialPosts(prev => [post, ...prev.slice(0,19)]); // Keep last 20
+    setGeneratedSocialPosts(prev => [post, ...prev.slice(0,19)]); 
   }, []);
 
   const addGeneratedBlogPostCB = useCallback((post: GeneratedBlogPost) => {
-    setGeneratedBlogPosts(prev => [post, ...prev.slice(0,19)]); // Keep last 20
+    setGeneratedBlogPosts(prev => [post, ...prev.slice(0,19)]); 
   }, []);
 
   const addGeneratedAdCampaignCB = useCallback((campaign: GeneratedAdCampaign) => {
-    setGeneratedAdCampaigns(prev => [campaign, ...prev.slice(0,19)]); // Keep last 20
+    setGeneratedAdCampaigns(prev => [campaign, ...prev.slice(0,19)]); 
   }, []);
   
   const contextValue = useMemo(() => ({

@@ -17,34 +17,13 @@ import { Progress } from '@/components/ui/progress';
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-import { UserCircle, LinkIcon, FileText, Palette, UploadCloud, Tag, Brain, Loader2, Trash2, Edit, Briefcase } from 'lucide-react';
+import { UserCircle, LinkIcon, FileText, UploadCloud, Tag, Brain, Loader2, Trash2, Edit, Briefcase } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { handleExtractBrandInfoFromUrlAction, type FormState as ExtractFormState } from '@/lib/actions';
 import { storage } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useActionState, startTransition } from 'react';
 import { Alert, AlertTitle } from '@/components/ui/alert';
-
-const imageStylePresets = [
-  { value: "photorealistic", label: "Photorealistic" },
-  { value: "digital-art", label: "Digital Art" },
-  { value: "3d", label: "3D Render" },
-  { value: "painting", label: "Painting" },
-  { value: "vector", label: "Vector Art" },
-  { value: "minimalist", label: "Minimalist" },
-  { value: "abstract", label: "Abstract" },
-  { value: "cartoon", label: "Cartoon / Comic" },
-  { value: "anime", label: "Anime / Manga" },
-  { value: "vintage", label: "Vintage / Retro" },
-  { value: "cyberpunk", label: "Cyberpunk" },
-  { value: "fantasy", label: "Fantasy Art" },
-  { value: "surreal", label: "Surreal" },
-  { value: "watercolor", label: "Watercolor" },
-  { value: "sketch", label: "Sketch / Drawing" },
-  { value: "photo", label: "Photo (Generic - Freepik)" }, // Added Freepik specific as example
-  { value: "studio-shot", label: "Studio Shot (Freepik)"},
-];
-
 
 const industries = [
   { value: "fashion_apparel", label: "Fashion & Apparel" },
@@ -68,7 +47,6 @@ const brandProfileSchema = z.object({
   websiteUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   brandDescription: z.string().min(10, { message: "Description must be at least 10 characters." }),
   industry: z.string().optional(),
-  imageStyle: z.string().optional(),
   imageStyleNotes: z.string().optional(),
   exampleImages: z.array(z.string().url({ message: "Each image must be a valid URL." })).max(5, {message: "You can upload a maximum of 5 example images."}).optional(),
   targetKeywords: z.string().optional(),
@@ -81,7 +59,6 @@ const defaultFormValues: BrandProfileFormData = {
   websiteUrl: "",
   brandDescription: "",
   industry: "",
-  imageStyle: imageStylePresets.length > 0 ? imageStylePresets[0].value : "",
   imageStyleNotes: "",
   exampleImages: [],
   targetKeywords: "",
@@ -227,12 +204,10 @@ export default function BrandProfilePage() {
       }
       
       const currentSelectedFileNames = files.map(file => file.name);
-      setSelectedFileNames(prev => [...prev.slice(0, currentSavedImages.length), ...currentSelectedFileNames]); // More robust name update
+      setSelectedFileNames(prev => [...prev.slice(0, currentSavedImages.length), ...currentSelectedFileNames]); 
       setIsUploading(true);
       setUploadProgress(0);
 
-      // For local previews before upload completes, create object URLs.
-      // These will be replaced by Firebase URLs upon successful upload.
       const newLocalPreviews = files.map(file => URL.createObjectURL(file));
       setPreviewImages(prev => [...prev, ...newLocalPreviews]);
 
@@ -242,7 +217,6 @@ export default function BrandProfilePage() {
       try {
         const successfullyUploadedURLs = await Promise.all(uploadPromises);
         
-        // Filter out old local previews and add new Firebase URLs
         const updatedImages = [
             ...currentSavedImages, 
             ...successfullyUploadedURLs
@@ -253,9 +227,7 @@ export default function BrandProfilePage() {
         
         toast({ title: "Images Uploaded", description: `${successfullyUploadedURLs.length} image(s) uploaded successfully. Save profile to persist changes.` });
       } catch (error) {
-        // Error already toasted in uploadImageToStorage
         toast({ title: "Some Uploads Failed", description: "Not all images were uploaded successfully. Check individual error messages.", variant: "destructive" });
-        // Revert previews to only successfully uploaded and saved images
         setPreviewImages(form.getValues("exampleImages") || []); 
       } finally {
         setIsUploading(false);
@@ -263,7 +235,6 @@ export default function BrandProfilePage() {
         if (fileInputRef.current) {
           fileInputRef.current.value = ""; 
         }
-        // Revoke temporary object URLs
         newLocalPreviews.forEach(url => URL.revokeObjectURL(url));
       }
     }
@@ -272,7 +243,6 @@ export default function BrandProfilePage() {
   const handleDeleteImage = async (imageUrlToDelete: string, indexToDelete: number) => {
     const currentImages = form.getValues("exampleImages") || [];
     
-    // Optimistically update UI
     const updatedFormImages = currentImages.filter((_, index) => index !== indexToDelete);
     form.setValue("exampleImages", updatedFormImages, { shouldValidate: true });
     setPreviewImages(updatedFormImages);
@@ -280,7 +250,6 @@ export default function BrandProfilePage() {
 
 
     try {
-      // Attempt to delete from Firebase Storage only if it's a Firebase URL
       if (imageUrlToDelete.includes("firebasestorage.googleapis.com")) {
         const imageRef = storageRef(storage, imageUrlToDelete);
         await deleteObject(imageRef);
@@ -289,11 +258,8 @@ export default function BrandProfilePage() {
     } catch (error: any) {
       console.error("Error deleting image from Firebase Storage:", error);
       toast({ title: "Deletion Error", description: `Failed to delete image from storage: ${error.message}. Reverting UI.`, variant: "destructive" });
-      // Revert UI if deletion failed
       form.setValue("exampleImages", currentImages, { shouldValidate: true });
       setPreviewImages(currentImages);
-      // Re-evaluate selectedFileNames based on currentImages (might be complex if names are dynamic)
-      // For simplicity, let's just clear it or re-map from currentImages if names were stable
       setSelectedFileNames(currentImages.map((_,i) => `Saved image ${i+1}`));
     }
   };
@@ -326,10 +292,10 @@ export default function BrandProfilePage() {
               <Skeleton className="h-6 w-3/4" />
             </CardHeader>
             <CardContent className="space-y-8">
-              {[...Array(7)].map((_, i) => ( 
+              {[...Array(6)].map((_, i) => ( 
                 <div key={i} className="space-y-2">
                   <Skeleton className="h-5 w-1/4" />
-                  <Skeleton className={i === 2 || i === 5 ? "h-24 w-full" : "h-10 w-full"} />
+                  <Skeleton className={i === 2 || i === 4 ? "h-24 w-full" : "h-10 w-full"} />
                 </div>
               ))}
               <Skeleton className="h-12 w-full" />
@@ -442,57 +408,23 @@ export default function BrandProfilePage() {
                     </FormItem>
                   )}
                 />
-
-                <FormField
-                  control={form.control}
-                  name="imageStyle"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center text-base"><Palette className="w-5 h-5 mr-2 text-primary"/>Image Style Preset</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        value={field.value || (imageStylePresets.length > 0 ? imageStylePresets[0].value : "")} 
-                        disabled={isBrandContextLoading || isUploading || isExtracting}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select an artistic style preset" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectLabel>Artistic Styles</SelectLabel>
-                            {imageStylePresets.map(style => (
-                              <SelectItem key={style.value} value={style.value}>{style.label}</SelectItem>
-                            ))}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        Choose a base style for image generation. 
-                        Some styles might be provider-specific (e.g., certain Freepik styles).
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
                 
                 <FormField
                   control={form.control}
                   name="imageStyleNotes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center text-base"><Edit className="w-5 h-5 mr-2 text-primary"/>Custom Image Style Notes (Optional)</FormLabel>
+                      <FormLabel className="flex items-center text-base"><Edit className="w-5 h-5 mr-2 text-primary"/>General Image Style Notes (Optional)</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Add custom details to the text prompt, e.g., 'moody lighting, focus on texture'."
+                          placeholder="Describe the general aesthetic for your brand's images, e.g., 'minimalist and clean', 'vibrant and energetic', 'moody lighting'."
                           rows={3}
                           {...field}
                           disabled={isBrandContextLoading || isUploading || isExtracting}
                         />
                       </FormControl>
                       <FormDescription>
-                        These notes will be added to the main text prompt for AI image generation.
+                        These notes provide general guidance for AI image generation. Specific style presets can be chosen in the Content Studio.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -542,7 +474,7 @@ export default function BrandProfilePage() {
                       <p className="text-sm text-muted-foreground mb-1">Current Example Image Previews ({previewImages.length}/5):</p>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {previewImages.map((src, index) => (
-                          <div key={src || index} className="relative group aspect-square"> {/* Ensure key is unique */}
+                          <div key={src || index} className="relative group aspect-square"> 
                             <NextImage src={src} alt={`Example image preview ${index + 1}`} fill style={{objectFit: 'contain'}} className="rounded border" data-ai-hint="brand example"/>
                             <Button
                                 type="button"
@@ -594,6 +526,3 @@ export default function BrandProfilePage() {
     </AppShell>
   );
 }
-    
-
-    

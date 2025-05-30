@@ -4,7 +4,6 @@ export interface BrandData {
   websiteUrl?: string;
   brandDescription?: string;
   industry?: string;
-  imageStyle?: string; // For preset style
   imageStyleNotes?: string; // For custom free-text style notes
   targetKeywords?: string;
   exampleImages?: string[]; // URLs from Firebase Storage
