@@ -17,6 +17,7 @@ export interface FormState<T = any> {
   data?: T;
   error?: string;
   message?: string;
+  taskId?: string; // Added for Freepik task status action
 }
 
 export async function handleGenerateImagesAction(
@@ -44,7 +45,7 @@ export async function handleGenerateImagesAction(
             .map(color => color.trim())
             .filter(color => /^#[0-9a-fA-F]{6}$/.test(color)) 
             .slice(0, 5) 
-            .map(color => ({ color, weight: 1 })); 
+            .map(color => ({ color, weight: 0.5 }));
         if (freepikStylingColors.length === 0) freepikStylingColors = undefined; 
     }
 
@@ -65,22 +66,23 @@ export async function handleGenerateImagesAction(
       freepikEffectFraming: (formData.get("freepikEffectFraming") as string === "none" ? undefined : formData.get("freepikEffectFraming") as string | undefined) || undefined,
     };
     
-    if (input.provider === "") delete input.provider;
+    if (input.provider === "" || input.provider === undefined) delete input.provider;
     if (!input.finalizedTextPrompt && (!input.brandDescription || !input.imageStyle)) {
       return { error: "Brand description and image style are required if not providing a finalized text prompt." };
     }
     if (input.exampleImage === "") delete input.exampleImage;
     if (input.aspectRatio === "" || input.aspectRatio === undefined) delete input.aspectRatio;
     if (input.industry === "" || input.industry === undefined) delete input.industry;
-
+    
+    console.log("Input to generateImages flow:", JSON.stringify(input, null, 2));
     const result = await generateImages(input);
     const message = result.generatedImages.length > 1
-        ? `${result.generatedImages.length} images generated successfully using ${result.providerUsed}!`
-        : `Image generated successfully using ${result.providerUsed}!`;
+        ? `${result.generatedImages.length} image(s)/task(s) processed using ${result.providerUsed}.`
+        : `Image/task processed successfully using ${result.providerUsed}.`;
     return { data: { generatedImages: result.generatedImages, promptUsed: result.promptUsed, providerUsed: result.providerUsed }, message: message };
   } catch (e: any) {
     console.error("Error in handleGenerateImagesAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
-    return { error: e.message || "Failed to generate image(s). Check server logs for details." };
+    return { error: `Failed to generate image(s): ${e.message || "Unknown error. Check server logs."}` };
   }
 }
 
@@ -98,7 +100,7 @@ export async function handleDescribeImageAction(
     return { data: result, message: "Image description generated!" };
   } catch (e: any) {
     console.error("Error in handleDescribeImageAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
-    return { error: e.message || "Failed to generate image description. Check server logs for details." };
+    return { error: `Failed to generate image description: ${e.message || "Unknown error. Check server logs."}` };
   }
 }
 
@@ -128,10 +130,9 @@ export async function handleGenerateSocialMediaCaptionAction(
 
     const result = await generateSocialMediaCaption(input);
     return { data: { ...result, imageSrc: imageSrc }, message: "Social media content generated!" };
-  } catch (e: any)
-     {
+  } catch (e: any) {
     console.error("Error in handleGenerateSocialMediaCaptionAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
-    return { error: e.message || "Failed to generate social media caption. Check server logs for details." };
+    return { error: `Failed to generate social media caption: ${e.message || "Unknown error. Check server logs."}` };
   }
 }
 
@@ -158,7 +159,7 @@ export async function handleGenerateBlogOutlineAction(
         return { data: result, message: "Blog outline generated successfully!" };
     } catch (e: any) {
         console.error("Error in handleGenerateBlogOutlineAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
-        return { error: e.message || "Failed to generate blog outline. Check server logs for details." };
+        return { error: `Failed to generate blog outline: ${e.message || "Unknown error. Check server logs."}` };
     }
 }
 
@@ -187,7 +188,7 @@ export async function handleGenerateBlogContentAction(
     return { data: result, message: "Blog content generated!" };
   } catch (e: any) {
     console.error("Error in handleGenerateBlogContentAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
-    return { error: e.message || "Failed to generate blog content. Check server logs for details." };
+    return { error: `Failed to generate blog content: ${e.message || "Unknown error. Check server logs."}` };
   }
 }
 
@@ -232,7 +233,7 @@ export async function handleGenerateAdCampaignAction(
     return { data: result, message: "Ad campaign variations generated successfully!" };
   } catch (e: any) {
     console.error("Error in handleGenerateAdCampaignAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
-    return { error: e.message || "Failed to generate ad campaign variations. Check server logs for details." };
+    return { error: `Failed to generate ad campaign variations: ${e.message || "Unknown error. Check server logs."}` };
   }
 }
 
@@ -250,7 +251,7 @@ export async function handleExtractBrandInfoFromUrlAction(
       return { data: result, message: "Brand information extracted successfully." };
   } catch (e: any) {
       console.error("Error in handleExtractBrandInfoFromUrlAction (Outer):", JSON.stringify(e, Object.getOwnPropertyNames(e)));
-      return { error: e.message || "Failed to extract brand information from URL. Check server logs for details." };
+      return { error: `Failed to extract brand information from URL: ${e.message || "Unknown error. Check server logs."}` };
   }
 }
 
@@ -265,31 +266,35 @@ export async function handleSaveGeneratedImagesAction(
     const brandProfileDocId = formData.get('brandProfileDocId') as string || 'defaultBrandProfile';
 
     if (!imagesToSaveJson) {
-      console.error("handleSaveGeneratedImagesAction: No imagesToSaveJson received in formData.");
-      return { error: "No image data received from the client." };
+      const errorMsg = "No image data received from the client (imagesToSaveJson is missing).";
+      console.error(`handleSaveGeneratedImagesAction: ${errorMsg}`);
+      return { error: errorMsg };
     }
 
     let imagesToSave: { dataUri: string; prompt: string; style: string; }[];
     try {
       imagesToSave = JSON.parse(imagesToSaveJson);
     } catch (e: any) {
-      console.error("handleSaveGeneratedImagesAction: Failed to parse imagesToSaveJson. Received:", imagesToSaveJson, "Error:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
-      return { error: `Invalid image data format received from client: ${e.message}` };
+      const errorMsg = `Invalid image data format received from client: ${e.message}. Received: ${imagesToSaveJson.substring(0, 200)}...`;
+      console.error(`handleSaveGeneratedImagesAction: ${errorMsg}`, JSON.stringify(e, Object.getOwnPropertyNames(e)));
+      return { error: errorMsg };
     }
 
     if (!Array.isArray(imagesToSave) || imagesToSave.length === 0) {
-      console.error("handleSaveGeneratedImagesAction: Parsed imagesToSave is not an array or is empty.");
-      return { error: "No images selected or data is not in expected array format." };
+      const errorMsg = "No images selected or data is not in expected array format after parsing.";
+      console.error(`handleSaveGeneratedImagesAction: ${errorMsg}. Parsed data:`, imagesToSave);
+      return { error: errorMsg };
     }
 
     let savedCount = 0;
     const saveErrors: string[] = [];
 
     for (const image of imagesToSave) {
-      if (!image.dataUri || !(image.dataUri.startsWith('data:image') || image.dataUri.startsWith('http'))) { 
-        const promptSnippet = image.prompt ? image.prompt.substring(0,30) + "..." : "N/A";
-        console.warn(`handleSaveGeneratedImagesAction: Invalid data URI or URL for an image (prompt: ${promptSnippet}). Skipping save for this image. URI starts with: ${image.dataUri?.substring(0,30)}...`);
-        saveErrors.push(`Invalid data URI/URL for image (prompt: ${promptSnippet})`);
+      const promptSnippet = image.prompt ? image.prompt.substring(0,30) + "..." : "N/A";
+      if (!image.dataUri || !(image.dataUri.startsWith('data:image') || image.dataUri.startsWith('image_url:') || image.dataUri.startsWith('https://'))) { 
+        const errorDetail = `Invalid data URI or URL for an image (prompt: ${promptSnippet}). URI starts with: ${image.dataUri?.substring(0,30)}...`;
+        console.warn(`handleSaveGeneratedImagesAction: ${errorDetail}. Skipping save for this image.`);
+        saveErrors.push(errorDetail);
         continue;
       }
       try {
@@ -300,13 +305,16 @@ export async function handleSaveGeneratedImagesAction(
             const filePath = `generatedLibraryImages/${brandProfileDocId}/${Date.now()}_${generateFilenamePart()}.${fileExtension}`;
             const imageStorageRef = storageRef(storage, filePath);
             
-            console.log(`handleSaveGeneratedImagesAction: Attempting to upload image to: ${filePath}`);
+            console.log(`handleSaveGeneratedImagesAction: Attempting to upload image data URI to: ${filePath}`);
             const snapshot = await uploadString(imageStorageRef, image.dataUri, 'data_url');
             console.log(`handleSaveGeneratedImagesAction: Successfully uploaded image: ${filePath}`);
             imageUrlToSave = await getDownloadURL(snapshot.ref);
             console.log(`handleSaveGeneratedImagesAction: Obtained download URL: ${imageUrlToSave}`);
-        } else {
-            console.log(`handleSaveGeneratedImagesAction: Image is already a URL, not uploading to storage: ${imageUrlToSave}`);
+        } else if (image.dataUri.startsWith('image_url:')) {
+             imageUrlToSave = image.dataUri.substring(10); // Remove 'image_url:' prefix
+             console.log(`handleSaveGeneratedImagesAction: Image is a direct URL (from Freepik GET likely), not uploading to storage: ${imageUrlToSave}`);
+        } else if (image.dataUri.startsWith('https://')) {
+             console.log(`handleSaveGeneratedImagesAction: Image is already an HTTPS URL, not uploading to storage: ${imageUrlToSave}`);
         }
 
 
@@ -320,7 +328,6 @@ export async function handleSaveGeneratedImagesAction(
         console.log(`handleSaveGeneratedImagesAction: Successfully saved image metadata to Firestore for URL: ${imageUrlToSave}`);
         savedCount++;
       } catch (e: any) {
-        const promptSnippet = image.prompt ? image.prompt.substring(0,50) + "..." : "N/A";
         const specificError = `Failed to save image (prompt: ${promptSnippet}): ${(e as Error).message?.substring(0,100)}`;
         console.error(`handleSaveGeneratedImagesAction: ${specificError}. Full error:`, JSON.stringify(e, Object.getOwnPropertyNames(e)));
         saveErrors.push(specificError);
@@ -337,8 +344,73 @@ export async function handleSaveGeneratedImagesAction(
       return { error: "No images were processed or saved. This might be due to an issue with the input data or no images being selected."};
     }
   } catch (e: any) {
+      const criticalErrorMsg = `A critical server error occurred during image saving: ${(e as Error).message}. Please check server logs.`;
       console.error("Critical error in handleSaveGeneratedImagesAction (outside loop):", JSON.stringify(e, Object.getOwnPropertyNames(e)));
-      return { error: `A critical server error occurred during image saving: ${(e as Error).message}. Please check server logs.` };
+      return { error: criticalErrorMsg };
   }
 }
 
+async function _checkFreepikTaskStatus(taskId: string): Promise<{ status: string; images: string[] | null }> {
+  const freepikApiKey = process.env.FREEPIK_API_KEY;
+  if (!freepikApiKey) {
+    throw new Error("FREEPIK_API_KEY is not set in environment variables for checking task status.");
+  }
+
+  const url = `https://api.freepik.com/v1/ai/text-to-image/imagen3/${taskId}`;
+  console.log(`Checking Freepik task status for ${taskId} at URL: ${url}`);
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'x-freepik-api-key': freepikApiKey,
+      },
+    });
+
+    const responseData = await response.json();
+    console.log(`Response from Freepik GET API for task ${taskId}:`, JSON.stringify(responseData, null, 2));
+
+    if (!response.ok) {
+      throw new Error(`Freepik GET API error for task ${taskId}: ${response.status} - ${responseData.title || responseData.detail || JSON.stringify(responseData)}`);
+    }
+
+    if (responseData.data && responseData.data.status) {
+      if (responseData.data.status === 'COMPLETED' && responseData.data.generated && responseData.data.generated.length > 0) {
+        return { status: responseData.data.status, images: responseData.data.generated };
+      }
+      return { status: responseData.data.status, images: null };
+    } else {
+      throw new Error(`Freepik GET API for task ${taskId} did not return data in expected format.`);
+    }
+  } catch (error: any) {
+    console.error(`Error calling Freepik GET API for task ${taskId}:`, error);
+    throw new Error(`Freepik GET API request failed for task ${taskId}: ${error.message}`);
+  }
+}
+
+export async function handleCheckFreepikTaskStatusAction(
+  prevState: FormState<{ status: string; images: string[] | null }>, // taskId removed from here, will be in returned object
+  formData: FormData
+): Promise<FormState<{ status: string; images: string[] | null; taskId: string }>> {
+  const taskId = formData.get("taskId") as string;
+  if (!taskId) {
+    return { error: "Task ID is required.", taskId: "" };
+  }
+  try {
+    const result = await _checkFreepikTaskStatus(taskId);
+    if (result.status === 'COMPLETED' && result.images && result.images.length > 0) {
+      return { data: { ...result, taskId }, message: `Task ${taskId.substring(0,8)}... completed. Images retrieved.` };
+    } else if (result.status === 'IN_PROGRESS') {
+      return { data: { ...result, taskId }, message: `Task ${taskId.substring(0,8)}... is still in progress.` };
+    } else if (result.status === 'FAILED') {
+       return { data: { ...result, taskId }, error: `Task ${taskId.substring(0,8)}... FAILED on Freepik's side.`};
+    } else { 
+      return { data: { ...result, taskId }, error: `Task ${taskId.substring(0,8)}... status: ${result.status}. No images available yet or unexpected status.`};
+    }
+  } catch (e: any) {
+    console.error(`Error in handleCheckFreepikTaskStatusAction for task ${taskId}:`, JSON.stringify(e, Object.getOwnPropertyNames(e)));
+    return { error: `Failed to check Freepik task status for ${taskId.substring(0,8)}...: ${e.message || 'Unknown error'}.`, taskId };
+  }
+}
+
+    
