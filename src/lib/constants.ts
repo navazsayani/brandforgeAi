@@ -14,10 +14,12 @@ export const industries = [
   { value: "automotive", label: "Automotive" },
   { value: "non_profit", label: "Non-profit" },
   { value: "other", label: "Other" },
+  { value: "_none_", label: "None / Not Applicable"}
 ];
 
 export const imageStylePresets = [
   { value: "photorealistic", label: "Photorealistic" },
+  { value: "photo", label: "Photo (Freepik)" },
   { value: "digital-art", label: "Digital Art (Freepik)" },
   { value: "3d", label: "3D Render (Freepik)" },
   { value: "painting", label: "Painting (Freepik)" },
@@ -34,7 +36,8 @@ export const imageStylePresets = [
   { value: "sketch", label: "Sketch (Freepik)" },
   { value: "watercolor", label: "Watercolor (Freepik)" },
   { value: "studio-shot", label: "Studio Shot (Freepik)" },
-  { value: "dark_moody", label: "Dark & Moody" },
+  { value: "dark", label: "Dark (Freepik)" },
+  { value: "dark_moody", label: "Dark & Moody (Generic)" },
   { value: "bright_airy", label: "Bright & Airy" },
   { value: "abstract", label: "Abstract" },
   { value: "origami", label: "Origami (Freepik)" },
@@ -115,7 +118,7 @@ export const freepikImagen3AspectRatios = [
     { value: "square_1_1", label: "1:1 (Square)" },
     { value: "social_story_9_16", label: "9:16 (Social Story)" },
     { value: "widescreen_16_9", label: "16:9 (Widescreen)" },
-    { value: "traditional_3_4", label: "3:4 (Traditional)" },
+    { value: "traditional_3_4", label: "3:4 (Traditional)" }, // Corresponds to UI 4:5 roughly
     { value: "classic_4_3", label: "4:3 (Classic)" },
 ];
 
@@ -128,3 +131,5 @@ export const generalAspectRatios = [
     { value: "3:2", label: "3:2 (Landscape)" },
     { value: "2:3", label: "2:3 (Portrait)" },
 ];
+
+    
