@@ -103,6 +103,7 @@ export default function ContentStudioPage() {
 
   const [checkingTaskId, setCheckingTaskId] = useState<string | null>(null);
   const [isCurrentlySavingImages, setIsCurrentlySavingImages] = useState(false);
+  const [isSavingImages, setIsSavingImages] = useState(false);
 
 
   useEffect(() => {
@@ -240,7 +241,8 @@ export default function ContentStudioPage() {
   }, [blogOutlineState, toast]);
 
  useEffect(() => {
-    setIsCurrentlySavingImages(false); // Ensure loading state is reset
+    setIsCurrentlySavingImages(false); 
+    setIsSavingImages(false);
     if (saveImagesState.message && !saveImagesState.error) {
       toast({ title: "Image Library", description: saveImagesState.message });
     }
@@ -300,7 +302,7 @@ export default function ContentStudioPage() {
   };
 
   const handleSaveAllGeneratedImages = () => {
-    setIsCurrentlySavingImages(true);
+    setIsSavingImages(true); 
     const saveableImages = lastSuccessfulGeneratedImageUrls
         .filter(url => url && (url.startsWith('data:') || url.startsWith('image_url:')))
         .map(url => ({
@@ -311,7 +313,7 @@ export default function ContentStudioPage() {
 
     if (saveableImages.length === 0) {
         toast({ title: "No new images to save", description: "No valid generated images are available for saving.", variant: "default"});
-        setIsCurrentlySavingImages(false);
+        setIsSavingImages(false);
         return;
     }
 
@@ -384,16 +386,18 @@ export default function ContentStudioPage() {
     if (selectedImageProvider === 'FREEPIK') {
         let baseFreepikPrompt = "";
         if (exampleImg) {
-            baseFreepikPrompt = `[An AI-generated description of your example image will be used here by the backend to guide content when Freepik/Imagen3 is selected.]\nUsing that description as primary inspiration for the subject and main visual elements, now generate an image based on the following concept: "${imageGenBrandDescription}".`;
+            // This placeholder will be replaced by the backend if an example image is used with Freepik
+             baseFreepikPrompt = `[An AI-generated description of your example image will be used here by the backend to guide content when Freepik/Imagen3 is selected.]\nUsing that description as primary inspiration for the subject and main visual elements, now generate an image based on the following concept: "${imageGenBrandDescription}".`;
         } else {
             baseFreepikPrompt = `Generate an image based on the concept: "${imageGenBrandDescription}".`;
         }
         textPromptContent = `${baseFreepikPrompt}${industryCtx}\nIncorporate these stylistic details and elements: "${combinedStyle}".`;
-        if (negPrompt) {
-            textPromptContent += `\n\nAvoid: ${negPrompt}.`;
-        }
+        // Note: For Freepik preview, we EXCLUDE negative_prompt, aspect_ratio, seed, and num_images from the text,
+        // as they are handled structurally by Freepik's API.
+        // However, we KEEP negativePrompt in the formSnapshot for the backend to use.
         textPromptContent += `\n\n${compositionGuidance}`;
     } else { 
+        // For Gemini and other general providers
         if (exampleImg) {
             textPromptContent = `
 Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.
@@ -409,10 +413,6 @@ The *design, appearance, theme, specific characteristics, and unique elements* o
 **Important Note on Color and Style**: While the brand description provides thematic guidance, strive for visual variety and avoid over-relying on a narrow color palette (like exclusively black and gold) unless the brand description *and* desired artistic style overwhelmingly and explicitly demand it. The goal is a fresh interpretation that fits the brand's *overall essence* and the *chosen artistic style*.
 
 **Crucially, do NOT replicate or closely imitate the visual design details (color, pattern, specific shape elements beyond the basic category identification, embellishments) of the provided example image.** The example image is *only* for determining the item category. The new image should look like a distinct product that fits the brand description and desired artistic style.
-
-**Example of Interaction:**
-If the example image is a 'simple blue cotton t-shirt' (category: t-shirt), the Brand Description is 'luxury brand, minimalist ethos, inspired by serene nature, prefers organic materials', and the Desired Artistic Style is 'high-fashion product shot, muted earthy tones'.
-You should generate an image of a *luxury t-shirt made from organic-looking material, in muted earthy tones (e.g., moss green, stone grey, soft beige), shot in a high-fashion product style*. It should evoke serenity and minimalism. It should NOT be the original blue cotton t-shirt, nor should it default to a generic "luxury" color scheme like black and gold unless those colors are specifically requested or strongly implied by the *combination* of inputs.
 `.trim();
         } else {
             textPromptContent = `
@@ -427,14 +427,14 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
             textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negPrompt}.`;
         }
         if (aspect) {
-            textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspect} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally, and the image content itself must fully occupy this ${aspect} frame, without any artificial letterboxing or pillarboxing.`;
+            textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspect}. Ensure the composition fits this ratio naturally, and the image content itself must fully occupy this ${aspect} frame, without any artificial letterboxing or pillarboxing.`;
         }
         if (seedValue !== undefined) {
             textPromptContent += `\n\nUse seed: ${seedValue}.`;
         }
         textPromptContent +=`\n\n${compositionGuidance}`;
         if (numImages > 1 ) {
-            textPromptContent += `\n\nImportant for batch generation: You are generating image 1 of a set of ${numImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (1/${numImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
+            textPromptContent += `\n\nImportant for batch generation: You are generating image 1 of a set of ${numImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (1/${numImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject.`;
         }
     }
 
@@ -446,8 +446,9 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
         exampleImage: exampleImg === "" ? undefined : exampleImg,
         aspectRatio: aspect,
         numberOfImages: numImages,
-        negativePrompt: negPrompt === "" ? undefined : negPrompt,
-        seed: seedValue,
+        negativePrompt: negPrompt === "" ? undefined : negPrompt, // Keep negativePrompt for backend
+        seed: seedValue, // Keep seed for backend
+        // Freepik structural params are kept for the backend but not textually in preview
         freepikStylingColors: selectedImageProvider === 'FREEPIK' && freepikDominantColorsInput ? freepikDominantColorsInput.split(',').map(c => ({color: c.trim(), weight: 0.5})) : undefined,
         freepikEffectColor: selectedImageProvider === 'FREEPIK' && freepikEffectColor !== "none" ? freepikEffectColor : undefined,
         freepikEffectLightning: selectedImageProvider === 'FREEPIK' && freepikEffectLightning !== "none" ? freepikEffectLightning : undefined,
@@ -462,8 +463,14 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
     startTransition(() => {
         const formData = new FormData();
 
+        // Use the currentTextPromptForEditing if the user has potentially modified it
+        // Otherwise, the backend will reconstruct it based on formSnapshot if needed.
+        // However, it's safer to ensure formSnapshot always contains the base elements.
         formData.append("finalizedTextPrompt", currentTextPromptForEditing || "");
-        formData.append("provider", formSnapshot?.provider || selectedImageProvider);
+
+        const provider = formSnapshot?.provider || selectedImageProvider;
+        formData.append("provider", provider);
+
         formData.append("brandDescription", formSnapshot?.brandDescription || imageGenBrandDescription || brandData?.brandDescription || "");
         
         const industryToSubmit = formSnapshot?.industry || imageGenIndustry || brandData?.industry || "";
@@ -477,6 +484,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
         formData.append("aspectRatio", formSnapshot?.aspectRatio || selectedAspectRatio);
         formData.append("numberOfImages", String(formSnapshot?.numberOfImages || parseInt(numberOfImagesToGenerate,10)));
 
+        // Negative prompt and seed are taken from formSnapshot, as they are part of structured data for backend
         const negPromptValue = formSnapshot?.negativePrompt;
         if (negPromptValue) formData.append("negativePrompt", negPromptValue);
 
@@ -485,8 +493,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
           formData.append("seed", String(seedValueNum));
         }
 
-        const currentProviderInSnapshot = formSnapshot?.provider || selectedImageProvider;
-        if (currentProviderInSnapshot === 'FREEPIK') {
+        if (provider === 'FREEPIK') {
             const fColorsFromSnapshot = formSnapshot?.freepikStylingColors;
             const fColorsInputStr = fColorsFromSnapshot ? fColorsFromSnapshot.map(c => c.color).join(',') : freepikDominantColorsInput;
             if (fColorsInputStr) formData.append("freepikDominantColorsInput", fColorsInputStr);
@@ -612,8 +619,10 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                      <div>
                         <Label htmlFor="imageGenIndustry" className="flex items-center mb-1"><Briefcase className="w-4 h-4 mr-2 text-primary" />Industry (from Profile)</Label>
                         <Select 
-                            value={imageGenIndustry} 
+                            value={imageGenIndustry || "_none_"} 
                             onValueChange={setImageGenIndustry}
+                            name="industry"
+                            
                         >
                             <SelectTrigger id="imageGenIndustry">
                                 <SelectValue placeholder="Select industry from profile" />
@@ -626,11 +635,10 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                                             {industry.label}
                                         </SelectItem>
                                     ))}
-                                     <SelectItem value="_none_">None / Custom</SelectItem>
                                 </SelectGroup>
                             </SelectContent>
                         </Select>
-                         <p className="text-xs text-muted-foreground mt-1">"None" means no specific industry context will be sent to AI. Value from Brand Profile is pre-selected.</p>
+                         <p className="text-xs text-muted-foreground mt-1">"None / Not Applicable" means no specific industry context will be sent to AI. Value from Brand Profile is pre-selected.</p>
                     </div>
 
                     <div>
@@ -874,10 +882,10 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                                     <Button
                                         type="button"
                                         onClick={handleSaveAllGeneratedImages}
-                                        disabled={isCurrentlySavingImages || !lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url.startsWith('image_url:'))}
+                                        disabled={isSavingImages || !lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url.startsWith('image_url:'))}
                                         size="sm"
                                     >
-                                        {isCurrentlySavingImages ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                        {isSavingImages ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                                         Save All to Library
                                     </Button>
                                 )}
