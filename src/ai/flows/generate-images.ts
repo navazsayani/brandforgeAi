@@ -63,22 +63,16 @@ async function _generateImageWithGemini(params: {
   promptParts: ({text: string} | {media: {url: string}})[];
 }): Promise<string> {
   const { aiInstance, promptParts } = params;
-  const safetySettingsConfig = [
-      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-  ];
 
   console.log("Final prompt parts array for Gemini _generateImageWithGemini:", JSON.stringify(promptParts, null, 2));
 
   try {
     const {media} = await aiInstance.generate({
-      model: 'googleai/gemini-2.0-flash-preview-image-generation',
+      model: 'googleai/gemini-2.0-flash-exp', // Updated model
       prompt: promptParts,
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
-        safetySettings: safetySettingsConfig,
+        // safetySettings removed as per request
       },
     });
 
@@ -557,3 +551,6 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
 
     
 
+
+
+    

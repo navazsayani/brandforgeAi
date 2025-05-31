@@ -53,16 +53,11 @@ Example direction: Think of a sleek, abstract 'B' that subtly incorporates a spa
 
     try {
       const {media} = await ai.generate({
-        model: 'googleai/gemini-2.0-flash-preview-image-generation',
+        model: 'googleai/gemini-2.0-flash-exp', // Updated model
         prompt: promptText,
         config: {
           responseModalities: ['TEXT', 'IMAGE'],
-          safetySettings: [
-            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          ],
+          // safetySettings removed as per request
         },
       });
 
@@ -78,3 +73,5 @@ Example direction: Think of a sleek, abstract 'B' that subtly incorporates a spa
   }
 );
 
+
+    
