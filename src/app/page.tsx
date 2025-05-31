@@ -6,8 +6,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogIn, UserPlus, LayoutDashboard, Loader2 } from 'lucide-react'; // Removed Sparkles
+import { LogIn, UserPlus, LayoutDashboard, Loader2 } from 'lucide-react'; 
 import NextImage from 'next/image';
+
+const brandForgeAppLogoDataUri = "data:image/svg+xml,%3Csvg%20width%3D%22120%22%20height%3D%22120%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Crect%20width%3D%22120%22%20height%3D%22120%22%20fill%3D%22hsl(180%2C%2050%25%2C%2040%25)%22%20rx%3D%2210%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20font-family%3D%22sans-serif%22%20font-size%3D%2260%22%20fill%3D%22hsl(180%2C%2050%25%2C%2095%25)%22%20text-anchor%3D%22middle%22%20dy%3D%22.3em%22%3EBF%3C%2Ftext%3E%3C%2Fsvg%3E";
 
 export default function LandingPage() {
   const { user, isLoading } = useAuth();
@@ -33,12 +35,12 @@ export default function LandingPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-background via-secondary to-background p-6 text-center">
       <div className="mb-12 flex flex-col items-center">
         <NextImage 
-            src="https://placehold.co/120x120.png" 
+            src={brandForgeAppLogoDataUri} 
             alt="BrandForge AI Logo" 
             width={120} 
             height={120} 
-            className="rounded-md mb-6 shadow-lg" // Changed to rounded-md for a more modern feel than rounded-full
-            data-ai-hint="AI forge" // Updated hint
+            className="rounded-md mb-6 shadow-lg" 
+            data-ai-hint="AI forge" 
         />
         <h1 className="text-5xl font-extrabold tracking-tight text-foreground sm:text-6xl md:text-7xl">
           Welcome to <span className="text-primary">BrandForge AI</span>

@@ -35,6 +35,8 @@ const navItems: NavItem[] = [
   { href: '/deployment-hub', label: 'Deployment Hub', icon: Send },
 ];
 
+const brandForgeAppLogoDataUri = "data:image/svg+xml,%3Csvg%20width%3D%2232%22%20height%3D%2232%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20fill%3D%22hsl(180%2C%2050%25%2C%2040%25)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20font-family%3D%22sans-serif%22%20font-size%3D%2216%22%20fill%3D%22hsl(180%2C%2050%25%2C%2095%25)%22%20text-anchor%3D%22middle%22%20dy%3D%22.3em%22%3EBF%3C%2Ftext%3E%3C%2Fsvg%3E";
+
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { user } = useAuth();
@@ -66,7 +68,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="p-4 border-b border-sidebar-border">
         <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2 text-sidebar-foreground hover:text-sidebar-primary-foreground">
           <NextImage 
-            src="https://placehold.co/32x32.png" 
+            src={brandForgeAppLogoDataUri}
             alt="BrandForge AI Logo" 
             width={32} 
             height={32} 
