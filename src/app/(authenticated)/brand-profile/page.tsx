@@ -390,7 +390,7 @@ export default function BrandProfilePage() {
   return (
     // AppShell is now handled by AuthenticatedLayout
     <div className="max-w-3xl mx-auto">
-      <h1 className="text-red-500 text-2xl font-bold my-4">DEBUG TEST - AUTHENTICATED BRAND PROFILE PAGE</h1>
+      
       <Card className="shadow-lg">
         <CardHeader>
           <div className="flex items-center space-x-3">
@@ -659,3 +659,5 @@ export default function BrandProfilePage() {
     </div>
   );
 }
+
+    
