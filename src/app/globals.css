@@ -8,25 +8,25 @@ body {
 
 @layer base {
   :root {
-    --background: 220 20% 97%; /* Light Steel Blueish White */
-    --foreground: 220 10% 20%; /* Dark Slate Grayish */
-    --card: 0 0% 100%; /* White */
-    --card-foreground: 220 10% 20%; /* Dark Slate Grayish */
-    --popover: 0 0% 100%; /* White */
-    --popover-foreground: 220 10% 20%; /* Dark Slate Grayish */
-    --primary: 200 80% 50%; /* Cerulean Blue */
-    --primary-foreground: 0 0% 100%; /* White */
-    --secondary: 220 15% 92%; /* Light Gray */
-    --secondary-foreground: 220 10% 30%; /* Slightly Lighter Dark Slate Grayish */
-    --muted: 220 15% 92%; /* Light Gray */
-    --muted-foreground: 220 10% 45%; /* Medium Gray */
-    --accent: 35 90% 55%; /* Bright Orange/Gold */
-    --accent-foreground: 220 10% 15%; /* Dark for contrast on bright accent */
-    --destructive: 0 75% 55%; /* Clearer Red */
-    --destructive-foreground: 0 0% 100%; /* White */
-    --border: 220 15% 88%; /* Lighter Gray Border */
-    --input: 220 15% 88%; /* Lighter Gray Border */
-    --ring: 200 80% 50%; /* Primary color for focus rings - Cerulean Blue */
+    --background: 0 100% 50%; /* BRIGHT RED - FOR DEBUGGING CSS APPLICATION */
+    --foreground: 220 10% 20%; 
+    --card: 0 0% 100%; 
+    --card-foreground: 220 10% 20%; 
+    --popover: 0 0% 100%; 
+    --popover-foreground: 220 10% 20%; 
+    --primary: 200 80% 50%; 
+    --primary-foreground: 0 0% 100%; 
+    --secondary: 220 15% 92%; 
+    --secondary-foreground: 220 10% 30%; 
+    --muted: 220 15% 92%; 
+    --muted-foreground: 220 10% 45%; 
+    --accent: 35 90% 55%; 
+    --accent-foreground: 220 10% 15%; 
+    --destructive: 0 75% 55%; 
+    --destructive-foreground: 0 0% 100%; 
+    --border: 220 15% 88%; 
+    --input: 220 15% 88%; 
+    --ring: 200 80% 50%; 
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
@@ -34,37 +34,37 @@ body {
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
 
-    /* Sidebar specific colors for light theme (though sidebar will be dark) */
-    --sidebar-background: 220 10% 18%; /* Dark blue-grey for sidebar */
-    --sidebar-foreground: 220 20% 92%; /* Light text on dark sidebar */
-    --sidebar-primary: 200 80% 55%; /* Slightly lighter primary for sidebar */
-    --sidebar-primary-foreground: 0 0% 100%; /* White */
-    --sidebar-accent: 200 80% 45%; /* Darker primary for hover */
-    --sidebar-accent-foreground: 0 0% 100%; /* White */
-    --sidebar-border: 220 10% 25%; /* Border for dark sidebar */
+    /* Sidebar specific colors */
+    --sidebar-background: 220 10% 18%; 
+    --sidebar-foreground: 220 20% 92%; 
+    --sidebar-primary: 200 80% 55%; 
+    --sidebar-primary-foreground: 0 0% 100%; 
+    --sidebar-accent: 200 80% 45%; 
+    --sidebar-accent-foreground: 0 0% 100%; 
+    --sidebar-border: 220 10% 25%; 
     --sidebar-ring: 200 80% 55%;
   }
 
   .dark {
-    --background: 220 10% 15%; /* Dark Slate Grayish */
-    --foreground: 220 20% 90%; /* Light Grayish Blue */
-    --card: 220 10% 20%; /* Slightly lighter than background */
+    --background: 220 10% 15%; 
+    --foreground: 220 20% 90%; 
+    --card: 220 10% 20%; 
     --card-foreground: 220 20% 90%;
     --popover: 220 10% 20%;
     --popover-foreground: 220 20% 90%;
-    --primary: 200 75% 55%; /* Slightly adjusted blue for dark mode */
+    --primary: 200 75% 55%; 
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 10% 25%; /* Darker Gray */
+    --secondary: 220 10% 25%; 
     --secondary-foreground: 220 20% 85%;
     --muted: 220 10% 25%;
     --muted-foreground: 220 20% 65%;
-    --accent: 35 85% 60%; /* Slightly adjusted accent for dark mode */
+    --accent: 35 85% 60%; 
     --accent-foreground: 220 10% 15%;
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 10% 30%; /* Darker border */
+    --border: 220 10% 30%; 
     --input: 220 10% 30%;
-    --ring: 200 75% 55%; /* Primary color for focus rings */
+    --ring: 200 75% 55%; 
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -72,7 +72,7 @@ body {
     --chart-5: 340 75% 55%;
 
     /* Sidebar specific colors for dark theme */
-    --sidebar-background: 220 10% 12%; /* Even darker for dark theme sidebar */
+    --sidebar-background: 220 10% 12%; 
     --sidebar-foreground: 220 20% 90%;
     --sidebar-primary: 200 75% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
