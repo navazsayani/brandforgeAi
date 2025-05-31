@@ -5,6 +5,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { Action } from 'genkit'; 
 import { describeImage } from './describe-image-flow'; // For Freepik description
+import { industries } from '../../lib/constants'; // Changed to relative import
 
 const GenerateImagesInputSchema = z.object({
   provider: z.enum(['GEMINI', 'FREEPIK', 'LEONARDO_AI', 'IMAGEN']).optional().describe("The image generation provider to use."),
@@ -265,7 +266,7 @@ const generateImagesFlow = ai.defineFlow(
   async (input) => {
     const {
       brandDescription,
-      industry,
+      industry, // This is the industry VALUE from input
       imageStyle, 
       exampleImage,
       exampleImageDescription,
@@ -286,8 +287,17 @@ const generateImagesFlow = ai.defineFlow(
     const generatedImageResults: string[] = [];
     let actualPromptUsedForFirstImage = ""; 
     const compositionGuidance = "IMPORTANT COMPOSITION RULE: When depicting human figures as the primary subject, the image *must* be well-composed. Avoid awkward or unintentional cropping of faces or key body parts. Ensure the figure is presented naturally and fully within the frame, unless the prompt *explicitly* requests a specific framing like 'close-up', 'headshot', 'upper body shot', or an artistic crop. Prioritize showing the entire subject if it's a person.";
-    const industryLabel = industries.find(i => i.value === industry)?.label || industry;
-    const industryContext = industryLabel ? ` The brand operates in the ${industryLabel} industry.` : "";
+
+    // Derive industryContext using the imported industries array
+    let industryLabel = "";
+    if (industry && industry !== "_none_") { // Check if industry value is provided and not "_none_"
+        const foundIndustry = industries.find(i => i.value === industry);
+        industryLabel = foundIndustry ? foundIndustry.label : industry; // Fallback to value if label not found
+    }
+    // Construct industryContext only if a valid label was found and it's not "None / Not Applicable"
+    const industryContext = (industryLabel && industryLabel !== "None / Not Applicable") 
+                            ? ` The brand operates in the ${industryLabel} industry.` 
+                            : "";
 
 
     if (chosenProvider.toUpperCase() === 'FREEPIK') {
@@ -318,15 +328,12 @@ const generateImagesFlow = ai.defineFlow(
             let baseContentPrompt = "";
             if (exampleImageDescription) {
                 console.log(`Freepik prompt using example image description: "${exampleImageDescription.substring(0,100)}..."`);
-                baseContentPrompt = `An example image was provided, which is described as: "${exampleImageDescription}". Using that description as primary inspiration for the subject and main visual elements, generate an image based on the concept: "${brandDescription}".`;
+                baseContentPrompt = `An example image was provided, which is described as: "${exampleImageDescription}". Using that description as primary inspiration for the subject and main visual elements, now generate an image based on the following concept: "${brandDescription}".`;
             } else {
                 baseContentPrompt = `Generate an image based on the concept: "${brandDescription}".`;
             }
-            textPromptForFreepik = `${baseContentPrompt}${industryContext}\nIncorporate these additional stylistic details and elements: "${imageStyle}".`;
+            textPromptForFreepik = `${baseContentPrompt}${industryContext}\nIncorporate these stylistic details and elements: "${imageStyle}".`;
             
-            if (negativePrompt) { // Freepik/Imagen3 handles negative_prompt structurally, but including it textually can be a fallback or for other models
-              textPromptForFreepik += `\n\nAvoid: ${negativePrompt}.`;
-            }
             textPromptForFreepik +=`\n\n${compositionGuidance}`;
         }
         actualPromptUsedForFirstImage = textPromptForFreepik; 
@@ -532,3 +539,4 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
 // });
     
 
+    
