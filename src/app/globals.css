@@ -2,31 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
-
 @layer base {
   :root {
-    --background: 0 0% 98%; /* Very light grey, almost white */
+    /* PRD: #F0F2F5 -> HSL: 216 25% 95% */
+    --background: 216 25% 95%; 
     --foreground: 220 10% 20%; 
-    --card: 0 0% 100%; /* White cards */
+    --card: 0 0% 100%; /* White cards for contrast */
     --card-foreground: 220 10% 20%; 
     --popover: 0 0% 100%; 
     --popover-foreground: 220 10% 20%; 
-    --primary: 210 70% 50%; /* A sophisticated deep blue */
+    /* PRD: #29ABE2 -> HSL: 199 76% 52% */
+    --primary: 199 76% 52%; 
     --primary-foreground: 0 0% 100%; 
-    --secondary: 220 15% 92%; /* Light grey for secondary elements */
+    --secondary: 220 15% 92%; 
     --secondary-foreground: 220 10% 30%; 
     --muted: 220 15% 92%; 
     --muted-foreground: 220 10% 45%; 
-    --accent: 35 90% 55%; /* Warm gold/orange for accents */
-    --accent-foreground: 220 10% 15%; 
+    /* PRD: #FF9933 -> HSL: 30 100% 60% */
+    --accent: 30 100% 60%; 
+    --accent-foreground: 24 95% 15%; /* Darker foreground for orange accent for readability */
     --destructive: 0 75% 55%; 
     --destructive-foreground: 0 0% 100%; 
     --border: 220 15% 88%; 
     --input: 220 15% 88%; 
-    --ring: 210 70% 50%; /* Primary blue for rings */
+    --ring: 199 76% 52%; /* Primary blue for rings */
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
@@ -37,35 +36,36 @@ body {
     /* Sidebar specific colors */
     --sidebar-background: 220 10% 18%; /* Dark blue-grey for sidebar */
     --sidebar-foreground: 220 20% 92%; /* Light text for dark sidebar */
-    --sidebar-primary: 210 70% 55%; /* Brighter blue for sidebar primary elements */
+    --sidebar-primary: 199 76% 58%; /* Brighter variant of PRD blue for sidebar primary elements */
     --sidebar-primary-foreground: 0 0% 100%; 
-    --sidebar-accent: 35 90% 55%; /* Gold/orange accent for sidebar */
-    --sidebar-accent-foreground: 220 10% 15%; 
+    --sidebar-accent: 30 100% 60%; /* Orange accent for sidebar */
+    --sidebar-accent-foreground: 24 95% 15%; 
     --sidebar-border: 220 10% 25%; 
-    --sidebar-ring: 210 70% 55%;
+    --sidebar-ring: 199 76% 58%;
   }
 
   .dark {
-    --background: 220 10% 15%; 
+    /* Using the PRD colors adapted for a dark theme */
+    --background: 220 10% 15%; /* Dark background */
     --foreground: 220 20% 90%; 
     --card: 220 10% 20%; 
     --card-foreground: 220 20% 90%;
     --popover: 220 10% 20%;
     --popover-foreground: 220 20% 90%;
-    --primary: 210 70% 50%; 
+    --primary: 199 76% 58%; /* Slightly brighter PRD blue for dark mode */
     --primary-foreground: 0 0% 100%;
     --secondary: 220 10% 25%; 
     --secondary-foreground: 220 20% 85%;
     --muted: 220 10% 25%;
     --muted-foreground: 220 20% 65%;
-    --accent: 35 85% 60%; 
-    --accent-foreground: 220 10% 15%;
+    --accent: 30 100% 65%; /* Slightly brighter PRD orange for dark mode */
+    --accent-foreground: 24 95% 15%;
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 100%;
     --border: 220 10% 30%; 
     --input: 220 10% 30%;
-    --ring: 210 70% 50%; 
-    --chart-1: 220 70% 50%;
+    --ring: 199 76% 58%; 
+    --chart-1: 199 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
@@ -74,12 +74,12 @@ body {
     /* Sidebar specific colors for dark theme */
     --sidebar-background: 220 10% 12%; 
     --sidebar-foreground: 220 20% 90%;
-    --sidebar-primary: 210 70% 55%;
+    --sidebar-primary: 199 76% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 35 85% 60%;
-    --sidebar-accent-foreground: 220 10% 15%;
+    --sidebar-accent: 30 100% 65%;
+    --sidebar-accent-foreground: 24 95% 15%;
     --sidebar-border: 220 10% 20%;
-    --sidebar-ring: 210 70% 55%;
+    --sidebar-ring: 199 76% 60%;
   }
 }
 
@@ -89,5 +89,6 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    /* font-family removed as it's handled by layout.tsx */
   }
 }
