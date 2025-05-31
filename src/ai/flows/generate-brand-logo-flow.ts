@@ -71,11 +71,11 @@ const generateBrandLogoFlow = ai.defineFlow(
 
     try {
       const {media} = await ai.generate({
-        model: 'googleai/gemini-2.0-flash-preview-image-generation',
+        model: 'googleai/gemini-2.0-flash-exp', // Updated model
         prompt: promptText,
         config: {
           responseModalities: ['TEXT', 'IMAGE'],
-           safetySettings: [ // Added safety settings
+           safetySettings: [
             { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
             { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
@@ -95,3 +95,4 @@ const generateBrandLogoFlow = ai.defineFlow(
     }
   }
 );
+
