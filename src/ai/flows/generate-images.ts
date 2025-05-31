@@ -5,7 +5,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { Action } from 'genkit'; 
 import { describeImage } from './describe-image-flow'; // For Freepik description
-import { industries } from '../../lib/constants'; // Changed to relative import
+import { industries, freepikValidStyles } from '../../lib/constants'; // Added freepikValidStyles
 
 const GenerateImagesInputSchema = z.object({
   provider: z.enum(['GEMINI', 'FREEPIK', 'LEONARDO_AI', 'IMAGEN']).optional().describe("The image generation provider to use."),
@@ -134,12 +134,9 @@ const freepikImagen3ApiAspectRatios: Record<string, string> = {
     "4:3": "classic_4_3",
 };
 
-const freepikValidStyles = ["photo", "digital-art", "3d", "painting", "low-poly", "pixel-art", "anime", "cyberpunk", "comic", "vintage", "cartoon", "vector", "studio-shot", "dark", "sketch", "mockup", "2000s-pone", "70s-vibe", "watercolor", "art-nouveau", "origami", "surreal", "fantasy", "traditional-japan"];
-
-
 async function _initiateFreepikImageTask(params: { 
   textPrompt: string; 
-  imageStyle: string;
+  imageStyle: string; // This is the combined string (preset + custom notes)
   exampleImage?: string; 
   negativePrompt?: string;
   aspectRatio?: string; 
@@ -164,7 +161,6 @@ async function _initiateFreepikImageTask(params: {
       console.log("Freepik/Imagen3: Mapping UI aspect ratio 4:5 to Freepik's 'traditional_3_4'");
   }
 
-
   const requestBody: any = {
     prompt: params.textPrompt,
     num_images: params.numberOfImages,
@@ -179,14 +175,16 @@ async function _initiateFreepikImageTask(params: {
 
   const styling: any = {};
   if (params.imageStyle) {
-      const firstStyleKeyword = params.imageStyle.toLowerCase().trim().split(/[,.]|\s-\s/)[0]; 
+      // Try to extract the first keyword from the combined imageStyle string (preset + custom notes)
+      // to set the structural Freepik style enum.
+      const firstStyleKeyword = params.imageStyle.toLowerCase().trim().split(/[,.]|\s-\s/)[0].trim(); 
       const directFreepikStyleMatch = freepikValidStyles.find(s => s.toLowerCase() === firstStyleKeyword);
 
       if (directFreepikStyleMatch) {
           styling.style = directFreepikStyleMatch;
-          console.log(`Freepik/Imagen3: Using direct style enum match: "${directFreepikStyleMatch}" from input style: "${params.imageStyle}"`);
+          console.log(`Freepik/Imagen3 STRUCTURAL: Using direct style enum match: "${directFreepikStyleMatch}" from input imageStyle (preset part): "${params.imageStyle}"`);
       } else {
-          console.warn(`Freepik/Imagen3: Provided imageStyle "${params.imageStyle}" (or its first part "${firstStyleKeyword}") is not a direct Freepik enum. Relying on text prompt for detailed styling. Freepik's 'style' parameter will default to 'photo' if not otherwise cued by text.`);
+          console.warn(`Freepik/Imagen3 STRUCTURAL: Provided imageStyle "${params.imageStyle}" (or its first part "${firstStyleKeyword}") is not a direct Freepik enum. Freepik's 'style' parameter will default to 'photo' if not otherwise cued by text prompt or structural parameters.`);
           if (params.imageStyle.toLowerCase().includes("photo") || params.imageStyle.toLowerCase().includes("photorealistic")) {
             styling.style = "photo"; 
           } else {
@@ -266,8 +264,8 @@ const generateImagesFlow = ai.defineFlow(
   async (input) => {
     const {
       brandDescription,
-      industry, // This is the industry VALUE from input
-      imageStyle, 
+      industry, 
+      imageStyle, // This is the combined string (preset.value + custom_notes_if_any)
       exampleImage,
       exampleImageDescription,
       aspectRatio,
@@ -288,13 +286,11 @@ const generateImagesFlow = ai.defineFlow(
     let actualPromptUsedForFirstImage = ""; 
     const compositionGuidance = "IMPORTANT COMPOSITION RULE: When depicting human figures as the primary subject, the image *must* be well-composed. Avoid awkward or unintentional cropping of faces or key body parts. Ensure the figure is presented naturally and fully within the frame, unless the prompt *explicitly* requests a specific framing like 'close-up', 'headshot', 'upper body shot', or an artistic crop. Prioritize showing the entire subject if it's a person.";
 
-    // Derive industryContext using the imported industries array
     let industryLabel = "";
-    if (industry && industry !== "_none_") { // Check if industry value is provided and not "_none_"
+    if (industry && industry !== "_none_") { 
         const foundIndustry = industries.find(i => i.value === industry);
-        industryLabel = foundIndustry ? foundIndustry.label : industry; // Fallback to value if label not found
+        industryLabel = foundIndustry ? foundIndustry.label : industry; 
     }
-    // Construct industryContext only if a valid label was found and it's not "None / Not Applicable"
     const industryContext = (industryLabel && industryLabel !== "None / Not Applicable") 
                             ? ` The brand operates in the ${industryLabel} industry.` 
                             : "";
@@ -307,7 +303,6 @@ const generateImagesFlow = ai.defineFlow(
         if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
             console.log(`Using finalized text prompt for Freepik batch: "${finalizedTextPrompt.substring(0,100)}..."`);
             textPromptForFreepik = finalizedTextPrompt;
-            // Add composition guidance if not already handled in finalized prompt
              if (
                 !finalizedTextPrompt.toLowerCase().includes("human figure") &&
                 !finalizedTextPrompt.toLowerCase().includes("crop") &&
@@ -332,8 +327,28 @@ const generateImagesFlow = ai.defineFlow(
             } else {
                 baseContentPrompt = `Generate an image based on the concept: "${brandDescription}".`;
             }
-            textPromptForFreepik = `${baseContentPrompt}${industryContext}\nIncorporate these stylistic details and elements: "${imageStyle}".`;
+
+            let textualStyleComponent = "";
+            const firstStyleKeywordOfCombined = imageStyle.toLowerCase().trim().split(/[,.]|\s-\s/)[0].trim();
+            const isStructuralStyleLikelyApplied = freepikValidStyles.includes(firstStyleKeywordOfCombined);
+
+            if (isStructuralStyleLikelyApplied) {
+                // A structural style (like "photo") was likely applied by _initiateFreepikImageTask.
+                // We add the full imageStyle textually if it contains more than just the structural keyword
+                // (e.g., "photo with dramatic lighting" or if the preset itself was "photorealistic" which implies "photo" + "realistic").
+                if (imageStyle.toLowerCase().trim() !== firstStyleKeywordOfCombined) {
+                    textualStyleComponent = `\nIncorporate these stylistic details and elements: "${imageStyle}".`;
+                } else {
+                    // imageStyle is essentially just the structural keyword (e.g., "photo").
+                    // No need to add it textually if _initiateFreepikImageTask handled it structurally.
+                    textualStyleComponent = ""; 
+                }
+            } else {
+                // The primary style (e.g., "minimalist") is not a structural Freepik style, so the full `imageStyle` string is relevant textually.
+                textualStyleComponent = `\nIncorporate these stylistic details and elements: "${imageStyle}".`;
+            }
             
+            textPromptForFreepik = `${baseContentPrompt}${industryContext}${textualStyleComponent}`;
             textPromptForFreepik +=`\n\n${compositionGuidance}`;
         }
         actualPromptUsedForFirstImage = textPromptForFreepik; 
@@ -342,7 +357,7 @@ const generateImagesFlow = ai.defineFlow(
         try {
             const freepikTask = await _initiateFreepikImageTask({
                 textPrompt: textPromptForFreepik, 
-                imageStyle: imageStyle, 
+                imageStyle: imageStyle, // Pass the combined style string for _initiateFreepikImageTask to parse for structural style
                 exampleImage: exampleImage,
                 negativePrompt: negativePrompt, 
                 aspectRatio: aspectRatio, 
@@ -502,6 +517,7 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
     if (chosenProvider.toUpperCase() === 'FREEPIK' && !actualPromptUsedForFirstImage && finalizedTextPrompt) {
         actualPromptUsedForFirstImage = finalizedTextPrompt; 
     } else if (chosenProvider.toUpperCase() === 'FREEPIK' && !actualPromptUsedForFirstImage) {
+        // Fallback if something went wrong before full prompt capture
         actualPromptUsedForFirstImage = `Concept: "${brandDescription}". Add stylistic details: "${imageStyle}". (Error occurred before full prompt capture for batch)`;
     }
 
@@ -540,3 +556,4 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
     
 
     
+
