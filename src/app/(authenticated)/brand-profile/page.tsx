@@ -25,7 +25,7 @@ import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject, 
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { SubmitButton } from '@/components/SubmitButton';
 import type { GenerateBrandLogoOutput } from '@/ai/flows/generate-brand-logo-flow';
-import { industries } from '../../lib/constants';
+import { industries } from '@/lib/constants';
 
 const brandProfileSchema = z.object({
   brandName: z.string().min(2, { message: "Brand name must be at least 2 characters." }),
@@ -396,8 +396,8 @@ export default function BrandProfilePage() {
           <div className="flex items-center space-x-3">
             <UserCircle className="w-10 h-10 text-primary" />
             <div>
-              <CardTitle className="text-3xl font-bold">Brand Profile</CardTitle>
-              <CardDescription className="text-lg">
+              <CardTitle className="text-3xl font-bold break-words">Brand Profile</CardTitle>
+              <CardDescription className="text-lg break-words">
                 Define your brand's identity. This information will fuel the AI for content and campaign generation.
               </CardDescription>
             </div>
@@ -659,5 +659,3 @@ export default function BrandProfilePage() {
     </div>
   );
 }
-
-    
