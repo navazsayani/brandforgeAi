@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { Sparkles, LogIn, UserPlus, LayoutDashboard, Loader2 } from 'lucide-react';
+import { LogIn, UserPlus, LayoutDashboard, Loader2 } from 'lucide-react'; // Removed Sparkles
 import NextImage from 'next/image';
 
 export default function LandingPage() {
@@ -33,12 +33,12 @@ export default function LandingPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-background via-secondary to-background p-6 text-center">
       <div className="mb-12 flex flex-col items-center">
         <NextImage 
-            src="https://placehold.co/150x150.png" // Replace with your actual logo if available
+            src="https://placehold.co/120x120.png" 
             alt="BrandForge AI Logo" 
             width={120} 
             height={120} 
-            className="rounded-full mb-6 shadow-lg"
-            data-ai-hint="creative logo"
+            className="rounded-md mb-6 shadow-lg" // Changed to rounded-md for a more modern feel than rounded-full
+            data-ai-hint="AI forge" // Updated hint
         />
         <h1 className="text-5xl font-extrabold tracking-tight text-foreground sm:text-6xl md:text-7xl">
           Welcome to <span className="text-primary">BrandForge AI</span>

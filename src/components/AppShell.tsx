@@ -4,7 +4,8 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, UserCircle, ImageIcon, MessageSquare, Sparkles, Send, Settings, Briefcase, Images, Menu, LogOut, LogIn as LogInIcon } from 'lucide-react';
+import NextImage from 'next/image'; // Added NextImage
+import { Home, UserCircle, ImageIcon, MessageSquare, Send, Settings, Briefcase, Images, Menu, LogOut, LogIn as LogInIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
@@ -17,7 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Assuming you have Avatar
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface NavItem {
   href: string;
@@ -64,7 +65,14 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="flex flex-col h-full">
       <div className="p-4 border-b border-sidebar-border">
         <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2 text-sidebar-foreground hover:text-sidebar-primary-foreground">
-          <Sparkles className="w-8 h-8 text-primary" />
+          <NextImage 
+            src="https://placehold.co/32x32.png" 
+            alt="BrandForge AI Logo" 
+            width={32} 
+            height={32} 
+            className="rounded-sm"
+            data-ai-hint="AI forge" 
+          />
           <h1 className="text-xl font-bold">BrandForge AI</h1>
         </Link>
       </div>
