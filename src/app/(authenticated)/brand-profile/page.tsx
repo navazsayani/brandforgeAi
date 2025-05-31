@@ -7,7 +7,7 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 // Removed AppShell import
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,6 +17,7 @@ import { Progress } from '@/components/ui/progress';
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
+import { useAuth } from '@/contexts/AuthContext';
 import { UserCircle, LinkIcon, FileText, UploadCloud, Tag, Brain, Loader2, Trash2, Edit, Briefcase, Image as ImageIconLucide, Sparkles } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { handleExtractBrandInfoFromUrlAction, handleGenerateBrandLogoAction, type FormState as ExtractFormState, type FormState as GenerateLogoFormState } from '@/lib/actions';
@@ -54,10 +55,11 @@ const defaultFormValues: BrandProfileFormData = {
 const initialExtractState: ExtractFormState<{ brandDescription: string; targetKeywords: string; }> = { error: undefined, data: undefined, message: undefined };
 const initialGenerateLogoState: GenerateLogoFormState<GenerateBrandLogoOutput> = { error: undefined, data: undefined, message: undefined };
 
-const BRAND_PROFILE_DOC_ID = "defaultBrandProfile";
-
 export default function BrandProfilePage() {
+  const { currentUser, isLoading: isAuthLoading } = useAuth();
   const { brandData, setBrandData, isLoading: isBrandContextLoading, error: brandContextError } = useBrand();
+
+  const userId = currentUser?.uid;
   const { toast } = useToast();
 
   const [previewImages, setPreviewImages] = useState<string[]>([]);
@@ -180,7 +182,12 @@ export default function BrandProfilePage() {
 
   const uploadImageToStorage = async (file: File, index: number, totalFiles: number): Promise<string> => {
     return new Promise((resolve, reject) => {
-      const filePath = `brand_example_images/${BRAND_PROFILE_DOC_ID}/${Date.now()}_${file.name}`;
+      if (!userId) {
+        toast({ title: "Upload Error", description: "User not authenticated. Cannot upload images.", variant: "destructive" });
+        reject(new Error("User not authenticated"));
+        return;
+      }
+      const filePath = `brand_example_images/${userId}/${Date.now()}_${file.name}`;
       const imageStorageRef = storageRef(storage, filePath);
       const uploadTask = uploadBytesResumable(imageStorageRef, file);
 
@@ -312,7 +319,12 @@ export default function BrandProfilePage() {
 
     if (generatedLogoPreview) {
       try {
-        const logoFilePath = `brand_logos/${BRAND_PROFILE_DOC_ID}/logo_${Date.now()}.png`;
+        if (!userId) {
+            toast({ title: "Save Error", description: "User not authenticated. Cannot save profile with new logo.", variant: "destructive" });
+            delete finalData.brandLogoUrl;
+            throw new Error("User not authenticated");
+        }
+        const logoFilePath = `brand_logos/${userId}/logo_${Date.now()}.png`;
         const logoStorageRef = storageRef(storage, logoFilePath);
 
         const uploadTask = uploadString(logoStorageRef, generatedLogoPreview, 'data_url');
@@ -344,7 +356,12 @@ export default function BrandProfilePage() {
     }
 
     try {
-      await setBrandData({...finalData, exampleImages: finalData.exampleImages || []});
+      if (!userId) {
+        toast({ title: "Save Error", description: "User not authenticated. Cannot save profile.", variant: "destructive" });
+        return;
+      }
+
+      await setBrandData({...finalData, exampleImages: finalData.exampleImages || []}, userId);
       toast({
         title: "Brand Profile Saved",
         description: "Your brand information has been saved successfully.",
@@ -362,26 +379,9 @@ export default function BrandProfilePage() {
     }
   };
 
-  if (isBrandContextLoading && !form.formState.isDirty && !brandData) {
+  if (isAuthLoading || (isBrandContextLoading && !form.formState.isDirty && !brandData)) {
     return (
-      // AppShell is now handled by AuthenticatedLayout
-      <div className="max-w-3xl mx-auto">
-        <Card className="shadow-lg">
-          <CardHeader>
-            <Skeleton className="h-10 w-1/2 mb-2" />
-            <Skeleton className="h-6 w-3/4" />
-          </CardHeader>
-          <CardContent className="space-y-8">
-            {[...Array(7)].map((_, i) => (
-              <div key={i} className="space-y-2">
-                <Skeleton className="h-5 w-1/4" />
-                <Skeleton className={i === 2 || i === 4 ? "h-24 w-full" : "h-10 w-full"} />
-              </div>
-            ))}
-            <Skeleton className="h-12 w-full" />
-          </CardContent>
-        </Card>
-      </div>
+      <div data-testid="loading-state">Loading... Please wait.</div>
     );
   }
 
@@ -411,7 +411,7 @@ export default function BrandProfilePage() {
                 name="brandName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center text-base"><UserCircle className="w-5 h-5 mr-2 text-primary"/>Brand Name</FormLabel>
+                    <FormLabel className="flex items-center text-base"><UserCircle className="w-5 h-5 mr-2 text-primary"/>Brand Name <span className="text-destructive ml-1">*</span></FormLabel>
                     <FormControl>
                       <Input placeholder="E.g., Acme Innovations" {...field} disabled={isBrandContextLoading || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo} />
                     </FormControl>
@@ -435,7 +435,7 @@ export default function BrandProfilePage() {
                               onClick={handleAutoFill}
                               disabled={isExtracting || isBrandContextLoading || !field.value || form.getFieldState("websiteUrl").invalid || isUploading || isGeneratingLogo || isUploadingLogo}
                               variant="outline"
-                              size="icon"
+                              size="sm"
                               title="Auto-fill from Website"
                           >
                               {isExtracting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="w-4 h-4" />}
@@ -451,7 +451,7 @@ export default function BrandProfilePage() {
                 name="brandDescription"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center text-base"><FileText className="w-5 h-5 mr-2 text-primary"/>Brand Description</FormLabel>
+                    <FormLabel className="flex items-center text-base"><FileText className="w-5 h-5 mr-2 text-primary"/>Brand Description <span className="text-destructive ml-1">*</span></FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Describe your brand, its values, target audience, and unique selling propositions."
@@ -644,17 +644,22 @@ export default function BrandProfilePage() {
                 </div>
               )}
 
-              <SubmitButton
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                size="lg"
-                disabled={isBrandContextLoading || form.formState.isSubmitting || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo}
-                loadingText={isUploadingLogo ? 'Uploading Logo & Saving...' : (isUploading ? 'Uploading Image(s)...' : (isBrandContextLoading ? 'Loading Profile...' : (form.formState.isSubmitting ? 'Saving...' : (isExtracting ? 'Extracting Info...' : 'Save Brand Profile'))))}
-              >
-                  {isUploadingLogo ? 'Uploading Logo & Saving...' : (isUploading ? 'Uploading Image(s)...' : (isBrandContextLoading ? 'Loading Profile...' : (form.formState.isSubmitting ? 'Saving...' : (isExtracting ? 'Extracting Info...' : 'Save Brand Profile'))))}
-              </SubmitButton>
             </form>
           </Form>
         </CardContent>
+          <CardFooter>
+            <Button
+              type="submit"
+              form="brandProfileForm" 
+              onClick={() => form.handleSubmit(onSubmit)()}
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+              size="lg"
+              disabled={isBrandContextLoading || form.formState.isSubmitting || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo}
+            >
+                {(isUploadingLogo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null)}
+                {isUploadingLogo ? 'Uploading Logo & Saving...' : (isUploading ? 'Uploading Image(s)...' : (isBrandContextLoading ? 'Loading Profile...' : (form.formState.isSubmitting ? 'Saving...' : (isExtracting ? 'Extracting Info...' : 'Save Brand Profile'))))}
+            </Button>
+          </CardFooter>
       </Card>
     </div>
   );
