@@ -105,7 +105,7 @@ export default function ContentStudioPage() {
   const [formSnapshot, setFormSnapshot] = useState<Partial<GenerateImagesInput> & { provider?: string } | null>(null);
 
   const [checkingTaskId, setCheckingTaskId] = useState<string | null>(null);
-  const [isCurrentlySavingImages, setIsCurrentlySavingImages] = useState(false);
+  // const [isCurrentlySavingImages, setIsCurrentlySavingImages] = useState(false); // Replaced by isSavingImages from useActionState
 
 
   useEffect(() => {
@@ -243,7 +243,7 @@ export default function ContentStudioPage() {
   }, [blogOutlineState, toast]);
 
  useEffect(() => {
-    setIsSavingImages(false); // Reset loading state when action completes
+    setIsSavingImages(false); 
     if (saveImagesServerActionState.message && !saveImagesServerActionState.error) {
       toast({ title: "Image Library", description: saveImagesServerActionState.message });
     }
@@ -303,7 +303,7 @@ export default function ContentStudioPage() {
   };
 
   const handleSaveAllGeneratedImages = () => {
-    setIsSavingImages(true); 
+    setIsSavingImages(true);
     const saveableImages = lastSuccessfulGeneratedImageUrls
         .filter(url => url && (url.startsWith('data:') || url.startsWith('image_url:')))
         .map(url => ({
@@ -370,7 +370,7 @@ export default function ContentStudioPage() {
 
     const currentIndustryValue = imageGenIndustry || brandData?.industry || "_none_";
     const industryLabelForPreview = industries.find(i => i.value === currentIndustryValue)?.label || currentIndustryValue;
-    console.log("Client-side preview: currentIndustryValue:", currentIndustryValue, "resolved to industryLabelForPreview:", industryLabelForPreview); // DEBUG
+    console.log("Client-side preview: currentIndustryValue:", currentIndustryValue, "resolved to industryLabelForPreview:", industryLabelForPreview); 
 
     const industryCtx = (industryLabelForPreview && industryLabelForPreview !== "None / Not Applicable" && industryLabelForPreview !== "_none_") ? ` The brand operates in the ${industryLabelForPreview} industry.` : "";
     const exampleImg = currentExampleImageForGen;
@@ -391,21 +391,28 @@ export default function ContentStudioPage() {
             textPromptContent = `Generate an image based on the concept: "${imageGenBrandDescription}".`;
         }
         textPromptContent += `${industryCtx}`;
+        
+        console.log("DEBUG PREVIEW (Freepik): selectedImageStylePreset:", `"${selectedImageStylePreset}"`);
+        console.log("DEBUG PREVIEW (Freepik): imported freepikValidStyles:", freepikValidStyles);
 
-        const firstPresetKeyword = selectedImageStylePreset.toLowerCase().trim().split(/[,.]|\s-\s/)[0];
+        const firstPresetKeyword = selectedImageStylePreset.toLowerCase().trim().split(/[,.]|\s-\s/)[0].trim();
         const isPresetAStructuralFreepikStyle = freepikValidStyles.some(s => s.toLowerCase() === firstPresetKeyword);
+        
+        console.log("DEBUG PREVIEW (Freepik): firstPresetKeyword:", `"${firstPresetKeyword}"`);
+        console.log("DEBUG PREVIEW (Freepik): isPresetAStructuralFreepikStyle:", isPresetAStructuralFreepikStyle);
 
         if (isPresetAStructuralFreepikStyle) {
-            textPromptContent += `\n(The base style '${selectedImageStylePreset}' will be applied structurally by Freepik.)`;
+            const presetLabel = imageStylePresets.find(p => p.value === selectedImageStylePreset)?.label || selectedImageStylePreset;
+            textPromptContent += `\n(The base style '${presetLabel}' will be applied structurally by Freepik.)`;
             if (customStyleNotesInput) {
                 textPromptContent += `\nIncorporate these additional custom stylistic details: "${customStyleNotesInput}".`;
             }
         } else {
-            if (combinedStyle) { // If preset isn't structural, the full combinedStyle is key textual info
+            if (combinedStyle) { 
                 textPromptContent += `\nIncorporate these stylistic details and elements: "${combinedStyle}".`;
             }
         }
-        // Negative prompt is handled structurally by Freepik, but textual can be complementary.
+        
         if (negPrompt) {
             textPromptContent += `\n\nAvoid: ${negPrompt}.`;
         }
@@ -458,7 +465,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
         provider: selectedImageProvider,
         brandDescription: imageGenBrandDescription,
         industry: currentIndustryValue === "_none_" ? "" : currentIndustryValue,
-        imageStyle: combinedStyle, // Always send the full combined style to backend
+        imageStyle: combinedStyle, 
         exampleImage: exampleImg === "" ? undefined : exampleImg,
         aspectRatio: aspect,
         numberOfImages: numImages,
@@ -526,7 +533,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
     const formData = new FormData();
     formData.append('brandName', (document.getElementById('blogBrandName') as HTMLInputElement)?.value || brandData?.brandName || "");
     formData.append('blogBrandDescription', (document.getElementById('blogBrandDescription') as HTMLTextAreaElement)?.value || brandData?.brandDescription || "");
-    formData.append('industry', (document.getElementById('blogIndustry') as HTMLInputElement)?.value || brandData?.industry || "");
+    formData.append('industry', (document.getElementById('blogIndustrySelectTrigger')?.textContent || brandData?.industry) === "None / Not Applicable" ? "" : (document.getElementById('blogIndustrySelectTrigger')?.textContent || brandData?.industry || "") );
     formData.append('blogKeywords', (document.getElementById('blogKeywords') as HTMLInputElement)?.value || brandData?.targetKeywords || "");
     formData.append('blogWebsiteUrl', (document.getElementById('blogWebsiteUrl') as HTMLInputElement)?.value || brandData?.websiteUrl || "");
 
@@ -634,7 +641,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                             name="industry"
                         >
                             <SelectTrigger id="imageGenIndustry">
-                                <SelectValue placeholder="Select industry from profile" />
+                                <SelectValue placeholder="Select industry" />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectGroup>
@@ -644,10 +651,11 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                                             {industry.label}
                                         </SelectItem>
                                     ))}
+                                     <SelectItem value="_none_">None / Not Applicable</SelectItem>
                                 </SelectGroup>
                             </SelectContent>
                         </Select>
-                         <p className="text-xs text-muted-foreground mt-1">Value from Brand Profile is pre-selected. "None / Not Applicable" means no specific industry context will be sent to AI.</p>
+                         <p className="text-xs text-muted-foreground mt-1">"None / Not Applicable" means no specific industry context will be sent to AI.</p>
                     </div>
 
                     <div>
@@ -888,7 +896,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                             </CardTitle>
                            <div className="flex items-center gap-2">
                                {lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url.startsWith('image_url:')) && (
-                                    <Button
+                                     <Button
                                         type="button"
                                         onClick={handleSaveAllGeneratedImages}
                                         disabled={isSavingImages || !lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url.startsWith('image_url:'))}
@@ -1249,12 +1257,21 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                         </div>
                         <div>
                             <Label htmlFor="blogIndustry" className="flex items-center mb-1"><Briefcase className="w-4 h-4 mr-2 text-primary" />Industry (from Profile)</Label>
-                            <Input
-                                id="blogIndustry"
-                                name="industry"
+                            <Select 
+                                name="industry" 
                                 defaultValue={brandData?.industry === "_none_" ? "" : brandData?.industry || ""}
-                                placeholder="e.g., Fashion, Technology"
-                            />
+                            >
+                                <SelectTrigger id="blogIndustrySelectTrigger">
+                                    <SelectValue placeholder="Select industry" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {industries.map(industry => (
+                                        <SelectItem key={industry.value} value={industry.value === "_none_" ? "" : industry.value}>
+                                            {industry.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div>
                             <Label htmlFor="blogKeywords" className="flex items-center mb-1"><Tag className="w-4 h-4 mr-2 text-primary" />Keywords (from Profile)</Label>
@@ -1380,3 +1397,4 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
     </AppShell>
   );
 }
+
