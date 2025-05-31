@@ -132,4 +132,6 @@ export const generalAspectRatios = [
     { value: "2:3", label: "2:3 (Portrait)" },
 ];
 
-    
+// This list is used by backend generate-images flow to match Freepik structural styles
+// and now by client-side preview for better accuracy.
+export const freepikValidStyles = ["photo", "digital-art", "3d", "painting", "low-poly", "pixel-art", "anime", "cyberpunk", "comic", "vintage", "cartoon", "vector", "studio-shot", "dark", "sketch", "mockup", "2000s-pone", "70s-vibe", "watercolor", "art-nouveau", "origami", "surreal", "fantasy", "traditional-japan"];

@@ -24,7 +24,7 @@ import type { GenerateBlogOutlineOutput } from "@/ai/flows/generate-blog-outline
 import type { GenerateImagesInput } from '@/ai/flows/generate-images';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { industries, imageStylePresets, freepikImagen3EffectColors, freepikImagen3EffectLightnings, freepikImagen3EffectFramings, freepikImagen3AspectRatios, generalAspectRatios, blogTones } from '../../lib/constants';
+import { industries, imageStylePresets, freepikImagen3EffectColors, freepikImagen3EffectLightnings, freepikImagen3EffectFramings, freepikImagen3AspectRatios, generalAspectRatios, blogTones, freepikValidStyles } from '../../lib/constants';
 
 
 const initialImageFormState: FormState<{ generatedImages: string[]; promptUsed: string; providerUsed: string; }>= { error: undefined, data: undefined, message: undefined };
@@ -53,7 +53,10 @@ export default function ContentStudioPage() {
   const [blogState, blogAction] = useActionState(handleGenerateBlogContentAction, initialBlogFormState);
   const [describeImageState, describeImageAction] = useActionState(handleDescribeImageAction, initialDescribeImageState);
   const [blogOutlineState, blogOutlineAction] = useActionState(handleGenerateBlogOutlineAction, initialBlogOutlineState);
-  const [saveImagesState, saveImagesAction] = useActionState(handleSaveGeneratedImagesAction, initialSaveImagesState);
+  
+  const [saveImagesServerActionState, saveImagesAction] = useActionState(handleSaveGeneratedImagesAction, initialSaveImagesState);
+  const [isSavingImages, setIsSavingImages] = useState(false);
+
   const [freepikTaskStatusState, freepikTaskStatusAction] = useActionState(handleCheckFreepikTaskStatusAction, initialFreepikTaskStatusState);
 
   const [lastSuccessfulGeneratedImageUrls, setLastSuccessfulGeneratedImageUrls] = useState<string[]>([]);
@@ -103,13 +106,12 @@ export default function ContentStudioPage() {
 
   const [checkingTaskId, setCheckingTaskId] = useState<string | null>(null);
   const [isCurrentlySavingImages, setIsCurrentlySavingImages] = useState(false);
-  const [isSavingImages, setIsSavingImages] = useState(false);
 
 
   useEffect(() => {
     if (brandData) {
         setImageGenBrandDescription(brandData.brandDescription || "");
-        setImageGenIndustry(brandData.industry || "");
+        setImageGenIndustry(brandData.industry || "_none_");
         setCustomStyleNotesInput(brandData.imageStyleNotes || ""); 
 
         if (brandData.exampleImages && brandData.exampleImages.length > 0) {
@@ -121,7 +123,7 @@ export default function ContentStudioPage() {
         }
     } else {
         setImageGenBrandDescription("");
-        setImageGenIndustry("");
+        setImageGenIndustry("_none_");
         setCustomStyleNotesInput("");
         setSelectedProfileImageIndexForGen(null);
         setSelectedProfileImageIndexForSocial(null);
@@ -241,15 +243,14 @@ export default function ContentStudioPage() {
   }, [blogOutlineState, toast]);
 
  useEffect(() => {
-    setIsCurrentlySavingImages(false); 
-    setIsSavingImages(false);
-    if (saveImagesState.message && !saveImagesState.error) {
-      toast({ title: "Image Library", description: saveImagesState.message });
+    setIsSavingImages(false); // Reset loading state when action completes
+    if (saveImagesServerActionState.message && !saveImagesServerActionState.error) {
+      toast({ title: "Image Library", description: saveImagesServerActionState.message });
     }
-    if (saveImagesState.error) {
-      toast({ title: "Error Saving Images", description: saveImagesState.error, variant: "destructive"});
+    if (saveImagesServerActionState.error) {
+      toast({ title: "Error Saving Images", description: saveImagesServerActionState.error, variant: "destructive"});
     }
-  }, [saveImagesState, toast]);
+  }, [saveImagesServerActionState, toast]);
 
 
   useEffect(() => {
@@ -367,11 +368,11 @@ export default function ContentStudioPage() {
   const handlePreviewPromptClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
 
-    const currentIndustryValue = imageGenIndustry || brandData?.industry || "";
+    const currentIndustryValue = imageGenIndustry || brandData?.industry || "_none_";
     const industryLabelForPreview = industries.find(i => i.value === currentIndustryValue)?.label || currentIndustryValue;
-    console.log("Client-side preview: currentIndustryValue:", currentIndustryValue, "resolved to industryLabelForPreview:", industryLabelForPreview); 
+    console.log("Client-side preview: currentIndustryValue:", currentIndustryValue, "resolved to industryLabelForPreview:", industryLabelForPreview); // DEBUG
 
-    const industryCtx = industryLabelForPreview && industryLabelForPreview !== "_none_" ? ` The brand operates in the ${industryLabelForPreview} industry.` : "";
+    const industryCtx = (industryLabelForPreview && industryLabelForPreview !== "None / Not Applicable" && industryLabelForPreview !== "_none_") ? ` The brand operates in the ${industryLabelForPreview} industry.` : "";
     const exampleImg = currentExampleImageForGen;
     const combinedStyle = selectedImageStylePreset + (customStyleNotesInput ? `. ${customStyleNotesInput}` : "");
     const negPrompt = imageGenNegativePrompt;
@@ -384,18 +385,32 @@ export default function ContentStudioPage() {
     let textPromptContent = "";
 
     if (selectedImageProvider === 'FREEPIK') {
-        let baseFreepikPrompt = "";
         if (exampleImg) {
-            // This placeholder will be replaced by the backend if an example image is used with Freepik
-             baseFreepikPrompt = `[An AI-generated description of your example image will be used here by the backend to guide content when Freepik/Imagen3 is selected.]\nUsing that description as primary inspiration for the subject and main visual elements, now generate an image based on the following concept: "${imageGenBrandDescription}".`;
+            textPromptContent = `[An AI-generated description of your example image will be used here by the backend to guide content when Freepik/Imagen3 is selected.]\nUsing that description as primary inspiration for the subject and main visual elements, now generate an image based on the following concept: "${imageGenBrandDescription}".`;
         } else {
-            baseFreepikPrompt = `Generate an image based on the concept: "${imageGenBrandDescription}".`;
+            textPromptContent = `Generate an image based on the concept: "${imageGenBrandDescription}".`;
         }
-        textPromptContent = `${baseFreepikPrompt}${industryCtx}\nIncorporate these stylistic details and elements: "${combinedStyle}".`;
-        // Note: For Freepik preview, we EXCLUDE negative_prompt, aspect_ratio, seed, and num_images from the text,
-        // as they are handled structurally by Freepik's API.
-        // However, we KEEP negativePrompt in the formSnapshot for the backend to use.
+        textPromptContent += `${industryCtx}`;
+
+        const firstPresetKeyword = selectedImageStylePreset.toLowerCase().trim().split(/[,.]|\s-\s/)[0];
+        const isPresetAStructuralFreepikStyle = freepikValidStyles.some(s => s.toLowerCase() === firstPresetKeyword);
+
+        if (isPresetAStructuralFreepikStyle) {
+            textPromptContent += `\n(The base style '${selectedImageStylePreset}' will be applied structurally by Freepik.)`;
+            if (customStyleNotesInput) {
+                textPromptContent += `\nIncorporate these additional custom stylistic details: "${customStyleNotesInput}".`;
+            }
+        } else {
+            if (combinedStyle) { // If preset isn't structural, the full combinedStyle is key textual info
+                textPromptContent += `\nIncorporate these stylistic details and elements: "${combinedStyle}".`;
+            }
+        }
+        // Negative prompt is handled structurally by Freepik, but textual can be complementary.
+        if (negPrompt) {
+            textPromptContent += `\n\nAvoid: ${negPrompt}.`;
+        }
         textPromptContent += `\n\n${compositionGuidance}`;
+
     } else { 
         // For Gemini and other general providers
         if (exampleImg) {
@@ -437,24 +452,23 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
             textPromptContent += `\n\nImportant for batch generation: You are generating image 1 of a set of ${numImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (1/${numImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject.`;
         }
     }
-
+    
+    setCurrentTextPromptForEditing(textPromptContent);
     setFormSnapshot({
         provider: selectedImageProvider,
         brandDescription: imageGenBrandDescription,
         industry: currentIndustryValue === "_none_" ? "" : currentIndustryValue,
-        imageStyle: combinedStyle,
+        imageStyle: combinedStyle, // Always send the full combined style to backend
         exampleImage: exampleImg === "" ? undefined : exampleImg,
         aspectRatio: aspect,
         numberOfImages: numImages,
-        negativePrompt: negPrompt === "" ? undefined : negPrompt, // Keep negativePrompt for backend
-        seed: seedValue, // Keep seed for backend
-        // Freepik structural params are kept for the backend but not textually in preview
+        negativePrompt: negPrompt === "" ? undefined : negPrompt,
+        seed: seedValue,
         freepikStylingColors: selectedImageProvider === 'FREEPIK' && freepikDominantColorsInput ? freepikDominantColorsInput.split(',').map(c => ({color: c.trim(), weight: 0.5})) : undefined,
         freepikEffectColor: selectedImageProvider === 'FREEPIK' && freepikEffectColor !== "none" ? freepikEffectColor : undefined,
         freepikEffectLightning: selectedImageProvider === 'FREEPIK' && freepikEffectLightning !== "none" ? freepikEffectLightning : undefined,
         freepikEffectFraming: selectedImageProvider === 'FREEPIK' && freepikEffectFraming !== "none" ? freepikEffectFraming : undefined,
     });
-    setCurrentTextPromptForEditing(textPromptContent);
     setIsPreviewingPrompt(true);
   };
 
@@ -463,9 +477,6 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
     startTransition(() => {
         const formData = new FormData();
 
-        // Use the currentTextPromptForEditing if the user has potentially modified it
-        // Otherwise, the backend will reconstruct it based on formSnapshot if needed.
-        // However, it's safer to ensure formSnapshot always contains the base elements.
         formData.append("finalizedTextPrompt", currentTextPromptForEditing || "");
 
         const provider = formSnapshot?.provider || selectedImageProvider;
@@ -484,7 +495,6 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
         formData.append("aspectRatio", formSnapshot?.aspectRatio || selectedAspectRatio);
         formData.append("numberOfImages", String(formSnapshot?.numberOfImages || parseInt(numberOfImagesToGenerate,10)));
 
-        // Negative prompt and seed are taken from formSnapshot, as they are part of structured data for backend
         const negPromptValue = formSnapshot?.negativePrompt;
         if (negPromptValue) formData.append("negativePrompt", negPromptValue);
 
@@ -622,7 +632,6 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                             value={imageGenIndustry || "_none_"} 
                             onValueChange={setImageGenIndustry}
                             name="industry"
-                            
                         >
                             <SelectTrigger id="imageGenIndustry">
                                 <SelectValue placeholder="Select industry from profile" />
@@ -638,7 +647,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                                 </SelectGroup>
                             </SelectContent>
                         </Select>
-                         <p className="text-xs text-muted-foreground mt-1">"None / Not Applicable" means no specific industry context will be sent to AI. Value from Brand Profile is pre-selected.</p>
+                         <p className="text-xs text-muted-foreground mt-1">Value from Brand Profile is pre-selected. "None / Not Applicable" means no specific industry context will be sent to AI.</p>
                     </div>
 
                     <div>
@@ -1371,4 +1380,3 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
     </AppShell>
   );
 }
-
