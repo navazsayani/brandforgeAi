@@ -74,7 +74,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="outline" size="icon">
-                  <Menu className="w-6 h-6" /> {/* Changed to Menu icon for mobile trigger */}
+                  <Menu className="w-6 h-6" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="p-0 w-64 bg-sidebar text-sidebar-foreground border-r-0">
@@ -98,9 +98,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 function UserMenu() {
   // In a real app, this would show user info and logout options
   return (
-    <div className="flex items-center gap-2 p-2 rounded-full cursor-pointer hover:bg-accent/10"> {/* Adjusted hover for UserMenu */}
+    <div className="flex items-center gap-2 p-2 rounded-full cursor-pointer hover:bg-accent/10">
       <UserCircle className="w-8 h-8 text-primary" />
-      <span className="hidden font-medium md:inline text-foreground">User Name</span> {/* Ensure text color from foreground */}
+      <span className="hidden font-medium md:inline text-foreground">User Name</span>
     </div>
   );
 }
