@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, UserCircle, ImageIcon, MessageSquare, Sparkles, Send, Settings, Briefcase, Images } from 'lucide-react'; // Changed BarChart2 to Sparkles, Added Images
+import { Home, UserCircle, ImageIcon, MessageSquare, Sparkles, Send, Settings, Briefcase, Images, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
@@ -74,7 +74,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="outline" size="icon">
-                  <Home className="w-6 h-6" /> {/* Changed to Home for consistency, or could be Menu icon */}
+                  <Menu className="w-6 h-6" /> {/* Changed to Menu icon for mobile trigger */}
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="p-0 w-64 bg-sidebar text-sidebar-foreground border-r-0">
@@ -98,9 +98,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 function UserMenu() {
   // In a real app, this would show user info and logout options
   return (
-    <div className="flex items-center gap-2 p-2 rounded-full cursor-pointer hover:bg-accent">
+    <div className="flex items-center gap-2 p-2 rounded-full cursor-pointer hover:bg-accent/10"> {/* Adjusted hover for UserMenu */}
       <UserCircle className="w-8 h-8 text-primary" />
-      <span className="hidden font-medium md:inline">User Name</span>
+      <span className="hidden font-medium md:inline text-foreground">User Name</span> {/* Ensure text color from foreground */}
     </div>
   );
 }

@@ -1,15 +1,15 @@
 
-"use client"; // Make this a client component to use useBrand hook
+"use client"; 
 
-import React, { useEffect, useState } from 'react'; // Import React and hooks
+import React, { useEffect, useState } from 'react'; 
 import { AppShell } from '@/components/AppShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowRight, Edit3, Send, TrendingUp, Sparkles } from 'lucide-react'; // Changed BarChart2 to Sparkles
-import NextImage from 'next/image'; // Use NextImage to avoid conflicts
-import { useBrand } from '@/contexts/BrandContext'; // Import useBrand
-import { Skeleton } from '@/components/ui/skeleton'; // For loading state
+import { ArrowRight, Edit3, Send, TrendingUp, Sparkles } from 'lucide-react'; 
+import NextImage from 'next/image'; 
+import { useBrand } from '@/contexts/BrandContext'; 
+import { Skeleton } from '@/components/ui/skeleton'; 
 
 export default function DashboardPage() {
   const { brandData, isLoading: isBrandLoading } = useBrand();
@@ -29,7 +29,7 @@ export default function DashboardPage() {
         <Card className="shadow-lg">
           <CardHeader>
             <div className="flex items-center space-x-3">
-              <Sparkles className="w-10 h-10 text-primary" /> {/* Changed from BarChart2 */}
+              <Sparkles className="w-10 h-10 text-primary" /> 
               <div>
                 <CardTitle className="text-3xl font-bold">Welcome to BrandForge AI</CardTitle>
                 <CardDescription className="text-lg">
@@ -45,7 +45,7 @@ export default function DashboardPage() {
               then explore our content creation and campaign management tools.
             </p>
             <div className="grid gap-6 md:grid-cols-2">
-              {/* Adjusted logo container to be square and control its max size */}
+              
               <div className="relative w-full max-w-md mx-auto aspect-square rounded-lg shadow-md overflow-hidden bg-muted flex items-center justify-center">
                 {isBrandLoading ? (
                   <Skeleton className="w-full h-full" />
@@ -60,7 +60,6 @@ export default function DashboardPage() {
                   />
                 ) : (
                   <div className="text-center p-4">
-                    {/* The placeholder image can remain non-square as it's just a generic background */}
                     <NextImage
                         src="https://placehold.co/400x400.png" 
                         alt="Placeholder for brand logo"
