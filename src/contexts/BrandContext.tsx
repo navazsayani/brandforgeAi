@@ -6,12 +6,13 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebaseConfig';
 import type { BrandData, GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign } from '@/types';
+import { useAuth } from './AuthContext'; // Added
 
-const BRAND_PROFILE_DOC_ID = "defaultBrandProfile"; 
+// BRAND_PROFILE_DOC_ID is no longer used as a global constant for doc ID
 
 interface BrandContextType {
   brandData: BrandData | null;
-  setBrandData: (data: BrandData) => Promise<void>;
+  setBrandData: (data: BrandData, userId: string) => Promise<void>; // Added userId parameter
   isLoading: boolean;
   error: string | null;
   generatedImages: GeneratedImage[];
@@ -26,7 +27,19 @@ interface BrandContextType {
 
 const BrandContext = createContext<BrandContextType | undefined>(undefined);
 
+const defaultEmptyBrandData: BrandData = {
+    brandName: "",
+    websiteUrl: "",
+    brandDescription: "",
+    industry: "",
+    imageStyleNotes: "",
+    exampleImages: [],
+    targetKeywords: "",
+    brandLogoUrl: undefined,
+};
+
 export const BrandProvider = ({ children }: { children: ReactNode }) => {
+  const { currentUser } = useAuth(); // Get current user from AuthContext
   const [brandData, setBrandDataState] = useState<BrandData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,31 +50,28 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
   const [generatedAdCampaigns, setGeneratedAdCampaigns] = useState<GeneratedAdCampaign[]>([]);
 
   const fetchBrandDataCB = useCallback(async () => {
+    if (!currentUser) {
+      setBrandDataState(null); // No user, no specific brand data
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
+    const userId = currentUser.uid;
+
     try {
-      const brandDocRef = doc(db, "brandProfiles", BRAND_PROFILE_DOC_ID);
+      const brandDocRef = doc(db, "brandProfiles", userId); // Use userId for document path
       const docSnap = await getDoc(brandDocRef);
       if (docSnap.exists()) {
         const fetchedData = docSnap.data() as BrandData;
-        setBrandDataState({ 
-          ...fetchedData, 
-          industry: fetchedData.industry || "",
-          imageStyleNotes: fetchedData.imageStyleNotes || "",
-          exampleImages: fetchedData.exampleImages || [],
-          brandLogoUrl: fetchedData.brandLogoUrl || undefined, // Ensure brandLogoUrl is handled
+        setBrandDataState({
+          ...defaultEmptyBrandData, // Ensure all fields are present
+          ...fetchedData,
         });
       } else {
-        setBrandDataState({ 
-            brandName: "", 
-            websiteUrl: "", 
-            brandDescription: "", 
-            industry: "", 
-            imageStyleNotes: "", 
-            exampleImages: [] , 
-            targetKeywords: "",
-            brandLogoUrl: undefined,
-        });
+        // User has no brand profile yet, initialize with empty/default
+        setBrandDataState(defaultEmptyBrandData);
       }
     } catch (e: any) {
       console.error("Error fetching brand data from Firestore:", e);
@@ -73,29 +83,34 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         specificError = "Database permission error. Please check your Firestore security rules in the Firebase console.";
       }
       setError(specificError);
+      setBrandDataState(null); // Set to null on error to avoid using stale data
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentUser]); // Depend on currentUser
 
   useEffect(() => {
     fetchBrandDataCB();
-  }, [fetchBrandDataCB]);
+  }, [fetchBrandDataCB]); // fetchBrandDataCB already depends on currentUser
 
-  const setBrandDataCB = useCallback(async (data: BrandData) => {
+  const setBrandDataCB = useCallback(async (data: BrandData, userId: string) => { // userId is now required
+    if (!userId) {
+      const noUserError = "User not authenticated. Cannot save brand profile.";
+      setError(noUserError);
+      console.error(noUserError);
+      throw new Error(noUserError);
+    }
+
     setIsLoading(true);
     setError(null);
     try {
-      const dataToSave: BrandData = { 
-        ...data, 
-        industry: data.industry || "",
-        imageStyleNotes: data.imageStyleNotes || "",
-        exampleImages: data.exampleImages || [],
-        brandLogoUrl: data.brandLogoUrl || undefined, // Ensure brandLogoUrl is included
+      const dataToSave: BrandData = {
+        ...defaultEmptyBrandData, // Ensure all fields are present even if partial data is passed
+        ...data,
       };
-      const brandDocRef = doc(db, "brandProfiles", BRAND_PROFILE_DOC_ID);
-      await setDoc(brandDocRef, dataToSave, { merge: true });
-      setBrandDataState(dataToSave); 
+      const brandDocRef = doc(db, "brandProfiles", userId); // Use userId for document path
+      await setDoc(brandDocRef, dataToSave, { merge: true }); // Use merge: true to be safe
+      setBrandDataState(dataToSave);
     } catch (e: any) {
       console.error("Error saving brand data to Firestore:", e);
       let specificError = `Failed to save brand profile: ${e.message || "Unknown error. Check console."}`;
@@ -106,28 +121,28 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
           specificError = "Failed to save data due to database permission error. Check Firestore security rules.";
       }
       setError(specificError);
-      throw e; 
+      throw e;
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   const addGeneratedImageCB = useCallback((image: GeneratedImage) => {
-    setGeneratedImages(prev => [image, ...prev.slice(0,19)]); 
+    setGeneratedImages(prev => [image, ...prev.slice(0,19)]);
   }, []);
 
   const addGeneratedSocialPostCB = useCallback((post: GeneratedSocialMediaPost) => {
-    setGeneratedSocialPosts(prev => [post, ...prev.slice(0,19)]); 
+    setGeneratedSocialPosts(prev => [post, ...prev.slice(0,19)]);
   }, []);
 
   const addGeneratedBlogPostCB = useCallback((post: GeneratedBlogPost) => {
-    setGeneratedBlogPosts(prev => [post, ...prev.slice(0,19)]); 
+    setGeneratedBlogPosts(prev => [post, ...prev.slice(0,19)]);
   }, []);
 
   const addGeneratedAdCampaignCB = useCallback((campaign: GeneratedAdCampaign) => {
-    setGeneratedAdCampaigns(prev => [campaign, ...prev.slice(0,19)]); 
+    setGeneratedAdCampaigns(prev => [campaign, ...prev.slice(0,19)]);
   }, []);
-  
+
   const contextValue = useMemo(() => ({
     brandData,
     setBrandData: setBrandDataCB,
@@ -163,3 +178,4 @@ export const useBrand = () => {
   }
   return context;
 };
+
