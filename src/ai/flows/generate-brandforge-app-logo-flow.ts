@@ -30,29 +30,30 @@ const generateBrandForgeAppLogoFlow = ai.defineFlow(
     const industry = "AI Software, Marketing Technology";
 
     const promptText = `
-Generate a concept for a brand logo for "${brandName}".
+Generate a sophisticated and **modern, chic, and minimalist** brand logo concept for "${brandName}".
 Brand Description: "${brandDescription}"
 Industry: "${industry}"
 
-The logo should be:
-- Simple, clean, and modern.
-- Memorable and iconic.
-- Visually representative of the brand's essence: AI, creation (forge), branding, intelligence, automation, sleekness.
-- Suitable for use as a brand identity mark on websites, social media, and within the app.
-- Preferably vector-like or easily convertible to a vector format. Avoid overly complex photographic details or textures that would not scale well.
-- Focus on typography (perhaps a stylized "BF" or "B"), abstract shapes, or simple icons that subtly suggest a forge, a spark, or a neural network element.
-- Consider using the color palette: Deep Teal as a primary or strong accent, with Gold as a secondary accent, and dark grays/off-whites for neutrality.
-- Ensure high contrast and readability.
-- The output should be a square image.
-- Do NOT include any additional explanatory text or background, only the logo graphic itself on a transparent or simple background if possible, otherwise a solid background that allows easy removal.
-- For technology, think modern, sleek, perhaps abstract representations of connectivity or innovation. Emphasize the 'forge' aspect -- creation and building.
+The logo MUST be:
+- **Minimalist & Clean:** Extremely simple, avoiding clutter. Focus on essential, iconic forms. Effective use of negative space is highly encouraged.
+- **Modern & Sleek:** Contemporary feel, sharp lines, possibly geometric or elegantly fluid shapes. Avoid anything ornate or overly detailed.
+- **Chic & Elegant:** Sophisticated and refined. It should feel premium and intelligent.
+- **Abstract or Stylized Logomark/Logotype:** Do NOT create an illustrative logo. It should be an abstract mark, a stylized monogram (e.g., "BF", "B"), or a very clean, modern logotype.
+- **Conceptually Relevant (Subtly):** Subtly hint at "AI" (e.g., clean neural pathway, a spark of intelligence, interconnected nodes) and "forge" (e.g., a strong, foundational shape, a spark of creation). These elements should be abstract and integrated seamlessly, not literal.
+- **Color Palette:** Strongly prefer a color palette based on Deep Teal as a primary or strong accent, with Soft Gold as a secondary accent. Dark grays or off-whites should be used for neutrality and background if not transparent.
+- **Vector-like Quality:** The design should be easily convertible to a vector format. Avoid photographic textures, complex gradients, or elements that do not scale well.
+- **High Contrast & Readability:** Ensure the logo is clear and impactful, even at small sizes.
+- **Square Image Output:** The final image must be square.
+- **No Explanatory Text:** Output ONLY the logo graphic itself on a transparent or simple, solid background that allows easy removal. Do NOT include any text labels like "Logo Concept" or descriptions with the image.
+
+Example direction: Think of a sleek, abstract 'B' that subtly incorporates a spark or a clean, geometric network pattern. Or, a very minimalist abstract shape that evokes both a forge's strength and AI's precision.
 `;
 
-    console.log("Attempting BrandForge AI app logo generation with prompt:", promptText);
+    console.log("Attempting BrandForge AI app logo generation with REFINED prompt:", promptText);
 
     try {
       const {media} = await ai.generate({
-        model: 'googleai/gemini-2.0-flash-preview-image-generation', // Consistent with existing logo flow
+        model: 'googleai/gemini-2.0-flash-preview-image-generation',
         prompt: promptText,
         config: {
           responseModalities: ['TEXT', 'IMAGE'],
@@ -76,3 +77,4 @@ The logo should be:
     }
   }
 );
+
