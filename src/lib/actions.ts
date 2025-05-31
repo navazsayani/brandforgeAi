@@ -9,6 +9,7 @@ import { extractBrandInfoFromUrl, type ExtractBrandInfoFromUrlInput, type Extrac
 import { describeImage, type DescribeImageInput, type DescribeImageOutput } from "@/ai/flows/describe-image-flow"; 
 import { generateBlogOutline, type GenerateBlogOutlineInput, type GenerateBlogOutlineOutput } from '@/ai/flows/generate-blog-outline-flow';
 import { generateBrandLogo, type GenerateBrandLogoInput, type GenerateBrandLogoOutput } from '@/ai/flows/generate-brand-logo-flow';
+import { generateBrandForgeAppLogo, type GenerateBrandForgeAppLogoOutput } from '@/ai/flows/generate-brandforge-app-logo-flow'; // Added
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -468,7 +469,24 @@ export async function handleGenerateBrandLogoAction(
     return { error: `Failed to generate brand logo: ${e.message || "Unknown error. Check server logs."}` };
   }
 }
+
+export async function handleGenerateBrandForgeAppLogoAction(
+  prevState: FormState<GenerateBrandForgeAppLogoOutput>,
+  formData: FormData // FormData is passed by useActionState but not used by this specific flow
+): Promise<FormState<GenerateBrandForgeAppLogoOutput>> {
+  try {
+    // No input needed from formData as the flow hardcodes BrandForge AI details
+    const result = await generateBrandForgeAppLogo();
+    return { data: result, message: "BrandForge AI application logo generated successfully!" };
+  } catch (e: any) {
+    console.error("Error in handleGenerateBrandForgeAppLogoAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
+    return { error: `Failed to generate BrandForge AI app logo: ${e.message || "Unknown error. Check server logs."}` };
+  }
+}
     
 
     
 
+
+    
+    
