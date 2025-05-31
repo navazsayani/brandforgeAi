@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, UserCircle, ImageIcon, MessageSquare, BarChart2, Send, Settings, Briefcase, Images } from 'lucide-react'; // Added Images
+import { Home, UserCircle, ImageIcon, MessageSquare, Sparkles, Send, Settings, Briefcase, Images } from 'lucide-react'; // Changed BarChart2 to Sparkles, Added Images
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
@@ -19,7 +19,7 @@ const navItems: NavItem[] = [
   { href: '/', label: 'Dashboard', icon: Home },
   { href: '/brand-profile', label: 'Brand Profile', icon: UserCircle },
   { href: '/content-studio', label: 'Content Studio', icon: ImageIcon },
-  { href: '/image-library', label: 'Image Library', icon: Images }, // Added Image Library
+  { href: '/image-library', label: 'Image Library', icon: Images },
   { href: '/campaign-manager', label: 'Campaign Manager', icon: Briefcase },
   { href: '/deployment-hub', label: 'Deployment Hub', icon: Send },
 ];
@@ -31,7 +31,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="flex flex-col h-full">
       <div className="p-4 border-b border-sidebar-border">
         <Link href="/" className="flex items-center gap-2 text-sidebar-foreground hover:text-sidebar-primary-foreground">
-          <BarChart2 className="w-8 h-8 text-primary" />
+          <Sparkles className="w-8 h-8 text-primary" />
           <h1 className="text-xl font-bold">BrandForge AI</h1>
         </Link>
       </div>
@@ -74,7 +74,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="outline" size="icon">
-                  <Home className="w-6 h-6" />
+                  <Home className="w-6 h-6" /> {/* Changed to Home for consistency, or could be Menu icon */}
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="p-0 w-64 bg-sidebar text-sidebar-foreground border-r-0">

@@ -6,7 +6,7 @@ import { AppShell } from '@/components/AppShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowRight, BarChart2, Edit3, Send, TrendingUp, Sparkles } from 'lucide-react';
+import { ArrowRight, Edit3, Send, TrendingUp, Sparkles } from 'lucide-react'; // Changed BarChart2 to Sparkles
 import NextImage from 'next/image'; // Use NextImage to avoid conflicts
 import { useBrand } from '@/contexts/BrandContext'; // Import useBrand
 import { Skeleton } from '@/components/ui/skeleton'; // For loading state
@@ -29,7 +29,7 @@ export default function DashboardPage() {
         <Card className="shadow-lg">
           <CardHeader>
             <div className="flex items-center space-x-3">
-              <BarChart2 className="w-10 h-10 text-primary" />
+              <Sparkles className="w-10 h-10 text-primary" /> {/* Changed from BarChart2 */}
               <div>
                 <CardTitle className="text-3xl font-bold">Welcome to BrandForge AI</CardTitle>
                 <CardDescription className="text-lg">
@@ -62,7 +62,7 @@ export default function DashboardPage() {
                   <div className="text-center p-4">
                     {/* The placeholder image can remain non-square as it's just a generic background */}
                     <NextImage
-                        src="https://placehold.co/400x400.png"
+                        src="https://placehold.co/400x400.png" 
                         alt="Placeholder for brand logo"
                         width={400}
                         height={400}
