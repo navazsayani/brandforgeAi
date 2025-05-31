@@ -32,7 +32,7 @@ const brandProfileSchema = z.object({
   websiteUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   brandDescription: z.string().min(10, { message: "Description must be at least 10 characters." }),
   industry: z.string().optional(),
-  imageStyleNotes: z.string().optional(), 
+  imageStyleNotes: z.string().optional(),
   exampleImages: z.array(z.string().url({ message: "Each image must be a valid URL." })).max(5, {message: "You can upload a maximum of 5 example images."}).optional(),
   targetKeywords: z.string().optional(),
   brandLogoUrl: z.string().url().optional(),
@@ -59,7 +59,7 @@ const BRAND_PROFILE_DOC_ID = "defaultBrandProfile";
 export default function BrandProfilePage() {
   const { brandData, setBrandData, isLoading: isBrandContextLoading, error: brandContextError } = useBrand();
   const { toast } = useToast();
-  
+
   const [previewImages, setPreviewImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -86,7 +86,7 @@ export default function BrandProfilePage() {
       const currentData = { ...defaultFormValues, ...brandData, exampleImages: brandData.exampleImages || [] };
       form.reset(currentData);
       setPreviewImages(currentData.exampleImages);
-      setGeneratedLogoPreview(null); 
+      setGeneratedLogoPreview(null);
       if (currentData.exampleImages.length > 0) {
         setSelectedFileNames(currentData.exampleImages.map((_,i) => `Saved image ${i+1}`));
       } else {
@@ -99,7 +99,7 @@ export default function BrandProfilePage() {
       setGeneratedLogoPreview(null);
     }
   }, [brandData, form, isBrandContextLoading]);
-  
+
   useEffect(() => {
     if (brandContextError) {
       toast({
@@ -119,7 +119,7 @@ export default function BrandProfilePage() {
     if (extractState.error) {
       toast({ title: "Extraction Error", description: extractState.error, variant: "destructive" });
     }
-    setIsExtracting(false); 
+    setIsExtracting(false);
   }, [extractState, form, toast]);
 
   useEffect(() => {
@@ -172,7 +172,7 @@ export default function BrandProfilePage() {
     formData.append("brandDescription", brandDescription);
     if (industry) formData.append("industry", industry);
     if (targetKeywords) formData.append("targetKeywords", targetKeywords);
-    
+
     startTransition(() => {
       generateLogoAction(formData);
     });
@@ -224,7 +224,7 @@ export default function BrandProfilePage() {
     if (event.target.files && event.target.files.length > 0) {
       const files = Array.from(event.target.files);
       const currentSavedImages = form.getValues("exampleImages") || [];
-      
+
       if (currentSavedImages.length + files.length > 5) {
         toast({
           title: "Upload Limit Exceeded",
@@ -232,11 +232,11 @@ export default function BrandProfilePage() {
           variant: "destructive",
         });
         if (fileInputRef.current) {
-          fileInputRef.current.value = ""; 
+          fileInputRef.current.value = "";
         }
         return;
       }
-      
+
       const currentSelectedFileNames = files.map(file => file.name);
       setSelectedFileNames(prev => {
           const oldNames = prev.filter((_,i) => i < currentSavedImages.length);
@@ -250,30 +250,30 @@ export default function BrandProfilePage() {
 
 
       const uploadPromises = files.map((file, index) => uploadImageToStorage(file, index, files.length));
-      
+
       try {
         const successfullyUploadedURLs = await Promise.all(uploadPromises);
-        
+
         const updatedImages = [
-            ...currentSavedImages, 
+            ...currentSavedImages,
             ...successfullyUploadedURLs
         ];
-        
+
         form.setValue('exampleImages', updatedImages, { shouldValidate: true });
-        setPreviewImages(updatedImages); 
+        setPreviewImages(updatedImages);
         setSelectedFileNames(updatedImages.map((_,i) => `Saved image ${i+1}`));
-        
+
         toast({ title: "Images Uploaded", description: `${successfullyUploadedURLs.length} image(s) uploaded successfully. Save profile to persist changes.` });
       } catch (error) {
         toast({ title: "Some Uploads Failed", description: "Not all images were uploaded successfully. Check individual error messages.", variant: "destructive" });
         const stillValidImages = form.getValues("exampleImages") || [];
-        setPreviewImages(stillValidImages); 
+        setPreviewImages(stillValidImages);
         setSelectedFileNames(stillValidImages.map((_,i) => `Saved image ${i+1}`));
       } finally {
         setIsUploading(false);
         setUploadProgress(0);
         if (fileInputRef.current) {
-          fileInputRef.current.value = ""; 
+          fileInputRef.current.value = "";
         }
         newLocalPreviews.forEach(url => URL.revokeObjectURL(url));
       }
@@ -282,7 +282,7 @@ export default function BrandProfilePage() {
 
   const handleDeleteImage = async (imageUrlToDelete: string, indexToDelete: number) => {
     const currentImages = form.getValues("exampleImages") || [];
-    
+
     const updatedFormImages = currentImages.filter((_, index) => index !== indexToDelete);
     form.setValue("exampleImages", updatedFormImages, { shouldValidate: true });
     setPreviewImages(updatedFormImages);
@@ -307,16 +307,16 @@ export default function BrandProfilePage() {
 
   const onSubmit: SubmitHandler<BrandProfileFormData> = async (data) => {
     let finalData = { ...data };
-    setIsUploadingLogo(true); 
+    setIsUploadingLogo(true);
     setLogoUploadProgress(0);
 
-    if (generatedLogoPreview) { 
+    if (generatedLogoPreview) {
       try {
-        const logoFilePath = `brand_logos/${BRAND_PROFILE_DOC_ID}/logo_${Date.now()}.png`; 
+        const logoFilePath = `brand_logos/${BRAND_PROFILE_DOC_ID}/logo_${Date.now()}.png`;
         const logoStorageRef = storageRef(storage, logoFilePath);
-        
+
         const uploadTask = uploadString(logoStorageRef, generatedLogoPreview, 'data_url');
-        
+
         let progressInterval = setInterval(() => {
           setLogoUploadProgress(prev => Math.min(prev + 10, 90));
         }, 100);
@@ -327,10 +327,10 @@ export default function BrandProfilePage() {
 
         const downloadURL = await getDownloadURL(snapshot.ref);
         finalData.brandLogoUrl = downloadURL;
-        setGeneratedLogoPreview(null); 
+        setGeneratedLogoPreview(null);
           toast({ title: "Logo Uploaded", description: "New logo uploaded and will be saved with profile." });
       } catch (error: any) {
-        clearInterval(progressInterval); 
+        clearInterval(progressInterval);
         setIsUploadingLogo(false);
         setLogoUploadProgress(0);
         toast({
@@ -339,7 +339,7 @@ export default function BrandProfilePage() {
           variant: "destructive",
         });
         console.error("Logo upload error:", error);
-        delete finalData.brandLogoUrl; 
+        delete finalData.brandLogoUrl;
       }
     }
 
@@ -355,13 +355,13 @@ export default function BrandProfilePage() {
         description: error.message || "Failed to save brand profile. Please try again.",
         variant: "destructive",
       });
-      console.error("Brand profile save error:", error); 
+      console.error("Brand profile save error:", error);
     } finally {
         setIsUploadingLogo(false);
         setLogoUploadProgress(0);
     }
   };
-  
+
   if (isBrandContextLoading && !form.formState.isDirty && !brandData) {
     return (
       // AppShell is now handled by AuthenticatedLayout
@@ -372,7 +372,7 @@ export default function BrandProfilePage() {
             <Skeleton className="h-6 w-3/4" />
           </CardHeader>
           <CardContent className="space-y-8">
-            {[...Array(7)].map((_, i) => ( 
+            {[...Array(7)].map((_, i) => (
               <div key={i} className="space-y-2">
                 <Skeleton className="h-5 w-1/4" />
                 <Skeleton className={i === 2 || i === 4 ? "h-24 w-full" : "h-10 w-full"} />
@@ -390,6 +390,7 @@ export default function BrandProfilePage() {
   return (
     // AppShell is now handled by AuthenticatedLayout
     <div className="max-w-3xl mx-auto">
+      <h1 className="text-red-500 text-2xl font-bold my-4">DEBUG TEST - AUTHENTICATED BRAND PROFILE PAGE</h1>
       <Card className="shadow-lg">
         <CardHeader>
           <div className="flex items-center space-x-3">
@@ -429,9 +430,9 @@ export default function BrandProfilePage() {
                           <FormControl>
                           <Input placeholder="https://www.example.com" {...field} disabled={isBrandContextLoading || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo} />
                           </FormControl>
-                          <Button 
-                              type="button" 
-                              onClick={handleAutoFill} 
+                          <Button
+                              type="button"
+                              onClick={handleAutoFill}
                               disabled={isExtracting || isBrandContextLoading || !field.value || form.getFieldState("websiteUrl").invalid || isUploading || isGeneratingLogo || isUploadingLogo}
                               variant="outline"
                               size="icon"
@@ -444,7 +445,7 @@ export default function BrandProfilePage() {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="brandDescription"
@@ -522,9 +523,9 @@ export default function BrandProfilePage() {
                               )}
                           </div>
                           <div className="flex-1 text-center sm:text-left">
-                              <Button 
-                                  type="button" 
-                                  onClick={handleGenerateLogo} 
+                              <Button
+                                  type="button"
+                                  onClick={handleGenerateLogo}
                                   disabled={isGeneratingLogo || isUploadingLogo || !form.getValues("brandName") || !form.getValues("brandDescription")}
                                   className="w-full sm:w-auto"
                               >
@@ -558,7 +559,7 @@ export default function BrandProfilePage() {
                       render={() => ( <FormMessage /> )}
                   />
               </FormItem>
-              
+
               <FormField
                 control={form.control}
                 name="imageStyleNotes"
@@ -580,7 +581,7 @@ export default function BrandProfilePage() {
                   </FormItem>
                 )}
               />
-              
+
               <FormItem>
                 <FormLabel className="flex items-center text-base"><UploadCloud className="w-5 h-5 mr-2 text-primary"/>Upload Example Images (Optional, up to 5)</FormLabel>
                   <FormControl>
@@ -593,18 +594,18 @@ export default function BrandProfilePage() {
                               </p>
                               {selectedFileNames.length === 0 && !isUploading && <p className="text-xs text-muted-foreground">SVG, PNG, JPG, GIF (Max 5MB per file recommended)</p>}
                           </div>
-                          <Input 
-                              id="dropzone-file" 
-                              type="file" 
+                          <Input
+                              id="dropzone-file"
+                              type="file"
                               multiple
-                              className="hidden" 
-                              onChange={handleImageFileChange} 
-                              accept="image/*" 
+                              className="hidden"
+                              onChange={handleImageFileChange}
+                              accept="image/*"
                               disabled={isBrandContextLoading || isUploading || isExtracting || (form.getValues("exampleImages")?.length || 0) >= 5 || isGeneratingLogo || isUploadingLogo}
-                              ref={fileInputRef} 
+                              ref={fileInputRef}
                           />
                       </Label>
-                  </div> 
+                  </div>
                   </FormControl>
                 {isUploading && (
                   <Progress value={uploadProgress} className="w-full h-2 mt-2" />
@@ -624,7 +625,7 @@ export default function BrandProfilePage() {
                     <p className="text-sm text-muted-foreground mb-1">Current Example Image Previews ({previewImages.length}/5):</p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                       {previewImages.map((src, index) => (
-                        <div key={src || index} className="relative group aspect-square"> 
+                        <div key={src || index} className="relative group aspect-square">
                           <NextImage src={src} alt={`Example image preview ${index + 1}`} fill style={{objectFit: 'contain'}} className="rounded border" data-ai-hint="brand example"/>
                           <Button
                               type="button"
@@ -642,10 +643,10 @@ export default function BrandProfilePage() {
                     </div>
                 </div>
               )}
-              
-              <SubmitButton 
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" 
-                size="lg" 
+
+              <SubmitButton
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                size="lg"
                 disabled={isBrandContextLoading || form.formState.isSubmitting || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo}
                 loadingText={isUploadingLogo ? 'Uploading Logo & Saving...' : (isUploading ? 'Uploading Image(s)...' : (isBrandContextLoading ? 'Loading Profile...' : (form.formState.isSubmitting ? 'Saving...' : (isExtracting ? 'Extracting Info...' : 'Save Brand Profile'))))}
               >
