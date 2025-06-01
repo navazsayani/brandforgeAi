@@ -12,10 +12,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, Images, UserCircle, FileImage } from 'lucide-react'; 
 import { Alert, AlertTitle } from '@/components/ui/alert';
 import { useBrand } from '@/contexts/BrandContext'; 
+import { useAuth } from '@/contexts/AuthContext';
 
 const BRAND_PROFILE_DOC_ID = "defaultBrandProfile";
 
 export default function ImageLibraryPage() {
+  const { user, isLoading: isLoadingUser } = useAuth();
   const [savedImages, setSavedImages] = useState<SavedGeneratedImage[]>([]);
   const [isLoadingSaved, setIsLoadingSaved] = useState(true);
   const [errorSaved, setErrorSaved] = useState<string | null>(null);
@@ -24,11 +26,16 @@ export default function ImageLibraryPage() {
 
   useEffect(() => {
     const fetchSavedImages = async () => {
+      if (!user) {
+        // User not loaded yet or not logged in, do not fetch
+        setIsLoadingSaved(false);
+        return;
+      }
       setIsLoadingSaved(true);
       setErrorSaved(null);
       try {
-        const imagesCollectionRef = collection(db, `brandProfiles/${BRAND_PROFILE_DOC_ID}/savedLibraryImages`);
-        const q = query(imagesCollectionRef, orderBy("createdAt", "desc"), limit(20));
+        const imagesCollectionRef = collection(db, `brandProfiles/${user.uid}/savedLibraryImages`);
+        const q = query(imagesCollectionRef, orderBy("createdAt", "desc")); // Removed limit(20) for full library
         const querySnapshot = await getDocs(q);
 
         const images: SavedGeneratedImage[] = [];
@@ -45,7 +52,7 @@ export default function ImageLibraryPage() {
     };
 
     fetchSavedImages();
-  }, []);
+  }, [user]); // Re-run effect when user changes
 
   const brandProfileImages = brandData?.exampleImages || [];
 

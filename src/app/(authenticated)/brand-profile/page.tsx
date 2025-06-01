@@ -314,6 +314,12 @@ export default function BrandProfilePage() {
 
   const onSubmit: SubmitHandler<BrandProfileFormData> = async (data) => {
     let finalData = { ...data };
+
+    // Temporarily clear brandLogoUrl if a new logo was generated to bypass schema validation
+    if (generatedLogoPreview) {
+        finalData.brandLogoUrl = "";
+    }
+
     setIsUploadingLogo(true);
     setLogoUploadProgress(0);
 
@@ -338,8 +344,7 @@ export default function BrandProfilePage() {
         setLogoUploadProgress(100);
 
         const downloadURL = await getDownloadURL(snapshot.ref);
-        finalData.brandLogoUrl = downloadURL;
-        setGeneratedLogoPreview(null);
+        finalData.brandLogoUrl = downloadURL; // Assign the actual download URL
           toast({ title: "Logo Uploaded", description: "New logo uploaded and will be saved with profile." });
       } catch (error: any) {
         clearInterval(progressInterval);
