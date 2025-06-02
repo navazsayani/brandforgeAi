@@ -14,6 +14,7 @@ import {z} from 'genkit';
 const DescribeImageInputSchema = z.object({
   imageDataUri: z
     .string()
+    .min(1, { message: "Image data URI or URL cannot be empty." })
     .describe(
       "The image to describe, as a data URI or a public HTTPS URL. The model will attempt to fetch HTTPS URLs. Expected format for data URI: 'data:<mimetype>;base64,<encoded_data>'."
     ),
@@ -54,14 +55,8 @@ const describeImageFlow = ai.defineFlow(
   async input => {
     // Log the input URI to help debug
     console.log('describeImageFlow received imageDataUri:', input.imageDataUri);
-
-    // Ensure imageDataUri is present, but do not strictly check for 'data:' prefix
-    if (!input.imageDataUri) {
-      throw new Error('Image data URI or URL is required for description.');
-    }
     
-    // The check for 'data:' prefix has been removed to allow HTTPS URLs.
-    // Gemini should handle HTTPS URLs in the {{media url=...}} tag.
+    // The check for imageDataUri presence is now handled by Zod schema validation (.min(1))
 
     const {output} = await prompt(input);
     if (!output) {
@@ -70,4 +65,3 @@ const describeImageFlow = ai.defineFlow(
     return output;
   }
 );
-
