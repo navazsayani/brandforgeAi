@@ -1,4 +1,3 @@
-
 'use server';
 
 import {ai} from '@/ai/genkit';
@@ -111,7 +110,7 @@ async function _generateImageWithImagen_stub(params: {
   imageStyle: string;
   exampleImage?: string;
   aspectRatio?: string;
-  negativePrompt?: string;
+  negativePrompt?: number;
   seed?: number;
   textPrompt: string;
 }): Promise<string> {
@@ -404,7 +403,7 @@ const generateImagesFlow = ai.defineFlow(
                         textPromptContent += `\n\n${compositionGuidance}`;
                     }
                 }
-                 if (numberOfImages > 1 && chosenProvider !== 'FREEPIK' && (!finalizedTextPrompt || (!finalizedTextPrompt.toLowerCase().includes("batch generation") && !finalizedTextPrompt.toLowerCase().includes(`image ${i+1}`)))) {
+                 if (numberOfImages > 1 && chosenProvider !== 'FREEPIK') {
                     textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
                 }
             } else { 
@@ -416,26 +415,82 @@ const generateImagesFlow = ai.defineFlow(
                 let coreInstructions = "";
 
                 if (exampleImage && chosenProvider === 'GEMINI') { 
-                    coreInstructions = `The provided example image (sent first for Gemini) serves ONE primary purpose: to identify the *category* of the item depicted (e.g., 'a handbag', 'a t-shirt', 'a piece of furniture', 'a pair of shoes').
+                    coreInstructions = `You are creating a strategic brand marketing image designed to drive engagement, build brand awareness, and convert viewers into customers on social media platforms.
 
-Your task is to generate a *completely new item* belonging to this *same category*.
+**BRAND STRATEGY CONTEXT:**
+The provided example image serves as a category reference only. Your mission is to create a completely new, brand-aligned visual asset that:
+- Captures attention in crowded social media feeds
+- Communicates brand values instantly
+- Appeals to the target demographic
+- Encourages social sharing and engagement
+- Supports the brand's marketing objectives
 
-The *design, appearance, theme, specific characteristics, and unique elements* of this NEW item must be **primarily and heavily derived** from the following inputs:
-1.  **Brand Description**: "${brandDescription}"${industryContext}. This description informs the *theme, conceptual elements, and unique characteristics* of the new item.
-2.  **Desired Artistic Style**: "${imageStyle}". This dictates the overall visual execution, including aspects like color palette (unless the brand description very strongly and specifically dictates a color scheme), lighting, and rendering style. If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic and look like a real product photo.
+**CORE CREATIVE BRIEF:**
+1. **Brand Identity**: "${brandDescription}"${industryContext}
+   - Extract the brand's personality, values, and unique selling proposition
+   - Consider the target audience's lifestyle, aspirations, and pain points
+   - Identify what makes this brand different from competitors
+   - Think about the emotional connection the brand wants to create
 
-**Important Note on Color and Style**: While the brand description provides thematic guidance, strive for visual variety and avoid over-relying on a narrow color palette (like exclusively black and gold) unless the brand description *and* desired artistic style overwhelmingly and explicitly demand it. The goal is a fresh interpretation that fits the brand's *overall essence* and the *chosen artistic style*.
+2. **Visual Execution Style**: "${imageStyle}"
+   - This defines the aesthetic approach, mood, and technical execution
+   - For realistic styles: Create professional, market-ready visuals
+   - For artistic styles: Balance creativity with brand recognition
+   - Consider platform-specific best practices (Instagram, TikTok, etc.)
 
-**Crucially, do NOT replicate or closely imitate the visual design details (color, pattern, specific shape elements beyond the basic category identification, embellishments) of the provided example image.** The example image is *only* for determining the item category. The new image should look like a distinct product that fits the brand description and desired artistic style.
+**MARKETING OPTIMIZATION REQUIREMENTS:**
+- **Scroll-stopping power**: The image must stand out in social feeds
+- **Brand consistency**: Align with the brand's visual identity and messaging
+- **Target audience appeal**: Resonate with the specific demographic
+- **Conversion potential**: Include subtle elements that encourage action
+- **Shareability factor**: Create content people want to share
+- **Platform optimization**: Consider where this will be posted
 
-**Example of Interaction:**
-If the example image is a 'simple blue cotton t-shirt' (category: t-shirt), the Brand Description is 'luxury brand, minimalist ethos, inspired by serene nature, prefers organic materials', and the Desired Artistic Style is 'high-fashion product shot, muted earthy tones'.
-You should generate an image of a *luxury t-shirt made from organic-looking material, in muted earthy tones (e.g., moss green, stone grey, soft beige), shot in a high-fashion product style*. It should evoke serenity and minimalism. It should NOT be the original blue cotton t-shirt, nor should it default to a generic "luxury" color scheme like black and gold unless those colors are specifically requested or strongly implied by the *combination* of inputs.
+**CREATIVE GUIDELINES:**
+- Use the example image ONLY for category identification
+- Create something completely new that embodies the brand essence
+- Avoid generic or cliché visual approaches
+- Include contextual elements that tell a brand story
+- Consider seasonal trends and cultural relevance
+- Ensure the image works both as standalone content and in campaigns
+
+**QUALITY STANDARDS:**
+- Professional marketing-grade quality
+- Optimized for social media engagement
+- Culturally sensitive and inclusive
+- Technically excellent (lighting, composition, clarity)
+- Brand-appropriate and on-message
 `;
                 } else { 
-                    coreInstructions = `The image should be based on the following concept: "${brandDescription}".${industryContext}
-The desired artistic style for this new image is: "${imageStyle}". If this style suggests realism (e.g., "photorealistic", "realistic photo"), the output *must* be highly realistic.
-**Important Note on Color and Style**: Strive for visual variety that aligns with the brand description and artistic style. Avoid defaulting to a narrow or stereotypical color palette unless the inputs strongly and explicitly demand it.
+                    coreInstructions = `You are creating a strategic brand marketing image designed to maximize social media engagement and brand recognition.
+
+**BRAND MARKETING OBJECTIVE:**
+Create a compelling visual that represents: "${brandDescription}"${industryContext}
+
+**STRATEGIC REQUIREMENTS:**
+- **Brand Storytelling**: The image should instantly communicate the brand's core value proposition
+- **Target Audience Appeal**: Consider who this brand serves and what resonates with them
+- **Social Media Optimization**: Design for maximum engagement on platforms like Instagram, TikTok, Facebook
+- **Conversion Focus**: Include elements that encourage viewers to learn more or take action
+- **Brand Differentiation**: Highlight what makes this brand unique in its market
+
+**VISUAL EXECUTION STYLE**: "${imageStyle}"
+- For realistic styles: Create professional, market-ready content
+- For artistic styles: Balance creativity with brand clarity
+- Ensure the style enhances rather than overshadows the brand message
+
+**MARKETING BEST PRACTICES:**
+- Use colors and composition that align with brand personality
+- Include contextual elements that tell a brand story
+- Consider current social media trends and visual preferences
+- Ensure the image works both standalone and in marketing campaigns
+- Create content that encourages social sharing and engagement
+
+**QUALITY STANDARDS:**
+- Professional marketing-grade execution
+- Culturally appropriate and inclusive
+- Technically excellent (lighting, composition, clarity)
+- Brand-consistent and strategically aligned
 `;
                 }
                 textPromptContent = `Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.\n\n${coreInstructions}`;
@@ -547,10 +602,3 @@ The desired artistic style for this new image is: "${imageStyle}". If this style
 //         schema: GenerateImagesOutputSchema,
 //     },
 // });
-    
-
-    
-
-
-
-    

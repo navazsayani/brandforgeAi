@@ -47,7 +47,6 @@ Please generate a generic brand description and keywords based on common pattern
 Extracted Website Content:
 {{{websiteContent}}}
 
-Based *only* on the Extracted Website Content and the Website URL:
 1.  **Brand Description**: Generate a concise but comprehensive description of the brand. It should capture its essence, primary offerings/services, values, and target audience if discernible. Aim for 2-4 well-crafted sentences.
 2.  **Target Keywords**: Identify 5-10 primary keywords that best represent the brand and its offerings. These should be suitable for SEO and ad campaigns. Provide them as a comma-separated list.
 

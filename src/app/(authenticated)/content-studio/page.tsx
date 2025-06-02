@@ -83,7 +83,7 @@ export default function ContentStudioPage() {
   const [selectedProfileImageIndexForGen, setSelectedProfileImageIndexForGen] = useState<number | null>(null);
   const [selectedProfileImageIndexForSocial, setSelectedProfileImageIndexForSocial] = useState<number | null>(null);
 
-  const [selectedImageProvider, setSelectedImageProvider] = useState<string>(imageGenerationProviders[0].value);
+  const [selectedImageProvider, setSelectedImageProvider] = useState<GenerateImagesInput['provider']>(imageGenerationProviders[0].value as GenerateImagesInput['provider']);
   const [imageGenBrandDescription, setImageGenBrandDescription] = useState<string>("");
   const [imageGenIndustry, setImageGenIndustry] = useState<string>("");
   const [selectedImageStylePreset, setSelectedImageStylePreset] = useState<string>(imageStylePresets[0].value);
@@ -104,6 +104,7 @@ export default function ContentStudioPage() {
   const [formSnapshot, setFormSnapshot] = useState<Partial<GenerateImagesInput> & { provider?: string } | null>(null);
 
   const [checkingTaskId, setCheckingTaskId] = useState<string | null>(null);
+  const isClearingRef = useRef(false);
 
 
   useEffect(() => {
@@ -128,7 +129,7 @@ export default function ContentStudioPage() {
     }
   }, [brandData]);
 
-  useEffect(() => {
+    useEffect(() => {
     if (selectedImageProvider === 'FREEPIK') {
       setCurrentAspectRatioOptions(freepikImagen3AspectRatios);
       if (!freepikImagen3AspectRatios.find(ar => ar.value === selectedAspectRatio)) {
@@ -140,10 +141,10 @@ export default function ContentStudioPage() {
         setSelectedAspectRatio(generalAspectRatios[0].value);
       }
     }
-  }, [selectedImageProvider, selectedAspectRatio]);
+    }, [selectedImageProvider, selectedAspectRatio]);
 
   useEffect(() => {
-    if (imageState.data) {
+    if (imageState.data && imageState.data.generatedImages && imageState.data.generatedImages.length > 0) {
       const newImageUrls = imageState.data.generatedImages;
       setLastSuccessfulGeneratedImageUrls(newImageUrls);
       setLastUsedImageGenPrompt(imageState.data.promptUsed);
@@ -156,7 +157,7 @@ export default function ContentStudioPage() {
             const newImage: GeneratedImage = {
                 id: `${new Date().toISOString()}-${Math.random().toString(36).substring(2, 9)}`,
                 src: displayUrl,
-                prompt: imageState.data.promptUsed || "",
+                prompt: imageState.data?.promptUsed || "",
                 style: selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")
             };
             addGeneratedImage(newImage);
@@ -164,20 +165,18 @@ export default function ContentStudioPage() {
           toast({ title: "Success", description: `${displayableImages.length} image(s) processed using ${imageState.data.providerUsed || 'default provider'}.` });
       } else if (newImageUrls.some(url => url.startsWith('task_id:'))) {
         toast({ title: "Freepik Task Started", description: "Freepik image generation task started. Use 'Check Status' to retrieve images." });
-      } else if (imageState.error) {
-        // Error already handled below
       } else if (!newImageUrls || newImageUrls.length === 0) {
-        toast({ title: "No Images/Tasks Generated", description: `Received empty list from ${imageState.data.providerUsed || 'default provider'}.`, variant: "default" });
+        toast({ title: "No Images/Tasks Generated", description: `Received empty list from ${imageState.data?.providerUsed || 'default provider'}.`, variant: "default" });
       }
       setIsPreviewingPrompt(false);
       setFormSnapshot(null);
     }
-    if (imageState.error && !imageState.data) { 
+ if (imageState.error) {
       toast({ title: "Error generating images", description: imageState.error, variant: "destructive" });
-      setIsPreviewingPrompt(false); 
-      setFormSnapshot(null);
+ setIsPreviewingPrompt(false);
+ setFormSnapshot(null);
     }
-  }, [imageState, toast, addGeneratedImage, selectedImageStylePreset, customStyleNotesInput]);
+  }, [imageState, toast, addGeneratedImage]);
 
   useEffect(() => {
     if (socialState.data) {
@@ -291,13 +290,13 @@ export default function ContentStudioPage() {
     toast({ title: `${type} Copied!`, description: "Content copied to clipboard." });
   };
 
-  const handleClearGeneratedImages = () => {
+ const handleClearGeneratedImages = () => {
     setLastSuccessfulGeneratedImageUrls([]);
     setLastUsedImageGenPrompt(null);
     setLastUsedImageProvider(null);
     setFormSnapshot(null);
     setIsPreviewingPrompt(false);
-    toast({title: "Cleared", description: "Generated images and prompt cleared."});
+    // Don't call imageAction when clearing - just reset the local state
   };
 
   const handleSaveAllGeneratedImages = () => {
@@ -478,6 +477,21 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
 
   const handleImageGenerationSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    
+    // Validate required fields
+    const brandDesc = formSnapshot?.brandDescription || imageGenBrandDescription || brandData?.brandDescription || "";
+    const imageStyle = formSnapshot?.imageStyle || (selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : ""));
+    
+    if (!brandDesc.trim()) {
+      toast({ title: "Missing Brand Description", description: "Please provide a brand description to generate images.", variant: "destructive" });
+      return;
+    }
+    
+    if (!imageStyle.trim()) {
+      toast({ title: "Missing Image Style", description: "Please select an image style preset.", variant: "destructive" });
+      return;
+    }
+    
     startTransition(() => {
         const formData = new FormData();
 
@@ -486,15 +500,15 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
         const provider = formSnapshot?.provider || selectedImageProvider;
         formData.append("provider", provider);
 
-        formData.append("brandDescription", formSnapshot?.brandDescription || imageGenBrandDescription || brandData?.brandDescription || "");
+        formData.append("brandDescription", brandDesc);
         
         const industryToSubmit = formSnapshot?.industry || imageGenIndustry || brandData?.industry || "";
         formData.append("industry", industryToSubmit === "_none_" ? "" : industryToSubmit);
         
-        formData.append("imageStyle", formSnapshot?.imageStyle || (selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")));
+        formData.append("imageStyle", imageStyle);
 
         const exampleImgToUse = formSnapshot?.exampleImage;
-        if (exampleImgToUse) formData.append("exampleImage", exampleImgToUse);
+        if (exampleImgToUse && exampleImgToUse.trim() !== "") formData.append("exampleImage", exampleImgToUse);
 
         formData.append("aspectRatio", formSnapshot?.aspectRatio || selectedAspectRatio);
         formData.append("numberOfImages", String(formSnapshot?.numberOfImages || parseInt(numberOfImagesToGenerate,10)));
@@ -521,6 +535,15 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
             const fEffectFramingValue = formSnapshot?.freepikEffectFraming || freepikEffectFraming;
             if (fEffectFramingValue && fEffectFramingValue !== "none") formData.append("freepikEffectFraming", fEffectFramingValue);
         }
+        
+        console.log("FormData being sent:", {
+          provider,
+          brandDescription: brandDesc,
+          imageStyle,
+          aspectRatio: formSnapshot?.aspectRatio || selectedAspectRatio,
+          numberOfImages: formSnapshot?.numberOfImages || parseInt(numberOfImagesToGenerate,10)
+        });
+        
         imageAction(formData);
     });
   };
@@ -602,7 +625,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                 <CardContent className="space-y-6">
                     <div>
                       <Label htmlFor="imageGenProviderSelect" className="flex items-center mb-1"><Server className="w-4 h-4 mr-2 text-primary" />Image Generation Provider</Label>
-                      <Select value={selectedImageProvider} onValueChange={setSelectedImageProvider}>
+                      <Select value={selectedImageProvider || ''} onValueChange={(value) => setSelectedImageProvider(value as GenerateImagesInput['provider'])}>
                           <SelectTrigger id="imageGenProviderSelect">
                               <SelectValue placeholder="Select image generation provider" />
                           </SelectTrigger>
@@ -930,7 +953,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
                                       onClick={() => downloadImage(url.startsWith('image_url:') ? url.substring(10) : url, `generated-image-${index + 1}.png`)}
                                       title="Download image"
                                     >
-                                      <Download className="h-4 w-4" />
+                                      <Download className="h-4 w-4"/>
                                     </Button>
                                   </>
                               ) : url && url.startsWith('task_id:') ? (
@@ -1291,7 +1314,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
 
                       <div className="space-y-2">
                           <Label htmlFor="blogToneSelect" className="flex items-center mb-1"><Mic2 className="w-4 h-4 mr-2 text-primary" />Tone/Style for Blog</Label>
-                          <Select name="blogTone" value={selectedBlogTone} onValueChange={setSelectedBlogTone}  id="blogToneSelect">
+                          <Select name="blogTone" value={selectedBlogTone} onValueChange={setSelectedBlogTone}>
                               <SelectTrigger>
                                   <SelectValue placeholder="Select a tone/style" />
                               </SelectTrigger>
@@ -1333,7 +1356,7 @@ The desired artistic style for this new image is: "${combinedStyle}". If this st
 
                       <div>
                           <Label htmlFor="blogTargetPlatformSelect" className="flex items-center mb-1"><Newspaper className="w-4 h-4 mr-2 text-primary" />Target Platform</Label>
-                          <Select name="targetPlatform" value={blogPlatformValue} onValueChange={(value) => setBlogPlatformValue(value as "Medium" | "Other")} id="blogTargetPlatformSelect">
+                          <Select name="targetPlatform" value={blogPlatformValue} onValueChange={(value) => setBlogPlatformValue(value as "Medium" | "Other")}>
                           <SelectTrigger>
                               <SelectValue placeholder="Select platform" />
                           </SelectTrigger>

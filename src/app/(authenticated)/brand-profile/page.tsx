@@ -36,7 +36,11 @@ const brandProfileSchema = z.object({
   imageStyleNotes: z.string().optional(),
   exampleImages: z.array(z.string().url({ message: "Each image must be a valid URL." })).max(5, {message: "You can upload a maximum of 5 example images."}).optional(),
   targetKeywords: z.string().optional(),
-  brandLogoUrl: z.string().url().optional(),
+  brandLogoUrl: z.union([
+    z.string().url({ message: "Please enter a valid URL." }), // For existing URLs
+    z.string().startsWith('data:').optional(), // For data URIs (generated logos)
+    z.literal('').optional() // For empty state or when a new logo is generated
+  ]).optional(),
 });
 
 type BrandProfileFormData = z.infer<typeof brandProfileSchema>;
@@ -164,7 +168,7 @@ export default function BrandProfilePage() {
       toast({
         title: "Missing Information",
         description: "Brand Name and Brand Description are required to generate a logo.",
-        variant: "warning"
+        variant: "default"
       });
       return;
     }
@@ -182,12 +186,12 @@ export default function BrandProfilePage() {
 
   const uploadImageToStorage = async (file: File, index: number, totalFiles: number): Promise<string> => {
     return new Promise((resolve, reject) => {
-      if (!userId) {
+      if (!currentUser) {
         toast({ title: "Upload Error", description: "User not authenticated. Cannot upload images.", variant: "destructive" });
         reject(new Error("User not authenticated"));
         return;
       }
-      const filePath = `brand_example_images/${userId}/${Date.now()}_${file.name}`;
+      const filePath = `brand_example_images/${currentUser?.uid}/${Date.now()}_${file.name}`;
       const imageStorageRef = storageRef(storage, filePath);
       const uploadTask = uploadBytesResumable(imageStorageRef, file);
 
@@ -323,6 +327,8 @@ export default function BrandProfilePage() {
     setIsUploadingLogo(true);
     setLogoUploadProgress(0);
 
+    let progressInterval: NodeJS.Timeout | undefined; // Declare outside try block
+
     if (generatedLogoPreview) {
       try {
         if (!userId) {
@@ -335,14 +341,16 @@ export default function BrandProfilePage() {
 
         const uploadTask = uploadString(logoStorageRef, generatedLogoPreview, 'data_url');
 
-        let progressInterval = setInterval(() => {
+        progressInterval = setInterval(() => { // Assign here
           setLogoUploadProgress(prev => Math.min(prev + 10, 90));
         }, 100);
 
         const snapshot = await uploadTask;
-        clearInterval(progressInterval);
+        if (progressInterval) { // Clear here
+          clearInterval(progressInterval);
+        }
         setLogoUploadProgress(100);
-
+        
         const downloadURL = await getDownloadURL(snapshot.ref);
         finalData.brandLogoUrl = downloadURL; // Assign the actual download URL
           toast({ title: "Logo Uploaded", description: "New logo uploaded and will be saved with profile." });
@@ -361,12 +369,15 @@ export default function BrandProfilePage() {
     }
 
     try {
-      if (!userId) {
+      console.log("Saving brand profile:");
+      console.log("currentUser:", currentUser);
+      console.log("isAuthLoading:", isAuthLoading);
+      if (!currentUser) {
         toast({ title: "Save Error", description: "User not authenticated. Cannot save profile.", variant: "destructive" });
         return;
       }
 
-      await setBrandData({...finalData, exampleImages: finalData.exampleImages || []}, userId);
+      await setBrandData({...finalData, exampleImages: finalData.exampleImages || []}, currentUser.uid);
       toast({
         title: "Brand Profile Saved",
         description: "Your brand information has been saved successfully.",
@@ -659,10 +670,10 @@ export default function BrandProfilePage() {
               onClick={() => form.handleSubmit(onSubmit)()}
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
               size="lg"
-              disabled={isBrandContextLoading || form.formState.isSubmitting || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo}
+ disabled={isAuthLoading || isBrandContextLoading || form.formState.isSubmitting || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo}
             >
                 {(isUploadingLogo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null)}
-                {isUploadingLogo ? 'Uploading Logo & Saving...' : (isUploading ? 'Uploading Image(s)...' : (isBrandContextLoading ? 'Loading Profile...' : (form.formState.isSubmitting ? 'Saving...' : (isExtracting ? 'Extracting Info...' : 'Save Brand Profile'))))}
+                {isUploadingLogo ? 'Uploading Logo & Saving...' : (isUploading ? 'Uploading Image(s)...' : (isAuthLoading || isBrandContextLoading ? 'Loading Profile...' : (form.formState.isSubmitting ? 'Saving...' : (isExtracting ? 'Extracting Info...' : 'Save Brand Profile'))))}
             </Button>
           </CardFooter>
       </Card>

@@ -1,4 +1,3 @@
-
 "use server";
 
 import { generateImages, type GenerateImagesInput } from '@/ai/flows/generate-images';
@@ -27,6 +26,17 @@ export async function handleGenerateImagesAction(
   formData: FormData
 ): Promise<FormState<{ generatedImages: string[]; promptUsed: string; providerUsed: string; }>> {
   try {
+    console.log('=== handleGenerateImagesAction START ===');
+    console.log('Environment check:');
+    console.log('  GOOGLE_API_KEY exists:', !!process.env.GOOGLE_API_KEY);
+    console.log('  GEMINI_API_KEY exists:', !!process.env.GEMINI_API_KEY);
+    console.log('  GOOGLE_GENAI_API_KEY exists:', !!process.env.GOOGLE_GENAI_API_KEY);
+    console.log('  IMAGE_GENERATION_PROVIDER:', process.env.IMAGE_GENERATION_PROVIDER);
+    
+    console.log('FormData entries:');
+    for (const [key, value] of formData.entries()) {
+      console.log(`  ${key}: ${typeof value === 'string' ? value.substring(0, 100) : '[File/Blob]'}`);
+    }
     const numberOfImagesStr = formData.get("numberOfImages") as string;
     const numberOfImages = parseInt(numberOfImagesStr, 10) || 1;
     
@@ -78,7 +88,7 @@ export async function handleGenerateImagesAction(
       brandDescription: formData.get("brandDescription") as string,
       industry: formData.get("industry") as string | undefined,
       imageStyle: formData.get("imageStyle") as string, 
-      exampleImage: exampleImageUrl === "" ? undefined : exampleImageUrl,
+      exampleImage: exampleImageUrl && exampleImageUrl.trim() !== "" ? exampleImageUrl : undefined,
       exampleImageDescription: aiGeneratedDesc, 
       aspectRatio: formData.get("aspectRatio") as string | undefined,
       numberOfImages: numberOfImages,
@@ -91,9 +101,11 @@ export async function handleGenerateImagesAction(
       freepikEffectFraming: (formData.get("freepikEffectFraming") as string === "none" ? undefined : formData.get("freepikEffectFraming") as string | undefined) || undefined,
     };
     
-    if (input.provider === "" || input.provider === undefined) delete input.provider;
+    if (!input.provider) delete input.provider;
     if (input.aspectRatio === "" || input.aspectRatio === undefined) delete input.aspectRatio;
     if (input.industry === "" || input.industry === undefined) delete input.industry;
+    if (!input.exampleImage) delete input.exampleImage;
+    if (!input.exampleImageDescription) delete input.exampleImageDescription;
     
     console.log("Server Action: Calling generateImages flow with input (finalizedTextPrompt excerpt):", JSON.stringify({ ...input, finalizedTextPrompt: input.finalizedTextPrompt?.substring(0,150) + "..." }, null, 2) );
 
@@ -290,6 +302,12 @@ export async function handleSaveGeneratedImagesAction(
   formData: FormData
 ): Promise<FormState<{savedCount: number}>> {
   try {
+    console.log('=== handleSaveGeneratedImagesAction START ===');
+    console.log('FormData entries for save action:');
+    for (const [key, value] of formData.entries()) {
+      console.log(`  ${key}: ${typeof value === 'string' ? value.substring(0, 100) : '[File/Blob]'}`);
+    }
+    
     const imagesToSaveJson = formData.get('imagesToSaveJson') as string;
     const brandProfileDocId = formData.get('brandProfileDocId') as string || 'defaultBrandProfile';
 
@@ -483,10 +501,3 @@ export async function handleGenerateBrandForgeAppLogoAction(
     return { error: `Failed to generate BrandForge AI app logo: ${e.message || "Unknown error. Check server logs."}` };
   }
 }
-    
-
-    
-
-
-    
-    

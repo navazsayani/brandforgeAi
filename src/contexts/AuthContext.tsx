@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
+  currentUser: User | null;
   isLoading: boolean;
   error: string | null;
   signUp: (email: string, pass: string) => Promise<User | null>;
@@ -22,6 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -29,6 +31,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
+      setCurrentUser(firebaseUser);
       setIsLoading(false);
     });
     return () => unsubscribe();
@@ -86,13 +89,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   const contextValue = useMemo(() => ({
     user,
+    currentUser,
     isLoading,
     error,
     signUp,
     logIn,
     logOut,
     setError
-  }), [user, isLoading, error]);
+  }), [user, currentUser, isLoading, error]);
 
   return (
     <AuthContext.Provider value={contextValue}>

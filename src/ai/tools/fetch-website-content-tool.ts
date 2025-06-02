@@ -5,20 +5,21 @@
  */
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import * as cheerio from 'cheerio';
 
 const FetchWebsiteContentInputSchema = z.object({
   url: z.string().url().describe('The URL of the website to fetch content from.'),
 });
 
 const FetchWebsiteContentOutputSchema = z.object({
-  textContent: z.string().describe('The extracted main text content of the website.'),
+  textContent: z.string().describe('The extracted main text content of the website, including meta description and keywords.'),
   error: z.string().optional().describe('Error message if fetching failed.'),
 });
 
 export const fetchWebsiteContentTool = ai.defineTool(
   {
     name: 'fetchWebsiteContent',
-    description: 'Fetches the main textual content from a given public website URL. It tries to extract meaningful text from the body of the HTML.',
+    description: 'Fetches the main textual content and meta information from a given public website URL.',
     inputSchema: FetchWebsiteContentInputSchema,
     outputSchema: FetchWebsiteContentOutputSchema,
   },
@@ -42,20 +43,22 @@ export const fetchWebsiteContentTool = ai.defineTool(
       }
 
       const html = await response.text();
+      const $ = cheerio.load(html);
+
+      // Extract meta description and keywords
+      const metaDescription = $('meta[name="description"]').attr('content') || '';
+      const metaKeywords = $('meta[name="keywords"]').attr('content') || '';
+
+      // Extract main text content from the body
+      let textContent = $('body').text().trim();
       
-      // Basic text extraction (can be improved with a proper HTML parser like cheerio or jsdom if needed for more complex scenarios)
-      // This regex attempts to strip HTML tags and extract content. It's not perfect.
-      let text = html.replace(/<style[^>]*>.*<\/style>/gs, ''); // Remove style tags
-      text = text.replace(/<script[^>]*>.*<\/script>/gs, ''); // Remove script tags
-      text = text.replace(/<[^>]+>/g, ' '); // Remove all other tags, replace with space
-      text = text.replace(/\s\s+/g, ' ').trim(); // Normalize whitespace
+      // Normalize whitespace
+      textContent = textContent.replace(/\s\s+/g, ' ');
 
-      // A very naive way to get "main" content - look for longer paragraphs
-      // This is highly heuristic and might need significant improvement
-      const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 100);
-      const mainContent = paragraphs.length > 0 ? paragraphs.join('\n\n') : text.substring(0, 5000); // Fallback to first 5000 chars
+      // Combine meta description and keywords with the body text
+      const combinedContent = `${metaDescription}. ${metaKeywords}. ${textContent}`;
 
-      return { textContent: mainContent || "No significant text content found." };
+      return { textContent: combinedContent || "No significant text content found." };
 
     } catch (e: any) {
       console.error('Error fetching website content:', e);
