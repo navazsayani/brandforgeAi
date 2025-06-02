@@ -315,6 +315,7 @@ export default function ContentStudioPage() {
         return;
     }
 
+    console.log('Saving images:', saveableImages);
     const formData = new FormData();
     formData.append('imagesToSaveJson', JSON.stringify(saveableImages));
     formData.append('brandProfileDocId', 'defaultBrandProfile');

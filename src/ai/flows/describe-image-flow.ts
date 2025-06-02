@@ -37,6 +37,7 @@ export async function describeImage(
 
 const prompt = ai.definePrompt({
   name: 'describeImagePrompt',
+  model: 'googleai/gemini-pro-vision', // Explicitly set a vision model
   input: {schema: DescribeImageInputSchema},
   output: {schema: DescribeImageOutputSchema},
   prompt: `Analyze the provided image and generate a concise, engaging description (1-2 sentences) suitable for a social media post. Focus on the main subject, key visual elements, and the overall mood or atmosphere of the image.
@@ -69,3 +70,4 @@ const describeImageFlow = ai.defineFlow(
     return output;
   }
 );
+

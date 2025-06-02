@@ -378,6 +378,7 @@ export async function handleSaveGeneratedImagesAction(
         const specificError = `Failed to save image (prompt: ${promptSnippet}): ${(e as Error).message?.substring(0,100)}`;
         console.error(`handleSaveGeneratedImagesAction: ${specificError}. Full error:`, JSON.stringify(e, Object.getOwnPropertyNames(e)));
         saveErrors.push(specificError);
+ throw e;
       }
     }
 
@@ -391,8 +392,8 @@ export async function handleSaveGeneratedImagesAction(
       return { error: "No images were processed or saved. This might be due to an issue with the input data or no images being selected."};
     }
   } catch (e: any) {
-      const criticalErrorMsg = `A critical server error occurred during image saving: ${(e as Error).message}. Please check server logs.`;
-      console.error("Critical error in handleSaveGeneratedImagesAction (outside loop):", JSON.stringify(e, Object.getOwnPropertyNames(e)));
+      const criticalErrorMsg = `A critical server error occurred during image saving: ${e.message || "Unknown error"}. Please check server logs.`;
+      console.error("Critical error in handleSaveGeneratedImagesAction (outside loop):", JSON.stringify(e, Object.getOwnPropertyNames(e), 2));
       return { error: criticalErrorMsg };
   }
 }
