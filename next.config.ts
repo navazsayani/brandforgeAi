@@ -2,6 +2,12 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
+  experimental: {
+    allowedDevOrigins: ["9000-firebase-studio-1748260341824.cluster-fdkw7vjj7bgguspe3fbbc25tra.cloudworkstations.dev"],
+    serverActions: {
+      bodySizeLimit: 8388608, // 8MB in bytes
+    },
+  },
   /* config options here */
   typescript: {
     ignoreBuildErrors: true,

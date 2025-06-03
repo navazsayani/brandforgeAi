@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useActionState, startTransition, useRef } from 'react';
 import NextImage from 'next/image';
+import { useQueryClient } from '@tanstack/react-query';
 // Removed AppShell import
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,7 +37,7 @@ const initialSaveImagesState: FormState<{savedCount: number}> = { error: undefin
 const initialFreepikTaskStatusState: FormState<{ status: string; images: string[] | null; taskId: string;}> = { error: undefined, data: undefined, message: undefined };
 
 const imageGenerationProviders = [
-    { value: "GEMINI", label: "Gemini (Google AI)" },
+    { value: "GEMINI", label: "Gemini (Google AI)", disabled: false },
     { value: "FREEPIK", label: "Freepik API (imagen3)" },
     { value: "LEONARDO_AI", label: "Leonardo.ai (Not Implemented)", disabled: true },
     { value: "IMAGEN", label: "Imagen (via Vertex - Not Implemented)", disabled: true },
@@ -45,8 +46,9 @@ const imageGenerationProviders = [
 type SocialImageChoice = 'generated' | 'profile' | null;
 
 export default function ContentStudioPage() {
-  const { brandData, addGeneratedImage, addGeneratedSocialPost, addGeneratedBlogPost } = useBrand();
+  const { brandData, addGeneratedImage, addGeneratedSocialPost, addGeneratedBlogPost, userId } = useBrand();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const [imageState, imageAction] = useActionState(handleGenerateImagesAction, initialImageFormState);
   const [socialState, socialAction] = useActionState(handleGenerateSocialMediaCaptionAction, initialSocialFormState);
@@ -243,11 +245,14 @@ export default function ContentStudioPage() {
     setIsSavingImages(false); 
     if (saveImagesServerActionState.message && !saveImagesServerActionState.error) {
       toast({ title: "Image Library", description: saveImagesServerActionState.message });
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: ['savedLibraryImages', userId] });
+      }
     }
     if (saveImagesServerActionState.error) {
       toast({ title: "Error Saving Images", description: saveImagesServerActionState.error, variant: "destructive"});
     }
-  }, [saveImagesServerActionState, toast]);
+  }, [saveImagesServerActionState, toast, queryClient, userId]);
 
 
   useEffect(() => {
@@ -316,12 +321,19 @@ export default function ContentStudioPage() {
     }
 
     console.log('Saving images:', saveableImages);
-    const formData = new FormData();
-    formData.append('imagesToSaveJson', JSON.stringify(saveableImages));
-    formData.append('brandProfileDocId', 'defaultBrandProfile');
+
+    // Check for userId BEFORE the startTransition block
+    if (!userId) {
+        toast({title: "Authentication Error", description: "User not logged in. Cannot save images.", variant: "destructive"});
+        setIsSavingImages(false);
+        return; // Return early if userId is missing
+    }
 
     startTransition(() => {
-      saveImagesAction(formData);
+ const formData = new FormData();
+ formData.append('imagesToSaveJson', JSON.stringify(saveableImages));
+ formData.append('userId', userId); // userId is guaranteed to be string here
+ saveImagesAction(formData);
     });
   };
 
@@ -551,7 +563,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
 
         formData.append("finalizedTextPrompt", currentTextPromptForEditing || "");
 
-        const provider = formSnapshot?.provider || selectedImageProvider;
+        const provider = formSnapshot?.provider || selectedImageProvider || imageGenerationProviders[0].value;
         formData.append("provider", provider);
 
         formData.append("brandDescription", brandDesc);

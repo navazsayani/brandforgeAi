@@ -11,7 +11,7 @@ import { generateBrandLogo, type GenerateBrandLogoInput, type GenerateBrandLogoO
 import { generateBrandForgeAppLogo, type GenerateBrandForgeAppLogoOutput } from '@/ai/flows/generate-brandforge-app-logo-flow'; // Added
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc } from 'firebase/firestore';
 
 // Generic type for form state with error
 export interface FormState<T = any> {
@@ -168,7 +168,16 @@ export async function handleGenerateSocialMediaCaptionAction(
     if (input.industry === "" || input.industry === undefined) delete input.industry;
 
     const result = await generateSocialMediaCaption(input);
-    return { data: { ...result, imageSrc: imageSrc }, message: "Social media content generated!" };
+    const userId = formData.get('userId') as string || 'defaultUser';
+    const brandProfileDocId = formData.get('brandProfileDocId') as string || 'defaultBrandProfile';
+    const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${brandProfileDocId}/socialMediaPosts`);
+    await addDoc(firestoreCollectionRef, {
+      caption: result.caption || "",
+      hashtags: result.hashtags || "",
+      imageSrc: imageSrc,
+      createdAt: serverTimestamp()
+    });
+    return { data: { ...result, imageSrc: imageSrc }, message: "Social media content generated and saved successfully!" };
   } catch (e: any)
    {
     console.error("Error in handleGenerateSocialMediaCaptionAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
@@ -225,7 +234,16 @@ export async function handleGenerateBlogContentAction(
     if (input.industry === "" || input.industry === undefined) delete input.industry;
 
     const result = await generateBlogContent(input);
-    return { data: result, message: "Blog content generated!" };
+    const userId = formData.get('userId') as string || 'defaultUser';
+    const brandProfileDocId = formData.get('brandProfileDocId') as string || 'defaultBrandProfile';
+    const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${brandProfileDocId}/blogPosts`);
+    await addDoc(firestoreCollectionRef, {
+      title: result.title || "Untitled",
+      content: result.content || "",
+      tags: result.tags || "",
+      createdAt: serverTimestamp()
+    });
+    return { data: result, message: "Blog content generated and saved successfully!" };
   } catch (e: any) {
     console.error("Error in handleGenerateBlogContentAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
     return { error: `Failed to generate blog content: ${e.message || "Unknown error. Check server logs."}` };
@@ -270,7 +288,20 @@ export async function handleGenerateAdCampaignAction(
     if (input.industry === "" || input.industry === undefined) delete input.industry;
 
     const result = await generateAdCampaign(input);
-    return { data: result, message: "Ad campaign variations generated successfully!" };
+    const userId = formData.get('userId') as string || 'defaultUser';
+    const brandProfileDocId = formData.get('brandProfileDocId') as string || 'defaultBrandProfile';
+    const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${brandProfileDocId}/adCampaigns`);
+    await addDoc(firestoreCollectionRef, {
+      campaignConcept: result.campaignConcept || "",
+      headlines: result.headlines || [],
+      bodyTexts: result.bodyTexts || [],
+      platformGuidance: result.platformGuidance || "",
+      targetKeywords: input.targetKeywords,
+      budget: input.budget,
+      platforms: input.platforms,
+      createdAt: serverTimestamp()
+    });
+    return { data: result, message: "Ad campaign variations generated and saved successfully!" };
   } catch (e: any) {
     console.error("Error in handleGenerateAdCampaignAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
     return { error: `Failed to generate ad campaign variations: ${e.message || "Unknown error. Check server logs."}` };
@@ -301,17 +332,12 @@ export async function handleSaveGeneratedImagesAction(
   prevState: FormState<{savedCount: number}>,
   formData: FormData
 ): Promise<FormState<{savedCount: number}>> {
+  console.log("handleSaveGeneratedImagesAction called");
   try {
-    console.log('=== handleSaveGeneratedImagesAction START ===');
-    console.log('FormData entries for save action:');
-    for (const [key, value] of formData.entries()) {
-      console.log(`  ${key}: ${typeof value === 'string' ? value.substring(0, 100) : '[File/Blob]'}`);
-    }
-    
-    const imagesToSaveJson = formData.get('imagesToSaveJson') as string;
-    const brandProfileDocId = formData.get('brandProfileDocId') as string || 'defaultBrandProfile';
-
-    if (!imagesToSaveJson) {
+    const userId = formData.get('userId') as string; // Read from formData for backward compatibility or if caller still passes it this way
+    console.log(`handleSaveGeneratedImagesAction: userId from formData: ${userId}`);
+    const imagesToSaveString = formData.get('imagesToSaveJson') as string;
+    if (!imagesToSaveString) {
       const errorMsg = "No image data received from the client (imagesToSaveJson is missing).";
       console.error(`handleSaveGeneratedImagesAction: ${errorMsg}`);
       return { error: errorMsg };
@@ -319,10 +345,10 @@ export async function handleSaveGeneratedImagesAction(
 
     let imagesToSave: { dataUri: string; prompt: string; style: string; }[];
     try {
-      imagesToSave = JSON.parse(imagesToSaveJson);
+      imagesToSave = JSON.parse(imagesToSaveString);
     } catch (e: any) {
-      const errorMsg = `Invalid image data format received from client: ${e.message}. Received: ${imagesToSaveJson.substring(0, 200)}...`;
-      console.error(`handleSaveGeneratedImagesAction: ${errorMsg}`, JSON.stringify(e, Object.getOwnPropertyNames(e)));
+      const errorMsg = `Invalid image data format received from client: ${e.message}. Received: ${imagesToSaveString.substring(0, 200)}...`;
+      console.error(`handleSaveGeneratedImagesAction: ${errorMsg}`, JSON.stringify(e, Object.getOwnPropertyNames(e), 2));
       return { error: errorMsg };
     }
 
@@ -332,53 +358,109 @@ export async function handleSaveGeneratedImagesAction(
       return { error: errorMsg };
     }
 
+    // Ensure userId is present and valid
+    if (!userId || typeof userId !== 'string') {
+      console.error('handleSaveGeneratedImagesAction: User not authenticated - userId is missing or invalid.');
+      return { error: 'User not authenticated - User not logged in cannot save image.' };
+    }
+
     let savedCount = 0;
     const saveErrors: string[] = [];
 
     for (const image of imagesToSave) {
       const promptSnippet = image.prompt ? image.prompt.substring(0,30) + "..." : "N/A";
-      if (!image.dataUri || !(image.dataUri.startsWith('data:image') || image.dataUri.startsWith('image_url:') || image.dataUri.startsWith('https://'))) { 
-        const errorDetail = `Invalid data URI or URL for an image (prompt: ${promptSnippet}). URI starts with: ${image.dataUri?.substring(0,30)}...`;
+      if (!image.dataUri) {
+        const errorDetail = `Invalid data URI or URL for an image (prompt: ${promptSnippet}). dataUri is missing.`;
         console.warn(`handleSaveGeneratedImagesAction: ${errorDetail}. Skipping save for this image.`);
         saveErrors.push(errorDetail);
         continue;
       }
+
+      if (!(image.dataUri.startsWith('data:image') || image.dataUri.startsWith('image_url:') || image.dataUri.startsWith('https://'))) {
+          const errorDetail = `Invalid data URI or URL format for an image (prompt: ${promptSnippet}). URI starts with: ${image.dataUri.substring(0, 30)}...`;
+          console.warn(`handleSaveGeneratedImagesAction: ${errorDetail}. Skipping save for this image.`);
+          saveErrors.push(errorDetail);
+          continue;
+      }
+
       try {
         console.log(`Processing image for saving. Data URI starts with: ${image.dataUri.substring(0,30)}...`);
         let imageUrlToSave = image.dataUri;
-        if (image.dataUri.startsWith('data:image')) { 
+        let isFreepikImage = false;
+
+        if (image.dataUri.startsWith('data:image')) {
             const fileExtensionMatch = image.dataUri.match(/^data:image\/([a-zA-Z+]+);base64,/);
             const fileExtension = fileExtensionMatch ? fileExtensionMatch[1] : 'png';
-            const filePath = `generatedLibraryImages/${brandProfileDocId}/${Date.now()}_${generateFilenamePart()}.${fileExtension}`;
+            const filePath = `users/${userId}/brandProfiles/defaultBrandProfile/generatedLibraryImages/${Date.now()}_${generateFilenamePart()}.${fileExtension}`;
             const imageStorageRef = storageRef(storage, filePath);
-            
+
             console.log(`handleSaveGeneratedImagesAction: Attempting to upload image data URI to: ${filePath}`);
-            const snapshot = await uploadString(imageStorageRef, image.dataUri, 'data_url');
-            console.log(`handleSaveGeneratedImagesAction: Successfully uploaded image: ${filePath}`);
-            imageUrlToSave = await getDownloadURL(snapshot.ref);
-            console.log(`handleSaveGeneratedImagesAction: Obtained download URL: ${imageUrlToSave}`);
+            try {
+                const snapshot = await uploadString(imageStorageRef, image.dataUri, 'data_url');
+                console.log(`handleSaveGeneratedImagesAction: Successfully uploaded image: ${filePath}`);
+                imageUrlToSave = await getDownloadURL(snapshot.ref);
+                console.log(`handleSaveGeneratedImagesAction: Obtained download URL: ${imageUrlToSave}`);
+            } catch (uploadError: any) {
+                const uploadErrorDetail = `Failed to upload image to Firebase Storage: ${uploadError.message}`;
+                console.error(`handleSaveGeneratedImagesAction: ${uploadErrorDetail}`, JSON.stringify(uploadError, Object.getOwnPropertyNames(uploadError)));
+                saveErrors.push(uploadErrorDetail);
+                continue;
+            }
         } else if (image.dataUri.startsWith('image_url:')) {
-             imageUrlToSave = image.dataUri.substring(10); 
-             console.log(`handleSaveGeneratedImagesAction: Image is a direct URL (likely from Freepik GET), not uploading to storage: ${imageUrlToSave}`);
+            imageUrlToSave = image.dataUri.substring(10);
+            console.log(`handleSaveGeneratedImagesAction: Image is a direct URL (likely from Freepik GET), not uploading to storage: ${imageUrlToSave}`);
+            isFreepikImage = true;
         } else if (image.dataUri.startsWith('https://')) {
-             console.log(`handleSaveGeneratedImagesAction: Image is already an HTTPS URL, not uploading to storage: ${imageUrlToSave}`);
+            console.log(`handleSaveGeneratedImagesAction: Image is already an HTTPS URL, not uploading to storage: ${imageUrlToSave}`);
         }
 
+        // Check if the "defaultBrandProfile" collection exists. If not, create it.
+        const brandProfileCollectionRef = collection(db, `users/${userId}/brandProfiles`);
+        const brandProfileDocRef = doc(brandProfileCollectionRef, "defaultBrandProfile");
+        const brandProfileDocSnap = await getDoc(brandProfileDocRef);
 
-        const firestoreCollectionRef = collection(db, `brandProfiles/${brandProfileDocId}/savedLibraryImages`);
-        await addDoc(firestoreCollectionRef, {
-          storageUrl: imageUrlToSave, 
-          prompt: image.prompt || "N/A",
-          style: image.style || "N/A",
-          createdAt: serverTimestamp(),
-        });
-        console.log(`handleSaveGeneratedImagesAction: Successfully saved image metadata to Firestore for URL: ${imageUrlToSave}`);
-        savedCount++;
+        if (!brandProfileDocSnap.exists()) {
+            console.log(`handleSaveGeneratedImagesAction: Default brand profile does not exist for user ${userId}. Creating it...`);
+            await setDoc(brandProfileDocRef, {
+                createdAt: serverTimestamp(),
+                // You can add default values for other fields here if needed
+            });
+            console.log(`handleSaveGeneratedImagesAction: Successfully created default brand profile for user ${userId}.`);
+        }
+
+        // Use userId to construct the collection path, assuming a default brand profile
+        const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/defaultBrandProfile/savedLibraryImages`);
+        try {
+            await addDoc(firestoreCollectionRef, {
+                storageUrl: imageUrlToSave,
+                prompt: image.prompt || "N/A",
+                style: image.style || "N/A",
+                createdAt: serverTimestamp(),
+            });
+            console.log(`handleSaveGeneratedImagesAction: Successfully saved image metadata to Firestore for URL: ${imageUrlToSave}`);
+            savedCount++;
+        } catch (firestoreError: any) {
+            const firestoreErrorDetail = `Failed to save image metadata to Firestore: ${firestoreError.message}`;
+            console.error(`handleSaveGeneratedImagesAction: ${firestoreErrorDetail}`, JSON.stringify(firestoreError, Object.getOwnPropertyNames(firestoreError)));
+            saveErrors.push(firestoreErrorDetail);
+            continue;
+        }
+
+        if (isFreepikImage) {
+            try {
+                new URL(imageUrlToSave);
+            } catch (urlError: any) {
+                const urlErrorDetail = `Freepik image URL is invalid: ${urlError.message}`;
+                console.error(`handleSaveGeneratedImagesAction: ${urlErrorDetail}`);
+                saveErrors.push(urlErrorDetail);
+                continue;
+            }
+        }
       } catch (e: any) {
         const specificError = `Failed to save image (prompt: ${promptSnippet}): ${(e as Error).message?.substring(0,100)}`;
         console.error(`handleSaveGeneratedImagesAction: ${specificError}. Full error:`, JSON.stringify(e, Object.getOwnPropertyNames(e)));
         saveErrors.push(specificError);
- throw e;
+        continue;
       }
     }
 
@@ -482,7 +564,15 @@ export async function handleGenerateBrandLogoAction(
 
 
     const result = await generateBrandLogo(input);
-    return { data: result, message: "Brand logo generated successfully!" };
+    const userId = formData.get('userId') as string || 'defaultUser';
+    const brandProfileDocId = formData.get('brandProfileDocId') as string || 'defaultBrandProfile';
+    const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${brandProfileDocId}/brandLogos`);
+    await addDoc(firestoreCollectionRef, {
+      logoData: result.logoDataUri || "",
+      brandName: input.brandName,
+      createdAt: serverTimestamp()
+    });
+    return { data: result, message: "Brand logo generated and saved successfully!" };
   } catch (e: any) {
     console.error("Error in handleGenerateBrandLogoAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
     return { error: `Failed to generate brand logo: ${e.message || "Unknown error. Check server logs."}` };

@@ -11,6 +11,7 @@ import { useAuth } from './AuthContext'; // Added
 // BRAND_PROFILE_DOC_ID is no longer used as a global constant for doc ID
 
 interface BrandContextType {
+  userId: string | null; // Added userId here
   brandData: BrandData | null;
   setBrandData: (data: BrandData, userId: string) => Promise<void>; // Added userId parameter
   isLoading: boolean;
@@ -144,6 +145,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const contextValue = useMemo(() => ({
+    userId: currentUser?.uid || null, // Expose userId from currentUser
     brandData,
     setBrandData: setBrandDataCB,
     isLoading,
@@ -157,7 +159,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
     generatedAdCampaigns,
     addGeneratedAdCampaign: addGeneratedAdCampaignCB
   }), [
-    brandData, setBrandDataCB, isLoading, error,
+    currentUser, brandData, setBrandDataCB, isLoading, error, // Added currentUser dependency
     generatedImages, addGeneratedImageCB,
     generatedSocialPosts, addGeneratedSocialPostCB,
     generatedBlogPosts, addGeneratedBlogPostCB,

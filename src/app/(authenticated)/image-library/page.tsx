@@ -1,58 +1,50 @@
 
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import NextImage from 'next/image';
-// Removed AppShell import
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { db } from '@/lib/firebaseConfig';
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import type { SavedGeneratedImage } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Images, UserCircle, FileImage } from 'lucide-react'; 
+import { AlertCircle, Images, UserCircle, FileImage } from 'lucide-react';
 import { Alert, AlertTitle } from '@/components/ui/alert';
-import { useBrand } from '@/contexts/BrandContext'; 
+import { useBrand } from '@/contexts/BrandContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
 
-const BRAND_PROFILE_DOC_ID = "defaultBrandProfile";
+// const BRAND_PROFILE_DOC_ID = "defaultBrandProfile"; // Not used directly in this component after refactor
+
+const fetchSavedLibraryImages = async (userId: string): Promise<SavedGeneratedImage[]> => {
+  if (!userId) {
+    throw new Error("User ID is required to fetch saved images.");
+  }
+  const imagesCollectionRef = collection(db, `users/${userId}/brandProfiles/defaultBrandProfile/savedLibraryImages`);
+  const q = query(imagesCollectionRef, orderBy("createdAt", "desc"));
+  const querySnapshot = await getDocs(q);
+  const images: SavedGeneratedImage[] = [];
+  querySnapshot.forEach((doc) => {
+    images.push({ id: doc.id, ...doc.data() } as SavedGeneratedImage);
+  });
+  return images;
+};
 
 export default function ImageLibraryPage() {
   const { user, isLoading: isLoadingUser } = useAuth();
-  const [savedImages, setSavedImages] = useState<SavedGeneratedImage[]>([]);
-  const [isLoadingSaved, setIsLoadingSaved] = useState(true);
-  const [errorSaved, setErrorSaved] = useState<string | null>(null);
-
   const { brandData, isLoading: isLoadingBrand, error: errorBrand } = useBrand();
 
-  useEffect(() => {
-    const fetchSavedImages = async () => {
-      if (!user) {
-        // User not loaded yet or not logged in, do not fetch
-        setIsLoadingSaved(false);
-        return;
-      }
-      setIsLoadingSaved(true);
-      setErrorSaved(null);
-      try {
-        const imagesCollectionRef = collection(db, `brandProfiles/${user.uid}/savedLibraryImages`);
-        const q = query(imagesCollectionRef, orderBy("createdAt", "desc")); // Removed limit(20) for full library
-        const querySnapshot = await getDocs(q);
-
-        const images: SavedGeneratedImage[] = [];
-        querySnapshot.forEach((doc) => {
-          images.push({ id: doc.id, ...doc.data() } as SavedGeneratedImage);
-        });
-        setSavedImages(images);
-      } catch (e: any) {
-        console.error("Error fetching saved AI-generated images:", e);
-        setErrorSaved(`Failed to load AI-generated images: ${e.message}. Check Firestore permissions and connectivity.`);
-      } finally {
-        setIsLoadingSaved(false);
-      }
-    };
-
-    fetchSavedImages();
-  }, [user]); // Re-run effect when user changes
+  const { 
+    data: savedImages = [], 
+    isLoading: isLoadingSaved, 
+    error: errorSavedFetch 
+  } = useQuery<SavedGeneratedImage[], Error>({
+    queryKey: ['savedLibraryImages', user?.uid],
+    queryFn: () => fetchSavedLibraryImages(user!.uid),
+    enabled: !!user, // Only run query if user is available
+  });
+  
+  const errorSaved = errorSavedFetch ? `Failed to load AI-generated images: ${errorSavedFetch.message}. Check Firestore permissions and connectivity.` : null;
 
   const brandProfileImages = brandData?.exampleImages || [];
 
