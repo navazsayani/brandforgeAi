@@ -552,7 +552,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
         exampleImage: (useExampleImageForGen && exampleImg && exampleImg.trim() !== "") ? exampleImg : undefined,
         aspectRatio: aspect,
         numberOfImages: numImages,
-        negativePrompt: negPrompt === "" ? undefined : negPrompt, // Revert to string
+        negativePrompt: negPrompt === "" ? undefined : negPrompt, // Keep as string
         seed: seedValue,
         freepikStylingColors: selectedImageProvider === 'FREEPIK' && freepikDominantColorsInput ? freepikDominantColorsInput.split(',').map(c => ({color: c.trim(), weight: 0.5})) : undefined,
         freepikEffectColor: selectedImageProvider === 'FREEPIK' && freepikEffectColor !== "none" ? freepikEffectColor : undefined,
@@ -588,7 +588,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
         const providerToUse = isAdmin ? (formSnapshot?.provider || selectedImageProvider) : "GEMINI";
         formData.append("provider", providerToUse);
 
-        formData.append("brandDescription", String(brandDesc || "")); // Ensure brandDesc is always a string
+        formData.append("brandDescription", String(brandDesc || "")); // Revert to previous state
         
         const industryToSubmit = formSnapshot?.industry || imageGenIndustry || brandData?.industry || ""; // formSnapshot for admin
         formData.append("industry", industryToSubmit === "_none_" ? "" : (industryToSubmit || ""));
