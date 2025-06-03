@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { ReactNode } from 'react';
@@ -53,10 +52,12 @@ export function AppShell({ children }: { children: ReactNode }) {
                 ? "bg-sidebar-accent text-sidebar-accent-foreground" 
                 : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             )}
-            as="a" 
+            asChild
           >
-            <item.icon className="w-5 h-5 mr-3" />
-            {item.label}
+            <a> {/* Wrap the content in <a> */}
+              <item.icon className="w-5 h-5 mr-3" />
+              {item.label}
+            </a>
           </Button>
         </Link>
       ))}

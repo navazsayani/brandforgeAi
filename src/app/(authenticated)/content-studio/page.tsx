@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from '@/contexts/AuthContext'; // Added
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download } from 'lucide-react';
@@ -46,6 +47,7 @@ const imageGenerationProviders = [
 type SocialImageChoice = 'generated' | 'profile' | null;
 
 export default function ContentStudioPage() {
+  const { currentUser } = useAuth(); // Added
   const { brandData, addGeneratedImage, addGeneratedSocialPost, addGeneratedBlogPost, userId } = useBrand();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -106,7 +108,12 @@ export default function ContentStudioPage() {
   const [formSnapshot, setFormSnapshot] = useState<Partial<GenerateImagesInput> & { provider?: string } | null>(null);
 
   const [checkingTaskId, setCheckingTaskId] = useState<string | null>(null);
+  const [selectedBlogIndustry, setSelectedBlogIndustry] = useState<string>("_none_"); // Added for blog industry
   const isClearingRef = useRef(false);
+
+  // New state variables for admin mode and example image usage
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [useExampleImageForGen, setUseExampleImageForGen] = useState<boolean>(true); // Default to true
 
 
   useEffect(() => {
@@ -114,6 +121,7 @@ export default function ContentStudioPage() {
         setImageGenBrandDescription(brandData.brandDescription || "");
         setImageGenIndustry(brandData.industry || "_none_");
         setCustomStyleNotesInput(brandData.imageStyleNotes || ""); 
+        setSelectedBlogIndustry(brandData.industry || "_none_"); // Initialize blog industry
 
         if (brandData.exampleImages && brandData.exampleImages.length > 0) {
             if (selectedProfileImageIndexForGen === null) setSelectedProfileImageIndexForGen(0);
@@ -128,8 +136,20 @@ export default function ContentStudioPage() {
         setCustomStyleNotesInput("");
         setSelectedProfileImageIndexForGen(null);
         setSelectedProfileImageIndexForSocial(null);
+        setSelectedBlogIndustry("_none_"); // Reset blog industry
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brandData]);
+
+  useEffect(() => {
+    if (currentUser && currentUser.email === 'admin@brandforge.ai') {
+      setIsAdmin(true);
+    } else {
+      setIsAdmin(false);
+      // For non-admins, always default to GEMINI provider
+      setSelectedImageProvider("GEMINI");
+    }
+  }, [currentUser]);
 
     useEffect(() => {
     if (selectedImageProvider === 'FREEPIK') {
@@ -178,7 +198,7 @@ export default function ContentStudioPage() {
  setIsPreviewingPrompt(false);
  setFormSnapshot(null);
     }
-  }, [imageState, toast, addGeneratedImage]);
+  }, [imageState, toast, addGeneratedImage, customStyleNotesInput, selectedImageStylePreset]);
 
   useEffect(() => {
     if (socialState.data) {
@@ -350,7 +370,7 @@ export default function ContentStudioPage() {
     }
   };
 
-  const currentExampleImageForGen = (brandData?.exampleImages && selectedProfileImageIndexForGen !== null && brandData.exampleImages[selectedProfileImageIndexForGen]) || "";
+  const currentExampleImageForGen = (useExampleImageForGen && brandData?.exampleImages && selectedProfileImageIndexForGen !== null && brandData.exampleImages[selectedProfileImageIndexForGen]) || "";
 
   const currentSocialImagePreviewUrl = useImageForSocialPost
     ? (socialImageChoice === 'generated'
@@ -383,7 +403,8 @@ export default function ContentStudioPage() {
     console.log("DEBUG PREVIEW: currentIndustryValue:", currentIndustryValue, "resolved to industryLabelForPreview:", industryLabelForPreview);
 
     const industryCtx = (industryLabelForPreview && industryLabelForPreview !== "None / Not Applicable" && industryLabelForPreview !== "_none_") ? ` The brand operates in the ${industryLabelForPreview} industry.` : "";
-    const exampleImg = currentExampleImageForGen;
+    // Use currentExampleImageForGen which respects useExampleImageForGen state
+    const exampleImg = useExampleImageForGen ? currentExampleImageForGen : ""; 
     const combinedStyle = selectedImageStylePreset + (customStyleNotesInput ? `. ${customStyleNotesInput}` : "");
     const negPrompt = imageGenNegativePrompt;
     const aspect = selectedAspectRatio;
@@ -528,10 +549,10 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
         brandDescription: imageGenBrandDescription,
         industry: currentIndustryValue === "_none_" ? "" : currentIndustryValue,
         imageStyle: combinedStyle, 
-        exampleImage: exampleImg === "" ? undefined : exampleImg,
+        exampleImage: (useExampleImageForGen && exampleImg && exampleImg.trim() !== "") ? exampleImg : undefined,
         aspectRatio: aspect,
         numberOfImages: numImages,
-        negativePrompt: negPrompt === "" ? undefined : negPrompt,
+        negativePrompt: negPrompt === "" ? undefined : negPrompt, // Revert to string
         seed: seedValue,
         freepikStylingColors: selectedImageProvider === 'FREEPIK' && freepikDominantColorsInput ? freepikDominantColorsInput.split(',').map(c => ({color: c.trim(), weight: 0.5})) : undefined,
         freepikEffectColor: selectedImageProvider === 'FREEPIK' && freepikEffectColor !== "none" ? freepikEffectColor : undefined,
@@ -545,8 +566,8 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     event.preventDefault();
     
     // Validate required fields
-    const brandDesc = formSnapshot?.brandDescription || imageGenBrandDescription || brandData?.brandDescription || "";
-    const imageStyle = formSnapshot?.imageStyle || (selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : ""));
+    const brandDesc = formSnapshot?.brandDescription || imageGenBrandDescription || brandData?.brandDescription || ""; // formSnapshot used by admin flow
+    const imageStyle = formSnapshot?.imageStyle || (selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")); // formSnapshot used by admin flow
     
     if (!brandDesc.trim()) {
       toast({ title: "Missing Brand Description", description: "Please provide a brand description to generate images.", variant: "destructive" });
@@ -561,49 +582,57 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     startTransition(() => {
         const formData = new FormData();
 
-        formData.append("finalizedTextPrompt", currentTextPromptForEditing || "");
+        formData.append("finalizedTextPrompt", currentTextPromptForEditing || ""); // currentTextPromptForEditing is set by handlePreviewPromptClick (admin) or handleDirectImageGeneration (normal user)
 
-        const provider = formSnapshot?.provider || selectedImageProvider || imageGenerationProviders[0].value;
-        formData.append("provider", provider);
+        // Provider: Admin uses selectedImageProvider (via formSnapshot), Non-admin defaults to GEMINI
+        const providerToUse = isAdmin ? (formSnapshot?.provider || selectedImageProvider) : "GEMINI";
+        formData.append("provider", providerToUse);
 
-        formData.append("brandDescription", brandDesc);
+        formData.append("brandDescription", String(brandDesc || "")); // Ensure brandDesc is always a string
         
-        const industryToSubmit = formSnapshot?.industry || imageGenIndustry || brandData?.industry || "";
+        const industryToSubmit = formSnapshot?.industry || imageGenIndustry || brandData?.industry || ""; // formSnapshot for admin
         formData.append("industry", industryToSubmit === "_none_" ? "" : (industryToSubmit || ""));
         
         formData.append("imageStyle", imageStyle);
+        
+        // Example Image: formSnapshot for admin, direct state for non-admin (though prompt construction handles this)
+        const exampleImgToUse = isAdmin ? formSnapshot?.exampleImage : (useExampleImageForGen && currentExampleImageForGen ? currentExampleImageForGen : undefined);
+        if (typeof exampleImgToUse === 'string' && exampleImgToUse.trim() !== "") {
+          formData.append("exampleImage", exampleImgToUse);
+        }
 
-        const exampleImgToUse = formSnapshot?.exampleImage;
-        if (exampleImgToUse && exampleImgToUse.trim() !== "") formData.append("exampleImage", exampleImgToUse);
+        formData.append("aspectRatio", formSnapshot?.aspectRatio || selectedAspectRatio); // formSnapshot for admin
+        formData.append("numberOfImages", String(formSnapshot?.numberOfImages || parseInt(numberOfImagesToGenerate,10))); // formSnapshot for admin
 
-        formData.append("aspectRatio", formSnapshot?.aspectRatio || selectedAspectRatio);
-        formData.append("numberOfImages", String(formSnapshot?.numberOfImages || parseInt(numberOfImagesToGenerate,10)));
+        const negPromptValue = isAdmin ? formSnapshot?.negativePrompt : imageGenNegativePrompt; // formSnapshot for admin
+        if (negPromptValue && negPromptValue.toString().trim() !== "") { // Check for undefined and empty string
+            formData.append("negativePrompt", negPromptValue.toString()); // Ensure it's a string
+        }
 
-        const negPromptValue = formSnapshot?.negativePrompt;
-        if (negPromptValue) formData.append("negativePrompt", negPromptValue);
-
-        const seedValueNum = formSnapshot?.seed;
+        const seedValueNum = isAdmin ? formSnapshot?.seed : (imageGenSeed && !isNaN(parseInt(imageGenSeed)) ? parseInt(imageGenSeed) : undefined); // formSnapshot for admin
         if (seedValueNum !== undefined) {
           formData.append("seed", String(seedValueNum));
         }
 
-        if (provider === 'FREEPIK') {
-            const fColorsFromSnapshot = formSnapshot?.freepikStylingColors;
-            const fColorsInputStr = fColorsFromSnapshot ? fColorsFromSnapshot.map(c => c.color).join(',') : freepikDominantColorsInput;
-            if (fColorsInputStr) formData.append("freepikDominantColorsInput", fColorsInputStr);
+        if (providerToUse === 'FREEPIK') {
+            const fColorsFromSnapshot = formSnapshot?.freepikStylingColors; // Admin uses formSnapshot
+            const fColorsInputStrToUse = isAdmin && fColorsFromSnapshot 
+                ? fColorsFromSnapshot.map(c => c.color).join(',') 
+                : freepikDominantColorsInput;
+            if (fColorsInputStrToUse) formData.append("freepikDominantColorsInput", fColorsInputStrToUse);
 
-            const fEffectColorValue = formSnapshot?.freepikEffectColor || freepikEffectColor;
-            if (fEffectColorValue && fEffectColorValue !== "none") formData.append("freepikEffectColor", fEffectColorValue);
+            const fEffectColorToUse = isAdmin ? (formSnapshot?.freepikEffectColor || freepikEffectColor) : freepikEffectColor;
+            if (fEffectColorToUse && fEffectColorToUse !== "none") formData.append("freepikEffectColor", fEffectColorToUse);
 
-            const fEffectLightningValue = formSnapshot?.freepikEffectLightning || freepikEffectLightning;
-            if (fEffectLightningValue && fEffectLightningValue !== "none") formData.append("freepikEffectLightning", fEffectLightningValue);
+            const fEffectLightningToUse = isAdmin ? (formSnapshot?.freepikEffectLightning || freepikEffectLightning) : freepikEffectLightning;
+            if (fEffectLightningToUse && fEffectLightningToUse !== "none") formData.append("freepikEffectLightning", fEffectLightningToUse);
 
-            const fEffectFramingValue = formSnapshot?.freepikEffectFraming || freepikEffectFraming;
-            if (fEffectFramingValue && fEffectFramingValue !== "none") formData.append("freepikEffectFraming", fEffectFramingValue);
+            const fEffectFramingToUse = isAdmin ? (formSnapshot?.freepikEffectFraming || freepikEffectFraming) : freepikEffectFraming;
+            if (fEffectFramingToUse && fEffectFramingToUse !== "none") formData.append("freepikEffectFraming", fEffectFramingToUse);
         }
         
         console.log("FormData being sent:", {
-          provider,
+          provider: providerToUse,
           brandDescription: brandDesc,
           imageStyle,
           aspectRatio: formSnapshot?.aspectRatio || selectedAspectRatio,
@@ -619,7 +648,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     const formData = new FormData();
     formData.append('brandName', (document.getElementById('blogBrandName') as HTMLInputElement)?.value || brandData?.brandName || "");
     formData.append('blogBrandDescription', (document.getElementById('blogBrandDescription') as HTMLTextAreaElement)?.value || brandData?.brandDescription || "");
-    formData.append('industry', (document.getElementById('blogIndustrySelectTrigger')?.textContent || brandData?.industry) === "None / Not Applicable" ? "" : (document.getElementById('blogIndustrySelectTrigger')?.textContent || brandData?.industry || "") );
+    formData.append('industry', selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry); // Use selectedBlogIndustry state
     formData.append('blogKeywords', (document.getElementById('blogKeywords') as HTMLInputElement)?.value || brandData?.targetKeywords || "");
     formData.append('blogWebsiteUrl', (document.getElementById('blogWebsiteUrl') as HTMLInputElement)?.value || brandData?.websiteUrl || "");
 
@@ -633,6 +662,91 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     });
   };
 
+  const handleSocialSubmit = async (formData: FormData) => {
+      let imageSrc = formData.get("selectedImageSrcForSocialPost") as string | null;
+      const MAX_IMAGE_SIZE_BYTES = 1000 * 1024; // 1MB (Firestore limit is 1,048,487 bytes)
+
+      if (imageSrc && imageSrc.startsWith('data:')) {
+          const originalImageSizeInBytes = imageSrc.length * 0.75;
+
+          if (originalImageSizeInBytes > MAX_IMAGE_SIZE_BYTES) {
+              toast({
+                  title: "Compressing Image...",
+                  description: `Image size (${(originalImageSizeInBytes / (1024*1024)).toFixed(2)} MB) exceeds 1MB. Attempting client-side compression.`,
+                  duration: 3000,
+              });
+
+              try {
+                  const compressedImageUri = await new Promise<string>((resolve, reject) => {
+                      const img = new Image();
+                      img.onload = () => {
+                          const canvas = document.createElement('canvas');
+                          const ctx = canvas.getContext('2d');
+
+                          // Calculate new dimensions to fit within a reasonable size while maintaining aspect ratio
+                          const maxWidth = 1920; // Max width for social media images
+                          const maxHeight = 1080; // Max height for social media images
+                          let width = img.width;
+                          let height = img.height;
+
+                          if (width > height) {
+                              if (width > maxWidth) {
+                                  height *= maxWidth / width;
+                                  width = maxWidth;
+                              }
+                          } else {
+                              if (height > maxHeight) {
+                                  width *= maxHeight / height;
+                                  height = maxHeight;
+                              }
+                          }
+
+                          canvas.width = width;
+                          canvas.height = height;
+
+                          ctx?.drawImage(img, 0, 0, width, height);
+
+                          // Try to compress to JPEG with quality 0.7
+                          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                          resolve(dataUrl);
+                      };
+                      img.onerror = reject;
+                      img.src = imageSrc;
+                  });
+
+                  const compressedSizeInBytes = compressedImageUri.length * 0.75;
+                  if (compressedSizeInBytes > MAX_IMAGE_SIZE_BYTES) {
+                      toast({
+                          title: "Compression Failed",
+                          description: `Even after compression, the image (${(compressedSizeInBytes / (1024*1024)).toFixed(2)} MB) is still too large. Please use a smaller image or generate the text and upload the image manually.`,
+                          variant: "destructive",
+                          duration: 8000,
+                      });
+                      return; // Stop submission
+                  } else {
+                      toast({
+                          title: "Image Compressed",
+                          description: `Image successfully compressed to ${(compressedSizeInBytes / 1024).toFixed(2)} KB.`,
+                          duration: 3000,
+                      });
+                      formData.set("selectedImageSrcForSocialPost", compressedImageUri); // Update formData with compressed image
+                  }
+              } catch (error) {
+                  console.error("Image compression error:", error);
+                  toast({
+                      title: "Image Compression Error",
+                      description: "Could not compress image. Please try a different image or generate text only.",
+                      variant: "destructive",
+                      duration: 8000,
+                  });
+                  return; // Stop submission
+              }
+          }
+      }
+      startTransition(() => {
+          socialAction(formData);
+      });
+  };
 
   const handleFetchFreepikResult = (taskId: string) => {
     setCheckingTaskId(taskId);
@@ -684,11 +798,42 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
             <CardHeader>
               <CardTitle>Generate Brand Images</CardTitle>
               <p className="text-sm text-muted-foreground">Create unique images. Uses brand description, industry, and style. Optionally use an example image from your Brand Profile.</p>
-                {lastUsedImageProvider && <p className="text-xs text-primary mt-1">Image(s) last generated using: {lastUsedImageProvider}</p>}
+                {lastUsedImageProvider && <p className="text-xs text-primary mt-1">Image(s) last generated using: {isAdmin ? lastUsedImageProvider : "Gemini (Google AI)"}</p>}
             </CardHeader>
-            {!isPreviewingPrompt ? (
-              <div id="imageGenerationFormFields">
+            {/* Conditional rendering for preview mode (admin) vs direct form (non-admin) */}
+            {isAdmin && isPreviewingPrompt ? (
+              // Admin is previewing prompt
+              <form onSubmit={handleImageGenerationSubmit}>
                 <CardContent className="space-y-6">
+                  <div>
+                    <Label htmlFor="editablePromptTextarea" className="flex items-center mb-1"><Edit className="w-4 h-4 mr-2 text-primary" />Final Prompt (Editable)</Label>
+                    <Textarea
+                      id="editablePromptTextarea"
+                      value={currentTextPromptForEditing}
+                      onChange={(e) => setCurrentTextPromptForEditing(e.target.value)}
+                      rows={10}
+                      className="font-mono text-sm"
+                      placeholder="The constructed prompt will appear here. You can edit it before generation."
+                    />
+                      <p className="text-xs text-muted-foreground">
+                      Note: For Freepik, structural parameters (aspect ratio, specific styles/effects) are set separately and won't be textually appended here by default if you edit this prompt. Editing this prompt gives most control to Gemini.
+                      </p>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex flex-col sm:flex-row gap-2">
+                  <Button type="button" variant="outline" onClick={() => { setIsPreviewingPrompt(false); setFormSnapshot(null);}} className="w-full sm:w-auto">
+                      Back to Edit Fields
+                  </Button>
+                  <SubmitButton className="w-full sm:flex-1" loadingText={parseInt(formSnapshot?.numberOfImages?.toString() || "1") > 1 ? "Generating Images..." : "Generating Image..."}>
+                      Generate {parseInt(formSnapshot?.numberOfImages?.toString() || "1") > 1 ? `${formSnapshot?.numberOfImages} Images` : "Image"} with This Prompt
+                  </SubmitButton>
+                </CardFooter>
+              </form>
+            ) : (
+              // Admin is in form fields mode OR it's a Non-Admin user (direct generation)
+              <form id="imageGenerationFormFields" onSubmit={isAdmin ? (e) => e.preventDefault() : handleImageGenerationSubmit}>
+                <CardContent className="space-y-6">
+                  {isAdmin && ( // Provider selection only for admin
                     <div>
                       <Label htmlFor="imageGenProviderSelect" className="flex items-center mb-1"><Server className="w-4 h-4 mr-2 text-primary" />Image Generation Provider</Label>
                       <Select value={selectedImageProvider || ''} onValueChange={(value) => setSelectedImageProvider(value as GenerateImagesInput['provider'])}>
@@ -706,7 +851,8 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                               </SelectGroup>
                           </SelectContent>
                       </Select>
-                  </div>
+                    </div>
+                  )}
 
                   <div>
                     <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
@@ -737,7 +883,12 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                           {industry.label}
                                       </SelectItem>
                                   ))}
-                                    <SelectItem value="_none_">None / Not Applicable</SelectItem>
+                                  {/* The "_none_" option should be part of the industries array if needed, 
+                                      otherwise it might be added here only if not in the array.
+                                      Assuming it's in the array to fix duplicate key error. 
+                                      If industries array does not contain _none_ and it's desired, 
+                                      ensure it's added to the industries constant or handled differently.
+                                  */}
                               </SelectGroup>
                           </SelectContent>
                       </Select>
@@ -777,48 +928,63 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                       rows={2}
                     />
                   </div>
-
-                  <div>
-                      <Label className="flex items-center mb-1">
-                          <ImageIcon className="w-4 h-4 mr-2 text-primary" />Example Image from Profile (Optional)
-                      </Label>
-                        {brandData?.exampleImages && brandData.exampleImages.length > 0 ? (
-                          <div className="mt-2 space-y-2">
-                              {brandData.exampleImages.length > 1 ? (
-                                  <>
-                                  <p className="text-xs text-muted-foreground">Select Profile Image to Use as Reference:</p>
-                                  <div className="flex space-x-2 overflow-x-auto pb-2">
-                                      {brandData.exampleImages.map((imgSrc, index) => (
-                                          <button
-                                              type="button"
-                                              key={`gen-profile-${index}`}
-                                              onClick={() => setSelectedProfileImageIndexForGen(index)}
-                                              className={cn(
-                                                  "w-20 h-20 rounded border-2 p-0.5 flex-shrink-0 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring",
-                                                  selectedProfileImageIndexForGen === index ? "border-primary ring-2 ring-primary" : "border-border"
-                                              )}
-                                          >
-                                              <NextImage src={imgSrc} alt={`Example ${index + 1}`} width={76} height={76} className="object-contain w-full h-full rounded-sm" data-ai-hint="style example"/>
-                                          </button>
-                                      ))}
-                                  </div>
-                                  </>
-                                ) : ( 
-                                    <div className="w-20 h-20 rounded border-2 p-0.5 border-primary ring-2 ring-primary flex-shrink-0">
-                                        <NextImage src={brandData.exampleImages[0]} alt={`Example 1`} width={76} height={76} className="object-contain w-full h-full rounded-sm" data-ai-hint="style example"/>
-                                    </div>
-                                )}
-                              { currentExampleImageForGen && (
-                                  <p className="text-xs text-muted-foreground">
-                                      Using image {selectedProfileImageIndexForGen !== null && brandData.exampleImages && brandData.exampleImages.length > 1 ? selectedProfileImageIndexForGen + 1 : '1'} as reference.
-                                      {selectedImageProvider === 'FREEPIK' && " (Freepik/Imagen3 uses AI description of this image, not the image directly for text-to-image.)"}
-                                  </p>
-                              )}
-                          </div>
-                      ) : (
-                          <p className="text-xs text-muted-foreground mt-1">No example images in Brand Profile to select.</p>
-                      )}
+                  
+                  {/* New Checkbox for using example image */}
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="useExampleImageForGen"
+                      checked={useExampleImageForGen}
+                      onCheckedChange={(checked) => setUseExampleImageForGen(checked as boolean)}
+                    />
+                    <Label htmlFor="useExampleImageForGen" className="text-sm font-medium">
+                      Use Example Image from Profile as Reference?
+                    </Label>
                   </div>
+
+                  {/* Conditional rendering for example image selection */}
+                  {useExampleImageForGen && (
+                    <div>
+                        <Label className="flex items-center mb-1">
+                            <ImageIcon className="w-4 h-4 mr-2 text-primary" />Example Image from Profile
+                        </Label>
+                          {brandData?.exampleImages && brandData.exampleImages.length > 0 ? (
+                            <div className="mt-2 space-y-2">
+                                {brandData.exampleImages.length > 1 ? (
+                                    <>
+                                    <p className="text-xs text-muted-foreground">Select Profile Image to Use as Reference:</p>
+                                    <div className="flex space-x-2 overflow-x-auto pb-2">
+                                        {brandData.exampleImages.map((imgSrc, index) => (
+                                            <button
+                                                type="button"
+                                                key={`gen-profile-${index}`}
+                                                onClick={() => setSelectedProfileImageIndexForGen(index)}
+                                                className={cn(
+                                                    "w-20 h-20 rounded border-2 p-0.5 flex-shrink-0 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring",
+                                                    selectedProfileImageIndexForGen === index ? "border-primary ring-2 ring-primary" : "border-border"
+                                                )}
+                                            >
+                                                <NextImage src={imgSrc} alt={`Example ${index + 1}`} width={76} height={76} className="object-contain w-full h-full rounded-sm" data-ai-hint="style example"/>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    </>
+                                  ) : ( 
+                                      <div className="w-20 h-20 rounded border-2 p-0.5 border-primary ring-2 ring-primary flex-shrink-0">
+                                          <NextImage src={brandData.exampleImages[0]} alt={`Example 1`} width={76} height={76} className="object-contain w-full h-full rounded-sm" data-ai-hint="style example"/>
+                                      </div>
+                                  )}
+                                { currentExampleImageForGen && ( // currentExampleImageForGen already respects useExampleImageForGen
+                                    <p className="text-xs text-muted-foreground">
+                                        Using image {selectedProfileImageIndexForGen !== null && brandData.exampleImages && brandData.exampleImages.length > 1 ? selectedProfileImageIndexForGen + 1 : "1"} as reference.
+                                        {selectedImageProvider === 'FREEPIK' && isAdmin && " (Freepik/Imagen3 uses AI description of this image, not the image directly for text-to-image.)"}
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            <p className="text-xs text-muted-foreground mt-1">No example images in Brand Profile to select.</p>
+                        )}
+                    </div>
+                  )}
 
                   <div>
                     <Label htmlFor="imageGenNegativePrompt" className="flex items-center mb-1"><CircleSlash className="w-4 h-4 mr-2 text-primary" />Negative Prompt (Optional)</Label>
@@ -831,8 +997,9 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                       rows={2}
                     />
                   </div>
-
-                  {selectedImageProvider === 'FREEPIK' && (
+                  
+                  {/* Freepik specific options only for admin and when Freepik is selected */}
+                  {isAdmin && selectedImageProvider === 'FREEPIK' && (
                       <>
                           <div className="pt-4 mt-4 border-t">
                               <h4 className="text-md font-semibold mb-3 text-primary flex items-center"><Paintbrush className="w-5 h-5 mr-2"/>Freepik Specific Styling (imagen3 model)</h4>
@@ -925,51 +1092,35 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                       id="imageGenSeed"
                       name="seed"
                       type="number"
-                      value={imageGenSeed}
+                      value={imageGenSeed || ""}
                       onChange={(e) => setImageGenSeed(e.target.value)}
                       placeholder="Enter a number for reproducible results"
                       min="0"
                       disabled={selectedImageProvider === 'FREEPIK'}
                     />
                       <p className="text-xs text-muted-foreground">
-                        {selectedImageProvider === 'FREEPIK' ? "Seed is ignored for Freepik/Imagen3 UI integration." : "Seed might not be strictly enforced by all models."}
+                        {(isAdmin && selectedImageProvider === 'FREEPIK') ? "Seed is ignored for Freepik/Imagen3 UI integration." : "Seed might not be strictly enforced by all models."}
                       </p>
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button type="button" onClick={handlePreviewPromptClick} className="w-full">
-                      <Eye className="mr-2 h-4 w-4" /> Preview Prompt
-                  </Button>
+                  {isAdmin ? (
+                    <Button type="button" onClick={handlePreviewPromptClick} className="w-full">
+                        <Eye className="mr-2 h-4 w-4" /> Preview Prompt
+                    </Button>
+                  ) : (
+                    // Non-admin direct generation button (form's onSubmit handles this)
+                    <SubmitButton 
+                        className="w-full" 
+                        loadingText={parseInt(numberOfImagesToGenerate,10) > 1 ? "Generating Images..." : "Generating Image..."}
+                        type="submit" // This button now submits the main form for non-admins
+                    >
+                        Generate {parseInt(numberOfImagesToGenerate,10) > 1 ? `${numberOfImagesToGenerate} Images` : "Image"}
+                    </SubmitButton>
+                  )}
                 </CardFooter>
-              </div>
-            ) : (
-              <form onSubmit={handleImageGenerationSubmit}>
-                <CardContent className="space-y-6">
-                  <div>
-                    <Label htmlFor="editablePromptTextarea" className="flex items-center mb-1"><Edit className="w-4 h-4 mr-2 text-primary" />Final Prompt (Editable)</Label>
-                    <Textarea
-                      id="editablePromptTextarea"
-                      value={currentTextPromptForEditing}
-                      onChange={(e) => setCurrentTextPromptForEditing(e.target.value)}
-                      rows={10}
-                      className="font-mono text-sm"
-                      placeholder="The constructed prompt will appear here. You can edit it before generation."
-                    />
-                      <p className="text-xs text-muted-foreground">
-                      Note: For Freepik, structural parameters (aspect ratio, specific styles/effects) are set separately and won't be textually appended here by default if you edit this prompt. Editing this prompt gives most control to Gemini.
-                      </p>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex flex-col sm:flex-row gap-2">
-                  <Button type="button" variant="outline" onClick={() => { setIsPreviewingPrompt(false); setFormSnapshot(null);}} className="w-full sm:w-auto">
-                      Back to Edit Fields
-                  </Button>
-                  <SubmitButton className="w-full sm:flex-1" loadingText={parseInt(formSnapshot?.numberOfImages?.toString() || "1") > 1 ? "Generating Images..." : "Generating Image..."}>
-                      Generate {parseInt(formSnapshot?.numberOfImages?.toString() || "1") > 1 ? `${formSnapshot?.numberOfImages} Images` : "Image"} with This Prompt
-                  </SubmitButton>
-                </CardFooter>
-              </form>
-            )}
+              </form> // This form is now used by both admin (fields mode) and non-admin (direct generation)
+            )} {/* End of conditional rendering for admin preview mode vs form fields/direct gen */}
 
             {lastSuccessfulGeneratedImageUrls.length > 0 && (
               <Card className="mt-6 mx-4 mb-4 shadow-sm">
@@ -1050,7 +1201,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                           </div>
                       ))}
                     </div>
-                    {lastUsedImageGenPrompt && (
+                    {isAdmin && lastUsedImageGenPrompt && ( // Hide "Prompt Used" for non-admins
                       <div className="mt-4">
                           <div className="flex justify-between items-center mb-1">
                               <Label htmlFor="usedImagePromptDisplay" className="flex items-center text-sm font-medium"><FileText className="w-4 h-4 mr-2 text-primary" />Prompt Used:</Label>
@@ -1089,7 +1240,13 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
               <CardTitle className="text-xl flex items-center"><MessageSquareText className="w-6 h-6 mr-2 text-primary"/>Create Social Media Post</CardTitle>
               <p className="text-sm text-muted-foreground">Generate engaging captions and hashtags. Uses brand description, industry, image description (optional), and selected tone.</p>
             </CardHeader>
-            <form action={socialAction}>
+            <form
+                onSubmit={(e) => {
+                    e.preventDefault();
+                    const currentFormData = new FormData(e.currentTarget);
+                    handleSocialSubmit(currentFormData);
+                }}
+            >
               <input type="hidden" name="industry" value={brandData?.industry === "_none_" ? "" : brandData?.industry || ""} />
               <input type="hidden" name="selectedImageSrcForSocialPost" value={useImageForSocialPost && currentSocialImagePreviewUrl ? currentSocialImagePreviewUrl : ""} />
               <CardContent className="space-y-6">
@@ -1160,12 +1317,12 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                       ))}
                                   </div>
                                   </>
-                                ) : (
+                                ) : brandData?.exampleImages?.[0] ? (
                                   <div className="w-16 h-16 rounded border-2 p-0.5 border-primary ring-2 ring-primary flex-shrink-0">
                                         <NextImage src={brandData.exampleImages[0]} alt={`Profile Example 1`} width={60} height={60} className="object-contain w-full h-full rounded-sm" data-ai-hint="social media reference"/>
                                     </div>
-                                )}
-                              {selectedProfileImageIndexForSocial !== null && brandData.exampleImages[selectedProfileImageIndexForSocial] && (
+                                ) : null}
+                              {selectedProfileImageIndexForSocial !== null && brandData?.exampleImages?.[selectedProfileImageIndexForSocial] && (
                                 <p className="text-xs text-muted-foreground">Using image {brandData.exampleImages.length > 1 ? selectedProfileImageIndexForSocial + 1 : '1'} from profile.</p>
                               )}
                             </div>
@@ -1274,19 +1431,21 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                             <div className="mb-4">
                               <p className="text-sm font-medium mb-1 text-muted-foreground">Associated Image:</p>
                               <div className="relative w-40 h-40 border rounded-md overflow-hidden mb-2">
-                                  <NextImage
+                                  {generatedSocialPost?.imageSrc && <NextImage
                                     src={generatedSocialPost.imageSrc}
                                     alt="Social post image"
                                     fill
-                                    style={{objectFit: 'contain'}} data-ai-hint="social content" />
+                                    style={{objectFit: 'contain'}} data-ai-hint="social content" />}
                               </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => downloadImage(generatedSocialPost.imageSrc || "", `social-post-${new Date().getTime()}.png`)}
-                              >
-                                <Download className="mr-2 h-4 w-4"/> Download Image
-                              </Button>
+                              {generatedSocialPost?.imageSrc && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => downloadImage(generatedSocialPost.imageSrc || "", `social-post-${new Date().getTime()}.png`)}
+                                >
+                                  <Download className="mr-2 h-4 w-4"/> Download Image
+                                </Button>
+                              )}
                           </div>
                       )}
                       <div>
@@ -1343,16 +1502,17 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                       </div>
                       <div>
                           <Label htmlFor="blogIndustry" className="flex items-center mb-1"><Briefcase className="w-4 h-4 mr-2 text-primary" />Industry (from Profile)</Label>
-                          <Select 
-                              name="industry" 
-                              defaultValue={brandData?.industry === "_none_" ? "" : brandData?.industry || ""}
+                          <Select
+                              name="industry"
+                              value={selectedBlogIndustry}
+                              onValueChange={setSelectedBlogIndustry}
                           >
                               <SelectTrigger id="blogIndustrySelectTrigger">
                                   <SelectValue placeholder="Select industry" />
                               </SelectTrigger>
                               <SelectContent>
                                   {industries.map(industry => (
-                                      <SelectItem key={industry.value} value={industry.value === "_none_" ? "" : industry.value}>
+                                      <SelectItem key={industry.value} value={industry.value}>
                                           {industry.label}
                                       </SelectItem>
                                   ))}

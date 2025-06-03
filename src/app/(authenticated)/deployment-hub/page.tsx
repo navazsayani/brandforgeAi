@@ -126,24 +126,24 @@ export default function DeploymentHubPage() {
             <GeneratedItemCard 
               key={campaign.id} 
               title={`Ad Campaign Summary`} 
-              description={campaign.summary}
+              description={campaign.campaignConcept}
               footerContent={
-                <Button onClick={() => handleDeploy("Ad Platforms", `Campaign: ${campaign.summary.substring(0,20)}...`)} className="w-full">
+                <Button onClick={() => handleDeploy("Ad Platforms", `Campaign: ${campaign.campaignConcept.substring(0,20)}...`)} className="w-full">
                   <ExternalLink className="w-4 h-4 mr-2" /> Mock Launch Campaign
                 </Button>
               }
             >
                 <div className="p-3 my-2 text-sm border rounded-md bg-secondary/50"> 
-                <h4 className="mb-1 font-semibold">Target Platforms:</h4>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {campaign.targetPlatforms.map(platform => (
-                      <Badge key={platform} variant="default">{platform.replace('_', ' ')}</Badge>
-                  ))}
-                </div>
-                <h4 className="mt-3 mb-1 font-semibold">Platform Specifics:</h4>
-                {Object.entries(campaign.platformDetails).map(([key, value]) => (
-                  <p key={key} className="text-xs break-all"><strong>{key.replace('_',' ')}:</strong> {String(value)}</p>
-                ))}
+                    <h4 className="mb-1 font-semibold">Target Platforms:</h4>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {campaign.targetPlatforms.map(platform => (
+                          <Badge key={platform} variant="default">{platform.replace('_', ' ')}</Badge>
+                      ))}
+                    </div>
+                    <h4 className="mt-3 mb-1 font-semibold">Platform Specifics:</h4>
+                    <div className="p-4 prose border rounded-md bg-muted/50 max-w-none max-h-60 overflow-y-auto text-sm">
+                        <p className="whitespace-pre-wrap">{campaign.platformGuidance}</p>
+                    </div>
                 </div>
             </GeneratedItemCard>
           ))}

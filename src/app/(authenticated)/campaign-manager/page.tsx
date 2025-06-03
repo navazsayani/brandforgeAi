@@ -217,7 +217,7 @@ export default function CampaignManagerPage() {
                 {generatedCampaign.headlines.map((headline, index) => (
                   <div key={`headline-${index}`} className="p-3 border rounded-md bg-muted/50">
                     <p className="text-sm whitespace-pre-wrap">{headline}</p>
-                    <Button variant="ghost" size="xs" onClick={() => copyToClipboard(headline, `Headline ${index+1}`)} className="mt-1 text-xs text-muted-foreground hover:text-primary">
+                    <Button variant="ghost" size="sm" onClick={() => copyToClipboard(headline, `Headline ${index+1}`)} className="mt-1 text-xs text-muted-foreground hover:text-primary">
                       <Copy className="w-3 h-3 mr-1" /> Copy Headline
                     </Button>
                   </div>
@@ -231,7 +231,7 @@ export default function CampaignManagerPage() {
                 {generatedCampaign.bodyTexts.map((body, index) => (
                   <div key={`body-${index}`} className="p-3 border rounded-md bg-muted/50">
                     <p className="text-sm whitespace-pre-wrap">{body}</p>
-                    <Button variant="ghost" size="xs" onClick={() => copyToClipboard(body, `Body Text ${index+1}`)} className="mt-1 text-xs text-muted-foreground hover:text-primary">
+                    <Button variant="ghost" size="sm" onClick={() => copyToClipboard(body, `Body Text ${index+1}`)} className="mt-1 text-xs text-muted-foreground hover:text-primary">
                       <Copy className="w-3 h-3 mr-1" /> Copy Body Text
                     </Button>
                   </div>
