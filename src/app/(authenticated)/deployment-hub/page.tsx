@@ -108,8 +108,7 @@ export default function DeploymentHubPage() {
                   <Send className="w-4 h-4 mr-2" /> Mock Publish to {post.platform}
                 </Button>
               }
-            >
-              <p className="mb-1 text-xs text-muted-foreground">Platform: <Badge variant="outline">{post.platform}</Badge></p>
+            >              <div className="mb-1 text-xs text-muted-foreground">Platform: <Badge variant="outline">{post.platform}</Badge></div>
               <div className="mb-2 space-x-1">
                   {post.tags.split(',').map(tag => tag.trim()).filter(tag => tag).map(tag => (
                       <Badge key={tag} variant="secondary" className="text-xs">#{tag}</Badge>

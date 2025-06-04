@@ -26,30 +26,32 @@ export default function DashboardPage() {
   }, [brandData]);
 
   return (
-    <div className="space-y-8">
-      <Card className="shadow-lg">
-        <CardHeader>
-          <div className="flex items-center space-x-3">
-            <Sparkles className="w-10 h-10 text-primary" /> 
-            <div>
-              <CardTitle className="text-3xl font-bold break-words">Welcome to BrandForge AI</CardTitle>
-              <CardDescription className="text-lg break-words">
+    <div className="space-y-6 sm:space-y-8 animate-fade-in">
+      <Card className="card-enhanced">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
+            <div className="p-3 bg-primary/10 rounded-xl w-fit">
+              <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />
+            </div>
+            <div className="flex-1">
+              <CardTitle className="text-break">Welcome to BrandForge AI</CardTitle>
+              <CardDescription className="text-responsive text-break mt-2">
                 Your intelligent partner for brand building, content creation, and campaign management.
               </CardDescription>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <p className="mb-6 text-muted-foreground break-words">
+        <CardContent className="space-y-6">
+          <p className="text-responsive text-muted-foreground text-break leading-relaxed">
             Leverage the power of AI to analyze your brand, generate compelling content,
             and automate your marketing efforts. Get started by defining your brand profile,
             then explore our content creation and campaign management tools.
           </p>
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid-responsive-2 gap-6">
             
-            <div className="relative w-full max-w-md mx-auto aspect-square rounded-lg shadow-md overflow-hidden bg-muted flex items-center justify-center">
+            <div className="relative w-full max-w-sm mx-auto aspect-square rounded-xl card-enhanced overflow-hidden bg-muted/50 flex items-center justify-center">
               {isBrandLoading ? (
-                <Skeleton className="w-full h-full" />
+                <Skeleton className="w-full h-full rounded-xl" />
               ) : logoUrl ? (
                 <NextImage
                   src={logoUrl}
@@ -58,25 +60,22 @@ export default function DashboardPage() {
                   style={{objectFit: "contain"}}
                   priority
                   data-ai-hint="brand logo main"
+                  className="rounded-xl"
                 />
               ) : (
-                <div className="text-center p-4">
-                  <NextImage
-                      src="https://placehold.co/400x400.png" 
-                      alt="Placeholder for brand logo"
-                      width={400}
-                      height={400}
-                      className="object-cover w-full h-full absolute inset-0 opacity-30"
-                      data-ai-hint="generic placeholder"
-                  />
-                  <div className="relative z-10 flex flex-col items-center justify-center h-full">
-                      <Sparkles className="w-16 h-16 text-primary mb-4" />
-                      <p className="text-lg font-semibold text-foreground break-words">Your Brand Logo Here</p>
-                      <p className="text-sm text-muted-foreground mb-3 break-words">
-                        Generate your brand logo in the Brand Profile page.
-                      </p>
+                <div className="text-center p-4 sm:p-6">
+                  <div className="relative z-10 flex flex-col items-center justify-center h-full space-y-4">
+                      <div className="p-4 bg-primary/10 rounded-2xl">
+                        <Sparkles className="w-12 h-12 sm:w-16 sm:h-16 text-primary" />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-base sm:text-lg font-semibold text-foreground text-break">Your Brand Logo Here</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground text-break">
+                          Generate your brand logo in the Brand Profile page.
+                        </p>
+                      </div>
                       <Link href="/brand-profile" passHref>
-                          <Button variant="default" size="sm">
+                          <Button variant="default" size="sm" className="btn-gradient-primary touch-target">
                               Go to Brand Profile <ArrowRight className="w-4 h-4 ml-2" />
                           </Button>
                       </Link>
@@ -84,7 +83,7 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-            <div className="flex flex-col justify-center space-y-4">
+            <div className="flex flex-col justify-center space-y-4 sm:space-y-6">
               <FeatureHighlight
                 icon={<Edit3 className="w-6 h-6 text-accent" />}
                 title="Define Your Brand"
@@ -143,16 +142,16 @@ interface FeatureHighlightProps {
 
 function FeatureHighlight({ icon, title, description, cta }: FeatureHighlightProps) {
   return (
-    <div className="flex items-start space-x-4">
-      <div className="flex-shrink-0 p-3 bg-accent/10 rounded-full">
+    <div className="flex items-start space-x-3 sm:space-x-4 p-4 rounded-lg hover:bg-muted/30 transition-colors duration-200">
+      <div className="flex-shrink-0 p-2 sm:p-3 bg-accent/10 rounded-full">
         {icon}
       </div>
-      <div>
-        <h3 className="text-lg font-semibold break-words">{title}</h3>
-        <p className="text-sm text-muted-foreground break-words">{description}</p>
+      <div className="flex-1 min-w-0">
+        <h3 className="text-base sm:text-lg font-semibold text-break">{title}</h3>
+        <p className="text-responsive-sm text-muted-foreground text-break leading-relaxed mt-1">{description}</p>
         <Link href={cta.href} passHref>
-          <Button variant="link" className="p-0 mt-1 text-primary h-auto">
-            {cta.label} <ArrowRight className="w-4 h-4 ml-1" />
+          <Button variant="link" className="p-0 mt-2 text-primary h-auto text-sm hover:text-primary/80 focus-enhanced">
+            {cta.label} <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
           </Button>
         </Link>
       </div>
@@ -169,16 +168,22 @@ interface InfoCardProps {
 
 function InfoCard({ title, description, icon, link }: InfoCardProps) {
   return (
-    <Card className="transition-all shadow-md hover:shadow-xl">
-      <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-        <CardTitle className="text-xl font-semibold break-words">{title}</CardTitle>
-        {icon}
+    <Card className="card-enhanced group hover:scale-[1.02] transition-all duration-300">
+      <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
+        <CardTitle className="text-lg sm:text-xl font-semibold text-break flex-1 pr-2">{title}</CardTitle>
+        <div className="flex-shrink-0 p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors duration-200">
+          {icon}
+        </div>
       </CardHeader>
-      <CardContent>
-        <p className="text-sm text-muted-foreground break-words">{description}</p>
+      <CardContent className="space-y-4">
+        <p className="text-responsive-sm text-muted-foreground text-break leading-relaxed">{description}</p>
         <Link href={link} passHref>
-          <Button variant="outline" className="mt-4 w-full">
-            Go to {title} <ArrowRight className="w-4 h-4 ml-2" />
+          <Button 
+            variant="outline" 
+            className="w-full touch-target focus-enhanced hover:bg-primary/5 hover:border-primary/30 transition-all duration-200"
+          >
+            <span>Go to {title}</span>
+            <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
           </Button>
         </Link>
       </CardContent>
