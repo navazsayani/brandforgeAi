@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
@@ -49,7 +50,7 @@ const defaultFormValues: BrandProfileFormData = {
   brandName: "",
   websiteUrl: "",
   brandDescription: "",
-  industry: "",
+  industry: "_none_", // Set default to "_none_" to match UI expectations
   imageStyleNotes: "",
   exampleImages: [],
   targetKeywords: "",
@@ -89,7 +90,14 @@ export default function BrandProfilePage() {
 
   useEffect(() => {
     if (brandData) {
-      const currentData = { ...defaultFormValues, ...brandData, exampleImages: brandData.exampleImages || [] };
+      // Ensure industry field is properly set - use actual value or fallback to "_none_"
+      const industryValue = brandData.industry && brandData.industry.trim() !== "" ? brandData.industry : "_none_";
+      const currentData = {
+        ...defaultFormValues,
+        ...brandData,
+        industry: industryValue, // Explicitly set the industry value
+        exampleImages: brandData.exampleImages || []
+      };
       form.reset(currentData);
       setPreviewImages(currentData.exampleImages);
       setGeneratedLogoPreview(null);
@@ -163,10 +171,9 @@ export default function BrandProfilePage() {
     const brandDescription = form.getValues("brandDescription");
     const industry = form.getValues("industry");
     const targetKeywords = form.getValues("targetKeywords");
-
-    if (!brandName || !brandDescription) {
-      toast({
-        title: "Missing Information",
+if (!brandName || !brandDescription) {
+  toast({
+    title: "Missing Information",
         description: "Brand Name and Brand Description are required to generate a logo.",
         variant: "default"
       });
@@ -317,7 +324,12 @@ export default function BrandProfilePage() {
 
 
   const onSubmit: SubmitHandler<BrandProfileFormData> = async (data) => {
+    console.log("🔍 BrandProfile: Form submission data:", data);
     let finalData = { ...data };
+
+    // Ensure industry field is properly handled - keep the actual selected value
+    // "_none_" is a valid value that represents "None / Not Applicable"
+    console.log("🔍 BrandProfile: Final data to save (before logo processing):", finalData);
 
     // Temporarily clear brandLogoUrl if a new logo was generated to bypass schema validation
     if (generatedLogoPreview) {
@@ -404,10 +416,11 @@ export default function BrandProfilePage() {
   const currentLogoToDisplay = generatedLogoPreview || brandData?.brandLogoUrl;
 
   return (
-    // AppShell is now handled by AuthenticatedLayout
-    <div className="max-w-3xl mx-auto">
+    // AppShell is now handled by AuthenticatedLayout    
+    <ScrollArea className="h-[calc(100vh-56px)]"> {/* Adjust height based on header/footer */}
+      <div className="max-w-3xl mx-auto py-6"> {/* Add padding */}
       
-      <Card className="shadow-lg">
+        <Card className="shadow-lg">
         <CardHeader>
           <div className="flex items-center space-x-3">
             <UserCircle className="w-10 h-10 text-primary" />
@@ -484,27 +497,36 @@ export default function BrandProfilePage() {
               <FormField
                 control={form.control}
                 name="industry"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center text-base"><Briefcase className="w-5 h-5 mr-2 text-primary"/>Industry / Brand Type</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""} disabled={isBrandContextLoading || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select your industry" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectLabel>Industries</SelectLabel>
-                          {industries.map(industry => (
-                            <SelectItem key={industry.value} value={industry.value}>{industry.label}</SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  // Ensure we always have a valid value - fallback to "_none_" if field.value is empty/undefined
+                  const selectValue = field.value && field.value.trim() !== "" ? field.value : "_none_";
+                  
+                  return (
+                    <FormItem>
+                      <FormLabel className="flex items-center text-base"><Briefcase className="w-5 h-5 mr-2 text-primary"/>Industry / Brand Type</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={selectValue}
+                        disabled={isBrandContextLoading || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select your industry" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectLabel>Industries</SelectLabel>
+                            {industries.map(industry => (
+                              <SelectItem key={industry.value} value={industry.value}>{industry.label}</SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
 
               <FormField
@@ -564,18 +586,18 @@ export default function BrandProfilePage() {
                               <Sparkles className="h-4 w-4" />
                               <AlertTitle>Logo Generated!</AlertTitle>
                               <AlertDescription>
-                              A new logo has been generated. Click "Save Brand Profile" below to upload and save it.
+                                A new logo has been generated. Click "Save Brand Profile" below to upload and save it.
                               </AlertDescription>
                           </Alert>
                       )}
                   </div>
-                  <FormField
-                      control={form.control}
-                      name="brandLogoUrl"
-                      render={() => ( <FormMessage /> )}
-                  />
-              </FormItem>
-
+                  
+              <FormField
+                  control={form.control}
+                  name="brandLogoUrl"
+                  render={() => ( <FormMessage /> )}
+              />
+          </FormItem>
               <FormField
                 control={form.control}
                 name="imageStyleNotes"
@@ -678,5 +700,6 @@ export default function BrandProfilePage() {
           </CardFooter>
       </Card>
     </div>
+    </ScrollArea>
   );
 }

@@ -117,11 +117,16 @@ export default function ContentStudioPage() {
 
 
   useEffect(() => {
+    console.log("🔍 ContentStudio: brandData received:", brandData);
     if (brandData) {
+        console.log("🔍 ContentStudio: Industry from brandData:", brandData.industry);
         setImageGenBrandDescription(brandData.brandDescription || "");
-        setImageGenIndustry(brandData.industry || "_none_");
-        setCustomStyleNotesInput(brandData.imageStyleNotes || ""); 
-        setSelectedBlogIndustry(brandData.industry || "_none_"); // Initialize blog industry
+        // Fix: Use the actual industry value from brandData, fallback to "_none_" only if truly empty
+        const industryValue = brandData.industry && brandData.industry.trim() !== "" ? brandData.industry : "_none_";
+        console.log("🔍 ContentStudio: Resolved industry value:", industryValue);
+        setImageGenIndustry(industryValue);
+        setSelectedBlogIndustry(industryValue); // Use the same value for blog industry
+        setCustomStyleNotesInput(brandData.imageStyleNotes || "");
 
         if (brandData.exampleImages && brandData.exampleImages.length > 0) {
             if (selectedProfileImageIndexForGen === null) setSelectedProfileImageIndexForGen(0);
@@ -131,12 +136,13 @@ export default function ContentStudioPage() {
             setSelectedProfileImageIndexForSocial(null);
         }
     } else {
+        console.log("🔍 ContentStudio: No brandData, using defaults");
         setImageGenBrandDescription("");
         setImageGenIndustry("_none_");
         setCustomStyleNotesInput("");
         setSelectedProfileImageIndexForGen(null);
         setSelectedProfileImageIndexForSocial(null);
-        setSelectedBlogIndustry("_none_"); // Reset blog industry
+        setSelectedBlogIndustry("_none_");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brandData]);
@@ -586,7 +592,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
 
         // Provider: Admin uses selectedImageProvider (via formSnapshot), Non-admin defaults to GEMINI
         const providerToUse = isAdmin ? (formSnapshot?.provider || selectedImageProvider) : "GEMINI";
-        formData.append("provider", providerToUse);
+        formData.append("provider", providerToUse as string);
 
         formData.append("brandDescription", String(brandDesc || "")); // Revert to previous state
         
@@ -772,8 +778,8 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
 
   return (
     // AppShell is now handled by AuthenticatedLayout
-    <div className="max-w-4xl mx-auto">
-      <CardHeader className="px-0 mb-6">
+    <div className="w-full max-w-4xl mx-auto content-studio-container">
+      <CardHeader className="px-0 mb-6 flex-shrink-0">
         <div className="flex items-center space-x-3">
             <Paintbrush className="w-10 h-10 text-primary" />
             <div>
@@ -785,15 +791,16 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
           </div>
       </CardHeader>
 
-      <Tabs defaultValue="image" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6">
+      <Tabs defaultValue="image" value={activeTab} onValueChange={setActiveTab} className="w-full content-studio-tabs">
+        <TabsList className="grid w-full grid-cols-3 mb-6 flex-shrink-0">
           <TabsTrigger value="image"><ImageIcon className="w-4 h-4 mr-2" />Image Generation</TabsTrigger>
           <TabsTrigger value="social"><MessageSquareText className="w-4 h-4 mr-2" />Social Media Post</TabsTrigger>
           <TabsTrigger value="blog"><Newspaper className="w-4 h-4 mr-2" />Blog Post</TabsTrigger>
         </TabsList>
 
         {/* Image Generation Tab */}
-        <TabsContent value="image">
+        <TabsContent value="image" className="content-studio-tab-content">
+          <div className="content-studio-scroll-area">
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle>Generate Brand Images</CardTitle>
@@ -867,13 +874,18 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                   </div>
                     <div>
                       <Label htmlFor="imageGenIndustry" className="flex items-center mb-1"><Briefcase className="w-4 h-4 mr-2 text-primary" />Industry (from Profile)</Label>
-                      <Select 
-                          value={imageGenIndustry || "_none_"} 
+                      <Select
+                          value={imageGenIndustry && imageGenIndustry.trim() !== "" ? imageGenIndustry : "_none_"}
                           onValueChange={setImageGenIndustry}
                           name="industry"
                       >
                           <SelectTrigger id="imageGenIndustry">
-                              <SelectValue placeholder="Select industry" />
+                              <SelectValue placeholder="Select industry">
+                                  {imageGenIndustry && imageGenIndustry !== "_none_"
+                                      ? industries.find(ind => ind.value === imageGenIndustry)?.label || imageGenIndustry
+                                      : "None / Not Applicable"
+                                  }
+                              </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
                               <SelectGroup>
@@ -883,12 +895,6 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                           {industry.label}
                                       </SelectItem>
                                   ))}
-                                  {/* The "_none_" option should be part of the industries array if needed, 
-                                      otherwise it might be added here only if not in the array.
-                                      Assuming it's in the array to fix duplicate key error. 
-                                      If industries array does not contain _none_ and it's desired, 
-                                      ensure it's added to the industries constant or handled differently.
-                                  */}
                               </SelectGroup>
                           </SelectContent>
                       </Select>
@@ -1231,10 +1237,12 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
               </Card>
             )}
           </Card>
+          </div>
         </TabsContent>
 
         {/* Social Media Post Tab */}
-        <TabsContent value="social">
+        <TabsContent value="social" className="content-studio-tab-content">
+          <div className="content-studio-scroll-area">
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="text-xl flex items-center"><MessageSquareText className="w-6 h-6 mr-2 text-primary"/>Create Social Media Post</CardTitle>
@@ -1470,10 +1478,12 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                 </Card>
             )}
           </Card>
+          </div>
         </TabsContent>
 
         {/* Blog Post Tab */}
-        <TabsContent value="blog">
+        <TabsContent value="blog" className="content-studio-tab-content">
+          <div className="content-studio-scroll-area">
             <form action={blogAction} className="w-full">
               <Card className="shadow-lg">
                   <CardHeader>
@@ -1504,11 +1514,16 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                           <Label htmlFor="blogIndustry" className="flex items-center mb-1"><Briefcase className="w-4 h-4 mr-2 text-primary" />Industry (from Profile)</Label>
                           <Select
                               name="industry"
-                              value={selectedBlogIndustry}
+                              value={selectedBlogIndustry && selectedBlogIndustry.trim() !== "" ? selectedBlogIndustry : "_none_"}
                               onValueChange={setSelectedBlogIndustry}
                           >
                               <SelectTrigger id="blogIndustrySelectTrigger">
-                                  <SelectValue placeholder="Select industry" />
+                                  <SelectValue placeholder="Select industry">
+                                      {selectedBlogIndustry && selectedBlogIndustry !== "_none_"
+                                          ? industries.find(ind => ind.value === selectedBlogIndustry)?.label || selectedBlogIndustry
+                                          : "None / Not Applicable"
+                                      }
+                                  </SelectValue>
                               </SelectTrigger>
                               <SelectContent>
                                   {industries.map(industry => (
@@ -1637,6 +1652,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                 </Card>
             )}
           </form>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

@@ -117,26 +117,26 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background overflow-hidden">
       <aside className="hidden md:flex md:flex-col md:w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-lg">
         <SidebarContent />
       </aside>
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <header className="flex items-center justify-between h-16 px-4 sm:px-6 bg-card border-b md:justify-end card-enhanced">
+      <div className="flex flex-col flex-1 h-full min-h-0">
+        <header className="flex items-center justify-between h-16 px-4 sm:px-6 bg-card border-b md:justify-end card-enhanced flex-shrink-0">
           <div className="md:hidden">
             <Sheet>
               <SheetTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="icon" 
+                <Button
+                  variant="outline"
+                  size="icon"
                   className="touch-target focus-enhanced"
                 >
                   <Menu className="w-6 h-6" />
                   <span className="sr-only">Open navigation menu</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent 
-                side="left" 
+              <SheetContent
+                side="left"
                 className="p-0 w-64 bg-sidebar text-sidebar-foreground border-r-0"
               >
                 <SheetHeader className="sr-only">
@@ -148,9 +148,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           <AuthUserMenu />
         </header>
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto container-responsive">
-          <div className="animate-fade-in">
-            {children}
+        <main className="flex-1 min-h-0 overflow-hidden">
+          <div className="main-scroll-container p-4 sm:p-6 lg:p-8 container-responsive">
+            <div className="animate-fade-in">
+              {children}
+            </div>
           </div>
         </main>
       </div>

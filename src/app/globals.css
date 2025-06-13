@@ -118,11 +118,24 @@
     @apply border-border;
   }
   
-  body {
-    @apply bg-background text-foreground;
-    background: var(--gradient-background);
-    min-height: 100vh;
-  }
+html {
+  height: 100%;
+  overflow-x: hidden; /* Prevent horizontal overscroll */
+  overscroll-behavior: none; /* Prevent overscroll on html */
+}
+
+body {
+  @apply bg-background text-foreground;
+  background: var(--gradient-background);
+  min-height: 100vh;
+  overscroll-behavior: none; /* Prevent overscroll bounce/rubber band effect */
+}
+
+/* Authenticated layout specific styles - only apply overflow restrictions to AppShell pages */
+.authenticated-layout {
+  height: 100vh;
+  overflow: hidden; /* Prevent body from scrolling - AppShell handles all scrolling */
+}
 
   /* Enhanced responsive typography */
   h1 {
@@ -189,9 +202,10 @@
   }
 
   /* Responsive grid utilities */
-  .grid-responsive {
-    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6;
-  }
+.grid-responsive {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6;
+  max-width: 100%; /* Ensure grid does not overflow on mobile */
+}
   
   .grid-responsive-2 {
     @apply grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6;
@@ -228,5 +242,45 @@
   
   .sidebar-nav-item.active {
     @apply bg-sidebar-accent text-sidebar-accent-foreground shadow-sm;
+  }
+
+  /* Content Studio specific scroll fixes */
+  .content-studio-container {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .content-studio-tabs {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .content-studio-tab-content {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .content-studio-scroll-area {
+    height: 100%;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
+
+  /* Utility class for overscroll containment */
+  .overscroll-contain {
+    overscroll-behavior: contain;
+  }
+
+  /* Main page scroll containment */
+  .main-scroll-container {
+    height: 100%;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    overscroll-behavior-x: none;
   }
 }

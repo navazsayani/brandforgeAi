@@ -40,5 +40,9 @@ export default function AuthenticatedLayout({
     );
   }
 
-  return <AppShell>{children}</AppShell>;
+  return (
+    <div className="authenticated-layout">
+      <AppShell>{children}</AppShell>
+    </div>
+  );
 }

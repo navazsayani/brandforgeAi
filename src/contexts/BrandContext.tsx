@@ -32,7 +32,7 @@ const defaultEmptyBrandData: BrandData = {
     brandName: "",
     websiteUrl: "",
     brandDescription: "",
-    industry: "",
+    industry: "_none_", // Set default to "_none_" to match UI expectations
     imageStyleNotes: "",
     exampleImages: [],
     targetKeywords: "",
@@ -66,12 +66,17 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
       const docSnap = await getDoc(brandDocRef);
       if (docSnap.exists()) {
         const fetchedData = docSnap.data() as BrandData;
-        setBrandDataState({
+        console.log("🔍 BrandContext: Raw data from Firestore:", fetchedData);
+        const mergedData = {
           ...defaultEmptyBrandData, // Ensure all fields are present
           ...fetchedData,
-        });
+        };
+        console.log("🔍 BrandContext: Merged data with defaults:", mergedData);
+        console.log("🔍 BrandContext: Industry value specifically:", mergedData.industry);
+        setBrandDataState(mergedData);
       } else {
         // User has no brand profile yet, initialize with empty/default
+        console.log("🔍 BrandContext: No existing data, using defaults");
         setBrandDataState(defaultEmptyBrandData);
       }
     } catch (e: any) {
@@ -109,9 +114,12 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         ...defaultEmptyBrandData, // Ensure all fields are present even if partial data is passed
         ...data,
       };
+      console.log("🔍 BrandContext: Data being saved to Firestore:", dataToSave);
+      console.log("🔍 BrandContext: Industry value being saved:", dataToSave.industry);
       const brandDocRef = doc(db, "brandProfiles", userId); // Use userId for document path
       await setDoc(brandDocRef, dataToSave, { merge: true }); // Use merge: true to be safe
       setBrandDataState(dataToSave);
+      console.log("🔍 BrandContext: Data saved successfully");
     } catch (e: any) {
       console.error("Error saving brand data to Firestore:", e);
       let specificError = `Failed to save brand profile: ${e.message || "Unknown error. Check console."}`;
