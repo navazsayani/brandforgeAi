@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useAuth } from '@/contexts/AuthContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, LogIn as LogInIcon, Sparkles } from 'lucide-react';
+import { AlertCircle, LogIn as LogInIcon, Sparkles, Loader2 } from 'lucide-react'; // Added Loader2
 import { SubmitButton } from '@/components/SubmitButton';
 import NextImage from 'next/image'; // For Google icon
 
