@@ -19,7 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from '@/contexts/AuthContext'; 
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download, Library, Star } from 'lucide-react'; // Added Star
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download, Library, Star, Lock } from 'lucide-react'; // Added Star, Lock
 import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage } from '@/types';
@@ -29,6 +29,7 @@ import type { GenerateImagesInput } from '@/ai/flows/generate-images';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; 
 import { industries, imageStylePresets, freepikImagen3EffectColors, freepikImagen3EffectLightnings, freepikImagen3EffectFramings, freepikImagen3AspectRatios, generalAspectRatios, blogTones, freepikValidStyles } from '@/lib/constants';
+import Link from 'next/link';
 
 
 const initialImageFormState: FormState<{ generatedImages: string[]; promptUsed: string; providerUsed: string; }>= { error: undefined, data: undefined, message: undefined };
@@ -133,6 +134,8 @@ export default function ContentStudioPage() {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [useExampleImageForGen, setUseExampleImageForGen] = useState<boolean>(true); 
 
+  const currentPlan = brandData?.plan || 'free';
+
   const { 
     data: savedLibraryImages = [], 
     isLoading: isLoadingSavedLibraryImages, 
@@ -187,7 +190,6 @@ export default function ContentStudioPage() {
         }
 
         // Adjust number of images based on plan
-        const currentPlan = brandData.plan || 'free';
         const currentNumImages = parseInt(numberOfImagesToGenerate, 10);
         if (currentPlan === 'free' && currentNumImages > 1) {
             setNumberOfImagesToGenerate("1");
@@ -201,7 +203,7 @@ export default function ContentStudioPage() {
         setNumberOfImagesToGenerate("1"); // Default to 1 if no brandData (e.g. on free plan default)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brandData, useImageForSocialPost, socialImageChoice, sessionLastImageGenerationResult, savedLibraryImages, numberOfImagesToGenerate]);
+  }, [brandData, useImageForSocialPost, socialImageChoice, sessionLastImageGenerationResult, savedLibraryImages, numberOfImagesToGenerate, currentPlan]);
 
 
   useEffect(() => {
@@ -645,37 +647,42 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     }
     
     startTransition(() => {
-        const formData = new FormData();
+        const formData = new FormData(document.getElementById('imageGenerationFormFields') as HTMLFormElement);
 
         formData.append("finalizedTextPrompt", currentTextPromptForEditing || ""); 
 
         const providerToUse = isAdmin ? (formSnapshot?.provider || selectedImageProvider) : "GEMINI";
-        formData.append("provider", providerToUse as string);
+        formData.set("provider", providerToUse as string); // Use set to override if it exists
 
-        formData.append("brandDescription", String(brandDesc || "")); 
+        formData.set("brandDescription", String(brandDesc || "")); 
         
-        // Submit industry value from selectedBlogIndustry (which is initialized from brandData)
         const industryToSubmit = selectedBlogIndustry === "_none_" ? "" : (selectedBlogIndustry || "");
-        formData.append("industry", industryToSubmit);
+        formData.set("industry", industryToSubmit); // Use set to override if it exists
         
-        formData.append("imageStyle", imageStyle);
+        formData.set("imageStyle", imageStyle);
         
         const exampleImgToUse = isAdmin ? formSnapshot?.exampleImage : (useExampleImageForGen && currentExampleImageForGen ? currentExampleImageForGen : undefined);
         if (typeof exampleImgToUse === 'string' && exampleImgToUse.trim() !== "") {
-          formData.append("exampleImage", exampleImgToUse);
+          formData.set("exampleImage", exampleImgToUse);
+        } else {
+            formData.delete("exampleImage");
         }
 
-        formData.append("aspectRatio", formSnapshot?.aspectRatio || selectedAspectRatio); 
-        formData.append("numberOfImages", String(formSnapshot?.numberOfImages || parseInt(numberOfImagesToGenerate,10))); 
+        formData.set("aspectRatio", formSnapshot?.aspectRatio || selectedAspectRatio); 
+        formData.set("numberOfImages", String(formSnapshot?.numberOfImages || parseInt(numberOfImagesToGenerate,10))); 
 
         const negPromptValue = isAdmin ? formSnapshot?.negativePrompt : imageGenNegativePrompt; 
         if (negPromptValue && negPromptValue.toString().trim() !== "") { 
-            formData.append("negativePrompt", negPromptValue.toString()); 
+            formData.set("negativePrompt", negPromptValue.toString()); 
+        } else {
+            formData.delete("negativePrompt");
         }
 
         const seedValueNum = isAdmin ? formSnapshot?.seed : (imageGenSeed && !isNaN(parseInt(imageGenSeed)) ? parseInt(imageGenSeed) : undefined); 
         if (seedValueNum !== undefined) {
-          formData.append("seed", String(seedValueNum));
+          formData.set("seed", String(seedValueNum));
+        } else {
+            formData.delete("seed");
         }
 
         if (providerToUse === 'FREEPIK') {
@@ -683,16 +690,24 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
             const fColorsInputStrToUse = isAdmin && fColorsFromSnapshot 
                 ? fColorsFromSnapshot.map(c => c.color).join(',') 
                 : freepikDominantColorsInput;
-            if (fColorsInputStrToUse) formData.append("freepikDominantColorsInput", fColorsInputStrToUse);
+            if (fColorsInputStrToUse) formData.set("freepikDominantColorsInput", fColorsInputStrToUse);
+             else formData.delete("freepikDominantColorsInput");
+
 
             const fEffectColorToUse = isAdmin ? (formSnapshot?.freepikEffectColor || freepikEffectColor) : freepikEffectColor;
-            if (fEffectColorToUse && fEffectColorToUse !== "none") formData.append("freepikEffectColor", fEffectColorToUse);
+            if (fEffectColorToUse && fEffectColorToUse !== "none") formData.set("freepikEffectColor", fEffectColorToUse);
+             else formData.delete("freepikEffectColor");
+
 
             const fEffectLightningToUse = isAdmin ? (formSnapshot?.freepikEffectLightning || freepikEffectLightning) : freepikEffectLightning;
-            if (fEffectLightningToUse && fEffectLightningToUse !== "none") formData.append("freepikEffectLightning", fEffectLightningToUse);
+            if (fEffectLightningToUse && fEffectLightningToUse !== "none") formData.set("freepikEffectLightning", fEffectLightningToUse);
+            else formData.delete("freepikEffectLightning");
+
 
             const fEffectFramingToUse = isAdmin ? (formSnapshot?.freepikEffectFraming || freepikEffectFraming) : freepikEffectFraming;
-            if (fEffectFramingToUse && fEffectFramingToUse !== "none") formData.append("freepikEffectFraming", fEffectFramingToUse);
+            if (fEffectFramingToUse && fEffectFramingToUse !== "none") formData.set("freepikEffectFraming", fEffectFramingToUse);
+            else formData.delete("freepikEffectFraming");
+
         }
                 
         imageAction(formData);
@@ -799,7 +814,6 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
           }
       }
       
-      // Pass industry for social posts
       const socialIndustryToSubmit = selectedBlogIndustry === "_none_" ? "" : (selectedBlogIndustry || "");
       formData.set("industry", socialIndustryToSubmit);
 
@@ -849,7 +863,6 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     }
   };
   
-  const currentPlan = brandData?.plan || 'free';
 
   return (
     <div className="w-full max-w-4xl mx-auto content-studio-container">
@@ -909,7 +922,8 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
               </form>
             ) : (
               <form id="imageGenerationFormFields" onSubmit={isAdmin ? (e) => e.preventDefault() : handleImageGenerationSubmit}>
-                <input type="hidden" name="industry" value={selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || ""} />
+                {/* Hidden input for industry in image generation form to pass value to backend if needed */}
+                {/* <input type="hidden" name="industry" value={selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || ""} /> */}
                 <CardContent className="space-y-6">
                   {isAdmin && ( 
                     <div>
@@ -1686,8 +1700,27 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                           </Select>
                       </div>
                   </CardContent>
-                  <CardFooter>
-                  <SubmitButton className="w-full" loadingText="Generating Blog..." disabled={isGeneratingOutline || !generatedBlogOutline.trim()}>Generate Blog Post</SubmitButton>
+                  <CardFooter className="flex flex-col items-start">
+                    <SubmitButton 
+                        className="w-full" 
+                        loadingText="Generating Blog..." 
+                        disabled={
+                            isGeneratingOutline || 
+                            !generatedBlogOutline.trim() ||
+                            (currentPlan === 'free')
+                        }
+                    >
+                        {currentPlan === 'free' ? <Lock className="mr-2 h-4 w-4" /> : null}
+                        Generate Blog Post {currentPlan === 'free' ? '(Premium Feature)' : ''}
+                    </SubmitButton>
+                    {currentPlan === 'free' && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                            Full blog post generation is a premium feature. 
+                            <Button variant="link" className="p-0 h-auto ml-1 text-xs" asChild>
+                                <Link href="/brand-profile">Upgrade your plan.</Link>
+                            </Button>
+                        </p>
+                    )}
                   </CardFooter>
               </Card>
               {generatedBlogPost && (
