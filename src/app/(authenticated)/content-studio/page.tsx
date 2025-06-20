@@ -19,7 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from '@/contexts/AuthContext'; 
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download, Library, Star, Lock } from 'lucide-react'; // Added Star, Lock
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download, Library, Star, Lock } from 'lucide-react';
 import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage } from '@/types';
@@ -194,11 +194,6 @@ export default function ContentStudioPage() {
             setNumberOfImagesToGenerate("1");
         }
 
-        if (!isAdmin && currentPlan === 'free' && selectedImageProvider === 'FREEPIK') {
-            setSelectedImageProvider('GEMINI');
-        }
-
-
     } else {
         setImageGenBrandDescription("");
         setSelectedBlogIndustry("_none_");
@@ -216,11 +211,10 @@ export default function ContentStudioPage() {
       setIsAdmin(true);
     } else {
       setIsAdmin(false);
-      if (currentPlan === 'free' && selectedImageProvider === 'FREEPIK') {
-        setSelectedImageProvider("GEMINI");
-      }
+      // If not admin, always default to Gemini
+      setSelectedImageProvider("GEMINI");
     }
-  }, [currentUser, currentPlan, selectedImageProvider]);
+  }, [currentUser]);
 
     useEffect(() => {
     if (selectedImageProvider === 'FREEPIK') {
@@ -658,7 +652,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
 
         formData.append("finalizedTextPrompt", currentTextPromptForEditing || ""); 
 
-        const providerToUse = isAdmin ? (formSnapshot?.provider || selectedImageProvider) : (currentPlan === 'free' ? 'GEMINI' : (formSnapshot?.provider || selectedImageProvider));
+        const providerToUse = isAdmin ? (formSnapshot?.provider || selectedImageProvider) : 'GEMINI';
         formData.set("provider", providerToUse as string); 
 
         formData.set("brandDescription", String(brandDesc || "")); 
@@ -835,19 +829,11 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
 
   const downloadImage = (imageUrl: string, filename = "generated-image.png") => {
     const link = document.createElement('a');
-    link.href = imageUrl; // For both data URI and actual URL
+    link.href = imageUrl; 
     link.download = filename;
     
-    // If it's not a data URI, it might be a cross-origin URL.
-    // For direct download of cross-origin images, `target="_blank"` can sometimes work
-    // or prompt the user to right-click save if direct download is blocked by CORS.
-    // However, for simplicity and common case with data URIs or same-origin / allowed CORS:
     if (!imageUrl.startsWith('data:')) {
-        // For external URLs, this will often open in new tab for user to save
-        // unless server sends Content-Disposition: attachment
         link.target = '_blank';
-        // Forcing download for external URLs is tricky and often not possible due to security.
-        // Best to let it open, or if server-controlled, ensure correct headers.
     }
     
     document.body.appendChild(link);
@@ -906,7 +892,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
             <CardHeader>
               <CardTitle>Generate Brand Images</CardTitle>
               <p className="text-sm text-muted-foreground">Create unique images. Uses brand description and style. Optionally use an example image from your Brand Profile.</p>
-                {lastUsedImageProvider && <p className="text-xs text-primary mt-1">Image(s) last generated using: {isAdmin ? lastUsedImageProvider : (currentPlan === 'free' ? 'Gemini (Google AI)' : lastUsedImageProvider )}</p>}
+                {lastUsedImageProvider && <p className="text-xs text-primary mt-1">Image(s) last generated using: {isAdmin ? lastUsedImageProvider : 'Gemini (Google AI)'}</p>}
             </CardHeader>
             {isAdmin && isPreviewingPrompt ? (
               <form onSubmit={handleImageGenerationSubmit}>
@@ -953,9 +939,9 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                       <SelectItem 
                                         key={provider.value} 
                                         value={provider.value} 
-                                        disabled={provider.disabled || (!isAdmin && provider.premium && currentPlan === 'free')}
+                                        disabled={provider.disabled}
                                       >
-                                          {provider.label} {!isAdmin && provider.premium && currentPlan === 'free' ? <span className="text-xs text-muted-foreground ml-1">(Premium <Star className="inline h-3 w-3"/>)</span> : (provider.premium ? <span className="text-xs text-amber-500 ml-1">(<Star className="inline h-3 w-3"/>)</span> : '')}
+                                          {provider.label} {provider.premium ? <span className="text-xs text-amber-500 ml-1">(<Star className="inline h-3 w-3"/>)</span> : ''}
                                       </SelectItem>
                                   ))}
                               </SelectGroup>
@@ -964,21 +950,11 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                     </div>
                   )}
                   {!isAdmin && (
-                     <div>
+                     <div className="hidden"> {/* Provider select hidden for non-admins */}
                       <Label htmlFor="imageGenProviderSelectUser" className="flex items-center mb-1"><Server className="w-4 h-4 mr-2 text-primary" />Image Generation Provider</Label>
                        <Select 
                         value={selectedImageProvider || 'GEMINI'} 
-                        onValueChange={(value) => {
-                            const providerInfo = imageGenerationProviders.find(p => p.value === value);
-                            if (providerInfo) {
-                                if (providerInfo.premium && currentPlan === 'free') {
-                                    toast({ title: "Premium Feature", description: `${providerInfo.label} is a premium feature.`, variant: "default" });
-                                    setSelectedImageProvider('GEMINI'); 
-                                } else {
-                                    setSelectedImageProvider(value as GenerateImagesInput['provider']);
-                                }
-                            }
-                        }}
+                        onValueChange={(value) => setSelectedImageProvider(value as GenerateImagesInput['provider'])}
                       >
                           <SelectTrigger id="imageGenProviderSelectUser">
                               <SelectValue placeholder="Select image generation provider" />
@@ -990,20 +966,17 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                       <SelectItem 
                                         key={provider.value} 
                                         value={provider.value}
-                                        disabled={provider.premium && currentPlan === 'free'}
+                                        disabled={true} // Effectively always Gemini for non-admins visually
                                       >
-                                          {provider.label} {provider.premium ? (currentPlan === 'free' ? <span className="text-xs text-muted-foreground ml-1">(Premium <Lock className="inline h-3 w-3"/>)</span> : <span className="text-xs text-amber-500 ml-1">(<Star className="inline h-3 w-3"/>)</span>) : ''}
+                                          {provider.label} {provider.premium && <span className="text-xs text-muted-foreground ml-1">(Premium <Lock className="inline h-3 w-3"/>)</span>}
                                       </SelectItem>
                                   ))}
                               </SelectGroup>
                           </SelectContent>
                       </Select>
-                       {selectedImageProvider === 'FREEPIK' && currentPlan === 'free' && !isAdmin && (
-                            <p className="text-xs text-destructive mt-1">Freepik is a premium feature. Generation will use Gemini.</p>
-                        )}
+                       <p className="text-xs text-muted-foreground mt-1">Using Gemini (Google AI) for image generation.</p>
                     </div>
                   )}
-
 
                   <div>
                     <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
@@ -1118,7 +1091,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                     />
                   </div>
                   
-                  {selectedImageProvider === 'FREEPIK' && (!isAdmin ? currentPlan === 'premium' : true) && (
+                  {selectedImageProvider === 'FREEPIK' && isAdmin && ( // Only show Freepik specifics if admin and Freepik is selected
                       <>
                           <div className="pt-4 mt-4 border-t">
                               <h4 className="text-md font-semibold mb-3 text-primary flex items-center"><Paintbrush className="w-5 h-5 mr-2"/>Freepik Specific Styling (imagen3 model)</h4>
@@ -1206,14 +1179,14 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                     <SelectItem 
                                         key={num} 
                                         value={String(num)}
-                                        disabled={currentPlan === 'free' && num > 1}
+                                        disabled={!isAdmin && currentPlan === 'free' && num > 1}
                                     >
-                                        {num} {currentPlan === 'free' && num > 1 ? <span className="text-xs text-muted-foreground ml-1">(Premium <Lock className="inline h-3 w-3"/>)</span> : (num > 1 ? <span className="text-xs text-amber-500 ml-1">(<Star className="inline h-3 w-3"/>)</span> : '')}
+                                        {num} {!isAdmin && currentPlan === 'free' && num > 1 ? <span className="text-xs text-muted-foreground ml-1">(Premium <Lock className="inline h-3 w-3"/>)</span> : (num > 1 ? <span className="text-xs text-amber-500 ml-1">(<Star className="inline h-3 w-3"/>)</span> : '')}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
-                        {currentPlan === 'free' && (
+                        {!isAdmin && currentPlan === 'free' && (
                              <p className="text-xs text-muted-foreground mt-1">Free plan allows 1 image per generation.</p>
                         )}
                     </div>
@@ -1228,10 +1201,10 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                       onChange={(e) => setImageGenSeed(e.target.value)}
                       placeholder="Enter a number for reproducible results"
                       min="0"
-                      disabled={selectedImageProvider === 'FREEPIK'}
+                      disabled={selectedImageProvider === 'FREEPIK' && isAdmin}
                     />
                       <p className="text-xs text-muted-foreground">
-                        {(selectedImageProvider === 'FREEPIK') ? "Seed is ignored for Freepik/Imagen3 UI integration." : "Seed might not be strictly enforced by all models."}
+                        {(selectedImageProvider === 'FREEPIK' && isAdmin) ? "Seed is ignored for Freepik/Imagen3 UI integration." : "Seed might not be strictly enforced by all models."}
                       </p>
                   </div>
                 </CardContent>
@@ -1245,9 +1218,9 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                         className="w-full" 
                         loadingText={parseInt(numberOfImagesToGenerate,10) > 1 ? "Generating Images..." : "Generating Image..."}
                         type="submit" 
-                        disabled={currentPlan === 'free' && selectedImageProvider === 'FREEPIK'}
+                        disabled={!isAdmin && currentPlan === 'free' && selectedImageProvider === 'FREEPIK'}
                     >
-                        {currentPlan === 'free' && selectedImageProvider === 'FREEPIK' ? <Lock className="mr-2 h-4 w-4" /> : null}
+                        {!isAdmin && currentPlan === 'free' && selectedImageProvider === 'FREEPIK' ? <Lock className="mr-2 h-4 w-4" /> : null}
                         Generate {parseInt(numberOfImagesToGenerate,10) > 1 ? `${numberOfImagesToGenerate} Images` : "Image"}
                     </SubmitButton>
                   )}
@@ -1262,7 +1235,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                           <CardTitle className="text-xl flex items-center">
                               <ImageIcon className="w-5 h-5 mr-2 text-primary" />
                               Generated Image{lastSuccessfulGeneratedImageUrls.length > 1 ? 's' : ''}
-                              {lastUsedImageProvider && <span className="text-xs text-muted-foreground ml-2">(via {lastUsedImageProvider})</span>}
+                              {lastUsedImageProvider && <span className="text-xs text-muted-foreground ml-2">(via {isAdmin ? lastUsedImageProvider : 'Gemini (Google AI)'})</span>}
                           </CardTitle>
                           <div className="flex items-center gap-2">
                               {lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url.startsWith('image_url:')) && (
@@ -1776,13 +1749,13 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                         disabled={
                             isGeneratingOutline || 
                             !generatedBlogOutline.trim() ||
-                            (currentPlan === 'free')
+                            (!isAdmin && currentPlan === 'free')
                         }
                     >
-                        {currentPlan === 'free' ? <Lock className="mr-2 h-4 w-4" /> : null}
-                        Generate Blog Post {currentPlan === 'free' ? '(Premium Feature)' : ''}
+                        {!isAdmin && currentPlan === 'free' ? <Lock className="mr-2 h-4 w-4" /> : null}
+                        Generate Blog Post {!isAdmin && currentPlan === 'free' ? '(Premium Feature)' : ''}
                     </SubmitButton>
-                    {currentPlan === 'free' && (
+                    {!isAdmin && currentPlan === 'free' && (
                         <p className="text-xs text-muted-foreground mt-2">
                             Full blog post generation is a premium feature. 
                             <Button variant="link" className="p-0 h-auto ml-1 text-xs" asChild>
