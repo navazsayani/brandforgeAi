@@ -189,13 +189,11 @@ export default function ContentStudioPage() {
             setSelectedLibraryImageIndexForSocial(0);
         }
 
-        // Adjust number of images based on plan
         const currentNumImages = parseInt(numberOfImagesToGenerate, 10);
         if (currentPlan === 'free' && currentNumImages > 1) {
             setNumberOfImagesToGenerate("1");
         }
 
-        // Adjust selected image provider based on plan (if not admin)
         if (!isAdmin && currentPlan === 'free' && selectedImageProvider === 'FREEPIK') {
             setSelectedImageProvider('GEMINI');
         }
@@ -206,8 +204,8 @@ export default function ContentStudioPage() {
         setSelectedBlogIndustry("_none_");
         setCustomStyleNotesInput("");
         setSelectedProfileImageIndexForGen(null);
-        setNumberOfImagesToGenerate("1"); // Default to 1 if no brandData (e.g. on free plan default)
-        setSelectedImageProvider('GEMINI'); // Default to GEMINI if no brandData
+        setNumberOfImagesToGenerate("1"); 
+        setSelectedImageProvider('GEMINI'); 
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brandData, useImageForSocialPost, socialImageChoice, sessionLastImageGenerationResult, savedLibraryImages, numberOfImagesToGenerate, currentPlan, isAdmin]);
@@ -218,7 +216,6 @@ export default function ContentStudioPage() {
       setIsAdmin(true);
     } else {
       setIsAdmin(false);
-      // If not admin and current plan is free, ensure provider is not Freepik
       if (currentPlan === 'free' && selectedImageProvider === 'FREEPIK') {
         setSelectedImageProvider("GEMINI");
       }
@@ -662,12 +659,11 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
         formData.append("finalizedTextPrompt", currentTextPromptForEditing || ""); 
 
         const providerToUse = isAdmin ? (formSnapshot?.provider || selectedImageProvider) : (currentPlan === 'free' ? 'GEMINI' : (formSnapshot?.provider || selectedImageProvider));
-        formData.set("provider", providerToUse as string); // Use set to override if it exists
+        formData.set("provider", providerToUse as string); 
 
         formData.set("brandDescription", String(brandDesc || "")); 
         
         const industryToSubmit = selectedBlogIndustry === "_none_" ? "" : (selectedBlogIndustry || "");
-        // formData.set("industry", industryToSubmit); // Industry is handled via hidden input now
         
         formData.set("imageStyle", imageStyle);
         
@@ -730,7 +726,6 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     formData.append('brandName', (document.getElementById('blogBrandName') as HTMLInputElement)?.value || brandData?.brandName || "");
     formData.append('blogBrandDescription', (document.getElementById('blogBrandDescription') as HTMLTextAreaElement)?.value || brandData?.brandDescription || "");
     
-    // formData.append('industry', selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || ""); // Industry handled by hidden field
     formData.append('blogKeywords', (document.getElementById('blogKeywords') as HTMLInputElement)?.value || brandData?.targetKeywords || "");
     formData.append('blogWebsiteUrl', (document.getElementById('blogWebsiteUrl') as HTMLInputElement)?.value || brandData?.websiteUrl || "");
 
@@ -824,10 +819,6 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
           }
       }
       
-      // const socialIndustryToSubmit = selectedBlogIndustry === "_none_" ? "" : (selectedBlogIndustry || ""); // Industry handled by hidden field
-      // formData.set("industry", socialIndustryToSubmit);
-
-
       startTransition(() => {
           socialAction(formData);
       });
@@ -843,16 +834,25 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
   };
 
   const downloadImage = (imageUrl: string, filename = "generated-image.png") => {
-    if (imageUrl.startsWith('data:')) {
-      const link = document.createElement('a');
-      link.href = imageUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } else { 
-      window.open(imageUrl, '_blank');
+    const link = document.createElement('a');
+    link.href = imageUrl; // For both data URI and actual URL
+    link.download = filename;
+    
+    // If it's not a data URI, it might be a cross-origin URL.
+    // For direct download of cross-origin images, `target="_blank"` can sometimes work
+    // or prompt the user to right-click save if direct download is blocked by CORS.
+    // However, for simplicity and common case with data URIs or same-origin / allowed CORS:
+    if (!imageUrl.startsWith('data:')) {
+        // For external URLs, this will often open in new tab for user to save
+        // unless server sends Content-Disposition: attachment
+        link.target = '_blank';
+        // Forcing download for external URLs is tricky and often not possible due to security.
+        // Best to let it open, or if server-controlled, ensure correct headers.
     }
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleSocialImageChoiceChange = (value: SocialImageChoice) => {
@@ -873,6 +873,11 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     }
   };
   
+  const generatedImageGridClass = lastSuccessfulGeneratedImageUrls.length > 1 
+    ? (lastSuccessfulGeneratedImageUrls.length > 2 
+      ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4' 
+      : 'grid-cols-1 sm:grid-cols-2') 
+    : 'grid-cols-1';
 
   return (
     <div className="w-full max-w-4xl mx-auto content-studio-container">
@@ -968,7 +973,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                             if (providerInfo) {
                                 if (providerInfo.premium && currentPlan === 'free') {
                                     toast({ title: "Premium Feature", description: `${providerInfo.label} is a premium feature.`, variant: "default" });
-                                    setSelectedImageProvider('GEMINI'); // Fallback to Gemini
+                                    setSelectedImageProvider('GEMINI'); 
                                 } else {
                                     setSelectedImageProvider(value as GenerateImagesInput['provider']);
                                 }
@@ -1278,19 +1283,22 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                       </div>
                   </CardHeader>
                   <CardContent>
-                    <div className={`grid gap-4 ${lastSuccessfulGeneratedImageUrls.length > 1 ? (lastSuccessfulGeneratedImageUrls.length > 2 ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'grid-cols-2') : 'grid-cols-1'}`}>
+                    <div className={`grid gap-4 ${generatedImageGridClass}`}>
                       {lastSuccessfulGeneratedImageUrls.map((url, index) => (
-                          <div key={url || index} className="relative group w-full overflow-hidden border rounded-md bg-muted aspect-square">
+                          <div key={url || index} className="relative group w-full overflow-hidden border rounded-md bg-muted">
                               {url && (url.startsWith('data:') || url.startsWith('image_url:')) ? (
                                   <>
-                                  <NextImage
-                                      src={url.startsWith('image_url:') ? url.substring(10) : url}
-                                      alt={`Generated brand image ${index + 1}`}
-                                      fill
-                                      style={{objectFit: 'contain'}}
-                                      data-ai-hint="brand marketing"
-                                      className="transition-opacity duration-300 opacity-100 group-hover:opacity-80"
-                                  />
+                                  <div className="aspect-square w-full relative">
+                                    <NextImage
+                                        src={url.startsWith('image_url:') ? url.substring(10) : url}
+                                        alt={`Generated brand image ${index + 1}`}
+                                        fill
+                                        sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                                        style={{objectFit: 'cover', objectPosition: 'center'}}
+                                        data-ai-hint="brand marketing"
+                                        className="transition-opacity duration-300 opacity-100 group-hover:opacity-80"
+                                    />
+                                  </div>
                                     <Button
                                       variant="outline"
                                       size="icon"
@@ -1302,7 +1310,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                     </Button>
                                   </>
                               ) : url && url.startsWith('task_id:') ? (
-                                    <div className="flex flex-col items-center justify-center h-full text-xs text-muted-foreground p-2 text-center">
+                                    <div className="flex flex-col items-center justify-center h-full text-xs text-muted-foreground p-2 text-center aspect-square">
                                       <Loader2 className="w-6 h-6 animate-spin mb-2" />
                                       Freepik image task pending. <br/> Task ID: {url.substring(8).substring(0,8)}...
                                       <form>
@@ -1324,7 +1332,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                       </form>
                                   </div>
                               ) : (
-                                  <div className="flex items-center justify-center h-full text-xs text-muted-foreground">Image not available</div>
+                                  <div className="flex items-center justify-center h-full text-xs text-muted-foreground aspect-square">Image not available</div>
                               )}
                           </div>
                       ))}
@@ -1511,7 +1519,9 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                 src={currentSocialImagePreviewUrl}
                                 alt="Selected image for social post"
                                 fill
-                                style={{objectFit: 'contain'}} data-ai-hint="social content" />
+                                sizes="160px"
+                                style={{objectFit: 'cover', objectPosition: 'center'}} 
+                                data-ai-hint="social content" />
                           </div>
                       </div>
                     )}
@@ -1608,7 +1618,9 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                     src={generatedSocialPost.imageSrc}
                                     alt="Social post image"
                                     fill
-                                    style={{objectFit: 'contain'}} data-ai-hint="social content" />}
+                                    sizes="160px"
+                                    style={{objectFit: 'cover', objectPosition: 'center'}} 
+                                    data-ai-hint="social content" />}
                               </div>
                               {generatedSocialPost?.imageSrc && (
                                 <Button
