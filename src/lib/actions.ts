@@ -6,10 +6,10 @@ import { generateSocialMediaCaption, type GenerateSocialMediaCaptionInput } from
 import { generateBlogContent, type GenerateBlogContentInput } from '@/ai/flows/generate-blog-content';
 import { generateAdCampaign, type GenerateAdCampaignInput, type GenerateAdCampaignOutput } from '@/ai/flows/generate-ad-campaign';
 import { extractBrandInfoFromUrl, type ExtractBrandInfoFromUrlInput, type ExtractBrandInfoFromUrlOutput } from '@/ai/flows/extract-brand-info-from-url-flow';
-import { describeImage, type DescribeImageInput, type DescribeImageOutput } from "@/ai/flows/describe-image-flow"; 
+import { describeImage, type DescribeImageInput, type DescribeImageOutput } from "@/ai/flows/describe-image-flow";
 import { generateBlogOutline, type GenerateBlogOutlineInput, type GenerateBlogOutlineOutput } from '@/ai/flows/generate-blog-outline-flow';
 import { generateBrandLogo, type GenerateBrandLogoInput, type GenerateBrandLogoOutput } from '@/ai/flows/generate-brand-logo-flow';
-import { generateBrandForgeAppLogo, type GenerateBrandForgeAppLogoOutput } from '@/ai/flows/generate-brandforge-app-logo-flow'; // Added
+import { generateBrandForgeAppLogo, type GenerateBrandForgeAppLogoOutput } from '@/ai/flows/generate-brandforge-app-logo-flow';
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc } from 'firebase/firestore';
@@ -19,8 +19,36 @@ export interface FormState<T = any> {
   data?: T;
   error?: string;
   message?: string;
-  taskId?: string; 
+  taskId?: string;
 }
+
+// Helper function to ensure user-specific brand profile document exists
+async function ensureUserBrandProfileDocExists(userId: string): Promise<void> {
+  if (!userId) {
+    throw new Error("User ID is required to ensure brand profile document exists.");
+  }
+  const brandProfileDocRef = doc(db, `users/${userId}/brandProfiles/${userId}`);
+  const brandProfileDocSnap = await getDoc(brandProfileDocRef);
+
+  if (!brandProfileDocSnap.exists()) {
+    console.log(`Brand profile document for user ${userId} does not exist. Creating it...`);
+    await setDoc(brandProfileDocRef, {
+      // Initialize with minimal default data or data relevant to the current operation
+      // This matches the default structure used in BrandContext.
+      brandName: "",
+      websiteUrl: "",
+      brandDescription: "",
+      industry: "_none_",
+      imageStyleNotes: "",
+      exampleImages: [],
+      targetKeywords: "",
+      brandLogoUrl: "", // Or undefined, matching BrandData type
+      createdAt: serverTimestamp(), // Good practice to timestamp creation
+    });
+    console.log(`Successfully created brand profile document for user ${userId}.`);
+  }
+}
+
 
 export async function handleGenerateImagesAction(
   prevState: FormState<{ generatedImages: string[]; promptUsed: string; providerUsed: string; }>,
@@ -46,7 +74,7 @@ export async function handleGenerateImagesAction(
     const seed = seedStr && !isNaN(parseInt(seedStr, 10)) ? parseInt(seedStr, 10) : undefined;
     
     let finalizedTextPromptValue = formData.get("finalizedTextPrompt") as string | undefined | null;
-    if (finalizedTextPromptValue === "") { 
+    if (finalizedTextPromptValue === "") {
       finalizedTextPromptValue = undefined;
     }
 
@@ -56,10 +84,10 @@ export async function handleGenerateImagesAction(
         freepikStylingColors = freepikDominantColorsInput
             .split(',')
             .map(color => color.trim())
-            .filter(color => /^#[0-9a-fA-F]{6}$/.test(color)) 
-            .slice(0, 5) 
-            .map(color => ({ color, weight: 0.5 })); 
-        if (freepikStylingColors.length === 0) freepikStylingColors = undefined; 
+            .filter(color => /^#[0-9a-fA-F]{6}$/.test(color))
+            .slice(0, 5)
+            .map(color => ({ color, weight: 0.5 }));
+        if (freepikStylingColors.length === 0) freepikStylingColors = undefined;
     }
     
     const exampleImageUrl = formData.get("exampleImage") as string | undefined;
@@ -88,9 +116,9 @@ export async function handleGenerateImagesAction(
       provider: formData.get("provider") as GenerateImagesInput['provider'] || undefined,
       brandDescription: formData.get("brandDescription") as string,
       industry: formData.get("industry") as string | undefined,
-      imageStyle: formData.get("imageStyle") as string, 
+      imageStyle: formData.get("imageStyle") as string,
       exampleImage: exampleImageUrl && exampleImageUrl.trim() !== "" ? exampleImageUrl : undefined,
-      exampleImageDescription: aiGeneratedDesc, 
+      exampleImageDescription: aiGeneratedDesc,
       aspectRatio: formData.get("aspectRatio") as string | undefined,
       numberOfImages: numberOfImages,
       negativePrompt: negativePromptValue === null || negativePromptValue === "" ? undefined : negativePromptValue,
@@ -156,7 +184,7 @@ export async function handleGenerateSocialMediaCaptionAction(
     const input: GenerateSocialMediaCaptionInput = {
       brandDescription: formData.get("brandDescription") as string,
       industry: formData.get("industry") as string | undefined,
-      imageDescription: imageSrc ? imageDescription : undefined, 
+      imageDescription: imageSrc ? imageDescription : undefined,
       tone: finalTone,
     };
 
@@ -169,16 +197,12 @@ export async function handleGenerateSocialMediaCaptionAction(
     if (input.industry === "" || input.industry === undefined) delete input.industry;
 
     const result = await generateSocialMediaCaption(input);
-    // For SaaS, userId should come from authenticated session, not form.
-    // Assuming this action is called by an authenticated user, we'd get userId from auth state.
-    // For now, let's assume 'userId' is passed in formData if needed, or retrieved server-side.
-    const userId = formData.get('userId') as string; // This needs to be the actual authenticated user's ID.
+    const userId = formData.get('userId') as string; 
     if (!userId) {
         return { error: "User ID is missing. Cannot save social media post."};
     }
-    // Use userId for the brandProfileDocId as well, simplifying to one brand profile per user.
-    const brandProfileDocId = userId; 
-    const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${brandProfileDocId}/socialMediaPosts`);
+    await ensureUserBrandProfileDocExists(userId);
+    const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/socialMediaPosts`);
     await addDoc(firestoreCollectionRef, {
       caption: result.caption || "",
       hashtags: result.hashtags || "",
@@ -200,10 +224,10 @@ export async function handleGenerateBlogOutlineAction(
     try {
         const input: GenerateBlogOutlineInput = {
             brandName: formData.get("brandName") as string,
-            brandDescription: formData.get("blogBrandDescription") as string, 
-            industry: formData.get("industry") as string | undefined, 
-            keywords: formData.get("blogKeywords") as string, 
-            websiteUrl: (formData.get("blogWebsiteUrl") as string) || undefined, 
+            brandDescription: formData.get("blogBrandDescription") as string,
+            industry: formData.get("industry") as string | undefined,
+            keywords: formData.get("blogKeywords") as string,
+            websiteUrl: (formData.get("blogWebsiteUrl") as string) || undefined,
         };
 
         if (!input.brandName || !input.brandDescription || !input.keywords) {
@@ -242,12 +266,12 @@ export async function handleGenerateBlogContentAction(
     if (input.industry === "" || input.industry === undefined) delete input.industry;
 
     const result = await generateBlogContent(input);
-    const userId = formData.get('userId') as string; // Needs to be actual authenticated user's ID
+    const userId = formData.get('userId') as string; 
     if (!userId) {
         return { error: "User ID is missing. Cannot save blog post."};
     }
-    const brandProfileDocId = userId; // Using userId for the brand profile doc
-    const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${brandProfileDocId}/blogPosts`);
+    await ensureUserBrandProfileDocExists(userId);
+    const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/blogPosts`);
     await addDoc(firestoreCollectionRef, {
       title: result.title || "Untitled",
       content: result.content || "",
@@ -269,9 +293,9 @@ export async function handleGenerateAdCampaignAction(
     const platformsString = formData.get("platforms") as string;
     const platformsArray = platformsString ? platformsString.split(',').map(p => p.trim()).filter(p => p) as ('google_ads' | 'meta')[] : [];
 
-    let generatedContent = formData.get("generatedContent") as string; 
-    if (generatedContent === "Custom content for ad campaign") { 
-        generatedContent = formData.get("customGeneratedContent") as string; 
+    let generatedContent = formData.get("generatedContent") as string;
+    if (generatedContent === "Custom content for ad campaign") {
+        generatedContent = formData.get("customGeneratedContent") as string;
     }
 
     const budgetStr = formData.get("budget") as string;
@@ -293,18 +317,18 @@ export async function handleGenerateAdCampaignAction(
     if (!input.brandName || !input.brandDescription || !input.generatedContent || !input.targetKeywords || input.platforms.length === 0) {
         return { error: "Brand name, description, inspirational content, target keywords, and at least one platform are required." };
     }
-    if (!input.generatedContent || !input.generatedContent.trim()) { 
+    if (!input.generatedContent || !input.generatedContent.trim()) {
         return { error: "Inspirational content (selected or custom) cannot be empty."};
     }
     if (input.industry === "" || input.industry === undefined) delete input.industry;
 
     const result = await generateAdCampaign(input);
-    const userId = formData.get('userId') as string; // Needs to be actual authenticated user's ID
+    const userId = formData.get('userId') as string; 
      if (!userId) {
         return { error: "User ID is missing. Cannot save ad campaign."};
     }
-    const brandProfileDocId = userId; // Using userId for the brand profile doc
-    const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${brandProfileDocId}/adCampaigns`);
+    await ensureUserBrandProfileDocExists(userId);
+    const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/adCampaigns`);
     await addDoc(firestoreCollectionRef, {
       campaignConcept: result.campaignConcept || "",
       headlines: result.headlines || [],
@@ -377,8 +401,9 @@ export async function handleSaveGeneratedImagesAction(
       return { error: 'User not authenticated - User not logged in cannot save image.' };
     }
     
-    // The brand profile document ID will be the same as the userId
-    const brandProfileDocId = userId;
+    // Ensure the parent brand profile document exists using the userId as the brandProfileDocId
+    await ensureUserBrandProfileDocExists(userId);
+    const brandProfileDocId = userId; // Using userId for the brand profile doc id
 
     let savedCount = 0;
     const saveErrors: string[] = [];
@@ -429,20 +454,6 @@ export async function handleSaveGeneratedImagesAction(
             isFreepikImage = true;
         } else if (image.dataUri.startsWith('https://')) {
             console.log(`handleSaveGeneratedImagesAction: Image is already an HTTPS URL, not uploading to storage: ${imageUrlToSave}`);
-        }
-
-        // Ensure the parent brand profile document exists
-        const userBrandProfileDocRef = doc(db, `users/${userId}/brandProfiles/${brandProfileDocId}`);
-        const brandProfileDocSnap = await getDoc(userBrandProfileDocRef);
-
-        if (!brandProfileDocSnap.exists()) {
-            console.log(`handleSaveGeneratedImagesAction: Brand profile document ${brandProfileDocId} does not exist for user ${userId}. Creating it...`);
-            await setDoc(userBrandProfileDocRef, {
-                // Initialize with minimal data or fetch from user's main profile if needed
-                brandName: "Default Brand Name", // Placeholder, ideally get from user's actual profile
-                createdAt: serverTimestamp(),
-            });
-            console.log(`handleSaveGeneratedImagesAction: Successfully created brand profile document for user ${userId}.`);
         }
 
         // Save to the 'savedLibraryImages' subcollection under the user-specific brand profile document
@@ -525,7 +536,7 @@ async function _checkFreepikTaskStatus(taskId: string): Promise<{ status: string
       if (responseData.data.status === 'COMPLETED' && responseData.data.generated && responseData.data.generated.length > 0) {
         return { status: responseData.data.status, images: responseData.data.generated as string[] };
       }
-      return { status: responseData.data.status, images: null }; 
+      return { status: responseData.data.status, images: null };
     } else {
       throw new Error(`Freepik GET API for task ${taskId} did not return data in expected format.`);
     }
@@ -551,7 +562,7 @@ export async function handleCheckFreepikTaskStatusAction(
       return { data: { ...result, taskId }, message: `Task ${taskId.substring(0,8)}... is still in progress.` };
     } else if (result.status === 'FAILED') {
        return { data: { ...result, taskId }, error: `Task ${taskId.substring(0,8)}... FAILED on Freepik's side.`};
-    } else { 
+    } else {
       return { data: { ...result, taskId }, error: `Task ${taskId.substring(0,8)}... status: ${result.status}. No images available yet or unexpected status.`};
     }
   } catch (e: any) {
@@ -581,12 +592,12 @@ export async function handleGenerateBrandLogoAction(
 
 
     const result = await generateBrandLogo(input);
-    const userId = formData.get('userId') as string; // Needs to be actual authenticated user's ID
+    const userId = formData.get('userId') as string; 
     if (!userId) {
         return { error: "User ID is missing. Cannot save brand logo."};
     }
-    const brandProfileDocId = userId; // Using userId for the brand profile doc
-    const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${brandProfileDocId}/brandLogos`);
+    await ensureUserBrandProfileDocExists(userId);
+    const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/brandLogos`);
     await addDoc(firestoreCollectionRef, {
       logoData: result.logoDataUri || "", // Storing data URI directly, consider storage if very large.
       brandName: input.brandName,
