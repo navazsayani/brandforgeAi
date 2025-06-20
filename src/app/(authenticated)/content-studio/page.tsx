@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useAuth } from '@/contexts/AuthContext'; // Added
+import { useAuth } from '@/contexts/AuthContext'; 
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download } from 'lucide-react';
@@ -25,7 +25,7 @@ import type { DescribeImageOutput } from "@/ai/flows/describe-image-flow";
 import type { GenerateBlogOutlineOutput } from "@/ai/flows/generate-blog-outline-flow";
 import type { GenerateImagesInput } from '@/ai/flows/generate-images';
 import { cn } from '@/lib/utils';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; // Keeping this import as is, though not directly part of the instruction, it's correct
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; 
 import { industries, imageStylePresets, freepikImagen3EffectColors, freepikImagen3EffectLightnings, freepikImagen3EffectFramings, freepikImagen3AspectRatios, generalAspectRatios, blogTones, freepikValidStyles } from '@/lib/constants';
 
 
@@ -47,8 +47,8 @@ const imageGenerationProviders = [
 type SocialImageChoice = 'generated' | 'profile' | null;
 
 export default function ContentStudioPage() {
-  const { currentUser } = useAuth(); // Added
-  const { brandData, addGeneratedImage, addGeneratedSocialPost, addGeneratedBlogPost, userId } = useBrand();
+  const { currentUser } = useAuth(); 
+  const { brandData, addGeneratedImage, addGeneratedSocialPost, addGeneratedBlogPost, userId, sessionLastImageGenerationResult, setSessionLastImageGenerationResult } = useBrand();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -89,7 +89,7 @@ export default function ContentStudioPage() {
 
   const [selectedImageProvider, setSelectedImageProvider] = useState<GenerateImagesInput['provider']>(imageGenerationProviders[0].value as GenerateImagesInput['provider']);
   const [imageGenBrandDescription, setImageGenBrandDescription] = useState<string>("");
-  const [imageGenIndustry, setImageGenIndustry] = useState<string>(""); // This state will still hold the industry value
+  const [imageGenIndustry, setImageGenIndustry] = useState<string>(""); 
   const [selectedImageStylePreset, setSelectedImageStylePreset] = useState<string>(imageStylePresets[0].value);
   const [customStyleNotesInput, setCustomStyleNotesInput] = useState<string>("");
   const [imageGenNegativePrompt, setImageGenNegativePrompt] = useState<string>("");
@@ -108,12 +108,11 @@ export default function ContentStudioPage() {
   const [formSnapshot, setFormSnapshot] = useState<Partial<GenerateImagesInput> & { provider?: string } | null>(null);
 
   const [checkingTaskId, setCheckingTaskId] = useState<string | null>(null);
-  const [selectedBlogIndustry, setSelectedBlogIndustry] = useState<string>("_none_"); // This state will still hold the industry value for blog
+  const [selectedBlogIndustry, setSelectedBlogIndustry] = useState<string>("_none_"); 
   const isClearingRef = useRef(false);
 
-  // New state variables for admin mode and example image usage
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
-  const [useExampleImageForGen, setUseExampleImageForGen] = useState<boolean>(true); // Default to true
+  const [useExampleImageForGen, setUseExampleImageForGen] = useState<boolean>(true); 
 
 
   useEffect(() => {
@@ -169,14 +168,27 @@ export default function ContentStudioPage() {
     }
     }, [selectedImageProvider, selectedAspectRatio]);
 
+  // Initialize local state from context on mount/context change
+  useEffect(() => {
+    if (sessionLastImageGenerationResult) {
+      setLastSuccessfulGeneratedImageUrls(sessionLastImageGenerationResult.generatedImages);
+      setLastUsedImageGenPrompt(sessionLastImageGenerationResult.promptUsed);
+      setLastUsedImageProvider(sessionLastImageGenerationResult.providerUsed);
+    } else {
+      // If context is null (e.g., cleared or initial load), reset local state too
+      setLastSuccessfulGeneratedImageUrls([]);
+      setLastUsedImageGenPrompt(null);
+      setLastUsedImageProvider(null);
+    }
+  }, [sessionLastImageGenerationResult]);
+
+
   useEffect(() => {
     if (imageState.data && imageState.data.generatedImages && imageState.data.generatedImages.length > 0) {
-      const newImageUrls = imageState.data.generatedImages;
-      setLastSuccessfulGeneratedImageUrls(newImageUrls);
-      setLastUsedImageGenPrompt(imageState.data.promptUsed);
-      setLastUsedImageProvider(imageState.data.providerUsed);
+      setSessionLastImageGenerationResult(imageState.data); // Store in context
+      // Local state updates will be triggered by the useEffect above listening to sessionLastImageGenerationResult
 
-      const displayableImages = newImageUrls.filter(url => url && (url.startsWith('data:') || url.startsWith('image_url:')));
+      const displayableImages = imageState.data.generatedImages.filter(url => url && (url.startsWith('data:') || url.startsWith('image_url:')));
       if (displayableImages.length > 0) {
         displayableImages.forEach(url => {
             const displayUrl = url.startsWith('image_url:') ? url.substring(10) : url;
@@ -186,23 +198,25 @@ export default function ContentStudioPage() {
                 prompt: imageState.data?.promptUsed || "",
                 style: selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")
             };
-            addGeneratedImage(newImage);
+            addGeneratedImage(newImage); // This is for the historical list in DeploymentHub, separate from session state
         });
           toast({ title: "Success", description: `${displayableImages.length} image(s) processed using ${imageState.data.providerUsed || 'default provider'}.` });
-      } else if (newImageUrls.some(url => url.startsWith('task_id:'))) {
+      } else if (imageState.data.generatedImages.some(url => url.startsWith('task_id:'))) {
         toast({ title: "Freepik Task Started", description: "Freepik image generation task started. Use 'Check Status' to retrieve images." });
-      } else if (!newImageUrls || newImageUrls.length === 0) {
+      } else if (!imageState.data.generatedImages || imageState.data.generatedImages.length === 0) {
         toast({ title: "No Images/Tasks Generated", description: `Received empty list from ${imageState.data?.providerUsed || 'default provider'}.`, variant: "default" });
       }
       setIsPreviewingPrompt(false);
       setFormSnapshot(null);
     }
- if (imageState.error) {
+    if (imageState.error) {
       toast({ title: "Error generating images", description: imageState.error, variant: "destructive" });
- setIsPreviewingPrompt(false);
- setFormSnapshot(null);
+      setIsPreviewingPrompt(false);
+      setFormSnapshot(null);
     }
-  }, [imageState, toast, addGeneratedImage, customStyleNotesInput, selectedImageStylePreset]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [imageState, toast, addGeneratedImage, customStyleNotesInput, selectedImageStylePreset, setSessionLastImageGenerationResult]);
+
 
   useEffect(() => {
     if (socialState.data) {
@@ -281,27 +295,32 @@ export default function ContentStudioPage() {
 
   useEffect(() => {
     if (freepikTaskStatusState.data) {
-      const { status, images, taskId } = freepikTaskStatusState.data;
-      if (status === 'COMPLETED' && images && images.length > 0) {
-        const newImageUrls = images.map(url => `image_url:${url}`); 
-        setLastSuccessfulGeneratedImageUrls(prevUrls => {
-            const taskIdentifier = `task_id:${taskId}`;
-            const existingTaskIndex = prevUrls.findIndex(url => url === taskIdentifier);
-            if (existingTaskIndex !== -1) {
-                const before = prevUrls.slice(0, existingTaskIndex);
-                const after = prevUrls.slice(existingTaskIndex + 1);
-                return [...before, ...newImageUrls, ...after];
-            } else {
-                  const otherImages = prevUrls.filter(url => !url.startsWith('task_id:'));
-                  return [...otherImages, ...newImageUrls];
-            }
-        });
-        toast({ title: `Task ${taskId.substring(0,8)}... Completed`, description: `${images.length} image(s) retrieved.` });
+      const { status, images: retrievedImageUrls, taskId } = freepikTaskStatusState.data;
+      if (status === 'COMPLETED' && retrievedImageUrls && retrievedImageUrls.length > 0) {
+        const newImageUrlsForTask = retrievedImageUrls.map(url => `image_url:${url}`);
+        
+        // Update context: replace task_id with actual image URLs
+        if (sessionLastImageGenerationResult) {
+          const updatedGeneratedImages = sessionLastImageGenerationResult.generatedImages.map(
+            url => (url === `task_id:${taskId}` ? newImageUrlsForTask : url) // Replace only the specific task_id
+          ).flat(); // Flatten in case newImageUrlsForTask itself is an array (it is)
+          
+          setSessionLastImageGenerationResult({
+            ...sessionLastImageGenerationResult,
+            generatedImages: updatedGeneratedImages,
+          });
+        }
+        toast({ title: `Task ${taskId.substring(0,8)}... Completed`, description: `${retrievedImageUrls.length} image(s) retrieved.` });
       } else if (status === 'IN_PROGRESS') {
         toast({ title: `Task ${taskId.substring(0,8)}... Still In Progress`, description: "Please check again in a few moments." });
       } else if (status === 'FAILED') {
         toast({ title: `Task ${taskId.substring(0,8)}... Failed`, description: "Freepik failed to generate images for this task.", variant: "destructive" });
-          setLastSuccessfulGeneratedImageUrls(prevUrls => prevUrls.filter(url => url !== `task_id:${taskId}`));
+          if (sessionLastImageGenerationResult) {
+            setSessionLastImageGenerationResult({
+              ...sessionLastImageGenerationResult,
+              generatedImages: sessionLastImageGenerationResult.generatedImages.filter(url => url !== `task_id:${taskId}`),
+            });
+          }
       } else { 
           toast({ title: `Task ${taskId.substring(0,8)}... Status: ${status}`, description: "Could not retrieve images or task has an unexpected status." });
       }
@@ -311,7 +330,8 @@ export default function ContentStudioPage() {
       toast({ title: "Error Checking Task Status", description: freepikTaskStatusState.error, variant: "destructive" });
       setCheckingTaskId(null);
     }
-  }, [freepikTaskStatusState, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [freepikTaskStatusState, toast, setSessionLastImageGenerationResult]);
 
 
   const copyToClipboard = (text: string, type: string) => {
@@ -320,9 +340,8 @@ export default function ContentStudioPage() {
   };
 
  const handleClearGeneratedImages = () => {
-    setLastSuccessfulGeneratedImageUrls([]);
-    setLastUsedImageGenPrompt(null);
-    setLastUsedImageProvider(null);
+    setSessionLastImageGenerationResult(null); // Clear from context
+    // Local states (lastSuccessfulGeneratedImageUrls, etc.) will be cleared by the useEffect listening to sessionLastImageGenerationResult
     setFormSnapshot(null);
     setIsPreviewingPrompt(false);
   };
@@ -643,7 +662,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     const formData = new FormData();
     formData.append('brandName', (document.getElementById('blogBrandName') as HTMLInputElement)?.value || brandData?.brandName || "");
     formData.append('blogBrandDescription', (document.getElementById('blogBrandDescription') as HTMLTextAreaElement)?.value || brandData?.brandDescription || "");
-    // Use selectedBlogIndustry state for the blog outline generation
+    
     formData.append('industry', selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || ""); 
     formData.append('blogKeywords', (document.getElementById('blogKeywords') as HTMLInputElement)?.value || brandData?.targetKeywords || "");
     formData.append('blogWebsiteUrl', (document.getElementById('blogWebsiteUrl') as HTMLInputElement)?.value || brandData?.websiteUrl || "");
@@ -737,7 +756,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
               }
           }
       }
-      // Use the selectedBlogIndustry for the social post's industry context if not overridden by a specific social form field
+      
       const socialIndustry = formData.get("industry") as string || (selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || "");
       formData.set("industry", socialIndustry);
 
@@ -860,10 +879,6 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                     />
                   </div>
                   
-                  {/* Industry field is now hidden from UI in Image Gen Tab */}
-                  {/* The imageGenIndustry state will still hold the value from brandData */}
-                  {/* and handleImageGenerationSubmit will use it when constructing formData */}
-
                   <div>
                     <Label htmlFor="imageGenImageStylePresetSelect" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Image Style Preset</Label>
                     <Select
@@ -1210,12 +1225,11 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                 onSubmit={(e) => {
                     e.preventDefault();
                     const currentFormData = new FormData(e.currentTarget);
-                    // Pass userId for Firestore saving context
+                    
                     if (userId) currentFormData.append("userId", userId); 
                     handleSocialSubmit(currentFormData);
                 }}
             >
-              {/* Hidden input for industry - value from selectedBlogIndustry which is initialized from brandData */}
               <input type="hidden" name="industry" value={selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || ""} />
               <input type="hidden" name="selectedImageSrcForSocialPost" value={useImageForSocialPost && currentSocialImagePreviewUrl ? currentSocialImagePreviewUrl : ""} />
               <CardContent className="space-y-6">
@@ -1446,13 +1460,11 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
           <div className="content-studio-scroll-area">
             <form 
               action={(formData) => {
-                // Pass userId for Firestore saving context
                 if (userId) formData.append("userId", userId);
                 blogAction(formData);
               }} 
               className="w-full"
             >
-              {/* Hidden input for industry - value from selectedBlogIndustry which is initialized from brandData */}
               <input type="hidden" name="industry" value={selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || ""} />
               <Card className="shadow-lg">
                   <CardHeader>
@@ -1479,11 +1491,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                           rows={3}
                           />
                       </div>
-                      
-                      {/* Industry field is now hidden from UI in Blog Post Tab */}
-                      {/* The selectedBlogIndustry state will still hold the value from brandData */}
-                      {/* and the hidden input above will submit it. */}
-                      
+                                          
                       <div>
                           <Label htmlFor="blogKeywords" className="flex items-center mb-1"><Tag className="w-4 h-4 mr-2 text-primary" />Keywords (from Profile)</Label>
                           <Input

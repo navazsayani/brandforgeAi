@@ -10,6 +10,12 @@ import { useAuth } from './AuthContext'; // Added
 
 // BRAND_PROFILE_DOC_ID is no longer used as a global constant for doc ID
 
+interface LastImageGenerationResult {
+  generatedImages: string[];
+  promptUsed: string;
+  providerUsed: string;
+}
+
 interface BrandContextType {
   userId: string | null; // Added userId here
   brandData: BrandData | null;
@@ -24,6 +30,8 @@ interface BrandContextType {
   addGeneratedBlogPost: (post: GeneratedBlogPost) => void;
   generatedAdCampaigns: GeneratedAdCampaign[];
   addGeneratedAdCampaign: (campaign: GeneratedAdCampaign) => void;
+  sessionLastImageGenerationResult: LastImageGenerationResult | null; // Added
+  setSessionLastImageGenerationResult: (result: LastImageGenerationResult | null) => void; // Added
 }
 
 const BrandContext = createContext<BrandContextType | undefined>(undefined);
@@ -49,6 +57,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
   const [generatedSocialPosts, setGeneratedSocialPosts] = useState<GeneratedSocialMediaPost[]>([]);
   const [generatedBlogPosts, setGeneratedBlogPosts] = useState<GeneratedBlogPost[]>([]);
   const [generatedAdCampaigns, setGeneratedAdCampaigns] = useState<GeneratedAdCampaign[]>([]);
+  const [sessionLastImageGenerationResult, setSessionLastImageGenerationResultState] = useState<LastImageGenerationResult | null>(null); // Added state
 
   const fetchBrandDataCB = useCallback(async () => {
     if (!currentUser) {
@@ -80,7 +89,6 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
           ...normalizedFetchedData, // Use normalized data for merge
         };
         
-        // Final check on mergedData.industry, though defaultEmptyBrandData and normalization should cover it.
         if (mergedData.industry === "" || mergedData.industry === undefined || mergedData.industry === null) {
             console.log("🔍 BrandContext: Normalizing mergedData industry from '", mergedData.industry, "' to '_none_'.");
             mergedData.industry = "_none_";
@@ -90,7 +98,6 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         console.log("🔍 BrandContext: Industry value specifically being set to state:", mergedData.industry);
         setBrandDataState(mergedData);
       } else {
-        // User has no brand profile yet, initialize with empty/default
         console.log("🔍 BrandContext: No existing data, using defaults");
         setBrandDataState(defaultEmptyBrandData);
       }
@@ -104,17 +111,17 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         specificError = "Database permission error. Please check your Firestore security rules in the Firebase console.";
       }
       setError(specificError);
-      setBrandDataState(null); // Set to null on error to avoid using stale data
+      setBrandDataState(null); 
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser]); // Depend on currentUser
+  }, [currentUser]); 
 
   useEffect(() => {
     fetchBrandDataCB();
-  }, [fetchBrandDataCB]); // fetchBrandDataCB already depends on currentUser
+  }, [fetchBrandDataCB]); 
 
-  const setBrandDataCB = useCallback(async (data: BrandData, userId: string) => { // userId is now required
+  const setBrandDataCB = useCallback(async (data: BrandData, userId: string) => { 
     if (!userId) {
       const noUserError = "User not authenticated. Cannot save brand profile.";
       setError(noUserError);
@@ -125,7 +132,6 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     setError(null);
     try {
-      // Normalize industry before saving
       const dataToSave: BrandData = {
         ...defaultEmptyBrandData, 
         ...data,
@@ -137,9 +143,9 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
 
       console.log("🔍 BrandContext: Data being saved to Firestore:", dataToSave);
       console.log("🔍 BrandContext: Industry value being saved:", dataToSave.industry);
-      const brandDocRef = doc(db, "brandProfiles", userId); // Use userId for document path
-      await setDoc(brandDocRef, dataToSave, { merge: true }); // Use merge: true to be safe
-      setBrandDataState(dataToSave); // Update local state with the (potentially normalized) data
+      const brandDocRef = doc(db, "brandProfiles", userId); 
+      await setDoc(brandDocRef, dataToSave, { merge: true }); 
+      setBrandDataState(dataToSave); 
       console.log("🔍 BrandContext: Data saved successfully");
     } catch (e: any) {
       console.error("Error saving brand data to Firestore:", e);
@@ -173,8 +179,13 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
     setGeneratedAdCampaigns(prev => [campaign, ...prev.slice(0,19)]);
   }, []);
 
+  // Added setter for sessionLastImageGenerationResult
+  const setSessionLastImageGenerationResultCB = useCallback((result: LastImageGenerationResult | null) => {
+    setSessionLastImageGenerationResultState(result);
+  }, []);
+
   const contextValue = useMemo(() => ({
-    userId: currentUser?.uid || null, // Expose userId from currentUser
+    userId: currentUser?.uid || null, 
     brandData,
     setBrandData: setBrandDataCB,
     isLoading,
@@ -186,13 +197,16 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
     generatedBlogPosts,
     addGeneratedBlogPost: addGeneratedBlogPostCB,
     generatedAdCampaigns,
-    addGeneratedAdCampaign: addGeneratedAdCampaignCB
+    addGeneratedAdCampaign: addGeneratedAdCampaignCB,
+    sessionLastImageGenerationResult, // Added to context
+    setSessionLastImageGenerationResult: setSessionLastImageGenerationResultCB // Added to context
   }), [
-    currentUser, brandData, setBrandDataCB, isLoading, error, // Added currentUser dependency
+    currentUser, brandData, setBrandDataCB, isLoading, error, 
     generatedImages, addGeneratedImageCB,
     generatedSocialPosts, addGeneratedSocialPostCB,
     generatedBlogPosts, addGeneratedBlogPostCB,
-    generatedAdCampaigns, addGeneratedAdCampaignCB
+    generatedAdCampaigns, addGeneratedAdCampaignCB,
+    sessionLastImageGenerationResult, setSessionLastImageGenerationResultCB // Added dependencies
   ]);
 
   return (
