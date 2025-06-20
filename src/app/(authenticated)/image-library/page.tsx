@@ -14,13 +14,13 @@ import { useBrand } from '@/contexts/BrandContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 
-// const BRAND_PROFILE_DOC_ID = "defaultBrandProfile"; // Not used directly in this component after refactor
-
 const fetchSavedLibraryImages = async (userId: string): Promise<SavedGeneratedImage[]> => {
   if (!userId) {
     throw new Error("User ID is required to fetch saved images.");
   }
-  const imagesCollectionRef = collection(db, `users/${userId}/brandProfiles/defaultBrandProfile/savedLibraryImages`);
+  // The brandProfileDocId is the same as userId for user-specific brand profiles
+  const brandProfileDocId = userId;
+  const imagesCollectionRef = collection(db, `users/${userId}/brandProfiles/${brandProfileDocId}/savedLibraryImages`);
   const q = query(imagesCollectionRef, orderBy("createdAt", "desc"));
   const querySnapshot = await getDocs(q);
   const images: SavedGeneratedImage[] = [];
@@ -125,7 +125,7 @@ export default function ImageLibraryPage() {
           <FileImage className="w-7 h-7 mr-3 text-primary" />
           AI-Generated Library Images ({savedImages.length})
         </h2>
-        {isLoadingSaved && (
+        {isLoadingUser || (isLoadingSaved && !user) && ( // Show skeletons if user is loading or saved images are loading AND user isn't available yet for query
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {[...Array(8)].map((_, i) => (
               <Card key={`ai-skeleton-${i}`} className="overflow-hidden">
@@ -145,7 +145,7 @@ export default function ImageLibraryPage() {
             <p>{errorSaved}</p>
           </Alert>
         )}
-        {!isLoadingSaved && !errorSaved && savedImages.length === 0 && (
+        {!isLoadingSaved && !errorSaved && savedImages.length === 0 && user && ( // Only show "empty" if not loading, no error, and user is present (so query would have run)
           <Card className="shadow-sm">
             <CardContent className="pt-6 text-center">
               <p className="text-muted-foreground">Your AI-generated image library is empty.</p>

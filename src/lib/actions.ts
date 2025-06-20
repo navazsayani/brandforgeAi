@@ -1,3 +1,4 @@
+
 "use server";
 
 import { generateImages, type GenerateImagesInput } from '@/ai/flows/generate-images';
@@ -168,8 +169,15 @@ export async function handleGenerateSocialMediaCaptionAction(
     if (input.industry === "" || input.industry === undefined) delete input.industry;
 
     const result = await generateSocialMediaCaption(input);
-    const userId = formData.get('userId') as string || 'defaultUser';
-    const brandProfileDocId = formData.get('brandProfileDocId') as string || 'defaultBrandProfile';
+    // For SaaS, userId should come from authenticated session, not form.
+    // Assuming this action is called by an authenticated user, we'd get userId from auth state.
+    // For now, let's assume 'userId' is passed in formData if needed, or retrieved server-side.
+    const userId = formData.get('userId') as string; // This needs to be the actual authenticated user's ID.
+    if (!userId) {
+        return { error: "User ID is missing. Cannot save social media post."};
+    }
+    // Use userId for the brandProfileDocId as well, simplifying to one brand profile per user.
+    const brandProfileDocId = userId; 
     const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${brandProfileDocId}/socialMediaPosts`);
     await addDoc(firestoreCollectionRef, {
       caption: result.caption || "",
@@ -234,8 +242,11 @@ export async function handleGenerateBlogContentAction(
     if (input.industry === "" || input.industry === undefined) delete input.industry;
 
     const result = await generateBlogContent(input);
-    const userId = formData.get('userId') as string || 'defaultUser';
-    const brandProfileDocId = formData.get('brandProfileDocId') as string || 'defaultBrandProfile';
+    const userId = formData.get('userId') as string; // Needs to be actual authenticated user's ID
+    if (!userId) {
+        return { error: "User ID is missing. Cannot save blog post."};
+    }
+    const brandProfileDocId = userId; // Using userId for the brand profile doc
     const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${brandProfileDocId}/blogPosts`);
     await addDoc(firestoreCollectionRef, {
       title: result.title || "Untitled",
@@ -288,8 +299,11 @@ export async function handleGenerateAdCampaignAction(
     if (input.industry === "" || input.industry === undefined) delete input.industry;
 
     const result = await generateAdCampaign(input);
-    const userId = formData.get('userId') as string || 'defaultUser';
-    const brandProfileDocId = formData.get('brandProfileDocId') as string || 'defaultBrandProfile';
+    const userId = formData.get('userId') as string; // Needs to be actual authenticated user's ID
+     if (!userId) {
+        return { error: "User ID is missing. Cannot save ad campaign."};
+    }
+    const brandProfileDocId = userId; // Using userId for the brand profile doc
     const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${brandProfileDocId}/adCampaigns`);
     await addDoc(firestoreCollectionRef, {
       campaignConcept: result.campaignConcept || "",
@@ -334,7 +348,7 @@ export async function handleSaveGeneratedImagesAction(
 ): Promise<FormState<{savedCount: number}>> {
   console.log("handleSaveGeneratedImagesAction called");
   try {
-    const userId = formData.get('userId') as string; // Read from formData for backward compatibility or if caller still passes it this way
+    const userId = formData.get('userId') as string;
     console.log(`handleSaveGeneratedImagesAction: userId from formData: ${userId}`);
     const imagesToSaveString = formData.get('imagesToSaveJson') as string;
     if (!imagesToSaveString) {
@@ -358,11 +372,13 @@ export async function handleSaveGeneratedImagesAction(
       return { error: errorMsg };
     }
 
-    // Ensure userId is present and valid
     if (!userId || typeof userId !== 'string') {
       console.error('handleSaveGeneratedImagesAction: User not authenticated - userId is missing or invalid.');
       return { error: 'User not authenticated - User not logged in cannot save image.' };
     }
+    
+    // The brand profile document ID will be the same as the userId
+    const brandProfileDocId = userId;
 
     let savedCount = 0;
     const saveErrors: string[] = [];
@@ -391,7 +407,8 @@ export async function handleSaveGeneratedImagesAction(
         if (image.dataUri.startsWith('data:image')) {
             const fileExtensionMatch = image.dataUri.match(/^data:image\/([a-zA-Z+]+);base64,/);
             const fileExtension = fileExtensionMatch ? fileExtensionMatch[1] : 'png';
-            const filePath = `users/${userId}/brandProfiles/defaultBrandProfile/generatedLibraryImages/${Date.now()}_${generateFilenamePart()}.${fileExtension}`;
+            // Use brandProfileDocId (which is userId) in the storage path for images
+            const filePath = `users/${userId}/brandProfiles/${brandProfileDocId}/generatedLibraryImages/${Date.now()}_${generateFilenamePart()}.${fileExtension}`;
             const imageStorageRef = storageRef(storage, filePath);
 
             console.log(`handleSaveGeneratedImagesAction: Attempting to upload image data URI to: ${filePath}`);
@@ -414,22 +431,22 @@ export async function handleSaveGeneratedImagesAction(
             console.log(`handleSaveGeneratedImagesAction: Image is already an HTTPS URL, not uploading to storage: ${imageUrlToSave}`);
         }
 
-        // Check if the "defaultBrandProfile" collection exists. If not, create it.
-        const brandProfileCollectionRef = collection(db, `users/${userId}/brandProfiles`);
-        const brandProfileDocRef = doc(brandProfileCollectionRef, "defaultBrandProfile");
-        const brandProfileDocSnap = await getDoc(brandProfileDocRef);
+        // Ensure the parent brand profile document exists
+        const userBrandProfileDocRef = doc(db, `users/${userId}/brandProfiles/${brandProfileDocId}`);
+        const brandProfileDocSnap = await getDoc(userBrandProfileDocRef);
 
         if (!brandProfileDocSnap.exists()) {
-            console.log(`handleSaveGeneratedImagesAction: Default brand profile does not exist for user ${userId}. Creating it...`);
-            await setDoc(brandProfileDocRef, {
+            console.log(`handleSaveGeneratedImagesAction: Brand profile document ${brandProfileDocId} does not exist for user ${userId}. Creating it...`);
+            await setDoc(userBrandProfileDocRef, {
+                // Initialize with minimal data or fetch from user's main profile if needed
+                brandName: "Default Brand Name", // Placeholder, ideally get from user's actual profile
                 createdAt: serverTimestamp(),
-                // You can add default values for other fields here if needed
             });
-            console.log(`handleSaveGeneratedImagesAction: Successfully created default brand profile for user ${userId}.`);
+            console.log(`handleSaveGeneratedImagesAction: Successfully created brand profile document for user ${userId}.`);
         }
 
-        // Use userId to construct the collection path, assuming a default brand profile
-        const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/defaultBrandProfile/savedLibraryImages`);
+        // Save to the 'savedLibraryImages' subcollection under the user-specific brand profile document
+        const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${brandProfileDocId}/savedLibraryImages`);
         try {
             await addDoc(firestoreCollectionRef, {
                 storageUrl: imageUrlToSave,
@@ -564,11 +581,14 @@ export async function handleGenerateBrandLogoAction(
 
 
     const result = await generateBrandLogo(input);
-    const userId = formData.get('userId') as string || 'defaultUser';
-    const brandProfileDocId = formData.get('brandProfileDocId') as string || 'defaultBrandProfile';
+    const userId = formData.get('userId') as string; // Needs to be actual authenticated user's ID
+    if (!userId) {
+        return { error: "User ID is missing. Cannot save brand logo."};
+    }
+    const brandProfileDocId = userId; // Using userId for the brand profile doc
     const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${brandProfileDocId}/brandLogos`);
     await addDoc(firestoreCollectionRef, {
-      logoData: result.logoDataUri || "",
+      logoData: result.logoDataUri || "", // Storing data URI directly, consider storage if very large.
       brandName: input.brandName,
       createdAt: serverTimestamp()
     });
