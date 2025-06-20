@@ -190,7 +190,7 @@ export default function ContentStudioPage() {
         }
 
         const currentNumImages = parseInt(numberOfImagesToGenerate, 10);
-        if (currentPlan === 'free' && currentNumImages > 1) {
+        if (currentPlan === 'free' && currentNumImages > 1 && !isAdmin) { // Added !isAdmin check
             setNumberOfImagesToGenerate("1");
         }
 
@@ -200,7 +200,7 @@ export default function ContentStudioPage() {
         setCustomStyleNotesInput("");
         setSelectedProfileImageIndexForGen(null);
         setNumberOfImagesToGenerate("1"); 
-        setSelectedImageProvider('GEMINI'); 
+        if (!isAdmin) setSelectedImageProvider('GEMINI'); // Reset for non-admins if brandData is null
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brandData, useImageForSocialPost, socialImageChoice, sessionLastImageGenerationResult, savedLibraryImages, numberOfImagesToGenerate, currentPlan, isAdmin]);
@@ -211,24 +211,25 @@ export default function ContentStudioPage() {
       setIsAdmin(true);
     } else {
       setIsAdmin(false);
-      // If not admin, always default to Gemini
+      // If not admin, always default to Gemini and ensure it's set
       setSelectedImageProvider("GEMINI");
     }
   }, [currentUser]);
 
-    useEffect(() => {
-    if (selectedImageProvider === 'FREEPIK') {
+  useEffect(() => {
+    if (selectedImageProvider === 'FREEPIK' && isAdmin) { // Only apply Freepik options if admin selected it
       setCurrentAspectRatioOptions(freepikImagen3AspectRatios);
       if (!freepikImagen3AspectRatios.find(ar => ar.value === selectedAspectRatio)) {
         setSelectedAspectRatio(freepikImagen3AspectRatios[0].value);
       }
-    } else {
+    } else { // Default to general for Gemini or if non-admin (who will use Gemini)
       setCurrentAspectRatioOptions(generalAspectRatios);
       if (!generalAspectRatios.find(ar => ar.value === selectedAspectRatio)) {
         setSelectedAspectRatio(generalAspectRatios[0].value);
       }
     }
-    }, [selectedImageProvider, selectedAspectRatio]);
+  }, [selectedImageProvider, selectedAspectRatio, isAdmin]); // Added isAdmin dependency
+
 
   useEffect(() => {
     if (sessionLastImageGenerationResult) {
@@ -658,6 +659,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
         formData.set("brandDescription", String(brandDesc || "")); 
         
         const industryToSubmit = selectedBlogIndustry === "_none_" ? "" : (selectedBlogIndustry || "");
+        formData.set("industry", industryToSubmit);
         
         formData.set("imageStyle", imageStyle);
         
@@ -719,7 +721,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     const formData = new FormData();
     formData.append('brandName', (document.getElementById('blogBrandName') as HTMLInputElement)?.value || brandData?.brandName || "");
     formData.append('blogBrandDescription', (document.getElementById('blogBrandDescription') as HTMLTextAreaElement)?.value || brandData?.brandDescription || "");
-    
+    formData.append('industry', selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || "" );
     formData.append('blogKeywords', (document.getElementById('blogKeywords') as HTMLInputElement)?.value || brandData?.targetKeywords || "");
     formData.append('blogWebsiteUrl', (document.getElementById('blogWebsiteUrl') as HTMLInputElement)?.value || brandData?.websiteUrl || "");
 
@@ -950,27 +952,20 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                     </div>
                   )}
                   {!isAdmin && (
-                     <div className="hidden"> {/* Provider select hidden for non-admins */}
+                     <div className="hidden"> {/* Provider select hidden for non-admins, but keep for form structure */}
                       <Label htmlFor="imageGenProviderSelectUser" className="flex items-center mb-1"><Server className="w-4 h-4 mr-2 text-primary" />Image Generation Provider</Label>
                        <Select 
-                        value={selectedImageProvider || 'GEMINI'} 
-                        onValueChange={(value) => setSelectedImageProvider(value as GenerateImagesInput['provider'])}
+                        name="provider" // Ensure name is present for FormData if it were visible
+                        value={'GEMINI'} // Always Gemini for non-admins
+                        disabled={true}
                       >
                           <SelectTrigger id="imageGenProviderSelectUser">
-                              <SelectValue placeholder="Select image generation provider" />
+                              <SelectValue placeholder="Gemini (Google AI)" />
                           </SelectTrigger>
                           <SelectContent>
                               <SelectGroup>
                                   <SelectLabel>Providers</SelectLabel>
-                                   {imageGenerationProviders.filter(p => !p.disabled).map(provider => (
-                                      <SelectItem 
-                                        key={provider.value} 
-                                        value={provider.value}
-                                        disabled={true} // Effectively always Gemini for non-admins visually
-                                      >
-                                          {provider.label} {provider.premium && <span className="text-xs text-muted-foreground ml-1">(Premium <Lock className="inline h-3 w-3"/>)</span>}
-                                      </SelectItem>
-                                  ))}
+                                   <SelectItem value="GEMINI" disabled={false}>Gemini (Google AI)</SelectItem>
                               </SelectGroup>
                           </SelectContent>
                       </Select>
@@ -1027,6 +1022,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="useExampleImageForGen"
+                      name="useExampleImage" // Added name for form data if needed, though controlled by state
                       checked={useExampleImageForGen}
                       onCheckedChange={(checked) => setUseExampleImageForGen(checked as boolean)}
                     />
@@ -1091,7 +1087,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                     />
                   </div>
                   
-                  {selectedImageProvider === 'FREEPIK' && isAdmin && ( // Only show Freepik specifics if admin and Freepik is selected
+                  {selectedImageProvider === 'FREEPIK' && isAdmin && ( 
                       <>
                           <div className="pt-4 mt-4 border-t">
                               <h4 className="text-md font-semibold mb-3 text-primary flex items-center"><Paintbrush className="w-5 h-5 mr-2"/>Freepik Specific Styling (imagen3 model)</h4>
@@ -1181,7 +1177,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                         value={String(num)}
                                         disabled={!isAdmin && currentPlan === 'free' && num > 1}
                                     >
-                                        {num} {!isAdmin && currentPlan === 'free' && num > 1 ? <span className="text-xs text-muted-foreground ml-1">(Premium <Lock className="inline h-3 w-3"/>)</span> : (num > 1 ? <span className="text-xs text-amber-500 ml-1">(<Star className="inline h-3 w-3"/>)</span> : '')}
+                                        {num} {!isAdmin && currentPlan === 'free' && num > 1 ? <span className="text-xs text-muted-foreground ml-1">(Premium <Lock className="inline h-3 w-3"/>)</span> : (num > 1 && isAdmin ? <span className="text-xs text-amber-500 ml-1">(<Star className="inline h-3 w-3"/>)</span> : '')}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -1218,9 +1214,8 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                         className="w-full" 
                         loadingText={parseInt(numberOfImagesToGenerate,10) > 1 ? "Generating Images..." : "Generating Image..."}
                         type="submit" 
-                        disabled={!isAdmin && currentPlan === 'free' && selectedImageProvider === 'FREEPIK'}
+                        // Non-admin free users can only use Gemini, so Freepik check is irrelevant for them here
                     >
-                        {!isAdmin && currentPlan === 'free' && selectedImageProvider === 'FREEPIK' ? <Lock className="mr-2 h-4 w-4" /> : null}
                         Generate {parseInt(numberOfImagesToGenerate,10) > 1 ? `${numberOfImagesToGenerate} Images` : "Image"}
                     </SubmitButton>
                   )}
@@ -1266,7 +1261,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                         src={url.startsWith('image_url:') ? url.substring(10) : url}
                                         alt={`Generated brand image ${index + 1}`}
                                         fill
-                                        sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                                        sizes="(max-width: 640px) 90vw, (max-width: 768px) 45vw, (max-width: 1024px) 30vw, 22vw"
                                         style={{objectFit: 'cover', objectPosition: 'center'}}
                                         data-ai-hint="brand marketing"
                                         className="transition-opacity duration-300 opacity-100 group-hover:opacity-80"
@@ -1356,6 +1351,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                     const currentFormData = new FormData(e.currentTarget);
                      currentFormData.append("industry", selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || "");
                     if (userId) currentFormData.append("userId", userId); 
+                    if (currentUser?.email) currentFormData.append("userEmail", currentUser.email); // Add userEmail
                     handleSocialSubmit(currentFormData);
                 }}
             >
@@ -1487,12 +1483,12 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                   {currentSocialImagePreviewUrl && useImageForSocialPost && (
                       <div className="pl-6 mt-2 mb-3">
                           <p className="text-sm font-medium mb-1 text-muted-foreground">Selected image for post:</p>
-                            <div className="relative w-40 h-40 border rounded-md overflow-hidden mb-2">
+                            <div className="relative w-32 h-32 border rounded-md overflow-hidden mb-2">
                               <NextImage
                                 src={currentSocialImagePreviewUrl}
                                 alt="Selected image for social post"
                                 fill
-                                sizes="160px"
+                                sizes="128px"
                                 style={{objectFit: 'cover', objectPosition: 'center'}} 
                                 data-ai-hint="social content" />
                           </div>
@@ -1586,12 +1582,12 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                       {generatedSocialPost.imageSrc && (
                             <div className="mb-4">
                               <p className="text-sm font-medium mb-1 text-muted-foreground">Associated Image:</p>
-                              <div className="relative w-40 h-40 border rounded-md overflow-hidden mb-2">
+                              <div className="relative w-32 h-32 border rounded-md overflow-hidden mb-2">
                                   {generatedSocialPost?.imageSrc && <NextImage
                                     src={generatedSocialPost.imageSrc}
                                     alt="Social post image"
                                     fill
-                                    sizes="160px"
+                                    sizes="128px"
                                     style={{objectFit: 'cover', objectPosition: 'center'}} 
                                     data-ai-hint="social content" />}
                               </div>
@@ -1637,6 +1633,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
               action={(formData) => {
                 formData.append("industry", selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || "");
                 if (userId) formData.append("userId", userId);
+                if (currentUser?.email) formData.append("userEmail", currentUser.email); // Add userEmail
                 blogAction(formData);
               }} 
               className="w-full"

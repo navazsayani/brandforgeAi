@@ -386,7 +386,7 @@ export async function handleSaveGeneratedImagesAction(
   console.log("handleSaveGeneratedImagesAction called");
   try {
     const userId = formData.get('userId') as string;
-    const userEmail = formData.get('userEmail') as string | undefined;
+    const userEmail = formData.get('userEmail') as string | undefined; // Not strictly needed here but good for ensureUser...
     console.log(`handleSaveGeneratedImagesAction: userId from formData: ${userId}`);
     const imagesToSaveString = formData.get('imagesToSaveJson') as string;
     if (!imagesToSaveString) {
@@ -455,7 +455,7 @@ export async function handleSaveGeneratedImagesAction(
                 imageUrlToSave = await getDownloadURL(snapshot.ref);
                 console.log(`handleSaveGeneratedImagesAction: Obtained download URL: ${imageUrlToSave}`);
             } catch (uploadError: any) {
-                const uploadErrorDetail = `Failed to upload image to Firebase Storage: ${uploadError.message}`;
+                const uploadErrorDetail = `Failed to upload image to Firebase Storage for prompt "${promptSnippet}": ${uploadError.message}. Code: ${uploadError.code}. Path: ${filePath}`;
                 console.error(`handleSaveGeneratedImagesAction: ${uploadErrorDetail}`, JSON.stringify(uploadError, Object.getOwnPropertyNames(uploadError)));
                 saveErrors.push(uploadErrorDetail);
                 continue;
@@ -479,7 +479,7 @@ export async function handleSaveGeneratedImagesAction(
             console.log(`handleSaveGeneratedImagesAction: Successfully saved image metadata to Firestore for URL: ${imageUrlToSave}`);
             savedCount++;
         } catch (firestoreError: any) {
-            const firestoreErrorDetail = `Failed to save image metadata to Firestore: ${firestoreError.message}`;
+            const firestoreErrorDetail = `Failed to save image metadata to Firestore for prompt "${promptSnippet}": ${firestoreError.message}. Code: ${firestoreError.code}. Path: ${firestoreCollectionRef.path}`;
             console.error(`handleSaveGeneratedImagesAction: ${firestoreErrorDetail}`, JSON.stringify(firestoreError, Object.getOwnPropertyNames(firestoreError)));
             saveErrors.push(firestoreErrorDetail);
             continue;
@@ -489,7 +489,7 @@ export async function handleSaveGeneratedImagesAction(
             try {
                 new URL(imageUrlToSave);
             } catch (urlError: any) {
-                const urlErrorDetail = `Freepik image URL is invalid: ${urlError.message}`;
+                const urlErrorDetail = `Freepik image URL is invalid for prompt "${promptSnippet}": ${urlError.message}`;
                 console.error(`handleSaveGeneratedImagesAction: ${urlErrorDetail}`);
                 saveErrors.push(urlErrorDetail);
                 continue;
