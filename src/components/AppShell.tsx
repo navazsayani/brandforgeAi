@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ReactNode } from 'react';
@@ -33,8 +34,6 @@ const navItems: NavItem[] = [
   { href: '/deployment-hub', label: 'Deployment Hub', icon: Send },
 ];
 
-// brandForgeAppLogoDataUri constant removed
-
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { user } = useAuth();
@@ -46,7 +45,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Button
             variant={pathname === item.href ? 'secondary' : 'ghost'}
             className={cn(
-              "sidebar-nav-item",
+              "sidebar-nav-item", // Includes w-full, text-sidebar-foreground, hover states, touch-target
+              "justify-start",    // Ensure left alignment of content (icon and text)
+              "gap-0",            // Remove default gap from base button, rely on icon's mr-3
               pathname === item.href 
                 ? "active shadow-md" 
                 : ""
@@ -84,7 +85,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         {user ? (
           <Button 
             variant="ghost" 
-            className="sidebar-nav-item"
+            className={cn(
+              "sidebar-nav-item", // Includes w-full, text-sidebar-foreground, hover states, touch-target
+              "justify-start",    // Ensure left alignment
+              "gap-0"             // Remove default button gap
+            )}
           >
             <Settings className="w-5 h-5 mr-3 flex-shrink-0" />
             <span className="text-break">Settings</span>
