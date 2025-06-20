@@ -67,12 +67,27 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
       if (docSnap.exists()) {
         const fetchedData = docSnap.data() as BrandData;
         console.log("🔍 BrandContext: Raw data from Firestore:", fetchedData);
+
+        // Normalize industry directly from fetchedData before merging
+        const normalizedFetchedData = { ...fetchedData };
+        if (normalizedFetchedData.industry === "" || normalizedFetchedData.industry === undefined || normalizedFetchedData.industry === null) {
+          console.log("🔍 BrandContext: Normalizing fetched industry from '", normalizedFetchedData.industry, "' to '_none_'.");
+          normalizedFetchedData.industry = "_none_";
+        }
+
         const mergedData = {
-          ...defaultEmptyBrandData, // Ensure all fields are present
-          ...fetchedData,
+          ...defaultEmptyBrandData, // Default already has industry: "_none_"
+          ...normalizedFetchedData, // Use normalized data for merge
         };
+        
+        // Final check on mergedData.industry, though defaultEmptyBrandData and normalization should cover it.
+        if (mergedData.industry === "" || mergedData.industry === undefined || mergedData.industry === null) {
+            console.log("🔍 BrandContext: Normalizing mergedData industry from '", mergedData.industry, "' to '_none_'.");
+            mergedData.industry = "_none_";
+        }
+        
         console.log("🔍 BrandContext: Merged data with defaults:", mergedData);
-        console.log("🔍 BrandContext: Industry value specifically:", mergedData.industry);
+        console.log("🔍 BrandContext: Industry value specifically being set to state:", mergedData.industry);
         setBrandDataState(mergedData);
       } else {
         // User has no brand profile yet, initialize with empty/default
@@ -110,15 +125,21 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     setError(null);
     try {
+      // Normalize industry before saving
       const dataToSave: BrandData = {
-        ...defaultEmptyBrandData, // Ensure all fields are present even if partial data is passed
+        ...defaultEmptyBrandData, 
         ...data,
       };
+      if (dataToSave.industry === "" || dataToSave.industry === undefined || dataToSave.industry === null) {
+        console.log("🔍 BrandContext (Save): Normalizing industry from '", dataToSave.industry, "' to '_none_' before saving.");
+        dataToSave.industry = "_none_";
+      }
+
       console.log("🔍 BrandContext: Data being saved to Firestore:", dataToSave);
       console.log("🔍 BrandContext: Industry value being saved:", dataToSave.industry);
       const brandDocRef = doc(db, "brandProfiles", userId); // Use userId for document path
       await setDoc(brandDocRef, dataToSave, { merge: true }); // Use merge: true to be safe
-      setBrandDataState(dataToSave);
+      setBrandDataState(dataToSave); // Update local state with the (potentially normalized) data
       console.log("🔍 BrandContext: Data saved successfully");
     } catch (e: any) {
       console.error("Error saving brand data to Firestore:", e);
