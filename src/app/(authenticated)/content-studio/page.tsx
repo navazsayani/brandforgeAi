@@ -31,6 +31,170 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { industries, imageStylePresets, freepikImagen3EffectColors, freepikImagen3EffectLightnings, freepikImagen3EffectFramings, freepikImagen3AspectRatios, generalAspectRatios, blogTones, freepikValidStyles } from '@/lib/constants';
 import Link from 'next/link';
 
+// --- START: Image Grid Fix Components ---
+/**
+ * ImprovedImageGrid Component
+ * This component replaces the existing image grid in the Content Studio page.
+ * It provides better responsive behavior and proper image sizing.
+ */
+const ImprovedImageGrid = ({ 
+  imageUrls, 
+  onDownload,
+  className = "" 
+}: { 
+  imageUrls: string[]; 
+  onDownload: (url: string, filename: string) => void;
+  className?: string;
+}) => {
+  const gridClass = imageUrls.length > 1 
+    ? (imageUrls.length > 2 
+      ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4' 
+      : 'grid-cols-1 sm:grid-cols-2') 
+    : 'grid-cols-1';
+
+  return (
+    <div className={`grid gap-4 ${gridClass} ${className}`}>
+      {imageUrls.map((url, index) => (
+        <ImageGridItem 
+          key={url || index} 
+          url={url} 
+          index={index}
+          onDownload={onDownload}
+        />
+      ))}
+    </div>
+  );
+};
+
+/**
+ * ImageGridItem Component
+ * This component handles the display of individual images in the grid.
+ * It properly maintains aspect ratio and handles different image types.
+ */
+const ImageGridItem = ({ 
+  url, 
+  index, 
+  onDownload 
+}: { 
+  url: string; 
+  index: number; 
+  onDownload: (url: string, filename: string) => void;
+}) => {
+  const displayUrl = url && url.startsWith('image_url:') 
+    ? url.substring(10) 
+    : url;
+  
+  const isDisplayableImage = url && (url.startsWith('data:') || url.startsWith('image_url:'));
+  const isTaskId = url && url.startsWith('task_id:');
+  
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const [freepikTaskStatusState, freepikTaskStatusAction] = useActionState(handleCheckFreepikTaskStatusAction, {error: undefined, data: undefined, message: undefined, taskId: "" });
+  const { toast } = useToast();
+  const { sessionLastImageGenerationResult, setSessionLastImageGenerationResult } = useBrand();
+
+
+ useEffect(() => {
+    if (freepikTaskStatusState.data && freepikTaskStatusState.data.taskId === url.substring(8)) {
+      const { status, images: retrievedImageUrls, taskId } = freepikTaskStatusState.data;
+       if (status === 'COMPLETED' && retrievedImageUrls && retrievedImageUrls.length > 0) {
+        const newImageUrlsForTask = retrievedImageUrls.map(retrievedUrl => `image_url:${retrievedUrl}`);
+        
+        if (sessionLastImageGenerationResult) {
+          const updatedGeneratedImages = sessionLastImageGenerationResult.generatedImages.map(
+            existingUrl => (existingUrl === `task_id:${taskId}` ? newImageUrlsForTask : existingUrl) 
+          ).flat(); 
+          
+          setSessionLastImageGenerationResult({
+            ...sessionLastImageGenerationResult,
+            generatedImages: updatedGeneratedImages,
+          });
+        }
+        toast({ title: `Task ${taskId.substring(0,8)}... Completed`, description: `${retrievedImageUrls.length} image(s) retrieved.` });
+      } else if (status === 'IN_PROGRESS') {
+        toast({ title: `Task ${taskId.substring(0,8)}... Still In Progress`, description: "Please check again in a few moments." });
+      } else if (status === 'FAILED') {
+        toast({ title: `Task ${taskId.substring(0,8)}... Failed`, description: "Freepik failed to generate images for this task.", variant: "destructive" });
+          if (sessionLastImageGenerationResult) {
+            setSessionLastImageGenerationResult({
+              ...sessionLastImageGenerationResult,
+              generatedImages: sessionLastImageGenerationResult.generatedImages.filter(existingUrl => existingUrl !== `task_id:${taskId}`),
+            });
+          }
+      } else { 
+          toast({ title: `Task ${taskId.substring(0,8)}... Status: ${status}`, description: "Could not retrieve images or task has an unexpected status." });
+      }
+      setIsCheckingStatus(false);
+    }
+    if (freepikTaskStatusState.error && freepikTaskStatusState.data?.taskId === url.substring(8)) {
+      toast({ title: "Error Checking Task Status", description: freepikTaskStatusState.error, variant: "destructive" });
+      setIsCheckingStatus(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [freepikTaskStatusState, url, toast, setSessionLastImageGenerationResult, sessionLastImageGenerationResult?.generatedImages]);
+
+
+  const handleCheckFreepikTask = () => {
+    if (isTaskId) {
+        setIsCheckingStatus(true);
+        const taskId = url.substring(8);
+        const formData = new FormData();
+        formData.append("taskId", taskId);
+        startTransition(() => {
+          freepikTaskStatusAction(formData);
+        });
+    }
+  };
+
+  return (
+    <div className="relative group w-full overflow-hidden border rounded-md bg-muted">
+      {isDisplayableImage ? (
+        <>
+          <div className="aspect-square w-full relative">
+            <NextImage
+              src={displayUrl}
+              alt={`Generated brand image ${index + 1}`}
+              fill
+              sizes="(max-width: 640px) 90vw, (max-width: 768px) 45vw, (max-width: 1024px) 30vw, 22vw"
+              style={{objectFit: 'cover', objectPosition: 'center'}}
+              data-ai-hint="brand marketing"
+              className="transition-opacity duration-300 opacity-100 group-hover:opacity-80"
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 z-10 bg-background/70 hover:bg-background"
+            onClick={() => onDownload(displayUrl, `generated-image-${index + 1}.png`)}
+            title="Download image"
+          >
+            <Download className="h-4 w-4"/>
+          </Button>
+        </>
+      ) : isTaskId ? (
+        <div className="flex flex-col items-center justify-center h-full text-xs text-muted-foreground p-2 text-center aspect-square">
+          <Loader2 className="w-6 h-6 animate-spin mb-2" />
+          Freepik image task pending. <br/> Task ID: {url.substring(8).substring(0,8)}...
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleCheckFreepikTask}
+            disabled={isCheckingStatus}
+            className="mt-2"
+          >
+            {isCheckingStatus ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+            Check Status
+          </Button>
+        </div>
+      ) : (
+        <div className="flex items-center justify-center h-full text-xs text-muted-foreground aspect-square">
+          Image not available
+        </div>
+      )}
+    </div>
+  );
+};
+// --- END: Image Grid Fix Components ---
+
 
 const initialImageFormState: FormState<{ generatedImages: string[]; promptUsed: string; providerUsed: string; }>= { error: undefined, data: undefined, message: undefined };
 const initialSocialFormState: FormState<{ caption: string; hashtags: string; imageSrc: string | null }> = { error: undefined, data: undefined, message: undefined };
@@ -190,7 +354,7 @@ export default function ContentStudioPage() {
         }
 
         const currentNumImages = parseInt(numberOfImagesToGenerate, 10);
-        if (currentPlan === 'free' && currentNumImages > 1 && !isAdmin) { // Added !isAdmin check
+        if (currentPlan === 'free' && currentNumImages > 1 && !isAdmin) {
             setNumberOfImagesToGenerate("1");
         }
 
@@ -200,7 +364,7 @@ export default function ContentStudioPage() {
         setCustomStyleNotesInput("");
         setSelectedProfileImageIndexForGen(null);
         setNumberOfImagesToGenerate("1"); 
-        if (!isAdmin) setSelectedImageProvider('GEMINI'); // Reset for non-admins if brandData is null
+        if (!isAdmin) setSelectedImageProvider('GEMINI'); 
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brandData, useImageForSocialPost, socialImageChoice, sessionLastImageGenerationResult, savedLibraryImages, numberOfImagesToGenerate, currentPlan, isAdmin]);
@@ -211,24 +375,23 @@ export default function ContentStudioPage() {
       setIsAdmin(true);
     } else {
       setIsAdmin(false);
-      // If not admin, always default to Gemini and ensure it's set
       setSelectedImageProvider("GEMINI");
     }
   }, [currentUser]);
 
   useEffect(() => {
-    if (selectedImageProvider === 'FREEPIK' && isAdmin) { // Only apply Freepik options if admin selected it
+    if (selectedImageProvider === 'FREEPIK' && isAdmin) { 
       setCurrentAspectRatioOptions(freepikImagen3AspectRatios);
       if (!freepikImagen3AspectRatios.find(ar => ar.value === selectedAspectRatio)) {
         setSelectedAspectRatio(freepikImagen3AspectRatios[0].value);
       }
-    } else { // Default to general for Gemini or if non-admin (who will use Gemini)
+    } else { 
       setCurrentAspectRatioOptions(generalAspectRatios);
       if (!generalAspectRatios.find(ar => ar.value === selectedAspectRatio)) {
         setSelectedAspectRatio(generalAspectRatios[0].value);
       }
     }
-  }, [selectedImageProvider, selectedAspectRatio, isAdmin]); // Added isAdmin dependency
+  }, [selectedImageProvider, selectedAspectRatio, isAdmin]); 
 
 
   useEffect(() => {
@@ -354,43 +517,37 @@ export default function ContentStudioPage() {
 
 
   useEffect(() => {
-    if (freepikTaskStatusState.data) {
-      const { status, images: retrievedImageUrls, taskId } = freepikTaskStatusState.data;
-      if (status === 'COMPLETED' && retrievedImageUrls && retrievedImageUrls.length > 0) {
-        const newImageUrlsForTask = retrievedImageUrls.map(url => `image_url:${url}`);
-        
-        if (sessionLastImageGenerationResult) {
-          const updatedGeneratedImages = sessionLastImageGenerationResult.generatedImages.map(
-            url => (url === `task_id:${taskId}` ? newImageUrlsForTask : url) 
-          ).flat(); 
-          
-          setSessionLastImageGenerationResult({
-            ...sessionLastImageGenerationResult,
-            generatedImages: updatedGeneratedImages,
-          });
+    if (freepikTaskStatusState.data && !checkingTaskId) { // Ensure we only process this if we are NOT currently checking
+        const { status, images: retrievedImageUrls, taskId } = freepikTaskStatusState.data;
+        // This block is now mostly handled by the ImageGridItem's local useEffect.
+        // This global one can be simplified or removed if ImageGridItem's is robust enough.
+        // For now, keep it for logging/broad updates if needed.
+        if (taskId && sessionLastImageGenerationResult?.generatedImages.some(url => url === `task_id:${taskId}`)) {
+            if (status === 'COMPLETED' && retrievedImageUrls && retrievedImageUrls.length > 0) {
+                const newImageUrlsForTask = retrievedImageUrls.map(url => `image_url:${url}`);
+                setSessionLastImageGenerationResult(prevResult => {
+                    if (!prevResult) return null;
+                    return {
+                        ...prevResult,
+                        generatedImages: prevResult.generatedImages.map(
+                            url => (url === `task_id:${taskId}` ? newImageUrlsForTask : url)
+                        ).flat(),
+                    };
+                });
+                toast({ title: `Task ${taskId.substring(0,8)}... Completed`, description: `${retrievedImageUrls.length} image(s) retrieved.` });
+            } else if (status === 'FAILED') {
+                setSessionLastImageGenerationResult(prevResult => {
+                    if (!prevResult) return null;
+                    return {
+                        ...prevResult,
+                        generatedImages: prevResult.generatedImages.filter(url => url !== `task_id:${taskId}`),
+                    };
+                });
+            }
         }
-        toast({ title: `Task ${taskId.substring(0,8)}... Completed`, description: `${retrievedImageUrls.length} image(s) retrieved.` });
-      } else if (status === 'IN_PROGRESS') {
-        toast({ title: `Task ${taskId.substring(0,8)}... Still In Progress`, description: "Please check again in a few moments." });
-      } else if (status === 'FAILED') {
-        toast({ title: `Task ${taskId.substring(0,8)}... Failed`, description: "Freepik failed to generate images for this task.", variant: "destructive" });
-          if (sessionLastImageGenerationResult) {
-            setSessionLastImageGenerationResult({
-              ...sessionLastImageGenerationResult,
-              generatedImages: sessionLastImageGenerationResult.generatedImages.filter(url => url !== `task_id:${taskId}`),
-            });
-          }
-      } else { 
-          toast({ title: `Task ${taskId.substring(0,8)}... Status: ${status}`, description: "Could not retrieve images or task has an unexpected status." });
-      }
-      setCheckingTaskId(null);
-    }
-    if (freepikTaskStatusState.error) {
-      toast({ title: "Error Checking Task Status", description: freepikTaskStatusState.error, variant: "destructive" });
-      setCheckingTaskId(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [freepikTaskStatusState, toast, setSessionLastImageGenerationResult]);
+  }, [freepikTaskStatusState, checkingTaskId]); // Added checkingTaskId dependency
 
 
   const copyToClipboard = (text: string, type: string) => {
@@ -820,14 +977,6 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
       });
   };
 
-  const handleFetchFreepikResult = (taskId: string) => {
-    setCheckingTaskId(taskId);
-    const formData = new FormData();
-    formData.append("taskId", taskId);
-    startTransition(() => {
-      freepikTaskStatusAction(formData);
-    });
-  };
 
   const downloadImage = (imageUrl: string, filename = "generated-image.png") => {
     const link = document.createElement('a');
@@ -861,12 +1010,6 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     }
   };
   
-  const generatedImageGridClass = lastSuccessfulGeneratedImageUrls.length > 1 
-    ? (lastSuccessfulGeneratedImageUrls.length > 2 
-      ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4' 
-      : 'grid-cols-1 sm:grid-cols-2') 
-    : 'grid-cols-1';
-
   return (
     <div className="w-full max-w-4xl mx-auto content-studio-container">
       <CardHeader className="px-0 mb-6 flex-shrink-0">
@@ -952,24 +1095,10 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                     </div>
                   )}
                   {!isAdmin && (
-                     <div className="hidden"> {/* Provider select hidden for non-admins, but keep for form structure */}
-                      <Label htmlFor="imageGenProviderSelectUser" className="flex items-center mb-1"><Server className="w-4 h-4 mr-2 text-primary" />Image Generation Provider</Label>
-                       <Select 
-                        name="provider" // Ensure name is present for FormData if it were visible
-                        value={'GEMINI'} // Always Gemini for non-admins
-                        disabled={true}
-                      >
-                          <SelectTrigger id="imageGenProviderSelectUser">
-                              <SelectValue placeholder="Gemini (Google AI)" />
-                          </SelectTrigger>
-                          <SelectContent>
-                              <SelectGroup>
-                                  <SelectLabel>Providers</SelectLabel>
-                                   <SelectItem value="GEMINI" disabled={false}>Gemini (Google AI)</SelectItem>
-                              </SelectGroup>
-                          </SelectContent>
-                      </Select>
-                       <p className="text-xs text-muted-foreground mt-1">Using Gemini (Google AI) for image generation.</p>
+                     <div className="space-y-1">
+                         <Label className="flex items-center"><Server className="w-4 h-4 mr-2 text-primary"/>Image Generation Provider</Label>
+                         <p className="text-sm text-muted-foreground p-2 border rounded-md bg-muted/50">Using Gemini (Google AI) for image generation.</p>
+                         <input type="hidden" name="provider" value="GEMINI" />
                     </div>
                   )}
 
@@ -1022,7 +1151,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="useExampleImageForGen"
-                      name="useExampleImage" // Added name for form data if needed, though controlled by state
+                      name="useExampleImage" 
                       checked={useExampleImageForGen}
                       onCheckedChange={(checked) => setUseExampleImageForGen(checked as boolean)}
                     />
@@ -1177,7 +1306,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                         value={String(num)}
                                         disabled={!isAdmin && currentPlan === 'free' && num > 1}
                                     >
-                                        {num} {!isAdmin && currentPlan === 'free' && num > 1 ? <span className="text-xs text-muted-foreground ml-1">(Premium <Lock className="inline h-3 w-3"/>)</span> : (num > 1 && isAdmin ? <span className="text-xs text-amber-500 ml-1">(<Star className="inline h-3 w-3"/>)</span> : '')}
+                                        {num} {!isAdmin && currentPlan === 'free' && num > 1 ? <span className="text-xs text-muted-foreground ml-1">(Premium <Lock className="inline h-3 w-3"/>)</span> : (num > 1 && isAdmin && imageGenerationProviders.find(p=>p.value === selectedImageProvider)?.premium ? <span className="text-xs text-amber-500 ml-1">(<Star className="inline h-3 w-3"/>)</span> : '')}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -1214,7 +1343,6 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                         className="w-full" 
                         loadingText={parseInt(numberOfImagesToGenerate,10) > 1 ? "Generating Images..." : "Generating Image..."}
                         type="submit" 
-                        // Non-admin free users can only use Gemini, so Freepik check is irrelevant for them here
                     >
                         Generate {parseInt(numberOfImagesToGenerate,10) > 1 ? `${numberOfImagesToGenerate} Images` : "Image"}
                     </SubmitButton>
@@ -1251,60 +1379,10 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                       </div>
                   </CardHeader>
                   <CardContent>
-                    <div className={`grid gap-4 ${generatedImageGridClass}`}>
-                      {lastSuccessfulGeneratedImageUrls.map((url, index) => (
-                          <div key={url || index} className="relative group w-full overflow-hidden border rounded-md bg-muted">
-                              {url && (url.startsWith('data:') || url.startsWith('image_url:')) ? (
-                                  <>
-                                  <div className="aspect-square w-full relative">
-                                    <NextImage
-                                        src={url.startsWith('image_url:') ? url.substring(10) : url}
-                                        alt={`Generated brand image ${index + 1}`}
-                                        fill
-                                        sizes="(max-width: 640px) 90vw, (max-width: 768px) 45vw, (max-width: 1024px) 30vw, 22vw"
-                                        style={{objectFit: 'cover', objectPosition: 'center'}}
-                                        data-ai-hint="brand marketing"
-                                        className="transition-opacity duration-300 opacity-100 group-hover:opacity-80"
-                                    />
-                                  </div>
-                                    <Button
-                                      variant="outline"
-                                      size="icon"
-                                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 z-10 bg-background/70 hover:bg-background"
-                                      onClick={() => downloadImage(url.startsWith('image_url:') ? url.substring(10) : url, `generated-image-${index + 1}.png`)}
-                                      title="Download image"
-                                    >
-                                      <Download className="h-4 w-4"/>
-                                    </Button>
-                                  </>
-                              ) : url && url.startsWith('task_id:') ? (
-                                    <div className="flex flex-col items-center justify-center h-full text-xs text-muted-foreground p-2 text-center aspect-square">
-                                      <Loader2 className="w-6 h-6 animate-spin mb-2" />
-                                      Freepik image task pending. <br/> Task ID: {url.substring(8).substring(0,8)}...
-                                      <form>
-                                        <input type="hidden" name="taskId" value={url.substring(8)} />
-                                        <SubmitButton
-                                          size="sm"
-                                          variant="outline"
-                                          loadingText="Checking..."
-                                          formAction={(formData) => { 
-                                              setCheckingTaskId(url.substring(8));
-                                              freepikTaskStatusAction(formData);
-                                          }}
-                                          disabled={checkingTaskId === url.substring(8)}
-                                          className="mt-2"
-                                        >
-                                          {checkingTaskId === url.substring(8) ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
-                                          Check Status
-                                        </SubmitButton>
-                                      </form>
-                                  </div>
-                              ) : (
-                                  <div className="flex items-center justify-center h-full text-xs text-muted-foreground aspect-square">Image not available</div>
-                              )}
-                          </div>
-                      ))}
-                    </div>
+                    <ImprovedImageGrid 
+                        imageUrls={lastSuccessfulGeneratedImageUrls}
+                        onDownload={downloadImage}
+                    />
                     {isAdmin && lastUsedImageGenPrompt && ( 
                       <div className="mt-4">
                           <div className="flex justify-between items-center mb-1">
@@ -1351,7 +1429,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                     const currentFormData = new FormData(e.currentTarget);
                      currentFormData.append("industry", selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || "");
                     if (userId) currentFormData.append("userId", userId); 
-                    if (currentUser?.email) currentFormData.append("userEmail", currentUser.email); // Add userEmail
+                    if (currentUser?.email) currentFormData.append("userEmail", currentUser.email); 
                     handleSocialSubmit(currentFormData);
                 }}
             >
@@ -1633,7 +1711,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
               action={(formData) => {
                 formData.append("industry", selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || "");
                 if (userId) formData.append("userId", userId);
-                if (currentUser?.email) formData.append("userEmail", currentUser.email); // Add userEmail
+                if (currentUser?.email) formData.append("userEmail", currentUser.email); 
                 blogAction(formData);
               }} 
               className="w-full"
