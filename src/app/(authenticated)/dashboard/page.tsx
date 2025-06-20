@@ -5,23 +5,27 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowRight, Edit3, Send, TrendingUp, Sparkles, Image as ImageIconLucide, Loader2 } from 'lucide-react'; 
+import { ArrowRight, Edit3, Send, TrendingUp, Sparkles, Image as ImageIconLucide, Loader2, Star } from 'lucide-react'; 
 import NextImage from 'next/image'; 
 import { useBrand } from '@/contexts/BrandContext'; 
 import { Skeleton } from '@/components/ui/skeleton'; 
 // Removed imports for AppLogoFormState, GenerateBrandForgeAppLogoOutput, handleGenerateBrandForgeAppLogoAction
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 // Removed SubmitButton import as it's not used here anymore
+import { Badge } from '@/components/ui/badge'; // Added Badge import
 
 export default function DashboardPage() {
   const { brandData, isLoading: isBrandLoading } = useBrand();
   const [logoUrl, setLogoUrl] = useState<string | undefined>(undefined);
+  const [currentPlan, setCurrentPlan] = useState<string | undefined>(undefined); // Added state for currentPlan
 
   useEffect(() => {
-    if (brandData?.brandLogoUrl) {
+    if (brandData) {
       setLogoUrl(brandData.brandLogoUrl);
+      setCurrentPlan(brandData.plan || 'free'); // Default to 'free' if plan is not set
     } else {
       setLogoUrl(undefined);
+      setCurrentPlan(undefined); // Clear plan if no brandData
     }
   }, [brandData]);
 
@@ -34,10 +38,24 @@ export default function DashboardPage() {
               <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />
             </div>
             <div className="flex-1">
-              <CardTitle className="text-break">Welcome to BrandForge AI</CardTitle>
-              <CardDescription className="text-responsive text-break mt-2">
-                Your intelligent partner for brand building, content creation, and campaign management.
-              </CardDescription>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
+                <div>
+                  <CardTitle className="text-break">Welcome to BrandForge AI</CardTitle>
+                  <CardDescription className="text-responsive text-break mt-2">
+                    Your intelligent partner for brand building, content creation, and campaign management.
+                  </CardDescription>
+                </div>
+                {isBrandLoading ? (
+                  <Skeleton className="h-7 w-24 mt-2 sm:mt-0 rounded-md bg-muted" />
+                ) : currentPlan && (
+                  <Badge 
+                    variant={currentPlan === 'premium' ? 'default' : 'secondary'} 
+                    className="mt-2 sm:mt-0 py-1 px-3 text-sm self-start sm:self-center"
+                  >
+                    <Star className="w-4 h-4 mr-1.5" /> Plan: {currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)}
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -92,7 +110,7 @@ export default function DashboardPage() {
               />
               <FeatureHighlight
                 icon={<TrendingUp className="w-6 h-6 text-accent" />}
-                title="Create & Conquer"
+                title="Create &amp; Conquer"
                 description="Generate stunning visuals, engaging social media posts, and insightful blog articles, all tailored to your brand."
                 cta={{ href: "/content-studio", label: "Explore Content Studio" }}
               />
