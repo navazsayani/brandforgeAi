@@ -8,7 +8,8 @@ export interface BrandData {
   targetKeywords?: string;
   exampleImages?: string[]; // URLs from Firebase Storage
   brandLogoUrl?: string; // URL from Firebase Storage for the brand logo
-  plan?: 'free' | 'premium'; // Added plan field
+  plan?: 'free' | 'premium';
+  userEmail?: string; // Added user's email
 }
 
 export interface GeneratedImage {
@@ -61,3 +62,9 @@ export interface GeneratedAdCampaign {
   budget?: number;
 }
 
+// Type for the admin user selection dropdown
+export interface UserProfileSelectItem {
+  userId: string;
+  brandName: string;
+  userEmail: string;
+}

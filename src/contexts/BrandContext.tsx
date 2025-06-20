@@ -43,7 +43,8 @@ const defaultEmptyBrandData: BrandData = {
     exampleImages: [],
     targetKeywords: "",
     brandLogoUrl: undefined,
-    plan: 'free', // Default plan
+    plan: 'free',
+    userEmail: "", // Added userEmail
 };
 
 export const BrandProvider = ({ children }: { children: ReactNode }) => {
@@ -71,7 +72,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const newBrandDocRef = doc(db, "users", userId, "brandProfiles", userId);
-      const oldBrandDocRef = doc(db, "brandProfiles", userId); // Hypothetical old path
+      const oldBrandDocRef = doc(db, "brandProfiles", userId); 
 
       let docSnap = await getDoc(newBrandDocRef);
       let dataToSet: BrandData | null = null;
@@ -91,32 +92,32 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (dataToSet) {
-        // Normalize data (industry, plan) before setting state or migrating
-        const normalizedData = { ...defaultEmptyBrandData, ...dataToSet }; // Ensure all keys from default are present
+        const normalizedData = { ...defaultEmptyBrandData, ...dataToSet }; 
         if (normalizedData.industry === "" || normalizedData.industry === undefined || normalizedData.industry === null) {
           normalizedData.industry = "_none_";
         }
         if (!normalizedData.plan || !['free', 'premium'].includes(normalizedData.plan)) {
             normalizedData.plan = 'free';
         }
+        // Ensure userEmail is populated if missing (especially during migration)
+        if (!normalizedData.userEmail && currentUser.email) {
+            normalizedData.userEmail = currentUser.email;
+        }
         
         setBrandDataState(normalizedData);
 
         if (fetchedFromOldPath) {
-          // Save the (normalized) data from old path to the new path
           try {
-            await setDoc(newBrandDocRef, normalizedData, { merge: true }); // Use normalizedData
-            console.log("BrandContext: Successfully migrated brand data from old path to new path.");
-            // Consider deleting from oldBrandDocRef if desired, e.g., await deleteDoc(oldBrandDocRef);
-            // For safety, manual deletion after verification is often preferred.
+            await setDoc(newBrandDocRef, normalizedData, { merge: true }); 
+            console.log("BrandContext: Successfully migrated brand data from old path to new path (including userEmail).");
           } catch (migrationError: any) {
             console.error("BrandContext: Error migrating data from old path to new path:", migrationError);
             setError(`Failed to migrate brand data to new structure: ${migrationError.message}. Old data will be used this session.`);
           }
         }
       } else {
-        console.log("BrandContext: No data found at new or old paths. Using default empty brand data.");
-        setBrandDataState(defaultEmptyBrandData);
+        console.log("BrandContext: No data found at new or old paths. Using default empty brand data (with current user's email if available).");
+        setBrandDataState({ ...defaultEmptyBrandData, userEmail: currentUser.email || "" });
       }
     } catch (e: any) {
       console.error("Error fetching brand data from Firestore:", e);
@@ -128,7 +129,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         specificError = "Database permission error. Please check your Firestore security rules in the Firebase console.";
       }
       setError(specificError);
-      setBrandDataState(defaultEmptyBrandData);
+      setBrandDataState({ ...defaultEmptyBrandData, userEmail: currentUser?.email || "" });
     } finally {
       setIsLoading(false);
     }
@@ -138,9 +139,9 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
     fetchBrandDataCB();
   }, [fetchBrandDataCB]); 
 
-  const setBrandDataCB = useCallback(async (data: BrandData, userId: string) => { 
-    if (!userId) {
-      const noUserError = "User not authenticated. Cannot save brand profile.";
+  const setBrandDataCB = useCallback(async (data: BrandData, userIdToSaveFor: string) => { 
+    if (!userIdToSaveFor) {
+      const noUserError = "User ID to save for is missing. Cannot save brand profile.";
       setError(noUserError);
       console.error(noUserError);
       throw new Error(noUserError);
@@ -160,9 +161,22 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         dataToSave.plan = 'free';
       }
 
-      const brandDocRef = doc(db, "users", userId, "brandProfiles", userId); 
+      // If this save is for the currently logged-in user's own profile, ensure their email is set.
+      // If an admin is saving for another user, data.userEmail should already be present from the loaded profile.
+      if (currentUser && userIdToSaveFor === currentUser.uid && currentUser.email) {
+        dataToSave.userEmail = currentUser.email;
+      } else if (!dataToSave.userEmail && data.userEmail) { // If not current user, preserve incoming email if any
+        dataToSave.userEmail = data.userEmail;
+      }
+
+
+      const brandDocRef = doc(db, "users", userIdToSaveFor, "brandProfiles", userIdToSaveFor); 
       await setDoc(brandDocRef, dataToSave, { merge: true }); 
-      setBrandDataState(dataToSave); 
+
+      // If the saved data is for the currently logged-in user, update the context state.
+      if (currentUser && userIdToSaveFor === currentUser.uid) {
+        setBrandDataState(dataToSave); 
+      }
     } catch (e: any) {
       console.error("Error saving brand data to Firestore:", e);
       let specificError = `Failed to save brand profile: ${e.message || "Unknown error. Check console."}`;
@@ -177,7 +191,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentUser]);
 
   const addGeneratedImageCB = useCallback((image: GeneratedImage) => {
     setGeneratedImages(prev => [image, ...prev.slice(0,19)]);
@@ -238,4 +252,3 @@ export const useBrand = () => {
   }
   return context;
 };
-

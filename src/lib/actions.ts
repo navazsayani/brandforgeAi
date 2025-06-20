@@ -12,7 +12,13 @@ import { generateBrandLogo, type GenerateBrandLogoInput, type GenerateBrandLogoO
 import { generateBrandForgeAppLogo, type GenerateBrandForgeAppLogoOutput } from '@/ai/flows/generate-brandforge-app-logo-flow';
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
-import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, collectionGroup, getDocs, query as firestoreQuery, where } from 'firebase/firestore';
+import type { UserProfileSelectItem, BrandData } from '@/types'; // Added UserProfileSelectItem and BrandData
+
+// Admin UID - Replace with your actual admin user's UID from Firebase Auth
+// For a real app, use Firebase custom claims for robust admin role checking.
+const ADMIN_USER_UID = process.env.NEXT_PUBLIC_ADMIN_UID || 'REPLACE_WITH_YOUR_ADMIN_UID';
+
 
 // Generic type for form state with error
 export interface FormState<T = any> {
@@ -23,7 +29,7 @@ export interface FormState<T = any> {
 }
 
 // Helper function to ensure user-specific brand profile document exists
-async function ensureUserBrandProfileDocExists(userId: string): Promise<void> {
+async function ensureUserBrandProfileDocExists(userId: string, userEmail?: string): Promise<void> {
   if (!userId) {
     throw new Error("User ID is required to ensure brand profile document exists.");
   }
@@ -32,9 +38,7 @@ async function ensureUserBrandProfileDocExists(userId: string): Promise<void> {
 
   if (!brandProfileDocSnap.exists()) {
     console.log(`Brand profile document for user ${userId} does not exist. Creating it...`);
-    await setDoc(brandProfileDocRef, {
-      // Initialize with minimal default data or data relevant to the current operation
-      // This matches the default structure used in BrandContext.
+    const initialProfileData: Partial<BrandData> = {
       brandName: "",
       websiteUrl: "",
       brandDescription: "",
@@ -42,9 +46,14 @@ async function ensureUserBrandProfileDocExists(userId: string): Promise<void> {
       imageStyleNotes: "",
       exampleImages: [],
       targetKeywords: "",
-      brandLogoUrl: "", // Or undefined, matching BrandData type
-      createdAt: serverTimestamp(), // Good practice to timestamp creation
-    });
+      brandLogoUrl: "",
+      plan: 'free',
+      createdAt: serverTimestamp() as any, // Firestore Timestamp
+    };
+    if (userEmail) {
+      initialProfileData.userEmail = userEmail;
+    }
+    await setDoc(brandProfileDocRef, initialProfileData);
     console.log(`Successfully created brand profile document for user ${userId}.`);
   }
 }
@@ -175,6 +184,8 @@ export async function handleGenerateSocialMediaCaptionAction(
     const imageDescription = formData.get("socialImageDescription") as string;
     const presetTone = formData.get("tone") as string;
     const customNuances = formData.get("customSocialToneNuances") as string | null;
+    const userId = formData.get('userId') as string; 
+    const userEmail = formData.get('userEmail') as string | undefined; // For ensuring profile exists with email
 
     let finalTone = presetTone;
     if (customNuances && customNuances.trim() !== "") {
@@ -195,13 +206,12 @@ export async function handleGenerateSocialMediaCaptionAction(
         return { error: "Image description is required if an image is selected for the post."}
     }
     if (input.industry === "" || input.industry === undefined) delete input.industry;
-
-    const result = await generateSocialMediaCaption(input);
-    const userId = formData.get('userId') as string; 
     if (!userId) {
         return { error: "User ID is missing. Cannot save social media post."};
     }
-    await ensureUserBrandProfileDocExists(userId);
+    await ensureUserBrandProfileDocExists(userId, userEmail);
+
+    const result = await generateSocialMediaCaption(input);
     const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/socialMediaPosts`);
     await addDoc(firestoreCollectionRef, {
       caption: result.caption || "",
@@ -249,6 +259,9 @@ export async function handleGenerateBlogContentAction(
   formData: FormData
 ): Promise<FormState<{ title: string; content: string; tags: string }>> {
   try {
+    const userId = formData.get('userId') as string; 
+    const userEmail = formData.get('userEmail') as string | undefined;
+
     const input: GenerateBlogContentInput = {
       brandName: formData.get("brandName") as string,
       brandDescription: formData.get("blogBrandDescription") as string,
@@ -264,13 +277,12 @@ export async function handleGenerateBlogContentAction(
     }
     if (input.websiteUrl === "") delete input.websiteUrl;
     if (input.industry === "" || input.industry === undefined) delete input.industry;
-
-    const result = await generateBlogContent(input);
-    const userId = formData.get('userId') as string; 
     if (!userId) {
         return { error: "User ID is missing. Cannot save blog post."};
     }
-    await ensureUserBrandProfileDocExists(userId);
+    await ensureUserBrandProfileDocExists(userId, userEmail);
+
+    const result = await generateBlogContent(input);
     const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/blogPosts`);
     await addDoc(firestoreCollectionRef, {
       title: result.title || "Untitled",
@@ -290,6 +302,8 @@ export async function handleGenerateAdCampaignAction(
   formData: FormData
 ): Promise<FormState<GenerateAdCampaignOutput>> {
   try {
+    const userId = formData.get('userId') as string; 
+    const userEmail = formData.get('userEmail') as string | undefined;
     const platformsString = formData.get("platforms") as string;
     const platformsArray = platformsString ? platformsString.split(',').map(p => p.trim()).filter(p => p) as ('google_ads' | 'meta')[] : [];
 
@@ -321,13 +335,12 @@ export async function handleGenerateAdCampaignAction(
         return { error: "Inspirational content (selected or custom) cannot be empty."};
     }
     if (input.industry === "" || input.industry === undefined) delete input.industry;
-
-    const result = await generateAdCampaign(input);
-    const userId = formData.get('userId') as string; 
      if (!userId) {
         return { error: "User ID is missing. Cannot save ad campaign."};
     }
-    await ensureUserBrandProfileDocExists(userId);
+    await ensureUserBrandProfileDocExists(userId, userEmail);
+
+    const result = await generateAdCampaign(input);
     const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/adCampaigns`);
     await addDoc(firestoreCollectionRef, {
       campaignConcept: result.campaignConcept || "",
@@ -373,6 +386,7 @@ export async function handleSaveGeneratedImagesAction(
   console.log("handleSaveGeneratedImagesAction called");
   try {
     const userId = formData.get('userId') as string;
+    const userEmail = formData.get('userEmail') as string | undefined;
     console.log(`handleSaveGeneratedImagesAction: userId from formData: ${userId}`);
     const imagesToSaveString = formData.get('imagesToSaveJson') as string;
     if (!imagesToSaveString) {
@@ -401,9 +415,8 @@ export async function handleSaveGeneratedImagesAction(
       return { error: 'User not authenticated - User not logged in cannot save image.' };
     }
     
-    // Ensure the parent brand profile document exists using the userId as the brandProfileDocId
-    await ensureUserBrandProfileDocExists(userId);
-    const brandProfileDocId = userId; // Using userId for the brand profile doc id
+    await ensureUserBrandProfileDocExists(userId, userEmail);
+    const brandProfileDocId = userId; 
 
     let savedCount = 0;
     const saveErrors: string[] = [];
@@ -432,7 +445,6 @@ export async function handleSaveGeneratedImagesAction(
         if (image.dataUri.startsWith('data:image')) {
             const fileExtensionMatch = image.dataUri.match(/^data:image\/([a-zA-Z+]+);base64,/);
             const fileExtension = fileExtensionMatch ? fileExtensionMatch[1] : 'png';
-            // Use brandProfileDocId (which is userId) in the storage path for images
             const filePath = `users/${userId}/brandProfiles/${brandProfileDocId}/generatedLibraryImages/${Date.now()}_${generateFilenamePart()}.${fileExtension}`;
             const imageStorageRef = storageRef(storage, filePath);
 
@@ -456,7 +468,6 @@ export async function handleSaveGeneratedImagesAction(
             console.log(`handleSaveGeneratedImagesAction: Image is already an HTTPS URL, not uploading to storage: ${imageUrlToSave}`);
         }
 
-        // Save to the 'savedLibraryImages' subcollection under the user-specific brand profile document
         const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${brandProfileDocId}/savedLibraryImages`);
         try {
             await addDoc(firestoreCollectionRef, {
@@ -577,6 +588,9 @@ export async function handleGenerateBrandLogoAction(
   formData: FormData
 ): Promise<FormState<GenerateBrandLogoOutput>> {
   try {
+    const userId = formData.get('userId') as string; 
+    const userEmail = formData.get('userEmail') as string | undefined;
+
     const input: GenerateBrandLogoInput = {
       brandName: formData.get("brandName") as string,
       brandDescription: formData.get("brandDescription") as string,
@@ -589,17 +603,16 @@ export async function handleGenerateBrandLogoAction(
     }
      if (input.industry === "" || input.industry === undefined) delete input.industry;
      if (input.targetKeywords === "" || input.targetKeywords === undefined) delete input.targetKeywords;
-
-
-    const result = await generateBrandLogo(input);
-    const userId = formData.get('userId') as string; 
     if (!userId) {
         return { error: "User ID is missing. Cannot save brand logo."};
     }
-    await ensureUserBrandProfileDocExists(userId);
+    await ensureUserBrandProfileDocExists(userId, userEmail);
+
+
+    const result = await generateBrandLogo(input);
     const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/brandLogos`);
     await addDoc(firestoreCollectionRef, {
-      logoData: result.logoDataUri || "", // Storing data URI directly, consider storage if very large.
+      logoData: result.logoDataUri || "", 
       brandName: input.brandName,
       createdAt: serverTimestamp()
     });
@@ -612,14 +625,51 @@ export async function handleGenerateBrandLogoAction(
 
 export async function handleGenerateBrandForgeAppLogoAction(
   prevState: FormState<GenerateBrandForgeAppLogoOutput>,
-  formData: FormData // FormData is passed by useActionState but not used by this specific flow
+  formData: FormData 
 ): Promise<FormState<GenerateBrandForgeAppLogoOutput>> {
   try {
-    // No input needed from formData as the flow hardcodes BrandForge AI details
     const result = await generateBrandForgeAppLogo();
     return { data: result, message: "BrandForge AI application logo generated successfully!" };
   } catch (e: any) {
     console.error("Error in handleGenerateBrandForgeAppLogoAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
     return { error: `Failed to generate BrandForge AI app logo: ${e.message || "Unknown error. Check server logs."}` };
+  }
+}
+
+export async function handleGetAllUserProfilesForAdminAction(
+  prevState: FormState<UserProfileSelectItem[]>,
+  formData: FormData
+): Promise<FormState<UserProfileSelectItem[]>> {
+  const adminRequesterUid = formData.get('adminRequesterUid') as string;
+
+  // Basic admin check (replace with robust claims-based check in production)
+  if (adminRequesterUid !== ADMIN_USER_UID) {
+    console.error("handleGetAllUserProfilesForAdminAction: Unauthorized attempt by UID:", adminRequesterUid);
+    return { error: "Unauthorized: You do not have permission to perform this action." };
+  }
+
+  try {
+    const profiles: UserProfileSelectItem[] = [];
+    // Query the 'brandProfiles' collection group
+    const brandProfilesGroupRef = collectionGroup(db, 'brandProfiles');
+    const querySnapshot = await getDocs(brandProfilesGroupRef);
+    
+    querySnapshot.forEach((docSnap) => {
+      const data = docSnap.data() as BrandData;
+      // The document ID of a 'brandProfiles' doc IS the userId
+      const userId = docSnap.id; 
+      profiles.push({
+        userId: userId,
+        brandName: data.brandName || "Unnamed Brand",
+        userEmail: data.userEmail || "No Email",
+      });
+    });
+    
+    console.log(`Fetched ${profiles.length} user profiles for admin.`);
+    return { data: profiles, message: "User profiles fetched successfully." };
+
+  } catch (e: any) {
+    console.error("Error in handleGetAllUserProfilesForAdminAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
+    return { error: `Failed to fetch user profiles: ${e.message || "Unknown error. Check server logs."}` };
   }
 }

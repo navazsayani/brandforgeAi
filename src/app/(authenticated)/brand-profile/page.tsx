@@ -18,17 +18,17 @@ import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
-import { UserCircle, LinkIcon, FileText, UploadCloud, Tag, Brain, Loader2, Trash2, Edit, Briefcase, Image as ImageIconLucide, Sparkles, Star, ShieldCheck, UserSearch } from 'lucide-react';
+import { UserCircle, LinkIcon, FileText, UploadCloud, Tag, Brain, Loader2, Trash2, Edit, Briefcase, Image as ImageIconLucide, Sparkles, Star, ShieldCheck, UserSearch, Users } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { handleExtractBrandInfoFromUrlAction, handleGenerateBrandLogoAction, type FormState as ExtractFormState, type FormState as GenerateLogoFormState } from '@/lib/actions';
-import { storage, db } from '@/lib/firebaseConfig'; // Added db
+import { handleExtractBrandInfoFromUrlAction, handleGenerateBrandLogoAction, handleGetAllUserProfilesForAdminAction, type FormState as ExtractFormState, type FormState as GenerateLogoFormState, type FormState as AdminFetchProfilesState } from '@/lib/actions';
+import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject, uploadString } from 'firebase/storage';
-import { doc, getDoc, setDoc } from 'firebase/firestore'; // Added doc, getDoc, setDoc
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { SubmitButton } from '@/components/SubmitButton';
 import type { GenerateBrandLogoOutput } from '@/ai/flows/generate-brand-logo-flow';
 import { industries } from '@/lib/constants';
-import type { BrandData } from '@/types';
+import type { BrandData, UserProfileSelectItem } from '@/types';
 
 const MAX_IMAGES_PREMIUM = 5;
 const MAX_IMAGES_FREE = 2;
@@ -47,6 +47,7 @@ const brandProfileSchema = z.object({
     z.literal('').optional()
   ]).optional(),
   plan: z.enum(['free', 'premium']).optional(),
+  userEmail: z.string().email().optional().or(z.literal('')), // Added userEmail
 });
 
 type BrandProfileFormData = z.infer<typeof brandProfileSchema>;
@@ -61,10 +62,12 @@ const defaultFormValues: BrandProfileFormData = {
   targetKeywords: "",
   brandLogoUrl: "",
   plan: 'free',
+  userEmail: "",
 };
 
 const initialExtractState: ExtractFormState<{ brandDescription: string; targetKeywords: string; }> = { error: undefined, data: undefined, message: undefined };
 const initialGenerateLogoState: GenerateLogoFormState<GenerateBrandLogoOutput> = { error: undefined, data: undefined, message: undefined };
+const initialAdminFetchProfilesState: AdminFetchProfilesState<UserProfileSelectItem[]> = { error: undefined, data: undefined, message: undefined };
 
 export default function BrandProfilePage() {
   const { currentUser, isLoading: isAuthLoading } = useAuth();
@@ -73,9 +76,10 @@ export default function BrandProfilePage() {
 
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [adminTargetUserId, setAdminTargetUserId] = useState<string>("");
-  const [adminInputUserId, setAdminInputUserId] = useState<string>("");
+  const [adminSelectedUserIdFromDropdown, setAdminSelectedUserIdFromDropdown] = useState<string>("");
   const [adminLoadedProfileData, setAdminLoadedProfileData] = useState<BrandData | null>(null);
   const [isAdminLoadingTargetProfile, setIsAdminLoadingTargetProfile] = useState<boolean>(false);
+  const [userProfilesForAdmin, setUserProfilesForAdmin] = useState<UserProfileSelectItem[]>([]);
 
   const [previewImages, setPreviewImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -91,6 +95,10 @@ export default function BrandProfilePage() {
   const [isGeneratingLogo, setIsGeneratingLogo] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [logoUploadProgress, setLogoUploadProgress] = useState(0);
+  
+  const [adminFetchProfilesServerState, adminFetchProfilesAction] = useActionState(handleGetAllUserProfilesForAdminAction, initialAdminFetchProfilesState);
+  const [isLoadingAdminProfiles, setIsLoadingAdminProfiles] = useState(false);
+
 
   const currentProfileBeingEdited = isAdmin && adminTargetUserId && adminLoadedProfileData ? adminLoadedProfileData : contextBrandData;
   const effectiveUserIdForStorage = isAdmin && adminTargetUserId ? adminTargetUserId : currentUser?.uid;
@@ -105,41 +113,65 @@ export default function BrandProfilePage() {
       setIsAdmin(true);
     } else {
       setIsAdmin(false);
-      setAdminTargetUserId(""); // Clear target if not admin
+      setAdminTargetUserId(""); 
       setAdminLoadedProfileData(null);
+      setUserProfilesForAdmin([]);
     }
   }, [currentUser]);
+  
+  useEffect(() => {
+    if (isAdmin && currentUser?.uid) {
+      setIsLoadingAdminProfiles(true);
+      const formData = new FormData();
+      formData.append('adminRequesterUid', currentUser.uid); // Pass admin's UID for server-side verification
+      startTransition(() => {
+        adminFetchProfilesAction(formData);
+      });
+    }
+  }, [isAdmin, currentUser, adminFetchProfilesAction]);
+
+  useEffect(() => {
+    setIsLoadingAdminProfiles(false);
+    if (adminFetchProfilesServerState.data) {
+      setUserProfilesForAdmin(adminFetchProfilesServerState.data);
+    }
+    if (adminFetchProfilesServerState.error) {
+      toast({ title: "Error Fetching User Profiles", description: adminFetchProfilesServerState.error, variant: "destructive"});
+    }
+  }, [adminFetchProfilesServerState, toast]);
+
 
   useEffect(() => {
     const dataToDisplay = isAdmin && adminTargetUserId && adminLoadedProfileData ? adminLoadedProfileData : contextBrandData;
     if (dataToDisplay) {
       const industryValue = dataToDisplay.industry && dataToDisplay.industry.trim() !== "" ? dataToDisplay.industry : "_none_";
       const planValue = dataToDisplay.plan && ['free', 'premium'].includes(dataToDisplay.plan) ? dataToDisplay.plan : 'free';
-      const exampleImagesArray = Array.isArray(dataToDisplay.exampleImages) ? dataToDisplay.exampleImages : [];
+      const emailValue = dataToDisplay.userEmail || (currentUser?.email && dataToDisplay === contextBrandData ? currentUser.email : "");
       
       const currentMaxImages = planValue === 'premium' ? MAX_IMAGES_PREMIUM : MAX_IMAGES_FREE;
+      const exampleImagesArray = Array.isArray(dataToDisplay.exampleImages) ? dataToDisplay.exampleImages.slice(0, currentMaxImages) : [];
 
       const currentData = {
         ...defaultFormValues,
         ...dataToDisplay,
         industry: industryValue,
-        exampleImages: exampleImagesArray.slice(0, currentMaxImages),
+        exampleImages: exampleImagesArray,
         plan: planValue,
+        userEmail: emailValue,
       };
       form.reset(currentData);
       setPreviewImages(currentData.exampleImages);
       setSelectedFileNames(currentData.exampleImages.map((_, i) => `Saved image ${i + 1}`));
-      // Reset generated logo preview when profile changes, unless it's part of current form state
       if (form.getValues("brandLogoUrl") !== generatedLogoPreview) {
         setGeneratedLogoPreview(null);
       }
     } else if (!isBrandContextLoading && !isAdminLoadingTargetProfile) {
-      form.reset(defaultFormValues);
+      form.reset({...defaultFormValues, userEmail: currentUser?.email || ""});
       setPreviewImages([]);
       setSelectedFileNames([]);
       setGeneratedLogoPreview(null);
     }
-  }, [adminTargetUserId, adminLoadedProfileData, contextBrandData, form, isBrandContextLoading, isAdminLoadingTargetProfile]);
+  }, [adminTargetUserId, adminLoadedProfileData, contextBrandData, form, isBrandContextLoading, isAdminLoadingTargetProfile, currentUser]);
 
 
   useEffect(() => {
@@ -167,23 +199,24 @@ export default function BrandProfilePage() {
     if (generateLogoState.error) toast({ title: "Logo Gen Error", description: generateLogoState.error, variant: "destructive" });
   }, [generateLogoState, toast]);
 
-  const handleAdminLoadTargetUserProfile = async () => {
-    if (!adminInputUserId.trim()) {
-      toast({ title: "Missing User ID", description: "Please enter a User ID to load.", variant: "destructive" });
+  const handleAdminLoadTargetUserProfile = async (targetUid?: string) => {
+    const uidToLoad = targetUid || adminSelectedUserIdFromDropdown;
+    if (!uidToLoad.trim()) {
+      toast({ title: "Missing User ID", description: "Please select a user to load.", variant: "destructive" });
       return;
     }
     setIsAdminLoadingTargetProfile(true);
-    setAdminLoadedProfileData(null); // Clear previous loaded data
+    setAdminLoadedProfileData(null); 
     try {
-      const targetUserDocRef = doc(db, "users", adminInputUserId, "brandProfiles", adminInputUserId);
+      const targetUserDocRef = doc(db, "users", uidToLoad, "brandProfiles", uidToLoad);
       const docSnap = await getDoc(targetUserDocRef);
       if (docSnap.exists()) {
         setAdminLoadedProfileData(docSnap.data() as BrandData);
-        setAdminTargetUserId(adminInputUserId); // Set the target ID for editing context
-        toast({ title: "Profile Loaded", description: `Displaying profile for User ID: ${adminInputUserId.substring(0, 8)}...` });
+        setAdminTargetUserId(uidToLoad); 
+        toast({ title: "Profile Loaded", description: `Displaying profile for User: ${docSnap.data()?.userEmail || uidToLoad.substring(0,8)}...` });
       } else {
-        toast({ title: "Not Found", description: `No profile found for User ID: ${adminInputUserId}`, variant: "destructive" });
-        setAdminTargetUserId(""); // Clear target if not found
+        toast({ title: "Not Found", description: `No profile found for User ID: ${uidToLoad}`, variant: "destructive" });
+        setAdminTargetUserId(""); 
       }
     } catch (error: any) {
       toast({ title: "Load Error", description: `Failed to load profile: ${error.message}`, variant: "destructive" });
@@ -193,11 +226,18 @@ export default function BrandProfilePage() {
     }
   };
   
+  useEffect(() => {
+    if (adminSelectedUserIdFromDropdown && adminSelectedUserIdFromDropdown !== adminTargetUserId) {
+        handleAdminLoadTargetUserProfile(adminSelectedUserIdFromDropdown);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adminSelectedUserIdFromDropdown]);
+
+
   const handleAdminLoadMyProfile = () => {
       setAdminTargetUserId("");
       setAdminLoadedProfileData(null);
-      setAdminInputUserId(""); // Clear the input field
-      // Form will auto-reset due to useEffect watching adminTargetUserId
+      setAdminSelectedUserIdFromDropdown(""); 
       toast({ title: "My Profile", description: "Displaying your own brand profile." });
   };
 
@@ -232,6 +272,11 @@ export default function BrandProfilePage() {
     if (industry) formData.append("industry", industry);
     if (targetKeywords) formData.append("targetKeywords", targetKeywords);
     if (effectiveUserIdForStorage) formData.append("userId", effectiveUserIdForStorage);
+    // Add userEmail if creating logo for own profile, or if admin is creating for user and email is known
+    const profileBeingEdited = isAdmin && adminTargetUserId && adminLoadedProfileData ? adminLoadedProfileData : contextBrandData;
+    const emailForLogoAction = profileBeingEdited?.userEmail || (currentUser?.uid === effectiveUserIdForStorage ? currentUser?.email : undefined);
+    if (emailForLogoAction) formData.append("userEmail", emailForLogoAction);
+
 
     startTransition(() => generateLogoAction(formData));
   };
@@ -296,8 +341,8 @@ export default function BrandProfilePage() {
         toast({ title: "Images Uploaded", description: `${successfullyUploadedURLs.length} image(s) ready. Save profile.` });
       } catch (error: any) {
         toast({ title: "Uploads Failed", description: `Not all images uploaded: ${error.message}`, variant: "destructive" });
-        const stillValidImages = form.getValues("exampleImages") || []; // Re-fetch potentially partially updated form values
-        setPreviewImages(stillValidImages); // Reset previews to what's actually in form
+        const stillValidImages = form.getValues("exampleImages") || []; 
+        setPreviewImages(stillValidImages); 
         setSelectedFileNames(stillValidImages.map((_,i) => `Saved image ${i+1}`));
       } finally {
         setIsUploading(false);
@@ -323,7 +368,7 @@ export default function BrandProfilePage() {
       toast({ title: "Image Deleted", description: "Image removed. Save profile." });
     } catch (error: any) {
       toast({ title: "Deletion Error", description: `Failed to delete from storage: ${error.message}. Reverting.`, variant: "destructive" });
-      form.setValue("exampleImages", currentImages, { shouldValidate: true }); // Revert
+      form.setValue("exampleImages", currentImages, { shouldValidate: true }); 
       setPreviewImages(currentImages);
       setSelectedFileNames(currentImages.map((_,i) => `Saved image ${i+1}`));
     }
@@ -338,16 +383,22 @@ export default function BrandProfilePage() {
       return;
     }
 
-    // Ensure plan is correctly set for the profile being saved
-    finalData.plan = form.getValues('plan'); // Take the plan from the form (editable by admin)
-
+    finalData.plan = form.getValues('plan'); 
     const currentImages = finalData.exampleImages || [];
     if (currentImages.length > maxImagesAllowed) {
         finalData.exampleImages = currentImages.slice(0, maxImagesAllowed);
         toast({ title: "Image Limit Adjusted", description: `Images adjusted to ${maxImagesAllowed} for plan.`, variant: "default" });
     }
 
-    if (generatedLogoPreview) finalData.brandLogoUrl = ""; // Clear if new logo is being uploaded
+    // Ensure userEmail is set correctly
+    if (!isAdmin || (isAdmin && userIdToSaveFor === currentUser?.uid)) { // Saving own profile (as admin or regular user)
+      finalData.userEmail = currentUser?.email || "";
+    } else if (isAdmin && adminTargetUserId && adminLoadedProfileData) { // Admin saving another user's profile
+      finalData.userEmail = adminLoadedProfileData.userEmail || ""; // Preserve loaded email
+    }
+
+
+    if (generatedLogoPreview) finalData.brandLogoUrl = ""; 
 
     setIsUploadingLogo(true);
     setLogoUploadProgress(0);
@@ -367,16 +418,15 @@ export default function BrandProfilePage() {
         if (progressInterval) clearInterval(progressInterval);
         setIsUploadingLogo(false); setLogoUploadProgress(0);
         toast({ title: "Logo Upload Error", description: `Failed to upload logo: ${error.message}. Profile saved without new logo.`, variant: "destructive" });
-        delete finalData.brandLogoUrl; // Save profile without new logo if upload failed
+        delete finalData.brandLogoUrl; 
       }
     }
 
     try {
-      if (isAdmin && adminTargetUserId) { // Admin saving another user's profile
-        const targetUserDocRef = doc(db, "users", adminTargetUserId, "brandProfiles", adminTargetUserId);
-        await setDoc(targetUserDocRef, finalData, { merge: true });
-        setAdminLoadedProfileData(finalData); // Update admin's view of this profile
-      } else if (currentUser) { // Non-admin saving their own, or admin saving their own via main form
+      if (isAdmin && adminTargetUserId) { 
+        await setContextBrandData(finalData, adminTargetUserId); // Using context function ensures consistency
+        setAdminLoadedProfileData(finalData); 
+      } else if (currentUser) { 
         await setContextBrandData(finalData, currentUser.uid);
       }
       toast({ title: "Brand Profile Saved", description: "Information saved successfully." });
@@ -398,9 +448,10 @@ export default function BrandProfilePage() {
   
   const currentLogoToDisplay = generatedLogoPreview || currentProfileBeingEdited?.brandLogoUrl;
   const canUploadMoreImages = (form.getValues("exampleImages")?.length || 0) < maxImagesAllowed;
+  
   const isEditingOwnProfileAsAdmin = isAdmin && adminTargetUserId === currentUser?.uid;
-  const displayTitle = isAdmin && adminTargetUserId ? 
-    (isEditingOwnProfileAsAdmin ? "Brand Profile (Editing My Profile as Admin)" : `Editing Profile for User: ${adminTargetUserId.substring(0,8)}...`) : 
+  const displayTitleText = isAdmin && adminTargetUserId ? 
+    (isEditingOwnProfileAsAdmin ? "Brand Profile (Editing My Profile as Admin)" : `Editing Profile for: ${currentProfileBeingEdited?.userEmail || adminTargetUserId.substring(0,8)}...`) : 
     "Brand Profile";
 
   return (
@@ -414,17 +465,35 @@ export default function BrandProfilePage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center space-x-2">
-                <Input
-                  type="text"
-                  placeholder="Enter User ID to load"
-                  value={adminInputUserId}
-                  onChange={(e) => setAdminInputUserId(e.target.value)}
-                  disabled={isAdminLoadingTargetProfile}
-                  className="flex-grow"
-                />
-                <Button onClick={handleAdminLoadTargetUserProfile} disabled={isAdminLoadingTargetProfile || !adminInputUserId.trim()} size="sm">
-                  {isAdminLoadingTargetProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserSearch className="h-4 w-4"/>}
-                </Button>
+                <Select
+                  value={adminSelectedUserIdFromDropdown}
+                  onValueChange={(value) => {
+                    setAdminSelectedUserIdFromDropdown(value);
+                    // Optional: trigger load immediately, or rely on useEffect
+                    // if (value) handleAdminLoadTargetUserProfile(value);
+                  }}
+                  disabled={isLoadingAdminProfiles || isAdminLoadingTargetProfile}
+                >
+                  <SelectTrigger className="flex-grow">
+                    <SelectValue placeholder={isLoadingAdminProfiles ? "Loading users..." : "Select a user to load/edit"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Users</SelectLabel>
+                      {isLoadingAdminProfiles && <SelectItem value="loading" disabled>Loading users...</SelectItem>}
+                      {!isLoadingAdminProfiles && userProfilesForAdmin.length === 0 && <SelectItem value="nousers" disabled>No user profiles found.</SelectItem>}
+                      {userProfilesForAdmin.map(profile => (
+                        <SelectItem key={profile.userId} value={profile.userId}>
+                          {profile.brandName || "Unnamed Brand"} - ({profile.userEmail || profile.userId.substring(0,8)+"..."})
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                {/* The load button is now less critical if selection triggers load, but can be kept for explicit action */}
+                {/* <Button onClick={() => handleAdminLoadTargetUserProfile()} disabled={isAdminLoadingTargetProfile || !adminSelectedUserIdFromDropdown} size="sm">
+                  {isAdminLoadingTargetProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserSearch className="h-4 w-4"/>} Load
+                </Button> */}
               </div>
               {adminTargetUserId && (
                 <Button onClick={handleAdminLoadMyProfile} variant="outline" size="sm" className="w-full">
@@ -440,7 +509,7 @@ export default function BrandProfilePage() {
             <div className="flex items-center space-x-3">
               <UserCircle className="w-10 h-10 text-primary" />
               <div>
-                <CardTitle className="text-3xl font-bold break-words">{displayTitle}</CardTitle>
+                <CardTitle className="text-3xl font-bold break-words">{displayTitleText}</CardTitle>
                 <CardDescription className="text-lg break-words">
                   Define the identity. Fuels AI for content and campaigns.
                 </CardDescription>
@@ -457,6 +526,18 @@ export default function BrandProfilePage() {
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><UserCircle className="w-5 h-5 mr-2 text-primary"/>Brand Name <span className="text-destructive ml-1">*</span></FormLabel>
                       <FormControl><Input placeholder="Acme Innovations" {...field} disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="userEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center text-base"><Users className="w-5 h-5 mr-2 text-primary"/>User Email</FormLabel>
+                      <FormControl><Input type="email" placeholder="user@example.com" {...field} disabled={true} /></FormControl>
+                      <FormDescription>User's email address (read-only).</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -613,7 +694,7 @@ export default function BrandProfilePage() {
               form="brandProfileFormReal"
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
               size="lg"
-              disabled={isAuthLoading || isBrandContextLoading || isAdminLoadingTargetProfile || form.formState.isSubmitting || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo}
+              disabled={isAuthLoading || isBrandContextLoading || isAdminLoadingTargetProfile || form.formState.isSubmitting || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isLoadingAdminProfiles}
             >
               {(isUploadingLogo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null)}
               {isUploadingLogo ? 'Uploading & Saving...' : (isUploading ? 'Uploading Image(s)...' : (isAuthLoading || isBrandContextLoading || isAdminLoadingTargetProfile ? 'Loading...' : (form.formState.isSubmitting ? 'Saving...' : (isExtracting ? 'Extracting...' : 'Save Brand Profile'))))}
