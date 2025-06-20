@@ -384,10 +384,19 @@ export async function handleSaveGeneratedImagesAction(
   formData: FormData
 ): Promise<FormState<{savedCount: number}>> {
   console.log("handleSaveGeneratedImagesAction called");
+  const userId = formData.get('userId') as string;
+  const userEmail = formData.get('userEmail') as string | undefined; 
+  console.log(`handleSaveGeneratedImagesAction: userId from formData: '${userId}', userEmail: '${userEmail}'`);
+
+  if (!userId || typeof userId !== 'string') {
+    console.error('handleSaveGeneratedImagesAction: User not authenticated - userId is missing or invalid.');
+    return { error: 'User not authenticated - User not logged in cannot save image.' };
+  }
+
   try {
-    const userId = formData.get('userId') as string;
-    const userEmail = formData.get('userEmail') as string | undefined; // Not strictly needed here but good for ensureUser...
-    console.log(`handleSaveGeneratedImagesAction: userId from formData: ${userId}`);
+    await ensureUserBrandProfileDocExists(userId, userEmail);
+    console.log(`handleSaveGeneratedImagesAction: Ensured brand profile doc exists for userId: ${userId}`);
+    
     const imagesToSaveString = formData.get('imagesToSaveJson') as string;
     if (!imagesToSaveString) {
       const errorMsg = "No image data received from the client (imagesToSaveJson is missing).";
@@ -409,15 +418,8 @@ export async function handleSaveGeneratedImagesAction(
       console.error(`handleSaveGeneratedImagesAction: ${errorMsg}. Parsed data:`, imagesToSave);
       return { error: errorMsg };
     }
-
-    if (!userId || typeof userId !== 'string') {
-      console.error('handleSaveGeneratedImagesAction: User not authenticated - userId is missing or invalid.');
-      return { error: 'User not authenticated - User not logged in cannot save image.' };
-    }
     
-    await ensureUserBrandProfileDocExists(userId, userEmail);
     const brandProfileDocId = userId; 
-
     let savedCount = 0;
     const saveErrors: string[] = [];
 
@@ -456,7 +458,7 @@ export async function handleSaveGeneratedImagesAction(
                 console.log(`handleSaveGeneratedImagesAction: Obtained download URL: ${imageUrlToSave}`);
             } catch (uploadError: any) {
                 const uploadErrorDetail = `Failed to upload image to Firebase Storage for prompt "${promptSnippet}": ${uploadError.message}. Code: ${uploadError.code}. Path: ${filePath}`;
-                console.error(`handleSaveGeneratedImagesAction: ${uploadErrorDetail}`, JSON.stringify(uploadError, Object.getOwnPropertyNames(uploadError)));
+                console.error(`handleSaveGeneratedImagesAction Storage Upload Error: ${uploadErrorDetail}`, JSON.stringify(uploadError, Object.getOwnPropertyNames(uploadError)));
                 saveErrors.push(uploadErrorDetail);
                 continue;
             }
@@ -468,7 +470,9 @@ export async function handleSaveGeneratedImagesAction(
             console.log(`handleSaveGeneratedImagesAction: Image is already an HTTPS URL, not uploading to storage: ${imageUrlToSave}`);
         }
 
-        const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${brandProfileDocId}/savedLibraryImages`);
+        const firestoreCollectionPath = `users/${userId}/brandProfiles/${brandProfileDocId}/savedLibraryImages`;
+        console.log(`handleSaveGeneratedImagesAction: Preparing to write to Firestore path: ${firestoreCollectionPath}`);
+        const firestoreCollectionRef = collection(db, firestoreCollectionPath);
         try {
             await addDoc(firestoreCollectionRef, {
                 storageUrl: imageUrlToSave,
@@ -479,8 +483,8 @@ export async function handleSaveGeneratedImagesAction(
             console.log(`handleSaveGeneratedImagesAction: Successfully saved image metadata to Firestore for URL: ${imageUrlToSave}`);
             savedCount++;
         } catch (firestoreError: any) {
-            const firestoreErrorDetail = `Failed to save image metadata to Firestore for prompt "${promptSnippet}": ${firestoreError.message}. Code: ${firestoreError.code}. Path: ${firestoreCollectionRef.path}`;
-            console.error(`handleSaveGeneratedImagesAction: ${firestoreErrorDetail}`, JSON.stringify(firestoreError, Object.getOwnPropertyNames(firestoreError)));
+            const firestoreErrorDetail = `Failed to save image metadata to Firestore for prompt "${promptSnippet}": ${firestoreError.message}. Code: ${firestoreError.code}. Path: ${firestoreCollectionPath}`;
+            console.error(`handleSaveGeneratedImagesAction Firestore Write Error: ${firestoreErrorDetail}`, JSON.stringify(firestoreError, Object.getOwnPropertyNames(firestoreError)));
             saveErrors.push(firestoreErrorDetail);
             continue;
         }
@@ -497,7 +501,7 @@ export async function handleSaveGeneratedImagesAction(
         }
       } catch (e: any) {
         const specificError = `Failed to save image (prompt: ${promptSnippet}): ${(e as Error).message?.substring(0,100)}`;
-        console.error(`handleSaveGeneratedImagesAction: ${specificError}. Full error:`, JSON.stringify(e, Object.getOwnPropertyNames(e)));
+        console.error(`handleSaveGeneratedImagesAction Loop Error: ${specificError}. Full error:`, JSON.stringify(e, Object.getOwnPropertyNames(e)));
         saveErrors.push(specificError);
         continue;
       }
@@ -513,8 +517,8 @@ export async function handleSaveGeneratedImagesAction(
       return { error: "No images were processed or saved. This might be due to an issue with the input data or no images being selected."};
     }
   } catch (e: any) {
-      const criticalErrorMsg = `A critical server error occurred during image saving: ${e.message || "Unknown error"}. Please check server logs.`;
-      console.error("Critical error in handleSaveGeneratedImagesAction (outside loop):", JSON.stringify(e, Object.getOwnPropertyNames(e), 2));
+      const criticalErrorMsg = `A critical server error occurred during image saving: ${e.message || "Unknown error"}. Please check server logs. UserId used: '${userId}'`;
+      console.error("Critical error in handleSaveGeneratedImagesAction (outer try-catch):", JSON.stringify(e, Object.getOwnPropertyNames(e), 2), `UserId: '${userId}'`);
       return { error: criticalErrorMsg };
   }
 }
@@ -673,3 +677,4 @@ export async function handleGetAllUserProfilesForAdminAction(
     return { error: `Failed to fetch user profiles: ${e.message || "Unknown error. Check server logs."}` };
   }
 }
+

@@ -53,7 +53,7 @@ const ImprovedImageGrid = ({
     : 'grid-cols-1';
 
   return (
-    <div className={`grid gap-4 ${gridClass} ${className}`}>
+    <div className={cn('grid gap-4 w-full', gridClass, className)}>
       {imageUrls.map((url, index) => (
         <ImageGridItem 
           key={url || index} 
@@ -154,7 +154,7 @@ const ImageGridItem = ({
               src={displayUrl}
               alt={`Generated brand image ${index + 1}`}
               fill
-              sizes="(max-width: 640px) 90vw, (max-width: 768px) 45vw, (max-width: 1024px) 30vw, 22vw"
+              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
               style={{objectFit: 'cover', objectPosition: 'center'}}
               data-ai-hint="brand marketing"
               className="transition-opacity duration-300 opacity-100 group-hover:opacity-80"
@@ -375,7 +375,7 @@ export default function ContentStudioPage() {
       setIsAdmin(true);
     } else {
       setIsAdmin(false);
-      setSelectedImageProvider("GEMINI");
+      setSelectedImageProvider("GEMINI"); // Ensure non-admins default to GEMINI
     }
   }, [currentUser]);
 
@@ -1037,7 +1037,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
             <CardHeader>
               <CardTitle>Generate Brand Images</CardTitle>
               <p className="text-sm text-muted-foreground">Create unique images. Uses brand description and style. Optionally use an example image from your Brand Profile.</p>
-                {lastUsedImageProvider && <p className="text-xs text-primary mt-1">Image(s) last generated using: {isAdmin ? lastUsedImageProvider : 'Gemini (Google AI)'}</p>}
+                {lastUsedImageProvider && <p className="text-xs text-primary mt-1">Image(s) last generated using: {!isAdmin ? 'Gemini (Google AI)' : lastUsedImageProvider}</p>}
             </CardHeader>
             {isAdmin && isPreviewingPrompt ? (
               <form onSubmit={handleImageGenerationSubmit}>
@@ -1343,8 +1343,11 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                         className="w-full" 
                         loadingText={parseInt(numberOfImagesToGenerate,10) > 1 ? "Generating Images..." : "Generating Image..."}
                         type="submit" 
+                        disabled={!isAdmin && currentPlan === 'free' && selectedImageProvider === 'FREEPIK'}
                     >
+                         {(!isAdmin && currentPlan === 'free' && selectedImageProvider === 'FREEPIK') ? <Lock className="mr-2 h-4 w-4" /> : null}
                         Generate {parseInt(numberOfImagesToGenerate,10) > 1 ? `${numberOfImagesToGenerate} Images` : "Image"}
+                        {(!isAdmin && currentPlan === 'free' && selectedImageProvider === 'FREEPIK') ? '(Premium Feature)' : ''}
                     </SubmitButton>
                   )}
                 </CardFooter>
@@ -1352,13 +1355,13 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
             )} 
 
             {lastSuccessfulGeneratedImageUrls.length > 0 && (
-              <Card className="mt-6 mx-4 mb-4 shadow-sm">
+              <Card className="mt-6 mb-4 shadow-sm"> {/* Removed mx-4 */}
                   <CardHeader>
                       <div className="flex justify-between items-center">
                           <CardTitle className="text-xl flex items-center">
                               <ImageIcon className="w-5 h-5 mr-2 text-primary" />
                               Generated Image{lastSuccessfulGeneratedImageUrls.length > 1 ? 's' : ''}
-                              {lastUsedImageProvider && <span className="text-xs text-muted-foreground ml-2">(via {isAdmin ? lastUsedImageProvider : 'Gemini (Google AI)'})</span>}
+                              {lastUsedImageProvider && <span className="text-xs text-muted-foreground ml-2">(via {!isAdmin ? 'Gemini (Google AI)' : lastUsedImageProvider})</span>}
                           </CardTitle>
                           <div className="flex items-center gap-2">
                               {lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url.startsWith('image_url:')) && (
@@ -1382,6 +1385,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                     <ImprovedImageGrid 
                         imageUrls={lastSuccessfulGeneratedImageUrls}
                         onDownload={downloadImage}
+                        className="w-full"
                     />
                     {isAdmin && lastUsedImageGenPrompt && ( 
                       <div className="mt-4">
