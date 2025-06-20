@@ -3,7 +3,7 @@
 
 import type { ReactNode, Dispatch, SetStateAction } from 'react';
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { onAuthStateChanged, type User, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { onAuthStateChanged, type User, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from '@/lib/firebaseConfig';
 import type { FirebaseError } from 'firebase/app';
 import { useRouter } from 'next/navigation';
@@ -15,6 +15,7 @@ interface AuthContextType {
   error: string | null;
   signUp: (email: string, pass: string) => Promise<User | null>;
   logIn: (email: string, pass: string) => Promise<User | null>;
+  signInWithGoogle: () => Promise<User | null>; // Added
   logOut: () => Promise<void>;
   setError: Dispatch<SetStateAction<string | null>>;
 }
@@ -33,9 +34,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(firebaseUser);
       setCurrentUser(firebaseUser);
       setIsLoading(false);
+      if (firebaseUser) {
+        // If user is authenticated, and they are on login/signup, redirect to dashboard
+        if (router.pathname === '/login' || router.pathname === '/signup') {
+          router.push('/dashboard');
+        }
+      }
     });
     return () => unsubscribe();
-  }, []);
+  }, [router]);
 
   const signUp = async (email: string, pass: string): Promise<User | null> => {
     setIsLoading(true);
@@ -71,12 +78,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const signInWithGoogle = async (): Promise<User | null> => {
+    setIsLoading(true);
+    setError(null);
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      setUser(result.user);
+      // The onAuthStateChanged listener will handle redirecting to dashboard
+      return result.user;
+    } catch (e) {
+      const firebaseError = e as FirebaseError;
+      console.error("Google sign-in error:", firebaseError);
+      // Handle specific Google Sign-In errors
+      if (firebaseError.code === 'auth/popup-closed-by-user') {
+        setError("Sign-in process was cancelled. Please try again.");
+      } else if (firebaseError.code === 'auth/account-exists-with-different-credential') {
+        setError("An account already exists with this email address. Please sign in using the original method.");
+      } else {
+        setError(firebaseError.message || "Failed to sign in with Google.");
+      }
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logOut = async (): Promise<void> => {
     setIsLoading(true);
     setError(null);
     try {
       await signOut(auth);
       setUser(null);
+      setCurrentUser(null); // Ensure currentUser is also cleared
       router.push('/login'); // Redirect to login after logout
     } catch (e) {
       const firebaseError = e as FirebaseError;
@@ -94,8 +128,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     error,
     signUp,
     logIn,
+    signInWithGoogle, // Added
     logOut,
     setError
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [user, currentUser, isLoading, error]);
 
   return (

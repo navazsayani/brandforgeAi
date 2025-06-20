@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm, type SubmitHandler } from 'react-hook-form';
@@ -9,13 +9,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui/label'; // Not directly used, but FormLabel is
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useAuth } from '@/contexts/AuthContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, UserPlus, Sparkles } from 'lucide-react';
+import { AlertCircle, UserPlus, Sparkles, Loader2 } from 'lucide-react';
 import { SubmitButton } from '@/components/SubmitButton';
+import NextImage from 'next/image'; // For Google icon
 
 const signupSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -29,9 +30,9 @@ const signupSchema = z.object({
 type SignupFormValues = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
-  const { signUp, error: authError, setError: setAuthError, isLoading } = useAuth();
+  const { user: authUser, signUp, signInWithGoogle, error: authError, setError: setAuthError, isLoading } = useAuth();
   const router = useRouter();
-  const [formError, setFormError] = useState<string | null>(null);
+  // const [formError, setFormError] = useState<string | null>(null); // Using authError directly
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -42,14 +43,28 @@ export default function SignupPage() {
     },
   });
 
+  useEffect(() => {
+    if (authUser && !isLoading) {
+      router.push('/dashboard');
+    }
+  }, [authUser, isLoading, router]);
+
   const onSubmit: SubmitHandler<SignupFormValues> = async (data) => {
-    setFormError(null);
+    // setFormError(null);
     setAuthError(null); 
     const user = await signUp(data.email, data.password);
     if (user) {
-      router.push('/dashboard'); // Redirect to dashboard on successful signup
+      // router.push('/dashboard'); // Redirect handled by useEffect in AuthContext now
     } else {
       // authError from context will be set by signUp function
+    }
+  };
+
+  const handleGoogleSignUp = async () => {
+    setAuthError(null);
+    const user = await signInWithGoogle();
+    if (user) {
+      // router.push('/dashboard'); // Redirect handled by useEffect in AuthContext now
     }
   };
 
@@ -68,7 +83,7 @@ export default function SignupPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
                   control={form.control}
                   name="email"
@@ -124,11 +139,11 @@ export default function SignupPage() {
                   )}
                 />
 
-                {(authError || formError) && (
+                {authError && ( // Combined formError and authError
                   <Alert variant="destructive" className="animate-fade-in">
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>Signup Failed</AlertTitle>
-                    <AlertDescription className="text-break">{authError || formError}</AlertDescription>
+                    <AlertDescription className="text-break">{authError}</AlertDescription>
                   </Alert>
                 )}
 
@@ -137,10 +152,33 @@ export default function SignupPage() {
                   loadingText="Creating Account..." 
                   disabled={isLoading}
                 >
-                  <UserPlus className="mr-2 h-5 w-5" /> Sign Up
+                  <UserPlus className="mr-2 h-5 w-5" /> Sign Up with Email
                 </SubmitButton>
               </form>
             </Form>
+             <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or continue with
+                </span>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              className="w-full touch-target focus-enhanced hover:bg-muted/50"
+              onClick={handleGoogleSignUp}
+              disabled={isLoading}
+            >
+               {isLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <NextImage src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google icon" width={18} height={18} className="mr-2" data-ai-hint="Google logo" />
+              )}
+              Sign up with Google
+            </Button>
           </CardContent>
           <CardFooter className="flex flex-col items-center space-y-2 pt-4">
             <p className="text-responsive-sm text-muted-foreground text-break">
