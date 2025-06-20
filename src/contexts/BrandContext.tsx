@@ -3,7 +3,7 @@
 
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore'; // Added deleteDoc for potential future use
 import { db } from '@/lib/firebaseConfig';
 import type { BrandData, GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign } from '@/types';
 import { useAuth } from './AuthContext'; 
@@ -60,7 +60,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchBrandDataCB = useCallback(async () => {
     if (!currentUser) {
-      setBrandDataState(defaultEmptyBrandData); // Use default if no user, includes default plan
+      setBrandDataState(defaultEmptyBrandData);
       setIsLoading(false);
       return;
     }
@@ -70,28 +70,53 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
     const userId = currentUser.uid;
 
     try {
-      const brandDocRef = doc(db, "users", userId, "brandProfiles", userId); 
-      const docSnap = await getDoc(brandDocRef);
-      if (docSnap.exists()) {
-        const fetchedData = docSnap.data() as BrandData;
-        
-        const normalizedFetchedData = { ...fetchedData };
-        if (normalizedFetchedData.industry === "" || normalizedFetchedData.industry === undefined || normalizedFetchedData.industry === null) {
-          normalizedFetchedData.industry = "_none_";
-        }
-        // Ensure plan defaults to 'free' if not present or invalid
-        if (!normalizedFetchedData.plan || !['free', 'premium'].includes(normalizedFetchedData.plan)) {
-            normalizedFetchedData.plan = 'free';
-        }
+      const newBrandDocRef = doc(db, "users", userId, "brandProfiles", userId);
+      const oldBrandDocRef = doc(db, "brandProfiles", userId); // Hypothetical old path
 
-        const mergedData = {
-          ...defaultEmptyBrandData, 
-          ...normalizedFetchedData, 
-        };
-        
-        setBrandDataState(mergedData);
+      let docSnap = await getDoc(newBrandDocRef);
+      let dataToSet: BrandData | null = null;
+      let fetchedFromOldPath = false;
+
+      if (docSnap.exists()) {
+        console.log("BrandContext: Found data at new path.");
+        dataToSet = docSnap.data() as BrandData;
       } else {
-        setBrandDataState(defaultEmptyBrandData); // User exists, but no profile, use defaults (includes plan: 'free')
+        console.log("BrandContext: No data at new path, checking old path...");
+        docSnap = await getDoc(oldBrandDocRef);
+        if (docSnap.exists()) {
+          console.log("BrandContext: Found data at old path. Attempting to migrate...");
+          dataToSet = docSnap.data() as BrandData;
+          fetchedFromOldPath = true;
+        }
+      }
+
+      if (dataToSet) {
+        // Normalize data (industry, plan) before setting state or migrating
+        const normalizedData = { ...defaultEmptyBrandData, ...dataToSet }; // Ensure all keys from default are present
+        if (normalizedData.industry === "" || normalizedData.industry === undefined || normalizedData.industry === null) {
+          normalizedData.industry = "_none_";
+        }
+        if (!normalizedData.plan || !['free', 'premium'].includes(normalizedData.plan)) {
+            normalizedData.plan = 'free';
+        }
+        
+        setBrandDataState(normalizedData);
+
+        if (fetchedFromOldPath) {
+          // Save the (normalized) data from old path to the new path
+          try {
+            await setDoc(newBrandDocRef, normalizedData, { merge: true }); // Use normalizedData
+            console.log("BrandContext: Successfully migrated brand data from old path to new path.");
+            // Consider deleting from oldBrandDocRef if desired, e.g., await deleteDoc(oldBrandDocRef);
+            // For safety, manual deletion after verification is often preferred.
+          } catch (migrationError: any) {
+            console.error("BrandContext: Error migrating data from old path to new path:", migrationError);
+            setError(`Failed to migrate brand data to new structure: ${migrationError.message}. Old data will be used this session.`);
+          }
+        }
+      } else {
+        console.log("BrandContext: No data found at new or old paths. Using default empty brand data.");
+        setBrandDataState(defaultEmptyBrandData);
       }
     } catch (e: any) {
       console.error("Error fetching brand data from Firestore:", e);
@@ -103,7 +128,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         specificError = "Database permission error. Please check your Firestore security rules in the Firebase console.";
       }
       setError(specificError);
-      setBrandDataState(defaultEmptyBrandData); // Fallback to default on error
+      setBrandDataState(defaultEmptyBrandData);
     } finally {
       setIsLoading(false);
     }
@@ -131,7 +156,6 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
       if (dataToSave.industry === "" || dataToSave.industry === undefined || dataToSave.industry === null) {
         dataToSave.industry = "_none_";
       }
-      // Ensure plan defaults to 'free' if not present or invalid before saving
       if (!dataToSave.plan || !['free', 'premium'].includes(dataToSave.plan)) {
         dataToSave.plan = 'free';
       }
