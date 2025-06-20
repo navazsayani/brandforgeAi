@@ -6,7 +6,6 @@ import NextImage from 'next/image';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-// Removed AppShell import
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +18,7 @@ import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
-import { UserCircle, LinkIcon, FileText, UploadCloud, Tag, Brain, Loader2, Trash2, Edit, Briefcase, Image as ImageIconLucide, Sparkles } from 'lucide-react';
+import { UserCircle, LinkIcon, FileText, UploadCloud, Tag, Brain, Loader2, Trash2, Edit, Briefcase, Image as ImageIconLucide, Sparkles, Star } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { handleExtractBrandInfoFromUrlAction, handleGenerateBrandLogoAction, type FormState as ExtractFormState, type FormState as GenerateLogoFormState } from '@/lib/actions';
 import { storage } from '@/lib/firebaseConfig';
@@ -38,10 +37,11 @@ const brandProfileSchema = z.object({
   exampleImages: z.array(z.string().url({ message: "Each image must be a valid URL." })).max(5, {message: "You can upload a maximum of 5 example images."}).optional(),
   targetKeywords: z.string().optional(),
   brandLogoUrl: z.union([
-    z.string().url({ message: "Please enter a valid URL." }), // For existing URLs
-    z.string().startsWith('data:').optional(), // For data URIs (generated logos)
-    z.literal('').optional() // For empty state or when a new logo is generated
+    z.string().url({ message: "Please enter a valid URL." }), 
+    z.string().startsWith('data:').optional(), 
+    z.literal('').optional() 
   ]).optional(),
+  plan: z.enum(['free', 'premium']).optional(), // Added plan to schema
 });
 
 type BrandProfileFormData = z.infer<typeof brandProfileSchema>;
@@ -50,11 +50,12 @@ const defaultFormValues: BrandProfileFormData = {
   brandName: "",
   websiteUrl: "",
   brandDescription: "",
-  industry: "_none_", // Set default to "_none_" to match UI expectations
+  industry: "_none_", 
   imageStyleNotes: "",
   exampleImages: [],
   targetKeywords: "",
   brandLogoUrl: "",
+  plan: 'free', // Default plan in form
 };
 
 const initialExtractState: ExtractFormState<{ brandDescription: string; targetKeywords: string; }> = { error: undefined, data: undefined, message: undefined };
@@ -90,13 +91,14 @@ export default function BrandProfilePage() {
 
   useEffect(() => {
     if (brandData) {
-      // Ensure industry field is properly set - use actual value or fallback to "_none_"
       const industryValue = brandData.industry && brandData.industry.trim() !== "" ? brandData.industry : "_none_";
+      const planValue = brandData.plan && ['free', 'premium'].includes(brandData.plan) ? brandData.plan : 'free'; // Ensure plan is valid or default
       const currentData = {
         ...defaultFormValues,
         ...brandData,
-        industry: industryValue, // Explicitly set the industry value
-        exampleImages: brandData.exampleImages || []
+        industry: industryValue,
+        exampleImages: brandData.exampleImages || [],
+        plan: planValue, // Set plan from context
       };
       form.reset(currentData);
       setPreviewImages(currentData.exampleImages);
@@ -327,11 +329,9 @@ if (!brandName || !brandDescription) {
     console.log("🔍 BrandProfile: Form submission data:", data);
     let finalData = { ...data };
 
-    // Ensure industry field is properly handled - keep the actual selected value
-    // "_none_" is a valid value that represents "None / Not Applicable"
+    // Ensure industry field is properly handled
     console.log("🔍 BrandProfile: Final data to save (before logo processing):", finalData);
 
-    // Temporarily clear brandLogoUrl if a new logo was generated to bypass schema validation
     if (generatedLogoPreview) {
         finalData.brandLogoUrl = "";
     }
@@ -339,7 +339,7 @@ if (!brandName || !brandDescription) {
     setIsUploadingLogo(true);
     setLogoUploadProgress(0);
 
-    let progressInterval: NodeJS.Timeout | undefined; // Declare outside try block
+    let progressInterval: NodeJS.Timeout | undefined; 
 
     if (generatedLogoPreview) {
       try {
@@ -353,18 +353,18 @@ if (!brandName || !brandDescription) {
 
         const uploadTask = uploadString(logoStorageRef, generatedLogoPreview, 'data_url');
 
-        progressInterval = setInterval(() => { // Assign here
+        progressInterval = setInterval(() => { 
           setLogoUploadProgress(prev => Math.min(prev + 10, 90));
         }, 100);
 
         const snapshot = await uploadTask;
-        if (progressInterval) { // Clear here
+        if (progressInterval) { 
           clearInterval(progressInterval);
         }
         setLogoUploadProgress(100);
         
         const downloadURL = await getDownloadURL(snapshot.ref);
-        finalData.brandLogoUrl = downloadURL; // Assign the actual download URL
+        finalData.brandLogoUrl = downloadURL; 
           toast({ title: "Logo Uploaded", description: "New logo uploaded and will be saved with profile." });
       } catch (error: any) {
         clearInterval(progressInterval);
@@ -381,15 +381,15 @@ if (!brandName || !brandDescription) {
     }
 
     try {
-      console.log("Saving brand profile:");
-      console.log("currentUser:", currentUser);
-      console.log("isAuthLoading:", isAuthLoading);
       if (!currentUser) {
         toast({ title: "Save Error", description: "User not authenticated. Cannot save profile.", variant: "destructive" });
         return;
       }
 
-      await setBrandData({...finalData, exampleImages: finalData.exampleImages || []}, currentUser.uid);
+      // Ensure plan is either 'free' or 'premium', default to 'free' if somehow undefined in form data
+      const planToSave = finalData.plan && ['free', 'premium'].includes(finalData.plan) ? finalData.plan : 'free';
+
+      await setBrandData({...finalData, exampleImages: finalData.exampleImages || [], plan: planToSave}, currentUser.uid);
       toast({
         title: "Brand Profile Saved",
         description: "Your brand information has been saved successfully.",
@@ -416,9 +416,8 @@ if (!brandName || !brandDescription) {
   const currentLogoToDisplay = generatedLogoPreview || brandData?.brandLogoUrl;
 
   return (
-    // AppShell is now handled by AuthenticatedLayout    
-    <ScrollArea className="h-[calc(100vh-56px)]"> {/* Adjust height based on header/footer */}
-      <div className="max-w-3xl mx-auto py-6"> {/* Add padding */}
+    <ScrollArea className="h-[calc(100vh-56px)]"> 
+      <div className="max-w-3xl mx-auto py-6"> 
       
         <Card className="shadow-lg">
         <CardHeader>
@@ -498,7 +497,6 @@ if (!brandName || !brandDescription) {
                 control={form.control}
                 name="industry"
                 render={({ field }) => {
-                  // Ensure we always have a valid value - fallback to "_none_" if field.value is empty/undefined
                   const selectValue = field.value && field.value.trim() !== "" ? field.value : "_none_";
                   
                   return (
@@ -546,7 +544,38 @@ if (!brandName || !brandDescription) {
                 )}
               />
 
-              {/* Brand Logo Section */}
+              <FormField
+                control={form.control}
+                name="plan"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center text-base"><Star className="w-5 h-5 mr-2 text-primary"/>Subscription Plan</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || 'free'}
+                      disabled={isBrandContextLoading || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select your plan" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectLabel>Plans</SelectLabel>
+                          <SelectItem value="free">Free</SelectItem>
+                          <SelectItem value="premium">Premium</SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      (For testing purposes. In a real app, this would be managed by a subscription system.)
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormItem>
                   <FormLabel className="flex items-center text-base mb-2"><Sparkles className="w-5 h-5 mr-2 text-primary"/>Brand Logo</FormLabel>
                   <div className="p-4 border rounded-lg space-y-4">
@@ -703,3 +732,4 @@ if (!brandName || !brandDescription) {
     </ScrollArea>
   );
 }
+

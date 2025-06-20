@@ -8,6 +8,7 @@ export interface BrandData {
   targetKeywords?: string;
   exampleImages?: string[]; // URLs from Firebase Storage
   brandLogoUrl?: string; // URL from Firebase Storage for the brand logo
+  plan?: 'free' | 'premium'; // Added plan field
 }
 
 export interface GeneratedImage {
@@ -59,3 +60,4 @@ export interface GeneratedAdCampaign {
   targetKeywords?: string;
   budget?: number;
 }
+

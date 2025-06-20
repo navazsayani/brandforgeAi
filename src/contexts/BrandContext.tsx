@@ -6,9 +6,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebaseConfig';
 import type { BrandData, GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign } from '@/types';
-import { useAuth } from './AuthContext'; // Added
-
-// BRAND_PROFILE_DOC_ID is no longer used as a global constant for doc ID
+import { useAuth } from './AuthContext'; 
 
 interface LastImageGenerationResult {
   generatedImages: string[];
@@ -17,9 +15,9 @@ interface LastImageGenerationResult {
 }
 
 interface BrandContextType {
-  userId: string | null; // Added userId here
+  userId: string | null; 
   brandData: BrandData | null;
-  setBrandData: (data: BrandData, userId: string) => Promise<void>; // Added userId parameter
+  setBrandData: (data: BrandData, userId: string) => Promise<void>; 
   isLoading: boolean;
   error: string | null;
   generatedImages: GeneratedImage[];
@@ -30,8 +28,8 @@ interface BrandContextType {
   addGeneratedBlogPost: (post: GeneratedBlogPost) => void;
   generatedAdCampaigns: GeneratedAdCampaign[];
   addGeneratedAdCampaign: (campaign: GeneratedAdCampaign) => void;
-  sessionLastImageGenerationResult: LastImageGenerationResult | null; // Added
-  setSessionLastImageGenerationResult: (result: LastImageGenerationResult | null) => void; // Added
+  sessionLastImageGenerationResult: LastImageGenerationResult | null; 
+  setSessionLastImageGenerationResult: (result: LastImageGenerationResult | null) => void; 
 }
 
 const BrandContext = createContext<BrandContextType | undefined>(undefined);
@@ -40,15 +38,16 @@ const defaultEmptyBrandData: BrandData = {
     brandName: "",
     websiteUrl: "",
     brandDescription: "",
-    industry: "_none_", // Set default to "_none_" to match UI expectations
+    industry: "_none_", 
     imageStyleNotes: "",
     exampleImages: [],
     targetKeywords: "",
     brandLogoUrl: undefined,
+    plan: 'free', // Default plan
 };
 
 export const BrandProvider = ({ children }: { children: ReactNode }) => {
-  const { currentUser } = useAuth(); // Get current user from AuthContext
+  const { currentUser } = useAuth(); 
   const [brandData, setBrandDataState] = useState<BrandData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,11 +56,11 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
   const [generatedSocialPosts, setGeneratedSocialPosts] = useState<GeneratedSocialMediaPost[]>([]);
   const [generatedBlogPosts, setGeneratedBlogPosts] = useState<GeneratedBlogPost[]>([]);
   const [generatedAdCampaigns, setGeneratedAdCampaigns] = useState<GeneratedAdCampaign[]>([]);
-  const [sessionLastImageGenerationResult, setSessionLastImageGenerationResultState] = useState<LastImageGenerationResult | null>(null); // Added state
+  const [sessionLastImageGenerationResult, setSessionLastImageGenerationResultState] = useState<LastImageGenerationResult | null>(null); 
 
   const fetchBrandDataCB = useCallback(async () => {
     if (!currentUser) {
-      setBrandDataState(null); // No user, no specific brand data
+      setBrandDataState(defaultEmptyBrandData); // Use default if no user, includes default plan
       setIsLoading(false);
       return;
     }
@@ -71,35 +70,28 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
     const userId = currentUser.uid;
 
     try {
-      const brandDocRef = doc(db, "brandProfiles", userId); // Use userId for document path
+      const brandDocRef = doc(db, "users", userId, "brandProfiles", userId); 
       const docSnap = await getDoc(brandDocRef);
       if (docSnap.exists()) {
         const fetchedData = docSnap.data() as BrandData;
-        console.log("🔍 BrandContext: Raw data from Firestore:", fetchedData);
-
-        // Normalize industry directly from fetchedData before merging
+        
         const normalizedFetchedData = { ...fetchedData };
         if (normalizedFetchedData.industry === "" || normalizedFetchedData.industry === undefined || normalizedFetchedData.industry === null) {
-          console.log("🔍 BrandContext: Normalizing fetched industry from '", normalizedFetchedData.industry, "' to '_none_'.");
           normalizedFetchedData.industry = "_none_";
+        }
+        // Ensure plan defaults to 'free' if not present or invalid
+        if (!normalizedFetchedData.plan || !['free', 'premium'].includes(normalizedFetchedData.plan)) {
+            normalizedFetchedData.plan = 'free';
         }
 
         const mergedData = {
-          ...defaultEmptyBrandData, // Default already has industry: "_none_"
-          ...normalizedFetchedData, // Use normalized data for merge
+          ...defaultEmptyBrandData, 
+          ...normalizedFetchedData, 
         };
         
-        if (mergedData.industry === "" || mergedData.industry === undefined || mergedData.industry === null) {
-            console.log("🔍 BrandContext: Normalizing mergedData industry from '", mergedData.industry, "' to '_none_'.");
-            mergedData.industry = "_none_";
-        }
-        
-        console.log("🔍 BrandContext: Merged data with defaults:", mergedData);
-        console.log("🔍 BrandContext: Industry value specifically being set to state:", mergedData.industry);
         setBrandDataState(mergedData);
       } else {
-        console.log("🔍 BrandContext: No existing data, using defaults");
-        setBrandDataState(defaultEmptyBrandData);
+        setBrandDataState(defaultEmptyBrandData); // User exists, but no profile, use defaults (includes plan: 'free')
       }
     } catch (e: any) {
       console.error("Error fetching brand data from Firestore:", e);
@@ -111,7 +103,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         specificError = "Database permission error. Please check your Firestore security rules in the Firebase console.";
       }
       setError(specificError);
-      setBrandDataState(null); 
+      setBrandDataState(defaultEmptyBrandData); // Fallback to default on error
     } finally {
       setIsLoading(false);
     }
@@ -137,16 +129,16 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         ...data,
       };
       if (dataToSave.industry === "" || dataToSave.industry === undefined || dataToSave.industry === null) {
-        console.log("🔍 BrandContext (Save): Normalizing industry from '", dataToSave.industry, "' to '_none_' before saving.");
         dataToSave.industry = "_none_";
       }
+      // Ensure plan defaults to 'free' if not present or invalid before saving
+      if (!dataToSave.plan || !['free', 'premium'].includes(dataToSave.plan)) {
+        dataToSave.plan = 'free';
+      }
 
-      console.log("🔍 BrandContext: Data being saved to Firestore:", dataToSave);
-      console.log("🔍 BrandContext: Industry value being saved:", dataToSave.industry);
-      const brandDocRef = doc(db, "brandProfiles", userId); 
+      const brandDocRef = doc(db, "users", userId, "brandProfiles", userId); 
       await setDoc(brandDocRef, dataToSave, { merge: true }); 
       setBrandDataState(dataToSave); 
-      console.log("🔍 BrandContext: Data saved successfully");
     } catch (e: any) {
       console.error("Error saving brand data to Firestore:", e);
       let specificError = `Failed to save brand profile: ${e.message || "Unknown error. Check console."}`;
@@ -179,7 +171,6 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
     setGeneratedAdCampaigns(prev => [campaign, ...prev.slice(0,19)]);
   }, []);
 
-  // Added setter for sessionLastImageGenerationResult
   const setSessionLastImageGenerationResultCB = useCallback((result: LastImageGenerationResult | null) => {
     setSessionLastImageGenerationResultState(result);
   }, []);
@@ -198,15 +189,15 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
     addGeneratedBlogPost: addGeneratedBlogPostCB,
     generatedAdCampaigns,
     addGeneratedAdCampaign: addGeneratedAdCampaignCB,
-    sessionLastImageGenerationResult, // Added to context
-    setSessionLastImageGenerationResult: setSessionLastImageGenerationResultCB // Added to context
+    sessionLastImageGenerationResult, 
+    setSessionLastImageGenerationResult: setSessionLastImageGenerationResultCB 
   }), [
     currentUser, brandData, setBrandDataCB, isLoading, error, 
     generatedImages, addGeneratedImageCB,
     generatedSocialPosts, addGeneratedSocialPostCB,
     generatedBlogPosts, addGeneratedBlogPostCB,
     generatedAdCampaigns, addGeneratedAdCampaignCB,
-    sessionLastImageGenerationResult, setSessionLastImageGenerationResultCB // Added dependencies
+    sessionLastImageGenerationResult, setSessionLastImageGenerationResultCB 
   ]);
 
   return (

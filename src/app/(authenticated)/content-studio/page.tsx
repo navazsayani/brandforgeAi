@@ -4,8 +4,8 @@
 import React, { useState, useEffect, useActionState, startTransition, useRef } from 'react';
 import NextImage from 'next/image';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { db } from '@/lib/firebaseConfig'; // For fetching library images
-import { collection, getDocs, query, orderBy } from 'firebase/firestore'; // For fetching library images
+import { db } from '@/lib/firebaseConfig'; 
+import { collection, getDocs, query, orderBy } from 'firebase/firestore'; 
 
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from '@/contexts/AuthContext'; 
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download, Library } from 'lucide-react';
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download, Library, Star } from 'lucide-react'; // Added Star
 import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage } from '@/types';
@@ -50,7 +50,7 @@ type SocialImageChoice = 'generated' | 'profile' | 'library' | null;
 
 const fetchSavedLibraryImages = async (userId: string | undefined): Promise<SavedGeneratedImage[]> => {
   if (!userId) {
-    return []; // Return empty if no userId, Tanstack Query will handle 'enabled'
+    return []; 
   }
   const brandProfileDocId = userId;
   const imagesCollectionRef = collection(db, `users/${userId}/brandProfiles/${brandProfileDocId}/savedLibraryImages`);
@@ -81,7 +81,6 @@ export default function ContentStudioPage() {
 
   const [freepikTaskStatusState, freepikTaskStatusAction] = useActionState(handleCheckFreepikTaskStatusAction, initialFreepikTaskStatusState);
 
-  // Local states for session-based generated images
   const [lastSuccessfulGeneratedImageUrls, setLastSuccessfulGeneratedImageUrls] = useState<string[]>([]);
   const [lastUsedImageGenPrompt, setLastUsedImageGenPrompt] = useState<string | null>(null);
   const [lastUsedImageProvider, setLastUsedImageProvider] = useState<string | null>(null);
@@ -110,7 +109,6 @@ export default function ContentStudioPage() {
 
   const [selectedImageProvider, setSelectedImageProvider] = useState<GenerateImagesInput['provider']>(imageGenerationProviders[0].value as GenerateImagesInput['provider']);
   const [imageGenBrandDescription, setImageGenBrandDescription] = useState<string>("");
-  // imageGenIndustry is removed from state as per previous request to hide it. Will be passed via hidden input.
   const [selectedImageStylePreset, setSelectedImageStylePreset] = useState<string>(imageStylePresets[0].value);
   const [customStyleNotesInput, setCustomStyleNotesInput] = useState<string>("");
   const [imageGenNegativePrompt, setImageGenNegativePrompt] = useState<string>("");
@@ -135,7 +133,6 @@ export default function ContentStudioPage() {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [useExampleImageForGen, setUseExampleImageForGen] = useState<boolean>(true); 
 
-  // Fetch saved library images
   const { 
     data: savedLibraryImages = [], 
     isLoading: isLoadingSavedLibraryImages, 
@@ -169,7 +166,6 @@ export default function ContentStudioPage() {
         } else {
             setSelectedProfileImageIndexForGen(null);
         }
-         // Auto-select a source for social image if "use image" is checked but no choice made
         if (useImageForSocialPost && socialImageChoice === null) {
             if (sessionLastImageGenerationResult?.generatedImages?.some(url => url?.startsWith('data:') || url?.startsWith('image_url:'))) {
                 setSocialImageChoice('generated');
@@ -190,14 +186,22 @@ export default function ContentStudioPage() {
             setSelectedLibraryImageIndexForSocial(0);
         }
 
+        // Adjust number of images based on plan
+        const currentPlan = brandData.plan || 'free';
+        const currentNumImages = parseInt(numberOfImagesToGenerate, 10);
+        if (currentPlan === 'free' && currentNumImages > 1) {
+            setNumberOfImagesToGenerate("1");
+        }
+
     } else {
         setImageGenBrandDescription("");
         setSelectedBlogIndustry("_none_");
         setCustomStyleNotesInput("");
         setSelectedProfileImageIndexForGen(null);
+        setNumberOfImagesToGenerate("1"); // Default to 1 if no brandData (e.g. on free plan default)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brandData, useImageForSocialPost, socialImageChoice, sessionLastImageGenerationResult, savedLibraryImages]);
+  }, [brandData, useImageForSocialPost, socialImageChoice, sessionLastImageGenerationResult, savedLibraryImages, numberOfImagesToGenerate]);
 
 
   useEffect(() => {
@@ -223,7 +227,6 @@ export default function ContentStudioPage() {
     }
     }, [selectedImageProvider, selectedAspectRatio]);
 
-  // Initialize local state from context on mount/context change
   useEffect(() => {
     if (sessionLastImageGenerationResult) {
       setLastSuccessfulGeneratedImageUrls(sessionLastImageGenerationResult.generatedImages);
@@ -472,7 +475,7 @@ export default function ContentStudioPage() {
   const handlePreviewPromptClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
 
-    const currentIndustryValue = selectedBlogIndustry; // Using selectedBlogIndustry which is initialized from brandData
+    const currentIndustryValue = selectedBlogIndustry; 
     const industryLabelForPreview = industries.find(i => i.value === currentIndustryValue)?.label || currentIndustryValue;
 
     const industryCtx = (industryLabelForPreview && industryLabelForPreview !== "None / Not Applicable" && industryLabelForPreview !== "_none_") ? ` The brand operates in the ${industryLabelForPreview} industry.` : "";
@@ -651,8 +654,9 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
 
         formData.append("brandDescription", String(brandDesc || "")); 
         
-        const industryToSubmit = isAdmin ? (formSnapshot?.industry || selectedBlogIndustry) : selectedBlogIndustry;
-        formData.append("industry", industryToSubmit === "_none_" ? "" : (industryToSubmit || ""));
+        // Submit industry value from selectedBlogIndustry (which is initialized from brandData)
+        const industryToSubmit = selectedBlogIndustry === "_none_" ? "" : (selectedBlogIndustry || "");
+        formData.append("industry", industryToSubmit);
         
         formData.append("imageStyle", imageStyle);
         
@@ -795,8 +799,10 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
           }
       }
       
-      const socialIndustry = formData.get("industry") as string || (selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || "");
-      formData.set("industry", socialIndustry);
+      // Pass industry for social posts
+      const socialIndustryToSubmit = selectedBlogIndustry === "_none_" ? "" : (selectedBlogIndustry || "");
+      formData.set("industry", socialIndustryToSubmit);
+
 
       startTransition(() => {
           socialAction(formData);
@@ -842,6 +848,8 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
         setSelectedProfileImageIndexForSocial(null);
     }
   };
+  
+  const currentPlan = brandData?.plan || 'free';
 
   return (
     <div className="w-full max-w-4xl mx-auto content-studio-container">
@@ -901,6 +909,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
               </form>
             ) : (
               <form id="imageGenerationFormFields" onSubmit={isAdmin ? (e) => e.preventDefault() : handleImageGenerationSubmit}>
+                <input type="hidden" name="industry" value={selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || ""} />
                 <CardContent className="space-y-6">
                   {isAdmin && ( 
                     <div>
@@ -1111,16 +1120,29 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                     </div>
                     <div>
                         <Label htmlFor="numberOfImagesSelect" className="flex items-center mb-1"><Images className="w-4 h-4 mr-2 text-primary" />Number of Images</Label>
-                        <Select name="numberOfImages" value={numberOfImagesToGenerate} onValueChange={setNumberOfImagesToGenerate}>
+                        <Select 
+                            name="numberOfImages" 
+                            value={numberOfImagesToGenerate} 
+                            onValueChange={setNumberOfImagesToGenerate}
+                        >
                             <SelectTrigger id="numberOfImagesSelect">
                                 <SelectValue placeholder="Select number" />
                             </SelectTrigger>
                             <SelectContent>
                                 {[1, 2, 3, 4].map(num => (
-                                    <SelectItem key={num} value={String(num)}>{num}</SelectItem>
+                                    <SelectItem 
+                                        key={num} 
+                                        value={String(num)}
+                                        disabled={currentPlan === 'free' && num > 1}
+                                    >
+                                        {num} {currentPlan === 'free' && num > 1 ? '(Premium only)' : ''}
+                                    </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
+                        {currentPlan === 'free' && (
+                             <p className="text-xs text-muted-foreground mt-1">Free plan allows 1 image per generation.</p>
+                        )}
                     </div>
                   </div>
                   <div>
@@ -1299,7 +1321,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                               setUseImageForSocialPost(isChecked);
                               if (!isChecked) {
                                   setSocialImageChoice(null);
-                              } else if (isChecked && socialImageChoice === null) { // Auto-select if turning on
+                              } else if (isChecked && socialImageChoice === null) { 
                                   if (sessionLastImageGenerationResult?.generatedImages?.some(url => url?.startsWith('data:') || url?.startsWith('image_url:'))) {
                                       handleSocialImageChoiceChange('generated');
                                   } else if (brandData?.exampleImages && brandData.exampleImages.length > 0) {
@@ -1307,7 +1329,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                   } else if (!isLoadingSavedLibraryImages && savedLibraryImages.length > 0) {
                                       handleSocialImageChoiceChange('library');
                                   } else {
-                                      handleSocialImageChoiceChange(null); // No sources available
+                                      handleSocialImageChoiceChange(null); 
                                   }
                               }
                           }}
