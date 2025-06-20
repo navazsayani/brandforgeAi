@@ -3,8 +3,10 @@
 
 import React, { useState, useEffect, useActionState, startTransition, useRef } from 'react';
 import NextImage from 'next/image';
-import { useQueryClient } from '@tanstack/react-query';
-// Removed AppShell import
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { db } from '@/lib/firebaseConfig'; // For fetching library images
+import { collection, getDocs, query, orderBy } from 'firebase/firestore'; // For fetching library images
+
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from '@/contexts/AuthContext'; 
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download } from 'lucide-react';
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download, Library } from 'lucide-react';
 import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage } from '@/types';
@@ -44,7 +46,23 @@ const imageGenerationProviders = [
     { value: "IMAGEN", label: "Imagen (via Vertex - Not Implemented)", disabled: true },
 ];
 
-type SocialImageChoice = 'generated' | 'profile' | null;
+type SocialImageChoice = 'generated' | 'profile' | 'library' | null;
+
+const fetchSavedLibraryImages = async (userId: string | undefined): Promise<SavedGeneratedImage[]> => {
+  if (!userId) {
+    return []; // Return empty if no userId, Tanstack Query will handle 'enabled'
+  }
+  const brandProfileDocId = userId;
+  const imagesCollectionRef = collection(db, `users/${userId}/brandProfiles/${brandProfileDocId}/savedLibraryImages`);
+  const q = query(imagesCollectionRef, orderBy("createdAt", "desc"));
+  const querySnapshot = await getDocs(q);
+  const images: SavedGeneratedImage[] = [];
+  querySnapshot.forEach((doc) => {
+    images.push({ id: doc.id, ...doc.data() } as SavedGeneratedImage);
+  });
+  return images;
+};
+
 
 export default function ContentStudioPage() {
   const { currentUser } = useAuth(); 
@@ -63,10 +81,11 @@ export default function ContentStudioPage() {
 
   const [freepikTaskStatusState, freepikTaskStatusAction] = useActionState(handleCheckFreepikTaskStatusAction, initialFreepikTaskStatusState);
 
+  // Local states for session-based generated images
   const [lastSuccessfulGeneratedImageUrls, setLastSuccessfulGeneratedImageUrls] = useState<string[]>([]);
   const [lastUsedImageGenPrompt, setLastUsedImageGenPrompt] = useState<string | null>(null);
   const [lastUsedImageProvider, setLastUsedImageProvider] = useState<string | null>(null);
-
+  
   const [generatedSocialPost, setGeneratedSocialPost] = useState<{caption: string, hashtags: string, imageSrc: string | null} | null>(null);
   const [generatedBlogPost, setGeneratedBlogPost] = useState<{title: string, content: string, tags: string} | null>(null);
   const [generatedBlogOutline, setGeneratedBlogOutline] = useState<string>("");
@@ -86,10 +105,12 @@ export default function ContentStudioPage() {
 
   const [selectedProfileImageIndexForGen, setSelectedProfileImageIndexForGen] = useState<number | null>(null);
   const [selectedProfileImageIndexForSocial, setSelectedProfileImageIndexForSocial] = useState<number | null>(null);
+  const [selectedLibraryImageIndexForSocial, setSelectedLibraryImageIndexForSocial] = useState<number | null>(null);
+
 
   const [selectedImageProvider, setSelectedImageProvider] = useState<GenerateImagesInput['provider']>(imageGenerationProviders[0].value as GenerateImagesInput['provider']);
   const [imageGenBrandDescription, setImageGenBrandDescription] = useState<string>("");
-  const [imageGenIndustry, setImageGenIndustry] = useState<string>(""); 
+  // imageGenIndustry is removed from state as per previous request to hide it. Will be passed via hidden input.
   const [selectedImageStylePreset, setSelectedImageStylePreset] = useState<string>(imageStylePresets[0].value);
   const [customStyleNotesInput, setCustomStyleNotesInput] = useState<string>("");
   const [imageGenNegativePrompt, setImageGenNegativePrompt] = useState<string>("");
@@ -114,36 +135,70 @@ export default function ContentStudioPage() {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [useExampleImageForGen, setUseExampleImageForGen] = useState<boolean>(true); 
 
+  // Fetch saved library images
+  const { 
+    data: savedLibraryImages = [], 
+    isLoading: isLoadingSavedLibraryImages, 
+    error: errorSavedLibraryFetch 
+  } = useQuery<SavedGeneratedImage[], Error>({
+    queryKey: ['savedLibraryImagesForSocial', userId],
+    queryFn: () => fetchSavedLibraryImages(userId || undefined),
+    enabled: !!userId,
+  });
 
   useEffect(() => {
-    console.log("🔍 ContentStudio: brandData received:", brandData);
+    if (errorSavedLibraryFetch) {
+      toast({
+        title: "Error Loading Library Images",
+        description: `Could not fetch your saved images: ${errorSavedLibraryFetch.message}. Please try again later.`,
+        variant: "destructive",
+      });
+    }
+  }, [errorSavedLibraryFetch, toast]);
+
+
+  useEffect(() => {
     if (brandData) {
-        console.log("🔍 ContentStudio: Industry from brandData:", brandData.industry);
         setImageGenBrandDescription(brandData.brandDescription || "");
         const industryValue = brandData.industry && brandData.industry.trim() !== "" ? brandData.industry : "_none_";
-        console.log("🔍 ContentStudio: Resolved industry value:", industryValue);
-        setImageGenIndustry(industryValue);
         setSelectedBlogIndustry(industryValue); 
         setCustomStyleNotesInput(brandData.imageStyleNotes || "");
 
         if (brandData.exampleImages && brandData.exampleImages.length > 0) {
             if (selectedProfileImageIndexForGen === null) setSelectedProfileImageIndexForGen(0);
-            if (selectedProfileImageIndexForSocial === null) setSelectedProfileImageIndexForSocial(0);
         } else {
             setSelectedProfileImageIndexForGen(null);
-            setSelectedProfileImageIndexForSocial(null);
         }
+         // Auto-select a source for social image if "use image" is checked but no choice made
+        if (useImageForSocialPost && socialImageChoice === null) {
+            if (sessionLastImageGenerationResult?.generatedImages?.some(url => url?.startsWith('data:') || url?.startsWith('image_url:'))) {
+                setSocialImageChoice('generated');
+                setSelectedProfileImageIndexForSocial(null);
+                setSelectedLibraryImageIndexForSocial(null);
+            } else if (brandData.exampleImages && brandData.exampleImages.length > 0) {
+                setSocialImageChoice('profile');
+                if(selectedProfileImageIndexForSocial === null) setSelectedProfileImageIndexForSocial(0);
+                setSelectedLibraryImageIndexForSocial(null);
+            } else if (savedLibraryImages.length > 0) {
+                setSocialImageChoice('library');
+                if(selectedLibraryImageIndexForSocial === null) setSelectedLibraryImageIndexForSocial(0);
+                setSelectedProfileImageIndexForSocial(null);
+            }
+        } else if (useImageForSocialPost && socialImageChoice === 'profile' && selectedProfileImageIndexForSocial === null && brandData.exampleImages && brandData.exampleImages.length > 0) {
+            setSelectedProfileImageIndexForSocial(0);
+        } else if (useImageForSocialPost && socialImageChoice === 'library' && selectedLibraryImageIndexForSocial === null && savedLibraryImages.length > 0) {
+            setSelectedLibraryImageIndexForSocial(0);
+        }
+
     } else {
-        console.log("🔍 ContentStudio: No brandData, using defaults");
         setImageGenBrandDescription("");
-        setImageGenIndustry("_none_");
+        setSelectedBlogIndustry("_none_");
         setCustomStyleNotesInput("");
         setSelectedProfileImageIndexForGen(null);
-        setSelectedProfileImageIndexForSocial(null);
-        setSelectedBlogIndustry("_none_");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brandData]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brandData, useImageForSocialPost, socialImageChoice, sessionLastImageGenerationResult, savedLibraryImages]);
+
 
   useEffect(() => {
     if (currentUser && currentUser.email === 'admin@brandforge.ai') {
@@ -175,7 +230,6 @@ export default function ContentStudioPage() {
       setLastUsedImageGenPrompt(sessionLastImageGenerationResult.promptUsed);
       setLastUsedImageProvider(sessionLastImageGenerationResult.providerUsed);
     } else {
-      // If context is null (e.g., cleared or initial load), reset local state too
       setLastSuccessfulGeneratedImageUrls([]);
       setLastUsedImageGenPrompt(null);
       setLastUsedImageProvider(null);
@@ -185,8 +239,7 @@ export default function ContentStudioPage() {
 
   useEffect(() => {
     if (imageState.data && imageState.data.generatedImages && imageState.data.generatedImages.length > 0) {
-      setSessionLastImageGenerationResult(imageState.data); // Store in context
-      // Local state updates will be triggered by the useEffect above listening to sessionLastImageGenerationResult
+      setSessionLastImageGenerationResult(imageState.data); 
 
       const displayableImages = imageState.data.generatedImages.filter(url => url && (url.startsWith('data:') || url.startsWith('image_url:')));
       if (displayableImages.length > 0) {
@@ -198,7 +251,7 @@ export default function ContentStudioPage() {
                 prompt: imageState.data?.promptUsed || "",
                 style: selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")
             };
-            addGeneratedImage(newImage); // This is for the historical list in DeploymentHub, separate from session state
+            addGeneratedImage(newImage); 
         });
           toast({ title: "Success", description: `${displayableImages.length} image(s) processed using ${imageState.data.providerUsed || 'default provider'}.` });
       } else if (imageState.data.generatedImages.some(url => url.startsWith('task_id:'))) {
@@ -284,7 +337,7 @@ export default function ContentStudioPage() {
     if (saveImagesServerActionState.message && !saveImagesServerActionState.error) {
       toast({ title: "Image Library", description: saveImagesServerActionState.message });
       if (userId) {
-        queryClient.invalidateQueries({ queryKey: ['savedLibraryImages', userId] });
+        queryClient.invalidateQueries({ queryKey: ['savedLibraryImagesForSocial', userId] });
       }
     }
     if (saveImagesServerActionState.error) {
@@ -299,11 +352,10 @@ export default function ContentStudioPage() {
       if (status === 'COMPLETED' && retrievedImageUrls && retrievedImageUrls.length > 0) {
         const newImageUrlsForTask = retrievedImageUrls.map(url => `image_url:${url}`);
         
-        // Update context: replace task_id with actual image URLs
         if (sessionLastImageGenerationResult) {
           const updatedGeneratedImages = sessionLastImageGenerationResult.generatedImages.map(
-            url => (url === `task_id:${taskId}` ? newImageUrlsForTask : url) // Replace only the specific task_id
-          ).flat(); // Flatten in case newImageUrlsForTask itself is an array (it is)
+            url => (url === `task_id:${taskId}` ? newImageUrlsForTask : url) 
+          ).flat(); 
           
           setSessionLastImageGenerationResult({
             ...sessionLastImageGenerationResult,
@@ -340,8 +392,7 @@ export default function ContentStudioPage() {
   };
 
  const handleClearGeneratedImages = () => {
-    setSessionLastImageGenerationResult(null); // Clear from context
-    // Local states (lastSuccessfulGeneratedImageUrls, etc.) will be cleared by the useEffect listening to sessionLastImageGenerationResult
+    setSessionLastImageGenerationResult(null); 
     setFormSnapshot(null);
     setIsPreviewingPrompt(false);
   };
@@ -362,8 +413,6 @@ export default function ContentStudioPage() {
         return;
     }
 
-    console.log('Saving images:', saveableImages);
-
     if (!userId) {
         toast({title: "Authentication Error", description: "User not logged in. Cannot save images.", variant: "destructive"});
         setIsSavingImages(false);
@@ -371,10 +420,10 @@ export default function ContentStudioPage() {
     }
 
     startTransition(() => {
- const formData = new FormData();
- formData.append('imagesToSaveJson', JSON.stringify(saveableImages));
- formData.append('userId', userId); 
- saveImagesAction(formData);
+       const formData = new FormData();
+       formData.append('imagesToSaveJson', JSON.stringify(saveableImages));
+       formData.append('userId', userId); 
+       saveImagesAction(formData);
     });
   };
 
@@ -384,6 +433,7 @@ export default function ContentStudioPage() {
       setUseImageForSocialPost(true);
       setSocialImageChoice('generated');
       setSelectedProfileImageIndexForSocial(null);
+      setSelectedLibraryImageIndexForSocial(null);
       setActiveTab('social');
       toast({title: "Image Selected", description: "First available generated image selected for social post."});
     } else {
@@ -395,11 +445,14 @@ export default function ContentStudioPage() {
 
   const currentSocialImagePreviewUrl = useImageForSocialPost
     ? (socialImageChoice === 'generated'
-        ? (lastSuccessfulGeneratedImageUrls.find(url => url?.startsWith('data:') || url?.startsWith('image_url:'))?.replace(/^image_url:/, '') || null)
+        ? (sessionLastImageGenerationResult?.generatedImages.find(url => url?.startsWith('data:') || url?.startsWith('image_url:'))?.replace(/^image_url:/, '') || null)
         : (socialImageChoice === 'profile'
             ? (brandData?.exampleImages && selectedProfileImageIndexForSocial !== null && brandData.exampleImages[selectedProfileImageIndexForSocial]) || null
-            : null))
+            : (socialImageChoice === 'library'
+                ? (!isLoadingSavedLibraryImages && savedLibraryImages && selectedLibraryImageIndexForSocial !== null && savedLibraryImages[selectedLibraryImageIndexForSocial]?.storageUrl) || null
+                : null)))
     : null;
+
 
   const handleAIDescribeImage = () => {
     if (!currentSocialImagePreviewUrl) {
@@ -419,9 +472,8 @@ export default function ContentStudioPage() {
   const handlePreviewPromptClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
 
-    const currentIndustryValue = imageGenIndustry || brandData?.industry || "_none_";
+    const currentIndustryValue = selectedBlogIndustry; // Using selectedBlogIndustry which is initialized from brandData
     const industryLabelForPreview = industries.find(i => i.value === currentIndustryValue)?.label || currentIndustryValue;
-    console.log("DEBUG PREVIEW: currentIndustryValue:", currentIndustryValue, "resolved to industryLabelForPreview:", industryLabelForPreview);
 
     const industryCtx = (industryLabelForPreview && industryLabelForPreview !== "None / Not Applicable" && industryLabelForPreview !== "_none_") ? ` The brand operates in the ${industryLabelForPreview} industry.` : "";
     const exampleImg = useExampleImageForGen ? currentExampleImageForGen : ""; 
@@ -443,15 +495,9 @@ export default function ContentStudioPage() {
         }
         textPromptContent += `${industryCtx}`;
         
-        console.log("DEBUG PREVIEW (Freepik): selectedImageStylePreset:", `"${selectedImageStylePreset}"`);
-        console.log("DEBUG PREVIEW (Freepik): imported freepikValidStyles:", freepikValidStyles);
-
         const firstPresetKeyword = selectedImageStylePreset.toLowerCase().trim().split(/[,.]|\s-\s/)[0].trim(); 
         const isPresetAStructuralFreepikStyle = freepikValidStyles.some(s => s.toLowerCase() === firstPresetKeyword);
         
-        console.log("DEBUG PREVIEW (Freepik): firstPresetKeyword:", `"${firstPresetKeyword}"`);
-        console.log("DEBUG PREVIEW (Freepik): isPresetAStructuralFreepikStyle:", isPresetAStructuralFreepikStyle);
-
         if (isPresetAStructuralFreepikStyle) {
             const presetLabel = imageStylePresets.find(p => p.value === selectedImageStylePreset)?.label || selectedImageStylePreset;
             textPromptContent += `\n(The base style '${presetLabel}' will be applied structurally by Freepik.)`;
@@ -605,7 +651,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
 
         formData.append("brandDescription", String(brandDesc || "")); 
         
-        const industryToSubmit = isAdmin ? (formSnapshot?.industry || imageGenIndustry || brandData?.industry || "") : (imageGenIndustry || brandData?.industry || "");
+        const industryToSubmit = isAdmin ? (formSnapshot?.industry || selectedBlogIndustry) : selectedBlogIndustry;
         formData.append("industry", industryToSubmit === "_none_" ? "" : (industryToSubmit || ""));
         
         formData.append("imageStyle", imageStyle);
@@ -644,15 +690,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
             const fEffectFramingToUse = isAdmin ? (formSnapshot?.freepikEffectFraming || freepikEffectFraming) : freepikEffectFraming;
             if (fEffectFramingToUse && fEffectFramingToUse !== "none") formData.append("freepikEffectFraming", fEffectFramingToUse);
         }
-        
-        console.log("FormData being sent:", {
-          provider: providerToUse,
-          brandDescription: brandDesc,
-          imageStyle,
-          aspectRatio: formSnapshot?.aspectRatio || selectedAspectRatio,
-          numberOfImages: formSnapshot?.numberOfImages || parseInt(numberOfImagesToGenerate,10)
-        });
-        
+                
         imageAction(formData);
     });
   };
@@ -784,6 +822,24 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
       document.body.removeChild(link);
     } else { 
       window.open(imageUrl, '_blank');
+    }
+  };
+
+  const handleSocialImageChoiceChange = (value: SocialImageChoice) => {
+    setSocialImageChoice(value);
+    if (value === 'generated') {
+        setSelectedProfileImageIndexForSocial(null);
+        setSelectedLibraryImageIndexForSocial(null);
+    } else if (value === 'profile') {
+        if (brandData?.exampleImages && brandData.exampleImages.length > 0 && selectedProfileImageIndexForSocial === null) {
+            setSelectedProfileImageIndexForSocial(0);
+        }
+        setSelectedLibraryImageIndexForSocial(null);
+    } else if (value === 'library') {
+        if (savedLibraryImages.length > 0 && selectedLibraryImageIndexForSocial === null) {
+            setSelectedLibraryImageIndexForSocial(0);
+        }
+        setSelectedProfileImageIndexForSocial(null);
     }
   };
 
@@ -1243,13 +1299,16 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                               setUseImageForSocialPost(isChecked);
                               if (!isChecked) {
                                   setSocialImageChoice(null);
-                              } else if (!socialImageChoice && lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url?.startsWith('image_url:'))) {
-                                  setSocialImageChoice('generated');
-                              } else if (!socialImageChoice && brandData?.exampleImages?.[selectedProfileImageIndexForSocial !== null ? selectedProfileImageIndexForSocial : 0]) {
-                                  setSocialImageChoice('profile');
-                                  if(selectedProfileImageIndexForSocial === null && brandData?.exampleImages?.length > 0) setSelectedProfileImageIndexForSocial(0);
-                              } else if (!socialImageChoice) {
-                                    setSocialImageChoice(null);
+                              } else if (isChecked && socialImageChoice === null) { // Auto-select if turning on
+                                  if (sessionLastImageGenerationResult?.generatedImages?.some(url => url?.startsWith('data:') || url?.startsWith('image_url:'))) {
+                                      handleSocialImageChoiceChange('generated');
+                                  } else if (brandData?.exampleImages && brandData.exampleImages.length > 0) {
+                                      handleSocialImageChoiceChange('profile');
+                                  } else if (!isLoadingSavedLibraryImages && savedLibraryImages.length > 0) {
+                                      handleSocialImageChoiceChange('library');
+                                  } else {
+                                      handleSocialImageChoiceChange(null); // No sources available
+                                  }
                               }
                           }}
                       />
@@ -1262,19 +1321,25 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                     <div className="pl-6 space-y-4">
                       <RadioGroup
                           value={socialImageChoice || ""}
-                          onValueChange={(value) => setSocialImageChoice(value as 'generated' | 'profile' | null)}
+                          onValueChange={(value) => handleSocialImageChoiceChange(value as SocialImageChoice)}
                           className="space-y-2"
                       >
                           <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="generated" id="social-generated" disabled={!lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url?.startsWith('image_url:'))}/>
-                              <Label htmlFor="social-generated" className={(!lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url?.startsWith('image_url:'))) ? "text-muted-foreground" : ""}>
-                                  Use Last Generated Image {(!lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url?.startsWith('image_url:'))) ? "(None available/suitable)" : `(First of ${lastSuccessfulGeneratedImageUrls.filter(url => url?.startsWith('data:') || url?.startsWith('image_url:')).length} available will be used)`}
+                              <RadioGroupItem value="generated" id="social-generated" disabled={!sessionLastImageGenerationResult?.generatedImages?.some(url => url?.startsWith('data:') || url?.startsWith('image_url:'))}/>
+                              <Label htmlFor="social-generated" className={(!sessionLastImageGenerationResult?.generatedImages?.some(url => url?.startsWith('data:') || url?.startsWith('image_url:'))) ? "text-muted-foreground" : ""}>
+                                  Use Last Generated Image {(!sessionLastImageGenerationResult?.generatedImages?.some(url => url?.startsWith('data:') || url?.startsWith('image_url:'))) ? "(None available/suitable)" : `(First of ${sessionLastImageGenerationResult?.generatedImages?.filter(url => url?.startsWith('data:') || url?.startsWith('image_url:')).length} available will be used)`}
                               </Label>
                           </div>
                           <div className="flex items-center space-x-2">
                               <RadioGroupItem value="profile" id="social-profile" disabled={!brandData?.exampleImages || brandData.exampleImages.length === 0} />
                               <Label htmlFor="social-profile" className={(!brandData?.exampleImages || brandData.exampleImages.length === 0) ? "text-muted-foreground" : ""}>
                                   Use Brand Profile Example Image {!brandData?.exampleImages || brandData.exampleImages.length === 0 ? "(None available)" : `(${(brandData?.exampleImages?.length || 0)} available)`}
+                              </Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="library" id="social-library" disabled={isLoadingSavedLibraryImages || savedLibraryImages.length === 0} />
+                              <Label htmlFor="social-library" className={(isLoadingSavedLibraryImages || savedLibraryImages.length === 0) ? "text-muted-foreground" : ""}>
+                                  Select from AI-Generated Library {isLoadingSavedLibraryImages ? "(Loading...)" : savedLibraryImages.length === 0 ? "(None available)" : `(${savedLibraryImages.length} available)`}
                               </Label>
                           </div>
                       </RadioGroup>
@@ -1310,6 +1375,39 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                               )}
                             </div>
                       )}
+
+                      {socialImageChoice === 'library' && !isLoadingSavedLibraryImages && savedLibraryImages.length > 0 && (
+                            <div className="mt-2 space-y-2">
+                                {savedLibraryImages.length > 1 ? (
+                                  <>
+                                  <p className="text-xs text-muted-foreground mb-1">Select Library Image for Social Post:</p>
+                                  <div className="flex space-x-2 overflow-x-auto pb-2">
+                                      {savedLibraryImages.map((img, index) => (
+                                          <button
+                                              type="button"
+                                              key={`social-library-${index}`}
+                                              onClick={() => setSelectedLibraryImageIndexForSocial(index)}
+                                              className={cn(
+                                                  "w-16 h-16 rounded border-2 p-0.5 flex-shrink-0 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring",
+                                                  selectedLibraryImageIndexForSocial === index ? "border-primary ring-2 ring-primary" : "border-border"
+                                              )}
+                                          >
+                                              <NextImage src={img.storageUrl} alt={`Library Image ${index + 1}`} width={60} height={60} className="object-contain w-full h-full rounded-sm" data-ai-hint="library content"/>
+                                          </button>
+                                      ))}
+                                  </div>
+                                  </>
+                                ) : savedLibraryImages[0] ? (
+                                  <div className="w-16 h-16 rounded border-2 p-0.5 border-primary ring-2 ring-primary flex-shrink-0">
+                                        <NextImage src={savedLibraryImages[0].storageUrl} alt={`Library Image 1`} width={60} height={60} className="object-contain w-full h-full rounded-sm" data-ai-hint="library content"/>
+                                    </div>
+                                ) : null}
+                              {selectedLibraryImageIndexForSocial !== null && savedLibraryImages[selectedLibraryImageIndexForSocial] && (
+                                <p className="text-xs text-muted-foreground">Using image {savedLibraryImages.length > 1 ? selectedLibraryImageIndexForSocial + 1 : '1'} from library.</p>
+                              )}
+                            </div>
+                      )}
+
                     </div>
                   )}
 
@@ -1326,7 +1424,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                       </div>
                     )}
                     {useImageForSocialPost && !currentSocialImagePreviewUrl && (
-                      <p className="pl-6 text-xs text-muted-foreground mb-3">No image selected or available for the social post.</p>
+                      <p className="pl-6 text-xs text-muted-foreground mb-3">No image selected or available for the social post. Please choose an available source.</p>
                     )}
                 </div>
 
