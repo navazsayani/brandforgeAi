@@ -28,20 +28,23 @@ import { SubmitButton } from '@/components/SubmitButton';
 import type { GenerateBrandLogoOutput } from '@/ai/flows/generate-brand-logo-flow';
 import { industries } from '@/lib/constants';
 
+const MAX_IMAGES_PREMIUM = 5;
+const MAX_IMAGES_FREE = 2;
+
 const brandProfileSchema = z.object({
   brandName: z.string().min(2, { message: "Brand name must be at least 2 characters." }),
   websiteUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   brandDescription: z.string().min(10, { message: "Description must be at least 10 characters." }),
   industry: z.string().optional(),
   imageStyleNotes: z.string().optional(),
-  exampleImages: z.array(z.string().url({ message: "Each image must be a valid URL." })).max(5, {message: "You can upload a maximum of 5 example images."}).optional(),
+  exampleImages: z.array(z.string().url({ message: "Each image must be a valid URL." })).optional(), // Max validation handled in component
   targetKeywords: z.string().optional(),
   brandLogoUrl: z.union([
     z.string().url({ message: "Please enter a valid URL." }), 
     z.string().startsWith('data:').optional(), 
     z.literal('').optional() 
   ]).optional(),
-  plan: z.enum(['free', 'premium']).optional(), // Added plan to schema
+  plan: z.enum(['free', 'premium']).optional(),
 });
 
 type BrandProfileFormData = z.infer<typeof brandProfileSchema>;
@@ -55,7 +58,7 @@ const defaultFormValues: BrandProfileFormData = {
   exampleImages: [],
   targetKeywords: "",
   brandLogoUrl: "",
-  plan: 'free', // Default plan in form
+  plan: 'free',
 };
 
 const initialExtractState: ExtractFormState<{ brandDescription: string; targetKeywords: string; }> = { error: undefined, data: undefined, message: undefined };
@@ -83,6 +86,8 @@ export default function BrandProfilePage() {
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [logoUploadProgress, setLogoUploadProgress] = useState(0);
 
+  const currentPlan = brandData?.plan || 'free';
+  const maxImagesAllowed = currentPlan === 'premium' ? MAX_IMAGES_PREMIUM : MAX_IMAGES_FREE;
 
   const form = useForm<BrandProfileFormData>({
     resolver: zodResolver(brandProfileSchema),
@@ -92,13 +97,14 @@ export default function BrandProfilePage() {
   useEffect(() => {
     if (brandData) {
       const industryValue = brandData.industry && brandData.industry.trim() !== "" ? brandData.industry : "_none_";
-      const planValue = brandData.plan && ['free', 'premium'].includes(brandData.plan) ? brandData.plan : 'free'; // Ensure plan is valid or default
+      const planValue = brandData.plan && ['free', 'premium'].includes(brandData.plan) ? brandData.plan : 'free';
+      const exampleImagesArray = Array.isArray(brandData.exampleImages) ? brandData.exampleImages : [];
       const currentData = {
         ...defaultFormValues,
         ...brandData,
         industry: industryValue,
-        exampleImages: brandData.exampleImages || [],
-        plan: planValue, // Set plan from context
+        exampleImages: exampleImagesArray.slice(0, maxImagesAllowed), // Ensure current images don't exceed new limit
+        plan: planValue,
       };
       form.reset(currentData);
       setPreviewImages(currentData.exampleImages);
@@ -114,7 +120,7 @@ export default function BrandProfilePage() {
       setSelectedFileNames([]);
       setGeneratedLogoPreview(null);
     }
-  }, [brandData, form, isBrandContextLoading]);
+  }, [brandData, form, isBrandContextLoading, maxImagesAllowed]);
 
   useEffect(() => {
     if (brandContextError) {
@@ -187,6 +193,8 @@ if (!brandName || !brandDescription) {
     formData.append("brandDescription", brandDescription);
     if (industry) formData.append("industry", industry);
     if (targetKeywords) formData.append("targetKeywords", targetKeywords);
+    if (currentUser?.uid) formData.append("userId", currentUser.uid);
+
 
     startTransition(() => {
       generateLogoAction(formData);
@@ -245,10 +253,10 @@ if (!brandName || !brandDescription) {
       const files = Array.from(event.target.files);
       const currentSavedImages = form.getValues("exampleImages") || [];
 
-      if (currentSavedImages.length + files.length > 5) {
+      if (currentSavedImages.length + files.length > maxImagesAllowed) {
         toast({
           title: "Upload Limit Exceeded",
-          description: "You can upload a maximum of 5 example images.",
+          description: `Your current plan (${currentPlan}) allows a maximum of ${maxImagesAllowed} example images. You have ${currentSavedImages.length} and tried to add ${files.length}.`,
           variant: "destructive",
         });
         if (fileInputRef.current) {
@@ -328,8 +336,20 @@ if (!brandName || !brandDescription) {
   const onSubmit: SubmitHandler<BrandProfileFormData> = async (data) => {
     console.log("🔍 BrandProfile: Form submission data:", data);
     let finalData = { ...data };
+    finalData.plan = currentPlan; // Ensure the plan from context/state is used
 
-    // Ensure industry field is properly handled
+    // Ensure exampleImages doesn't exceed the limit for the current plan before saving
+    const currentImages = finalData.exampleImages || [];
+    if (currentImages.length > maxImagesAllowed) {
+        finalData.exampleImages = currentImages.slice(0, maxImagesAllowed);
+        toast({
+            title: "Image Limit Adjusted",
+            description: `Number of example images was adjusted to ${maxImagesAllowed} to match your plan.`,
+            variant: "default"
+        });
+    }
+
+
     console.log("🔍 BrandProfile: Final data to save (before logo processing):", finalData);
 
     if (generatedLogoPreview) {
@@ -367,7 +387,7 @@ if (!brandName || !brandDescription) {
         finalData.brandLogoUrl = downloadURL; 
           toast({ title: "Logo Uploaded", description: "New logo uploaded and will be saved with profile." });
       } catch (error: any) {
-        clearInterval(progressInterval);
+        if (progressInterval) clearInterval(progressInterval);
         setIsUploadingLogo(false);
         setLogoUploadProgress(0);
         toast({
@@ -385,8 +405,7 @@ if (!brandName || !brandDescription) {
         toast({ title: "Save Error", description: "User not authenticated. Cannot save profile.", variant: "destructive" });
         return;
       }
-
-      // Ensure plan is either 'free' or 'premium', default to 'free' if somehow undefined in form data
+      
       const planToSave = finalData.plan && ['free', 'premium'].includes(finalData.plan) ? finalData.plan : 'free';
 
       await setBrandData({...finalData, exampleImages: finalData.exampleImages || [], plan: planToSave}, currentUser.uid);
@@ -409,11 +428,15 @@ if (!brandName || !brandDescription) {
 
   if (isAuthLoading || (isBrandContextLoading && !form.formState.isDirty && !brandData)) {
     return (
-      <div data-testid="loading-state">Loading... Please wait.</div>
+      <div data-testid="loading-state" className="flex items-center justify-center h-screen">
+        <Loader2 className="w-12 h-12 text-primary animate-spin" />
+        <p className="ml-4 text-lg">Loading Brand Profile...</p>
+      </div>
     );
   }
 
   const currentLogoToDisplay = generatedLogoPreview || brandData?.brandLogoUrl;
+  const canUploadMoreImages = (form.getValues("exampleImages")?.length || 0) < maxImagesAllowed;
 
   return (
     <ScrollArea className="h-[calc(100vh-56px)]"> 
@@ -551,8 +574,12 @@ if (!brandName || !brandDescription) {
                   <FormItem>
                     <FormLabel className="flex items-center text-base"><Star className="w-5 h-5 mr-2 text-primary"/>Subscription Plan</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
-                      value={field.value || 'free'}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        // Optionally, if changing plan immediately affects other parts of form:
+                        // form.setValue('plan', value as 'free' | 'premium', { shouldValidate: true });
+                      }}
+                      value={field.value || 'free'} // Default to 'free' if undefined
                       disabled={isBrandContextLoading || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo}
                     >
                       <FormControl>
@@ -650,16 +677,20 @@ if (!brandName || !brandDescription) {
               />
 
               <FormItem>
-                <FormLabel className="flex items-center text-base"><UploadCloud className="w-5 h-5 mr-2 text-primary"/>Upload Example Images (Optional, up to 5)</FormLabel>
+                <FormLabel className="flex items-center text-base"><UploadCloud className="w-5 h-5 mr-2 text-primary"/>Upload Example Images</FormLabel>
+                 <FormDescription>
+                    Your plan ({currentPlan}) allows up to {maxImagesAllowed} example images.
+                    Currently: {(form.getValues("exampleImages")?.length || 0)}/{maxImagesAllowed}.
+                </FormDescription>
                   <FormControl>
                   <div className="flex items-center justify-center w-full">
-                      <Label htmlFor="dropzone-file" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer border-border bg-card hover:bg-secondary ${isBrandContextLoading || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || (form.getValues("exampleImages")?.length || 0) >= 5 ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      <Label htmlFor="dropzone-file" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer border-border bg-card hover:bg-secondary ${isBrandContextLoading || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || !canUploadMoreImages ? 'opacity-50 cursor-not-allowed' : ''}`}>
                           <div className="flex flex-col items-center justify-center pt-5 pb-6">
                               {isUploading ? <Loader2 className="w-8 h-8 mb-2 text-muted-foreground animate-spin" /> : <UploadCloud className="w-8 h-8 mb-2 text-muted-foreground" />}
                               <p className="mb-1 text-sm text-muted-foreground">
-                                {isUploading ? `Uploading ${selectedFileNames.join(', ').substring(0,30)}...` : (selectedFileNames.length > 0 && previewImages.length === selectedFileNames.length ? selectedFileNames.map((name, idx) => name === `Saved image ${idx+1}` ? `Image ${idx+1}` : name).join(', ').substring(0,50) + (selectedFileNames.join(', ').length > 50 ? '...' : '') : <><span className="font-semibold">Click to upload</span> or drag and drop</>)}
+                                {isUploading ? `Uploading ${selectedFileNames.join(', ').substring(0,30)}...` : (selectedFileNames.length > 0 && previewImages.length === selectedFileNames.length ? selectedFileNames.map((name, idx) => name === `Saved image ${idx+1}` ? `Image ${idx+1}` : name).join(', ').substring(0,50) + (selectedFileNames.join(', ').length > 50 ? '...' : '') : (canUploadMoreImages ? <><span className="font-semibold">Click to upload</span> or drag and drop</> : `Maximum ${maxImagesAllowed} images reached.`))}
                               </p>
-                              {selectedFileNames.length === 0 && !isUploading && <p className="text-xs text-muted-foreground">SVG, PNG, JPG, GIF (Max 5MB per file recommended)</p>}
+                              {selectedFileNames.length === 0 && !isUploading && canUploadMoreImages && <p className="text-xs text-muted-foreground">SVG, PNG, JPG, GIF (Max 5MB per file recommended)</p>}
                           </div>
                           <Input
                               id="dropzone-file"
@@ -668,7 +699,7 @@ if (!brandName || !brandDescription) {
                               className="hidden"
                               onChange={handleImageFileChange}
                               accept="image/*"
-                              disabled={isBrandContextLoading || isUploading || isExtracting || (form.getValues("exampleImages")?.length || 0) >= 5 || isGeneratingLogo || isUploadingLogo}
+                              disabled={isBrandContextLoading || isUploading || isExtracting || !canUploadMoreImages || isGeneratingLogo || isUploadingLogo}
                               ref={fileInputRef}
                           />
                       </Label>
@@ -682,14 +713,14 @@ if (!brandName || !brandDescription) {
                   name="exampleImages"
                   render={() => ( <FormMessage /> )}
                   />
-                  { (form.getValues("exampleImages")?.length || 0) >= 5 && !isUploading &&
-                  <p className="text-xs text-destructive mt-1">Maximum 5 images allowed.</p>
+                  { !canUploadMoreImages && !isUploading &&
+                  <p className="text-xs text-destructive mt-1">Maximum {maxImagesAllowed} images allowed for the {currentPlan} plan.</p>
                   }
               </FormItem>
 
               {previewImages.length > 0 && (
                 <div className="mt-2 space-y-3">
-                    <p className="text-sm text-muted-foreground mb-1">Current Example Image Previews ({previewImages.length}/5):</p>
+                    <p className="text-sm text-muted-foreground mb-1">Current Example Image Previews ({previewImages.length}/{maxImagesAllowed}):</p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                       {previewImages.map((src, index) => (
                         <div key={src || index} className="relative group aspect-square">
@@ -721,7 +752,7 @@ if (!brandName || !brandDescription) {
               onClick={() => form.handleSubmit(onSubmit)()}
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
               size="lg"
- disabled={isAuthLoading || isBrandContextLoading || form.formState.isSubmitting || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo}
+              disabled={isAuthLoading || isBrandContextLoading || form.formState.isSubmitting || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo}
             >
                 {(isUploadingLogo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null)}
                 {isUploadingLogo ? 'Uploading Logo & Saving...' : (isUploading ? 'Uploading Image(s)...' : (isAuthLoading || isBrandContextLoading ? 'Loading Profile...' : (form.formState.isSubmitting ? 'Saving...' : (isExtracting ? 'Extracting Info...' : 'Save Brand Profile'))))}
@@ -733,3 +764,4 @@ if (!brandName || !brandDescription) {
   );
 }
 
+    
