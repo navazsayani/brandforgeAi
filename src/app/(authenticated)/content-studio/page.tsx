@@ -154,7 +154,7 @@ const ImageGridItem = ({
               src={displayUrl}
               alt={`Generated brand image ${index + 1}`}
               fill
-              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              sizes="(max-width: 639px) 90vw, (max-width: 767px) 45vw, (max-width: 1023px) 30vw, 23vw"
               style={{objectFit: 'cover', objectPosition: 'center'}}
               data-ai-hint="brand marketing"
               className="transition-opacity duration-300 opacity-100 group-hover:opacity-80"
@@ -587,6 +587,7 @@ export default function ContentStudioPage() {
        const formData = new FormData();
        formData.append('imagesToSaveJson', JSON.stringify(saveableImages));
        formData.append('userId', userId); 
+       formData.append('userEmail', currentUser?.email || '');
        saveImagesAction(formData);
     });
   };
@@ -1070,7 +1071,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
               <form id="imageGenerationFormFields" onSubmit={isAdmin ? (e) => e.preventDefault() : handleImageGenerationSubmit}>
                 <input type="hidden" name="industry" value={selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || ""} />
                 <CardContent className="space-y-6">
-                  {isAdmin && ( 
+                  {isAdmin ? ( 
                     <div>
                       <Label htmlFor="imageGenProviderSelect" className="flex items-center mb-1"><Server className="w-4 h-4 mr-2 text-primary" />Image Generation Provider</Label>
                       <Select value={selectedImageProvider || ''} onValueChange={(value) => setSelectedImageProvider(value as GenerateImagesInput['provider'])}>
@@ -1093,8 +1094,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                           </SelectContent>
                       </Select>
                     </div>
-                  )}
-                  {!isAdmin && (
+                  ) : (
                      <div className="space-y-1">
                          <Label className="flex items-center"><Server className="w-4 h-4 mr-2 text-primary"/>Image Generation Provider</Label>
                          <p className="text-sm text-muted-foreground p-2 border rounded-md bg-muted/50">Using Gemini (Google AI) for image generation.</p>
@@ -1355,7 +1355,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
             )} 
 
             {lastSuccessfulGeneratedImageUrls.length > 0 && (
-              <Card className="mt-6 mb-4 shadow-sm"> {/* Removed mx-4 */}
+              <Card className="mt-6 mb-4 shadow-sm">
                   <CardHeader>
                       <div className="flex justify-between items-center">
                           <CardTitle className="text-xl flex items-center">
@@ -1650,7 +1650,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
               </CardFooter>
             </form>
               {generatedSocialPost && (
-                <Card className="mt-6 mx-4 mb-4 shadow-sm">
+                <Card className="mt-6 shadow-sm"> {/* Removed mx-4 */}
                   <CardHeader>
                       <CardTitle className="text-xl flex items-center">
                           <MessageSquareText className="w-5 h-5 mr-2 text-primary" />
@@ -1845,7 +1845,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                   </CardFooter>
               </Card>
               {generatedBlogPost && (
-                <Card className="mt-6 mx-4 mb-4 shadow-sm">
+                <Card className="mt-6 shadow-sm"> {/* Removed mx-4 */}
                   <CardHeader>
                       <CardTitle className="text-xl flex items-center">
                           <Newspaper className="w-5 h-5 mr-2 text-primary" />
