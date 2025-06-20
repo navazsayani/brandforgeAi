@@ -5,29 +5,46 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowRight, Edit3, Send, TrendingUp, Sparkles, Image as ImageIconLucide, Loader2, Star } from 'lucide-react'; 
+import { ArrowRight, Edit3, Send, TrendingUp, Sparkles, Image as ImageIconLucide, Loader2, Star, ShieldCheck } from 'lucide-react'; 
 import NextImage from 'next/image'; 
 import { useBrand } from '@/contexts/BrandContext'; 
+import { useAuth } from '@/contexts/AuthContext'; // Added useAuth
 import { Skeleton } from '@/components/ui/skeleton'; 
-// Removed imports for AppLogoFormState, GenerateBrandForgeAppLogoOutput, handleGenerateBrandForgeAppLogoAction
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-// Removed SubmitButton import as it's not used here anymore
-import { Badge } from '@/components/ui/badge'; // Added Badge import
+import { Badge } from '@/components/ui/badge';
 
 export default function DashboardPage() {
   const { brandData, isLoading: isBrandLoading } = useBrand();
+  const { currentUser, isLoading: isAuthLoading } = useAuth(); // Get currentUser
   const [logoUrl, setLogoUrl] = useState<string | undefined>(undefined);
-  const [currentPlan, setCurrentPlan] = useState<string | undefined>(undefined); // Added state for currentPlan
+  const [displayPlan, setDisplayPlan] = useState<string | undefined>(undefined);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   useEffect(() => {
+    if (currentUser && currentUser.email === 'admin@brandforge.ai') {
+      setIsAdmin(true);
+    } else {
+      setIsAdmin(false);
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      setDisplayPlan('Admin');
+    } else if (brandData) {
+      setDisplayPlan(brandData.plan || 'free');
+    } else {
+      setDisplayPlan(undefined);
+    }
+
     if (brandData) {
       setLogoUrl(brandData.brandLogoUrl);
-      setCurrentPlan(brandData.plan || 'free'); // Default to 'free' if plan is not set
     } else {
       setLogoUrl(undefined);
-      setCurrentPlan(undefined); // Clear plan if no brandData
     }
-  }, [brandData]);
+  }, [brandData, isAdmin]);
+
+  const isLoading = isBrandLoading || isAuthLoading;
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fade-in">
@@ -45,14 +62,15 @@ export default function DashboardPage() {
                     Your intelligent partner for brand building, content creation, and campaign management.
                   </CardDescription>
                 </div>
-                {isBrandLoading ? (
+                {isLoading ? (
                   <Skeleton className="h-7 w-24 mt-2 sm:mt-0 rounded-md bg-muted" />
-                ) : currentPlan && (
+                ) : displayPlan && (
                   <Badge 
-                    variant={currentPlan === 'premium' ? 'default' : 'secondary'} 
+                    variant={isAdmin ? 'destructive' : (displayPlan === 'premium' ? 'default' : 'secondary')} 
                     className="mt-2 sm:mt-0 py-1 px-3 text-sm self-start sm:self-center"
                   >
-                    <Star className="w-4 h-4 mr-1.5" /> Plan: {currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)}
+                    {isAdmin ? <ShieldCheck className="w-4 h-4 mr-1.5" /> : <Star className="w-4 h-4 mr-1.5" />}
+                    {isAdmin ? 'Admin Access' : `Plan: ${displayPlan.charAt(0).toUpperCase() + displayPlan.slice(1)}`}
                   </Badge>
                 )}
               </div>
@@ -68,7 +86,7 @@ export default function DashboardPage() {
           <div className="grid-responsive-2 gap-6">
             
             <div className="relative w-full max-w-sm mx-auto aspect-square rounded-xl card-enhanced overflow-hidden bg-muted/50 flex items-center justify-center">
-              {isBrandLoading ? (
+              {isLoading ? (
                 <Skeleton className="w-full h-full rounded-xl" />
               ) : logoUrl ? (
                 <NextImage
@@ -110,7 +128,7 @@ export default function DashboardPage() {
               />
               <FeatureHighlight
                 icon={<TrendingUp className="w-6 h-6 text-accent" />}
-                title="Create &amp; Conquer"
+                title="Create & Conquer"
                 description="Generate stunning visuals, engaging social media posts, and insightful blog articles, all tailored to your brand."
                 cta={{ href: "/content-studio", label: "Explore Content Studio" }}
               />
@@ -124,8 +142,6 @@ export default function DashboardPage() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Temporary App Logo Generation Card has been removed */}
 
       <div className="grid gap-6 md:grid-cols-3">
         <InfoCard
