@@ -491,7 +491,7 @@ export default function BrandProfilePage() {
                   <SelectTrigger className="flex-grow min-w-0">
                     <SelectValue placeholder={isLoadingAdminProfiles ? "Loading users..." : "Select a user to load/edit"} />
                   </SelectTrigger>
-                  <SelectContent className="max-w-[var(--radix-select-trigger-width)]">
+                  <SelectContent className="w-[var(--radix-select-trigger-width)]">
                     <SelectGroup>
                       <SelectLabel>Users</SelectLabel>
                       {isLoadingAdminProfiles && <SelectItem value="loading" disabled>Loading users...</SelectItem>}
@@ -520,7 +520,7 @@ export default function BrandProfilePage() {
           <CardHeader>
             <div className="flex items-center space-x-3">
               <UserCircle className="w-10 h-10 text-primary" />
-              <div className="min-w-0">
+              <div className="min-w-0 overflow-hidden">
                 <CardTitle className="text-3xl font-bold break-words">{displayTitleText}</CardTitle>
                 <CardDescription className="text-lg break-words">
                   Define the identity. Fuels AI for content and campaigns.
@@ -719,3 +719,5 @@ export default function BrandProfilePage() {
     </ScrollArea>
   );
 }
+
+    
