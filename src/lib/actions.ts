@@ -12,7 +12,7 @@ import { generateBrandLogo, type GenerateBrandLogoInput, type GenerateBrandLogoO
 import { generateBrandForgeAppLogo, type GenerateBrandForgeAppLogoOutput } from '@/ai/flows/generate-brandforge-app-logo-flow';
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
-import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, collectionGroup, getDocs, query as firestoreQuery, where } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where } from 'firebase/firestore';
 import type { UserProfileSelectItem, BrandData } from '@/types'; // Added UserProfileSelectItem and BrandData
 
 // Generic type for form state with error
@@ -641,30 +641,31 @@ export async function handleGetAllUserProfilesForAdminAction(
 ): Promise<FormState<UserProfileSelectItem[]>> {
   const adminRequesterEmail = formData.get('adminRequesterEmail') as string;
 
-  // Basic admin check (replace with robust claims-based check in production)
   if (adminRequesterEmail !== 'admin@brandforge.ai') {
-    console.error("handleGetAllUserProfilesForAdminAction: Unauthorized attempt by email:", adminRequesterEmail);
     return { error: "Unauthorized: You do not have permission to perform this action." };
   }
 
   try {
     const profiles: UserProfileSelectItem[] = [];
-    // Query the 'brandProfiles' collection group
-    const brandProfilesGroupRef = collectionGroup(db, 'brandProfiles');
-    const querySnapshot = await getDocs(brandProfilesGroupRef);
+    const usersCollectionRef = collection(db, 'users');
+    const allUserDocsSnapshot = await getDocs(usersCollectionRef);
+
+    for (const userDoc of allUserDocsSnapshot.docs) {
+      const userId = userDoc.id;
+      const brandProfileDocRef = doc(db, 'users', userId, 'brandProfiles', userId);
+      const brandProfileSnap = await getDoc(brandProfileDocRef);
+
+      if (brandProfileSnap.exists()) {
+        const data = brandProfileSnap.data() as BrandData;
+        profiles.push({
+          userId: userId,
+          brandName: data.brandName || "Unnamed Brand",
+          userEmail: data.userEmail || "No Email",
+        });
+      }
+    }
     
-    querySnapshot.forEach((docSnap) => {
-      const data = docSnap.data() as BrandData;
-      // The document ID of a 'brandProfiles' doc IS the userId
-      const userId = docSnap.id; 
-      profiles.push({
-        userId: userId,
-        brandName: data.brandName || "Unnamed Brand",
-        userEmail: data.userEmail || "No Email",
-      });
-    });
-    
-    console.log(`Fetched ${profiles.length} user profiles for admin.`);
+    console.log(`Fetched ${profiles.length} user profiles for admin using individual reads.`);
     return { data: profiles, message: "User profiles fetched successfully." };
 
   } catch (e: any) {
