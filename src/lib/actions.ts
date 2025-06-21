@@ -12,8 +12,8 @@ import { generateBrandLogo, type GenerateBrandLogoInput, type GenerateBrandLogoO
 import { generateBrandForgeAppLogo, type GenerateBrandForgeAppLogoOutput } from '@/ai/flows/generate-brandforge-app-logo-flow';
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
-import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where } from 'firebase/firestore';
-import type { UserProfileSelectItem, BrandData } from '@/types'; // Added UserProfileSelectItem and BrandData
+import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where, collectionGroup } from 'firebase/firestore';
+import type { UserProfileSelectItem, BrandData } from '@/types';
 
 // Generic type for form state with error
 export interface FormState<T = any> {
@@ -641,35 +641,38 @@ export async function handleGetAllUserProfilesForAdminAction(
 ): Promise<FormState<UserProfileSelectItem[]>> {
   const adminRequesterEmail = formData.get('adminRequesterEmail') as string;
 
+  // This check is a preliminary safeguard. The real security is in Firestore rules.
   if (adminRequesterEmail !== 'admin@brandforge.ai') {
     return { error: "Unauthorized: You do not have permission to perform this action." };
   }
 
   try {
     const profiles: UserProfileSelectItem[] = [];
-    const usersCollectionRef = collection(db, 'users');
-    const allUserDocsSnapshot = await getDocs(usersCollectionRef);
+    // Use a collectionGroup query to fetch all brandProfiles directly.
+    // This is more efficient than fetching all users then all profiles.
+    const profilesQuery = firestoreQuery(collectionGroup(db, 'brandProfiles'));
+    const querySnapshot = await getDocs(profilesQuery);
 
-    for (const userDoc of allUserDocsSnapshot.docs) {
-      const userId = userDoc.id;
-      const brandProfileDocRef = doc(db, 'users', userId, 'brandProfiles', userId);
-      const brandProfileSnap = await getDoc(brandProfileDocRef);
-
-      if (brandProfileSnap.exists()) {
-        const data = brandProfileSnap.data() as BrandData;
-        profiles.push({
-          userId: userId,
-          brandName: data.brandName || "Unnamed Brand",
-          userEmail: data.userEmail || "No Email",
-        });
-      }
-    }
+    querySnapshot.forEach((doc) => {
+      const data = doc.data() as BrandData;
+      // The document ID of a brandProfile is the user's UID.
+      const userId = doc.id; 
+      profiles.push({
+        userId: userId,
+        brandName: data.brandName || "Unnamed Brand",
+        userEmail: data.userEmail || "No Email",
+      });
+    });
     
-    console.log(`Fetched ${profiles.length} user profiles for admin using individual reads.`);
+    console.log(`Fetched ${profiles.length} user profiles for admin using collectionGroup query.`);
     return { data: profiles, message: "User profiles fetched successfully." };
 
   } catch (e: any) {
     console.error("Error in handleGetAllUserProfilesForAdminAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
+    // Add specific check for permission denied error
+    if ((e as any).code === 'permission-denied') {
+        return { error: `Failed to fetch user profiles: Missing or insufficient permissions. Please ensure your Firestore security rules are deployed correctly and include the collectionGroup rule for admins.` };
+    }
     return { error: `Failed to fetch user profiles: ${e.message || "Unknown error. Check server logs."}` };
   }
 }
