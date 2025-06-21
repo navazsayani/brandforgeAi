@@ -491,7 +491,7 @@ export default function BrandProfilePage() {
                   <SelectTrigger className="flex-grow min-w-0">
                     <SelectValue placeholder={isLoadingAdminProfiles ? "Loading users..." : "Select a user to load/edit"} />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-w-[var(--radix-select-trigger-width)]">
                     <SelectGroup>
                       <SelectLabel>Users</SelectLabel>
                       {isLoadingAdminProfiles && <SelectItem value="loading" disabled>Loading users...</SelectItem>}
