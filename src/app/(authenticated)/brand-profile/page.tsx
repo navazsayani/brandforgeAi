@@ -480,7 +480,7 @@ export default function BrandProfilePage() {
               <CardDescription>Load and edit a specific user's brand profile.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 w-full">
                 <Select
                   value={adminSelectedUserIdFromDropdown}
                   onValueChange={(value) => {
@@ -488,7 +488,7 @@ export default function BrandProfilePage() {
                   }}
                   disabled={isLoadingAdminProfiles || isAdminLoadingTargetProfile}
                 >
-                  <SelectTrigger className="flex-grow">
+                  <SelectTrigger className="flex-grow min-w-0">
                     <SelectValue placeholder={isLoadingAdminProfiles ? "Loading users..." : "Select a user to load/edit"} />
                   </SelectTrigger>
                   <SelectContent>
@@ -521,7 +521,7 @@ export default function BrandProfilePage() {
             <div className="flex items-center space-x-3">
               <UserCircle className="w-10 h-10 text-primary" />
               <div className="min-w-0">
-                <CardTitle className="text-3xl font-bold break-all">{displayTitleText}</CardTitle>
+                <CardTitle className="text-3xl font-bold break-words">{displayTitleText}</CardTitle>
                 <CardDescription className="text-lg break-words">
                   Define the identity. Fuels AI for content and campaigns.
                 </CardDescription>
@@ -561,7 +561,9 @@ export default function BrandProfilePage() {
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><LinkIcon className="w-5 h-5 mr-2 text-primary"/>Website URL</FormLabel>
                       <div className="flex items-center space-x-2">
-                        <FormControl><Input placeholder="https://example.com" {...field} disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo} /></FormControl>
+                        <div className="flex-grow min-w-0">
+                           <FormControl><Input placeholder="https://example.com" {...field} disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo} /></FormControl>
+                        </div>
                         <Button type="button" onClick={handleAutoFill} disabled={isExtracting || isBrandContextLoading || isAdminLoadingTargetProfile || !field.value || form.getFieldState("websiteUrl").invalid || isUploading || isGeneratingLogo || isUploadingLogo} variant="outline" size="sm" title="Auto-fill">
                           {isExtracting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="w-4 h-4" />}
                         </Button>
