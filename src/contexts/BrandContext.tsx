@@ -3,7 +3,7 @@
 
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore'; // Added deleteDoc for potential future use
+import { doc, getDoc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore'; // Added deleteDoc and serverTimestamp for potential future use
 import { db } from '@/lib/firebaseConfig';
 import type { BrandData, GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign } from '@/types';
 import { useAuth } from './AuthContext'; 
@@ -59,86 +59,6 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
   const [generatedAdCampaigns, setGeneratedAdCampaigns] = useState<GeneratedAdCampaign[]>([]);
   const [sessionLastImageGenerationResult, setSessionLastImageGenerationResultState] = useState<LastImageGenerationResult | null>(null); 
 
-  const fetchBrandDataCB = useCallback(async () => {
-    if (!currentUser) {
-      setBrandDataState(defaultEmptyBrandData);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-    const userId = currentUser.uid;
-
-    try {
-      const newBrandDocRef = doc(db, "users", userId, "brandProfiles", userId);
-      const oldBrandDocRef = doc(db, "brandProfiles", userId); 
-
-      let docSnap = await getDoc(newBrandDocRef);
-      let dataToSet: BrandData | null = null;
-      let fetchedFromOldPath = false;
-
-      if (docSnap.exists()) {
-        console.log("BrandContext: Found data at new path.");
-        dataToSet = docSnap.data() as BrandData;
-      } else {
-        console.log("BrandContext: No data at new path, checking old path...");
-        docSnap = await getDoc(oldBrandDocRef);
-        if (docSnap.exists()) {
-          console.log("BrandContext: Found data at old path. Attempting to migrate...");
-          dataToSet = docSnap.data() as BrandData;
-          fetchedFromOldPath = true;
-        }
-      }
-
-      if (dataToSet) {
-        const normalizedData = { ...defaultEmptyBrandData, ...dataToSet }; 
-        if (normalizedData.industry === "" || normalizedData.industry === undefined || normalizedData.industry === null) {
-          normalizedData.industry = "_none_";
-        }
-        if (!normalizedData.plan || !['free', 'premium'].includes(normalizedData.plan)) {
-            normalizedData.plan = 'free';
-        }
-        // Ensure userEmail is populated if missing (especially during migration)
-        if (!normalizedData.userEmail && currentUser.email) {
-            normalizedData.userEmail = currentUser.email;
-        }
-        
-        setBrandDataState(normalizedData);
-
-        if (fetchedFromOldPath) {
-          try {
-            await setDoc(newBrandDocRef, normalizedData, { merge: true }); 
-            console.log("BrandContext: Successfully migrated brand data from old path to new path (including userEmail).");
-          } catch (migrationError: any) {
-            console.error("BrandContext: Error migrating data from old path to new path:", migrationError);
-            setError(`Failed to migrate brand data to new structure: ${migrationError.message}. Old data will be used this session.`);
-          }
-        }
-      } else {
-        console.log("BrandContext: No data found at new or old paths. Using default empty brand data (with current user's email if available).");
-        setBrandDataState({ ...defaultEmptyBrandData, userEmail: currentUser.email || "" });
-      }
-    } catch (e: any) {
-      console.error("Error fetching brand data from Firestore:", e);
-      let specificError = `Failed to fetch brand data: ${e.message || "Unknown error. Check console."}`;
-      if (e.code === 'unavailable' || (e.message && (e.message.toLowerCase().includes("client is offline") || e.message.toLowerCase().includes("could not reach cloud firestore backend")))) {
-        specificError = "Connection Error: Unable to reach Firestore. Please check your internet connection or Firebase status. The app may operate with cached data if available.";
-        console.warn("FIRESTORE OFFLINE: Could not reach Cloud Firestore backend. Client operating in offline mode.", e);
-      } else if (e.message && e.message.toLowerCase().includes("missing or insufficient permissions")) {
-        specificError = "Database permission error. Please check your Firestore security rules in the Firebase console.";
-      }
-      setError(specificError);
-      setBrandDataState({ ...defaultEmptyBrandData, userEmail: currentUser?.email || "" });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentUser]); 
-
-  useEffect(() => {
-    fetchBrandDataCB();
-  }, [fetchBrandDataCB]); 
-
   const setBrandDataCB = useCallback(async (data: BrandData, userIdToSaveFor: string) => { 
     if (!userIdToSaveFor) {
       const noUserError = "User ID to save for is missing. Cannot save brand profile.";
@@ -161,19 +81,26 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         dataToSave.plan = 'free';
       }
 
-      // If this save is for the currently logged-in user's own profile, ensure their email is set.
-      // If an admin is saving for another user, data.userEmail should already be present from the loaded profile.
       if (currentUser && userIdToSaveFor === currentUser.uid && currentUser.email) {
         dataToSave.userEmail = currentUser.email;
-      } else if (!dataToSave.userEmail && data.userEmail) { // If not current user, preserve incoming email if any
+      } else if (!dataToSave.userEmail && data.userEmail) { 
         dataToSave.userEmail = data.userEmail;
       }
-
 
       const brandDocRef = doc(db, "users", userIdToSaveFor, "brandProfiles", userIdToSaveFor); 
       await setDoc(brandDocRef, dataToSave, { merge: true }); 
 
-      // If the saved data is for the currently logged-in user, update the context state.
+      // ADDED: Update the central user index
+      const userIndexRef = doc(db, "userIndex", "profiles");
+      const indexUpdateData = {
+          [`${userIdToSaveFor}`]: { // Use a dynamic key for the user's UID
+              brandName: dataToSave.brandName || "Unnamed Brand",
+              userEmail: dataToSave.userEmail || "No Email",
+          }
+      };
+      await setDoc(userIndexRef, indexUpdateData, { merge: true });
+      console.log(`BrandContext: Wrote/updated userIndex for user ${userIdToSaveFor}.`);
+
       if (currentUser && userIdToSaveFor === currentUser.uid) {
         setBrandDataState(dataToSave); 
       }
@@ -192,6 +119,81 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
     }
   }, [currentUser]);
+
+  const fetchBrandDataCB = useCallback(async () => {
+    if (!currentUser) {
+      setBrandDataState(defaultEmptyBrandData);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    const userId = currentUser.uid;
+
+    try {
+      const newBrandDocRef = doc(db, "users", userId, "brandProfiles", userId);
+      const oldBrandDocRef = doc(db, "brandProfiles", userId); 
+
+      let docSnap = await getDoc(newBrandDocRef);
+      let dataToSet: BrandData | null = null;
+      let needsSave = false; // Flag to trigger save/migration
+
+      if (docSnap.exists()) {
+        console.log("BrandContext: Found data at new path.");
+        dataToSet = docSnap.data() as BrandData;
+      } else {
+        console.log("BrandContext: No data at new path, checking old path...");
+        docSnap = await getDoc(oldBrandDocRef);
+        if (docSnap.exists()) {
+          console.log("BrandContext: Found data at old path. Flagging for migration.");
+          dataToSet = docSnap.data() as BrandData;
+          needsSave = true; // Data needs to be saved to new path.
+        }
+      }
+
+      if (dataToSet) {
+        const normalizedData = { ...defaultEmptyBrandData, ...dataToSet }; 
+        if (!normalizedData.industry) normalizedData.industry = "_none_";
+        if (!normalizedData.plan) normalizedData.plan = 'free';
+        
+        // If user email is missing from the data, add it and flag for saving.
+        if (!normalizedData.userEmail && currentUser.email) {
+            normalizedData.userEmail = currentUser.email;
+            needsSave = true; 
+        }
+        
+        setBrandDataState(normalizedData);
+
+        if (needsSave) {
+          console.log("BrandContext: Data needs save/migration, calling setBrandDataCB to update and create index entry.");
+          await setBrandDataCB(normalizedData, userId);
+        }
+      } else {
+        console.log("BrandContext: No data found at all. Creating and saving default profile to trigger index creation.");
+        const defaultWithEmail = { ...defaultEmptyBrandData, userEmail: currentUser.email || "" };
+        setBrandDataState(defaultWithEmail);
+        await setBrandDataCB(defaultWithEmail, userId);
+      }
+    } catch (e: any) {
+      console.error("Error fetching brand data from Firestore:", e);
+      let specificError = `Failed to fetch brand data: ${e.message || "Unknown error. Check console."}`;
+      if (e.code === 'unavailable' || (e.message && (e.message.toLowerCase().includes("client is offline") || e.message.toLowerCase().includes("could not reach cloud firestore backend")))) {
+        specificError = "Connection Error: Unable to reach Firestore. Please check your internet connection or Firebase status. The app may operate with cached data if available.";
+        console.warn("FIRESTORE OFFLINE: Could not reach Cloud Firestore backend. Client operating in offline mode.", e);
+      } else if (e.message && e.message.toLowerCase().includes("missing or insufficient permissions")) {
+        specificError = "Database permission error. Please check your Firestore security rules in the Firebase console.";
+      }
+      setError(specificError);
+      setBrandDataState({ ...defaultEmptyBrandData, userEmail: currentUser?.email || "" });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentUser, setBrandDataCB]); 
+
+  useEffect(() => {
+    fetchBrandDataCB();
+  }, [fetchBrandDataCB]); 
 
   const addGeneratedImageCB = useCallback((image: GeneratedImage) => {
     setGeneratedImages(prev => [image, ...prev.slice(0,19)]);

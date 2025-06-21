@@ -646,41 +646,28 @@ export async function handleGetAllUserProfilesForAdminAction(
   }
 
   try {
-    const profiles: UserProfileSelectItem[] = [];
-    const usersCollectionRef = collection(db, 'users');
-    const usersSnapshot = await getDocs(usersCollectionRef);
+    const userIndexRef = doc(db, "userIndex", "profiles");
+    const userIndexSnap = await getDoc(userIndexRef);
 
-    for (const userDoc of usersSnapshot.docs) {
-      const userId = userDoc.id;
-      const profileDocRef = doc(db, `users/${userId}/brandProfiles/${userId}`);
-      const profileDocSnap = await getDoc(profileDocRef);
-
-      if (profileDocSnap.exists()) {
-        const data = profileDocSnap.data() as BrandData;
-        profiles.push({
-          userId: userId,
-          brandName: data.brandName || "Unnamed Brand",
-          userEmail: data.userEmail || "No Email",
-        });
-      } else {
-        // Handle case where user doc exists but profile doc doesn't yet
-        // This can happen if a user signs up but hasn't visited the profile page yet.
-        const userDocData = userDoc.data();
-        profiles.push({
-          userId: userId,
-          brandName: "Unnamed Brand (No Profile)",
-          userEmail: userDocData.email || "No Email", // Assuming email might be on the top-level user doc from auth
-        });
-      }
+    if (!userIndexSnap.exists()) {
+        console.log("Admin action: userIndex/profiles document does not exist yet.");
+        return { data: [], message: "No user profiles have been saved yet." };
     }
+
+    const indexData = userIndexSnap.data();
+    const profiles: UserProfileSelectItem[] = Object.entries(indexData).map(([userId, userData]) => ({
+      userId: userId,
+      brandName: (userData as any).brandName || "Unnamed Brand",
+      userEmail: (userData as any).userEmail || "No Email",
+    }));
     
-    console.log(`Fetched ${profiles.length} user profiles for admin by listing /users collection.`);
+    console.log(`Fetched ${profiles.length} user profiles for admin from userIndex.`);
     return { data: profiles, message: "User profiles fetched successfully." };
 
   } catch (e: any) {
     console.error("Error in handleGetAllUserProfilesForAdminAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
     if ((e as any).code === 'permission-denied') {
-        return { error: `Failed to fetch user profiles: Missing or insufficient permissions. Please ensure your Firestore security rules are deployed correctly and allow admins to list the '/users' collection.` };
+        return { error: `Failed to fetch user profiles: Missing or insufficient permissions. Please ensure your Firestore security rules are deployed correctly and allow admins to read the 'userIndex/profiles' document.` };
     }
     return { error: `Failed to fetch user profiles: ${e.message || "Unknown error. Check server logs."}` };
   }
