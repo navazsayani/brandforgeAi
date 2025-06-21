@@ -41,25 +41,24 @@ export function AppShell({ children }: { children: ReactNode }) {
   const SidebarNav = () => (
     <nav className="flex-1 px-2 py-4 space-y-1">
       {navItems.map((item) => (
-        <Link key={item.label} href={item.href} legacyBehavior passHref>
-          <Button
-            variant={pathname === item.href ? 'secondary' : 'ghost'}
-            className={cn(
-              "sidebar-nav-item", // Includes w-full, text-sidebar-foreground, hover states, touch-target
-              "justify-start",    // Ensure left alignment of content (icon and text)
-              "gap-0",            // Remove default gap from base button, rely on icon's mr-3
-              pathname === item.href 
-                ? "active shadow-md" 
-                : ""
-            )}
-            asChild
-          >
-            <a>
-              <item.icon className="w-5 h-5 mr-3 flex-shrink-0" />
-              <span className="text-break">{item.label}</span>
-            </a>
-          </Button>
-        </Link>
+        <Button
+          key={item.label}
+          asChild
+          variant={pathname === item.href ? 'secondary' : 'ghost'}
+          className={cn(
+            "sidebar-nav-item", // Includes w-full, text-sidebar-foreground, hover states, touch-target
+            "justify-start",    // Ensure left alignment of content (icon and text)
+            "gap-0",            // Remove default gap from base button, rely on icon's mr-3
+            pathname === item.href 
+              ? "active shadow-md" 
+              : ""
+          )}
+        >
+          <Link href={item.href}>
+            <item.icon className="w-5 h-5 mr-3 flex-shrink-0" />
+            <span className="text-break">{item.label}</span>
+          </Link>
+        </Button>
       ))}
     </nav>
   );
