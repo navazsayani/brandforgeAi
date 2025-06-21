@@ -641,37 +641,46 @@ export async function handleGetAllUserProfilesForAdminAction(
 ): Promise<FormState<UserProfileSelectItem[]>> {
   const adminRequesterEmail = formData.get('adminRequesterEmail') as string;
 
-  // This check is a preliminary safeguard. The real security is in Firestore rules.
   if (adminRequesterEmail !== 'admin@brandforge.ai') {
     return { error: "Unauthorized: You do not have permission to perform this action." };
   }
 
   try {
     const profiles: UserProfileSelectItem[] = [];
-    // Use a collectionGroup query to fetch all brandProfiles directly.
-    // This is more efficient than fetching all users then all profiles.
-    const profilesQuery = firestoreQuery(collectionGroup(db, 'brandProfiles'));
-    const querySnapshot = await getDocs(profilesQuery);
+    const usersCollectionRef = collection(db, 'users');
+    const usersSnapshot = await getDocs(usersCollectionRef);
 
-    querySnapshot.forEach((doc) => {
-      const data = doc.data() as BrandData;
-      // The document ID of a brandProfile is the user's UID.
-      const userId = doc.id; 
-      profiles.push({
-        userId: userId,
-        brandName: data.brandName || "Unnamed Brand",
-        userEmail: data.userEmail || "No Email",
-      });
-    });
+    for (const userDoc of usersSnapshot.docs) {
+      const userId = userDoc.id;
+      const profileDocRef = doc(db, `users/${userId}/brandProfiles/${userId}`);
+      const profileDocSnap = await getDoc(profileDocRef);
+
+      if (profileDocSnap.exists()) {
+        const data = profileDocSnap.data() as BrandData;
+        profiles.push({
+          userId: userId,
+          brandName: data.brandName || "Unnamed Brand",
+          userEmail: data.userEmail || "No Email",
+        });
+      } else {
+        // Handle case where user doc exists but profile doc doesn't yet
+        // This can happen if a user signs up but hasn't visited the profile page yet.
+        const userDocData = userDoc.data();
+        profiles.push({
+          userId: userId,
+          brandName: "Unnamed Brand (No Profile)",
+          userEmail: userDocData.email || "No Email", // Assuming email might be on the top-level user doc from auth
+        });
+      }
+    }
     
-    console.log(`Fetched ${profiles.length} user profiles for admin using collectionGroup query.`);
+    console.log(`Fetched ${profiles.length} user profiles for admin by listing /users collection.`);
     return { data: profiles, message: "User profiles fetched successfully." };
 
   } catch (e: any) {
     console.error("Error in handleGetAllUserProfilesForAdminAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
-    // Add specific check for permission denied error
     if ((e as any).code === 'permission-denied') {
-        return { error: `Failed to fetch user profiles: Missing or insufficient permissions. Please ensure your Firestore security rules are deployed correctly and include the collectionGroup rule for admins.` };
+        return { error: `Failed to fetch user profiles: Missing or insufficient permissions. Please ensure your Firestore security rules are deployed correctly and allow admins to list the '/users' collection.` };
     }
     return { error: `Failed to fetch user profiles: ${e.message || "Unknown error. Check server logs."}` };
   }
