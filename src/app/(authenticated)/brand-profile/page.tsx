@@ -120,10 +120,10 @@ export default function BrandProfilePage() {
   }, [currentUser]);
   
   useEffect(() => {
-    if (isAdmin && currentUser?.uid) {
+    if (isAdmin && currentUser?.email) {
       setIsLoadingAdminProfiles(true);
       const formData = new FormData();
-      formData.append('adminRequesterUid', currentUser.uid); // Pass admin's UID for server-side verification
+      formData.append('adminRequesterEmail', currentUser.email); // Pass admin's email for server-side verification
       startTransition(() => {
         adminFetchProfilesAction(formData);
       });

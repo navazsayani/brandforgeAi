@@ -15,11 +15,6 @@ import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storag
 import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, collectionGroup, getDocs, query as firestoreQuery, where } from 'firebase/firestore';
 import type { UserProfileSelectItem, BrandData } from '@/types'; // Added UserProfileSelectItem and BrandData
 
-// Admin UID - Replace with your actual admin user's UID from Firebase Auth
-// For a real app, use Firebase custom claims for robust admin role checking.
-const ADMIN_USER_UID = process.env.NEXT_PUBLIC_ADMIN_UID || 'REPLACE_WITH_YOUR_ADMIN_UID';
-
-
 // Generic type for form state with error
 export interface FormState<T = any> {
   data?: T;
@@ -383,10 +378,10 @@ export async function handleSaveGeneratedImagesAction(
   prevState: FormState<{savedCount: number}>,
   formData: FormData
 ): Promise<FormState<{savedCount: number}>> {
-  console.log("handleSaveGeneratedImagesAction called");
   const userId = formData.get('userId') as string;
   const userEmail = formData.get('userEmail') as string | undefined; 
-  console.log(`handleSaveGeneratedImagesAction: userId from formData: '${userId}', userEmail: '${userEmail}'`);
+  console.log(`handleSaveGeneratedImagesAction: Attempting to save images for userId from formData: '${userId}'`);
+
 
   if (!userId || typeof userId !== 'string') {
     console.error('handleSaveGeneratedImagesAction: User not authenticated - userId is missing or invalid.');
@@ -394,8 +389,8 @@ export async function handleSaveGeneratedImagesAction(
   }
 
   try {
+    console.log(`handleSaveGeneratedImagesAction: Ensuring brand profile doc exists for userId: ${userId}`);
     await ensureUserBrandProfileDocExists(userId, userEmail);
-    console.log(`handleSaveGeneratedImagesAction: Ensured brand profile doc exists for userId: ${userId}`);
     
     const imagesToSaveString = formData.get('imagesToSaveJson') as string;
     if (!imagesToSaveString) {
@@ -644,11 +639,11 @@ export async function handleGetAllUserProfilesForAdminAction(
   prevState: FormState<UserProfileSelectItem[]>,
   formData: FormData
 ): Promise<FormState<UserProfileSelectItem[]>> {
-  const adminRequesterUid = formData.get('adminRequesterUid') as string;
+  const adminRequesterEmail = formData.get('adminRequesterEmail') as string;
 
   // Basic admin check (replace with robust claims-based check in production)
-  if (adminRequesterUid !== ADMIN_USER_UID) {
-    console.error("handleGetAllUserProfilesForAdminAction: Unauthorized attempt by UID:", adminRequesterUid);
+  if (adminRequesterEmail !== 'admin@brandforge.ai') {
+    console.error("handleGetAllUserProfilesForAdminAction: Unauthorized attempt by email:", adminRequesterEmail);
     return { error: "Unauthorized: You do not have permission to perform this action." };
   }
 
@@ -677,4 +672,3 @@ export async function handleGetAllUserProfilesForAdminAction(
     return { error: `Failed to fetch user profiles: ${e.message || "Unknown error. Check server logs."}` };
   }
 }
-
