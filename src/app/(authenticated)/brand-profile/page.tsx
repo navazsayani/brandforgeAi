@@ -121,12 +121,21 @@ export default function BrandProfilePage() {
   
   useEffect(() => {
     if (isAdmin && currentUser?.email) {
-      setIsLoadingAdminProfiles(true);
-      const formData = new FormData();
-      formData.append('adminRequesterEmail', currentUser.email); // Pass admin's email for server-side verification
-      startTransition(() => {
-        adminFetchProfilesAction(formData);
-      });
+      const fetchAdminProfiles = async () => {
+        setIsLoadingAdminProfiles(true);
+        try {
+          const formData = new FormData();
+          formData.append('adminRequesterEmail', currentUser.email || '');
+          startTransition(() => {
+            adminFetchProfilesAction(formData);
+          });
+        } catch (error) {
+          console.error('Failed to fetch admin profiles:', error);
+          setIsLoadingAdminProfiles(false);
+        }
+      };
+      
+      fetchAdminProfiles();
     }
   }, [isAdmin, currentUser, adminFetchProfilesAction]);
 
@@ -205,21 +214,28 @@ export default function BrandProfilePage() {
       toast({ title: "Missing User ID", description: "Please select a user to load.", variant: "destructive" });
       return;
     }
+    
     setIsAdminLoadingTargetProfile(true);
-    setAdminLoadedProfileData(null); 
+    setAdminLoadedProfileData(null);
+    
     try {
       const targetUserDocRef = doc(db, "users", uidToLoad, "brandProfiles", uidToLoad);
       const docSnap = await getDoc(targetUserDocRef);
       if (docSnap.exists()) {
         setAdminLoadedProfileData(docSnap.data() as BrandData);
-        setAdminTargetUserId(uidToLoad); 
+        setAdminTargetUserId(uidToLoad);
         toast({ title: "Profile Loaded", description: `Displaying profile for User: ${docSnap.data()?.userEmail || uidToLoad.substring(0,8)}...` });
       } else {
         toast({ title: "Not Found", description: `No profile found for User ID: ${uidToLoad}`, variant: "destructive" });
-        setAdminTargetUserId(""); 
+        setAdminTargetUserId("");
       }
     } catch (error: any) {
-      toast({ title: "Load Error", description: `Failed to load profile: ${error.message}`, variant: "destructive" });
+      console.error("Admin profile load error:", error);
+      let errorMessage = `Failed to load profile: ${error.message}`;
+      if (error.message?.includes('Missing or insufficient permissions')) {
+        errorMessage = "Permission denied. Admin authentication may not be properly configured.";
+      }
+      toast({ title: "Load Error", description: errorMessage, variant: "destructive" });
       setAdminTargetUserId("");
     } finally {
       setIsAdminLoadingTargetProfile(false);
@@ -457,7 +473,7 @@ export default function BrandProfilePage() {
   return (
     <ScrollArea className="h-[calc(100vh-56px)]">
       <div className="max-w-3xl mx-auto py-6">
-      {isAdmin && (
+        {isAdmin && (
           <Card className="mb-6 bg-secondary/50 shadow-md">
             <CardHeader>
               <CardTitle className="text-xl flex items-center"><ShieldCheck className="w-6 h-6 mr-2 text-primary" />Admin Controls</CardTitle>
@@ -469,8 +485,6 @@ export default function BrandProfilePage() {
                   value={adminSelectedUserIdFromDropdown}
                   onValueChange={(value) => {
                     setAdminSelectedUserIdFromDropdown(value);
-                    // Optional: trigger load immediately, or rely on useEffect
-                    // if (value) handleAdminLoadTargetUserProfile(value);
                   }}
                   disabled={isLoadingAdminProfiles || isAdminLoadingTargetProfile}
                 >
@@ -484,16 +498,14 @@ export default function BrandProfilePage() {
                       {!isLoadingAdminProfiles && userProfilesForAdmin.length === 0 && <SelectItem value="nousers" disabled>No user profiles found.</SelectItem>}
                       {userProfilesForAdmin.map(profile => (
                         <SelectItem key={profile.userId} value={profile.userId}>
-                          {profile.brandName || "Unnamed Brand"} - ({profile.userEmail || profile.userId.substring(0,8)+"..."})
+                          <div className="truncate">
+                            {profile.brandName || "Unnamed Brand"} - ({profile.userEmail || profile.userId.substring(0,8)+"..."})
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-                {/* The load button is now less critical if selection triggers load, but can be kept for explicit action */}
-                {/* <Button onClick={() => handleAdminLoadTargetUserProfile()} disabled={isAdminLoadingTargetProfile || !adminSelectedUserIdFromDropdown} size="sm">
-                  {isAdminLoadingTargetProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserSearch className="h-4 w-4"/>} Load
-                </Button> */}
               </div>
               {adminTargetUserId && (
                 <Button onClick={handleAdminLoadMyProfile} variant="outline" size="sm" className="w-full">
@@ -508,8 +520,8 @@ export default function BrandProfilePage() {
           <CardHeader>
             <div className="flex items-center space-x-3">
               <UserCircle className="w-10 h-10 text-primary" />
-              <div>
-                <CardTitle className="text-3xl font-bold break-words">{displayTitleText}</CardTitle>
+              <div className="min-w-0">
+                <CardTitle className="text-3xl font-bold break-all">{displayTitleText}</CardTitle>
                 <CardDescription className="text-lg break-words">
                   Define the identity. Fuels AI for content and campaigns.
                 </CardDescription>

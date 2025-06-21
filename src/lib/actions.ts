@@ -33,7 +33,7 @@ async function ensureUserBrandProfileDocExists(userId: string, userEmail?: strin
 
   if (!brandProfileDocSnap.exists()) {
     console.log(`Brand profile document for user ${userId} does not exist. Creating it...`);
-    const initialProfileData: Partial<BrandData> = {
+    const initialProfileData: Partial<BrandData> & { createdAt?: any } = {
       brandName: "",
       websiteUrl: "",
       brandDescription: "",
@@ -59,17 +59,6 @@ export async function handleGenerateImagesAction(
   formData: FormData
 ): Promise<FormState<{ generatedImages: string[]; promptUsed: string; providerUsed: string; }>> {
   try {
-    console.log('=== handleGenerateImagesAction START ===');
-    console.log('Environment check:');
-    console.log('  GOOGLE_API_KEY exists:', !!process.env.GOOGLE_API_KEY);
-    console.log('  GEMINI_API_KEY exists:', !!process.env.GEMINI_API_KEY);
-    console.log('  GOOGLE_GENAI_API_KEY exists:', !!process.env.GOOGLE_GENAI_API_KEY);
-    console.log('  IMAGE_GENERATION_PROVIDER:', process.env.IMAGE_GENERATION_PROVIDER);
-    
-    console.log('FormData entries:');
-    for (const [key, value] of formData.entries()) {
-      console.log(`  ${key}: ${typeof value === 'string' ? value.substring(0, 100) : '[File/Blob]'}`);
-    }
     const numberOfImagesStr = formData.get("numberOfImages") as string;
     const numberOfImages = parseInt(numberOfImagesStr, 10) || 1;
     
@@ -101,15 +90,12 @@ export async function handleGenerateImagesAction(
 
     if (chosenProvider.toUpperCase() === 'FREEPIK' && exampleImageUrl && exampleImageUrl.trim() !== "") {
       try {
-        console.log(`Attempting to describe example image for Freepik prompt: ${exampleImageUrl}`);
         const descriptionOutput = await describeImage({ imageDataUri: exampleImageUrl });
         aiGeneratedDesc = descriptionOutput.description;
-        console.log(`Successfully described example image for Freepik: ${aiGeneratedDesc}`);
         
         if (finalizedTextPromptValue && finalizedTextPromptValue.includes(placeholderToReplace)) {
           const replacementText = `The user provided an example image which is described as: "${aiGeneratedDesc || "No specific description available for the example image"}". Using that description as primary inspiration for the subject and main visual elements, continue with the rest of the prompt instructions which should guide the concept and style for the new image.`;
           finalizedTextPromptValue = finalizedTextPromptValue.replace(placeholderToReplace, replacementText);
-          console.log("Server Action: Replaced placeholder in finalizedTextPrompt. New prompt starts with:", finalizedTextPromptValue.substring(0,150) + "...");
         }
       } catch (descError: any) {
         console.warn(`Could not generate description for example image (Freepik): ${descError.message}. Proceeding without it.`);
@@ -140,7 +126,7 @@ export async function handleGenerateImagesAction(
     if (!input.exampleImage) delete input.exampleImage;
     if (!input.exampleImageDescription) delete input.exampleImageDescription;
     
-    console.log("Server Action: Calling generateImages flow with input (finalizedTextPrompt excerpt):", JSON.stringify({ ...input, finalizedTextPrompt: input.finalizedTextPrompt?.substring(0,150) + "..." }, null, 2) );
+    
 
     const result = await generateImages(input);
     const message = `${result.generatedImages.length} image(s)/task(s) processed using ${result.providerUsed || 'default provider'}.`;
@@ -380,7 +366,7 @@ export async function handleSaveGeneratedImagesAction(
 ): Promise<FormState<{savedCount: number}>> {
   const userId = formData.get('userId') as string;
   const userEmail = formData.get('userEmail') as string | undefined; 
-  console.log(`handleSaveGeneratedImagesAction: Attempting to save images for userId from formData: '${userId}'`);
+  
 
 
   if (!userId || typeof userId !== 'string') {
@@ -389,7 +375,7 @@ export async function handleSaveGeneratedImagesAction(
   }
 
   try {
-    console.log(`handleSaveGeneratedImagesAction: Ensuring brand profile doc exists for userId: ${userId}`);
+    
     await ensureUserBrandProfileDocExists(userId, userEmail);
     
     const imagesToSaveString = formData.get('imagesToSaveJson') as string;
@@ -435,7 +421,7 @@ export async function handleSaveGeneratedImagesAction(
       }
 
       try {
-        console.log(`Processing image for saving. Data URI starts with: ${image.dataUri.substring(0,30)}...`);
+        
         let imageUrlToSave = image.dataUri;
         let isFreepikImage = false;
 
@@ -445,12 +431,10 @@ export async function handleSaveGeneratedImagesAction(
             const filePath = `users/${userId}/brandProfiles/${brandProfileDocId}/generatedLibraryImages/${Date.now()}_${generateFilenamePart()}.${fileExtension}`;
             const imageStorageRef = storageRef(storage, filePath);
 
-            console.log(`handleSaveGeneratedImagesAction: Attempting to upload image data URI to: ${filePath}`);
+            
             try {
                 const snapshot = await uploadString(imageStorageRef, image.dataUri, 'data_url');
-                console.log(`handleSaveGeneratedImagesAction: Successfully uploaded image: ${filePath}`);
                 imageUrlToSave = await getDownloadURL(snapshot.ref);
-                console.log(`handleSaveGeneratedImagesAction: Obtained download URL: ${imageUrlToSave}`);
             } catch (uploadError: any) {
                 const uploadErrorDetail = `Failed to upload image to Firebase Storage for prompt "${promptSnippet}": ${uploadError.message}. Code: ${uploadError.code}. Path: ${filePath}`;
                 console.error(`handleSaveGeneratedImagesAction Storage Upload Error: ${uploadErrorDetail}`, JSON.stringify(uploadError, Object.getOwnPropertyNames(uploadError)));
@@ -459,14 +443,14 @@ export async function handleSaveGeneratedImagesAction(
             }
         } else if (image.dataUri.startsWith('image_url:')) {
             imageUrlToSave = image.dataUri.substring(10);
-            console.log(`handleSaveGeneratedImagesAction: Image is a direct URL (likely from Freepik GET), not uploading to storage: ${imageUrlToSave}`);
+            
             isFreepikImage = true;
         } else if (image.dataUri.startsWith('https://')) {
-            console.log(`handleSaveGeneratedImagesAction: Image is already an HTTPS URL, not uploading to storage: ${imageUrlToSave}`);
+            
         }
 
         const firestoreCollectionPath = `users/${userId}/brandProfiles/${brandProfileDocId}/savedLibraryImages`;
-        console.log(`handleSaveGeneratedImagesAction: Preparing to write to Firestore path: ${firestoreCollectionPath}`);
+        
         const firestoreCollectionRef = collection(db, firestoreCollectionPath);
         try {
             await addDoc(firestoreCollectionRef, {
@@ -475,7 +459,7 @@ export async function handleSaveGeneratedImagesAction(
                 style: image.style || "N/A",
                 createdAt: serverTimestamp(),
             });
-            console.log(`handleSaveGeneratedImagesAction: Successfully saved image metadata to Firestore for URL: ${imageUrlToSave}`);
+            
             savedCount++;
         } catch (firestoreError: any) {
             const firestoreErrorDetail = `Failed to save image metadata to Firestore for prompt "${promptSnippet}": ${firestoreError.message}. Code: ${firestoreError.code}. Path: ${firestoreCollectionPath}`;
@@ -525,7 +509,7 @@ async function _checkFreepikTaskStatus(taskId: string): Promise<{ status: string
   }
 
   const url = `https://api.freepik.com/v1/ai/text-to-image/imagen3/${taskId}`;
-  console.log(`Checking Freepik task status for ${taskId} at URL: ${url}`);
+  
 
   try {
     const response = await fetch(url, {
@@ -536,7 +520,7 @@ async function _checkFreepikTaskStatus(taskId: string): Promise<{ status: string
     });
 
     const responseData = await response.json();
-    console.log(`Response from Freepik GET API for task ${taskId}:`, JSON.stringify(responseData, null, 2));
+    
 
     if (!response.ok) {
       throw new Error(`Freepik GET API error for task ${taskId}: ${response.status} - ${responseData.title || responseData.detail || JSON.stringify(responseData)}`);
@@ -650,7 +634,6 @@ export async function handleGetAllUserProfilesForAdminAction(
     const userIndexSnap = await getDoc(userIndexRef);
 
     if (!userIndexSnap.exists()) {
-        console.log("Admin action: userIndex/profiles document does not exist yet.");
         return { data: [], message: "No user profiles have been saved yet." };
     }
 
@@ -661,14 +644,15 @@ export async function handleGetAllUserProfilesForAdminAction(
       userEmail: (userData as any).userEmail || "No Email",
     }));
     
-    console.log(`Fetched ${profiles.length} user profiles for admin from userIndex.`);
     return { data: profiles, message: "User profiles fetched successfully." };
 
   } catch (e: any) {
-    console.error("Error in handleGetAllUserProfilesForAdminAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
-    if ((e as any).code === 'permission-denied') {
-        return { error: `Failed to fetch user profiles: Missing or insufficient permissions. Please ensure your Firestore security rules are deployed correctly and allow admins to read the 'userIndex/profiles' document.` };
+    if (e.code === 'permission-denied') {
+        return { error: "Database permission error. Please check your Firestore security rules in the Firebase console." };
+    } else if (e.code === 'unavailable') {
+        return { error: "Database unavailable. Please check your internet connection." };
     }
-    return { error: `Failed to fetch user profiles: ${e.message || "Unknown error. Check server logs."}` };
+    
+    return { error: `Failed to fetch user profiles: ${e.message || "Unknown error"}` };
   }
 }
