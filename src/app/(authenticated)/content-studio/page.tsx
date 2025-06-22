@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useActionState, startTransition, useRef } from 'react';
@@ -1070,10 +1069,10 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
               <form id="imageGenerationFormFields" onSubmit={handleImageGenerationSubmit}>
                 <input type="hidden" name="industry" value={selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || ""} />
                 <CardContent className="space-y-6">
-                  {isAdmin ? ( 
+                  {isAdmin && (
                     <div>
                       <Label htmlFor="imageGenProviderSelect" className="flex items-center mb-1"><Server className="w-4 h-4 mr-2 text-primary" />Image Generation Provider</Label>
-                      <Select value={selectedImageProvider || ''} onValueChange={(value) => setSelectedImageProvider(value as GenerateImagesInput['provider'])}>
+                      <Select name="provider" value={selectedImageProvider || 'GEMINI'} onValueChange={(value) => setSelectedImageProvider(value as GenerateImagesInput['provider'])}>
                           <SelectTrigger id="imageGenProviderSelect">
                               <SelectValue placeholder="Select image generation provider" />
                           </SelectTrigger>
@@ -1092,12 +1091,6 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                               </SelectGroup>
                           </SelectContent>
                       </Select>
-                    </div>
-                  ) : (
-                     <div className="space-y-1">
-                         <Label className="flex items-center"><Server className="w-4 h-4 mr-2 text-primary"/>Image Generation Provider</Label>
-                         <p className="text-sm text-muted-foreground p-2 border rounded-md bg-muted/50">Using Gemini (Google AI) for image generation.</p>
-                         <input type="hidden" name="provider" value="GEMINI" />
                     </div>
                   )}
 
