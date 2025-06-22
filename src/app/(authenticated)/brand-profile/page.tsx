@@ -517,9 +517,9 @@ export default function BrandProfilePage() {
 
         <Card className="shadow-lg">
           <CardHeader>
-            <div className="flex items-center space-x-3">
+            <div className="grid grid-cols-[auto_1fr] items-center gap-3">
               <UserCircle className="w-10 h-10 text-primary flex-shrink-0" />
-              <div className="flex-1 min-w-0 overflow-hidden">
+              <div className="overflow-hidden">
                 <CardTitle className="text-2xl md:text-3xl font-bold break-words">{displayTitleText}</CardTitle>
                 <CardDescription className="text-md md:text-lg break-words">
                   Define the identity. Fuels AI for content and campaigns.

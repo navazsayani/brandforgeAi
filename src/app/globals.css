@@ -129,9 +129,14 @@
     background: var(--gradient-background);
     min-height: 100vh;
     overscroll-behavior: none;
+    word-break: break-word; /* More aggressive word breaking to prevent overflow */
   }
 
   /* Enhanced responsive typography */
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-balance; /* Use browser's text balancing for headings */
+  }
+
   h1 {
     @apply text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight;
     line-height: 1.1;

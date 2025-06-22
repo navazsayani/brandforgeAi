@@ -145,20 +145,18 @@ const ImageGridItem = ({
   };
 
   return (
-    <div className="relative group w-full overflow-hidden border rounded-md bg-muted">
+    <div className="relative group aspect-square overflow-hidden rounded-md border bg-muted">
       {isDisplayableImage ? (
         <>
-          <div className="aspect-square w-full relative">
-            <NextImage
-              src={displayUrl}
-              alt={`Generated brand image ${index + 1}`}
-              fill
-              sizes="(max-width: 639px) 90vw, (max-width: 767px) 45vw, (max-width: 1023px) 30vw, 23vw"
-              style={{objectFit: 'cover', objectPosition: 'center'}}
-              data-ai-hint="brand marketing"
-              className="transition-opacity duration-300 opacity-100 group-hover:opacity-80"
-            />
-          </div>
+          <NextImage
+            src={displayUrl}
+            alt={`Generated brand image ${index + 1}`}
+            fill
+            sizes="(max-width: 639px) 90vw, (max-width: 767px) 45vw, (max-width: 1023px) 30vw, 23vw"
+            style={{objectFit: 'cover', objectPosition: 'center'}}
+            data-ai-hint="brand marketing"
+            className="transition-opacity duration-300 opacity-100 group-hover:opacity-80"
+          />
           <Button
             variant="outline"
             size="icon"
