@@ -202,7 +202,7 @@ const initialBlogFormState: FormState<{ title: string; content: string; tags: st
 const initialDescribeImageState: FormState<DescribeImageOutput> = { error: undefined, data: undefined, message: undefined };
 const initialBlogOutlineState: FormState<GenerateBlogOutlineOutput> = { error: undefined, data: undefined, message: undefined };
 const initialSaveImagesState: FormState<{savedCount: number}> = { error: undefined, data: undefined, message: undefined };
-const initialFreepikTaskStatusState: FormState<{ status: string; images: string[] | null; taskId: string;}> = { error: undefined, data: undefined, message: undefined };
+const initialFreepikTaskStatusState: FormState<{ status: string; images: string[] | null; taskId: string;}> = { error: undefined, data: undefined, message: undefined, taskId: "" };
 
 const imageGenerationProviders = [
     { value: "GEMINI", label: "Gemini (Google AI)", disabled: false, premium: false },
@@ -1012,8 +1012,8 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
   };
   
   return (
-    <div className="w-full max-w-4xl mx-auto content-studio-container">
-      <CardHeader className="px-0 mb-6 flex-shrink-0">
+    <div className="w-full">
+      <CardHeader className="px-0 mb-6">
         <div className="flex items-center space-x-3">
             <Paintbrush className="w-10 h-10 text-primary" />
             <div>
@@ -1025,15 +1025,14 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
           </div>
       </CardHeader>
 
-      <Tabs defaultValue="image" value={activeTab} onValueChange={setActiveTab} className="w-full content-studio-tabs">
-        <TabsList className="grid w-full grid-cols-3 mb-6 flex-shrink-0">
+      <Tabs defaultValue="image" value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="image"><ImageIcon className="w-4 h-4 mr-2" />Image Generation</TabsTrigger>
           <TabsTrigger value="social"><MessageSquareText className="w-4 h-4 mr-2" />Social Media Post</TabsTrigger>
           <TabsTrigger value="blog"><Newspaper className="w-4 h-4 mr-2" />Blog Post</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="image" className="content-studio-tab-content">
-          <div className="content-studio-scroll-area">
+        <TabsContent value="image">
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle>Generate Brand Images</CardTitle>
@@ -1068,7 +1067,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                 </CardFooter>
               </form>
             ) : (
-              <form id="imageGenerationFormFields" onSubmit={isAdmin ? (e) => e.preventDefault() : handleImageGenerationSubmit}>
+              <form id="imageGenerationFormFields" onSubmit={handleImageGenerationSubmit}>
                 <input type="hidden" name="industry" value={selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || ""} />
                 <CardContent className="space-y-6">
                   {isAdmin ? ( 
@@ -1188,7 +1187,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                     </>
                                   ) : ( 
                                       <div className="w-20 h-20 rounded border-2 p-0.5 border-primary ring-2 ring-primary flex-shrink-0">
-                                          <NextImage src={brandData.exampleImages[0]} alt={`Example 1`} width={76} height={76} className="object-contain w-full h-full rounded-sm" data-ai-hint="style example"/>
+                                          <NextImage src={brandData.exampleImages[0]} alt={`Example 1}`} width={76} height={76} className="object-contain w-full h-full rounded-sm" data-ai-hint="style example"/>
                                       </div>
                                   )}
                                 { currentExampleImageForGen && ( 
@@ -1342,12 +1341,9 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                     <SubmitButton 
                         className="w-full" 
                         loadingText={parseInt(numberOfImagesToGenerate,10) > 1 ? "Generating Images..." : "Generating Image..."}
-                        type="submit" 
-                        disabled={!isAdmin && currentPlan === 'free' && selectedImageProvider === 'FREEPIK'}
+                        type="submit"
                     >
-                         {(!isAdmin && currentPlan === 'free' && selectedImageProvider === 'FREEPIK') ? <Lock className="mr-2 h-4 w-4" /> : null}
                         Generate {parseInt(numberOfImagesToGenerate,10) > 1 ? `${numberOfImagesToGenerate} Images` : "Image"}
-                        {(!isAdmin && currentPlan === 'free' && selectedImageProvider === 'FREEPIK') ? '(Premium Feature)' : ''}
                     </SubmitButton>
                   )}
                 </CardFooter>
@@ -1381,7 +1377,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                           </div>
                       </div>
                   </CardHeader>
-                  <CardContent className="overflow-hidden"> {/* Added overflow-hidden here */}
+                  <CardContent className="overflow-hidden">
                     <ImprovedImageGrid 
                         imageUrls={lastSuccessfulGeneratedImageUrls}
                         onDownload={downloadImage}
@@ -1417,11 +1413,9 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
               </Card>
             )}
           </Card>
-          </div>
         </TabsContent>
 
-        <TabsContent value="social" className="content-studio-tab-content">
-          <div className="content-studio-scroll-area">
+        <TabsContent value="social">
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="text-xl flex items-center"><MessageSquareText className="w-6 h-6 mr-2 text-primary"/>Create Social Media Post</CardTitle>
@@ -1706,11 +1700,9 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                 </Card>
             )}
           </Card>
-          </div>
         </TabsContent>
 
-        <TabsContent value="blog" className="content-studio-tab-content">
-          <div className="content-studio-scroll-area">
+        <TabsContent value="blog">
             <form 
               action={(formData) => {
                 formData.append("industry", selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || "");
@@ -1884,10 +1876,8 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                 </Card>
             )}
           </form>
-          </div>
         </TabsContent>
       </Tabs>
     </div>
   );
 }
-

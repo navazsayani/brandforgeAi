@@ -471,8 +471,8 @@ export default function BrandProfilePage() {
     "Brand Profile";
 
   return (
-    <ScrollArea className="h-[calc(100vh-56px)]">
-      <div className="max-w-3xl mx-auto py-6">
+    <ScrollArea className="h-full">
+      <div className="max-w-3xl mx-auto py-6 px-4">
         {isAdmin && (
           <Card className="mb-6 bg-secondary/50 shadow-md">
             <CardHeader>
@@ -519,10 +519,10 @@ export default function BrandProfilePage() {
         <Card className="shadow-lg">
           <CardHeader>
             <div className="flex items-center space-x-3">
-              <UserCircle className="w-10 h-10 text-primary" />
-              <div className="min-w-0 overflow-hidden">
-                <CardTitle className="text-3xl font-bold break-words">{displayTitleText}</CardTitle>
-                <CardDescription className="text-lg break-words">
+              <UserCircle className="w-10 h-10 text-primary flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <CardTitle className="text-2xl md:text-3xl font-bold break-words">{displayTitleText}</CardTitle>
+                <CardDescription className="text-md md:text-lg break-words">
                   Define the identity. Fuels AI for content and campaigns.
                 </CardDescription>
               </div>
@@ -635,7 +635,7 @@ export default function BrandProfilePage() {
                   <FormLabel className="flex items-center text-base mb-2"><Sparkles className="w-5 h-5 mr-2 text-primary"/>Brand Logo</FormLabel>
                   <div className="p-4 border rounded-lg space-y-4">
                     <div className="flex flex-col sm:flex-row items-center gap-4">
-                      <div className="w-32 h-32 border rounded-md flex items-center justify-center bg-muted overflow-hidden">
+                      <div className="w-32 h-32 border rounded-md flex items-center justify-center bg-muted overflow-hidden flex-shrink-0">
                         {isGeneratingLogo ? <Loader2 className="w-12 h-12 text-primary animate-spin"/> : currentLogoToDisplay ? <NextImage src={currentLogoToDisplay} alt="Brand Logo Preview" width={128} height={128} className="object-contain" data-ai-hint="brand logo"/> : <ImageIconLucide className="w-12 h-12 text-muted-foreground"/>}
                       </div>
                       <div className="flex-1 text-center sm:text-left">
@@ -719,5 +719,3 @@ export default function BrandProfilePage() {
     </ScrollArea>
   );
 }
-
-    
