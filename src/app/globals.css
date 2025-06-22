@@ -118,24 +118,18 @@
     @apply border-border;
   }
   
-html {
-  height: 100%;
-  overflow-x: hidden; /* Prevent horizontal overscroll */
-  overscroll-behavior: none; /* Prevent overscroll on html */
-}
-
-body {
-  @apply bg-background text-foreground;
-  background: var(--gradient-background);
-  min-height: 100vh;
-  overscroll-behavior: none; /* Prevent overscroll bounce/rubber band effect */
-}
-
-/* Authenticated layout specific styles - only apply overflow restrictions to AppShell pages */
-.authenticated-layout {
-  height: 100vh;
-  overflow: hidden; /* Prevent body from scrolling - AppShell handles all scrolling */
-}
+  html {
+    height: 100%;
+    overflow-x: hidden;
+    overscroll-behavior: none;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    background: var(--gradient-background);
+    min-height: 100vh;
+    overscroll-behavior: none;
+  }
 
   /* Enhanced responsive typography */
   h1 {
@@ -158,7 +152,6 @@ body {
     line-height: 1.4;
   }
 
-  /* Responsive text utilities */
   .text-responsive {
     @apply text-sm sm:text-base md:text-lg;
   }
@@ -167,25 +160,21 @@ body {
     @apply text-xs sm:text-sm md:text-base;
   }
 
-  /* Enhanced mobile-first spacing */
   .container-responsive {
     @apply px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto;
   }
 
-  /* Prevent text overflow on mobile */
   .text-break {
     word-wrap: break-word;
     word-break: break-word;
     hyphens: auto;
   }
 
-  /* Enhanced card styles */
   .card-enhanced {
     background: var(--gradient-card);
     @apply shadow-lg hover:shadow-xl transition-all duration-300 border border-border/50;
   }
 
-  /* Modern button gradients */
   .btn-gradient-primary {
     background: var(--gradient-primary);
     @apply text-primary-foreground border-0 hover:shadow-lg transition-all duration-300;
@@ -196,27 +185,23 @@ body {
     @apply text-accent-foreground border-0 hover:shadow-lg transition-all duration-300;
   }
 
-  /* Mobile-friendly touch targets */
   .touch-target {
     @apply min-h-[44px] min-w-[44px];
   }
 
-  /* Responsive grid utilities */
-.grid-responsive {
-  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6;
-  max-width: 100%; /* Ensure grid does not overflow on mobile */
-}
+  .grid-responsive {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6;
+    max-width: 100%;
+  }
   
   .grid-responsive-2 {
     @apply grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6;
   }
 
-  /* Enhanced focus states for accessibility */
   .focus-enhanced:focus {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 
-  /* Smooth animations */
   .animate-fade-in {
     animation: fadeIn 0.5s ease-in-out;
   }
@@ -226,7 +211,6 @@ body {
     to { opacity: 1; transform: translateY(0); }
   }
 
-  /* Mobile navigation improvements */
   @media (max-width: 768px) {
     .mobile-nav {
       @apply fixed inset-x-0 top-0 z-50 bg-background/95 backdrop-blur-sm border-b;
@@ -244,12 +228,11 @@ body {
     @apply bg-sidebar-accent text-sidebar-accent-foreground shadow-sm;
   }
 
-  /* Utility class for overscroll containment */
   .overscroll-contain {
     overscroll-behavior: contain;
   }
-
-  /* Main page scroll containment */
+  
+  /* Main page scroll containment - THIS IS THE CRITICAL FIX */
   .main-scroll-container {
     height: 100%;
     overflow-y: auto;
