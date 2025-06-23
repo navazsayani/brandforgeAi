@@ -206,7 +206,7 @@ function InfoCard({ title, description, icon, link }: InfoCardProps) {
   return (
     <Card className="card-feature group">
       <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
-        <CardTitle className="text-lg sm:text-xl font-semibold text-break flex-1 pr-2">{title}</CardTitle>
+        <CardTitle className="text-lg sm:text-xl font-semibold text-break flex-1 pr-2 min-w-0">{title}</CardTitle>
         <div className="flex-shrink-0 p-2 sm:p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors duration-200">
           {icon}
         </div>
@@ -216,7 +216,7 @@ function InfoCard({ title, description, icon, link }: InfoCardProps) {
         <Link href={link} passHref>
           <Button
             variant="outline"
-            className="w-full h-10 sm:h-12 touch-target focus-enhanced hover:bg-primary/5 hover:border-primary/30 transition-all duration-200 border-2"
+            className="w-full whitespace-normal h-auto min-h-10 sm:min-h-12 touch-target focus-enhanced hover:bg-primary/5 hover:border-primary/30 transition-all duration-200 border-2"
           >
             <span>Go to {title}</span>
             <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
