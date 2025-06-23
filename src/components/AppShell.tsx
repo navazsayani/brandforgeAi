@@ -153,7 +153,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <AuthUserMenu />
         </header>
         <main className="flex-1 min-h-0 overflow-hidden">
-          <div className="main-scroll-container container-responsive py-8 sm:py-10 lg:py-12">
+          <div className="main-scroll-container container-responsive py-4 sm:py-6 lg:py-8">
             <div className="animate-fade-in content-spacing">
               {children}
             </div>

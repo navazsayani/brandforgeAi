@@ -1023,10 +1023,22 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
       </CardHeader>
 
       <Tabs defaultValue="image" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6">
-          <TabsTrigger value="image"><ImageIcon className="w-4 h-4 mr-2" />Image Generation</TabsTrigger>
-          <TabsTrigger value="social"><MessageSquareText className="w-4 h-4 mr-2" />Social Media Post</TabsTrigger>
-          <TabsTrigger value="blog"><Newspaper className="w-4 h-4 mr-2" />Blog Post</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 mb-6 h-auto">
+          <TabsTrigger value="image" className="flex-col sm:flex-row gap-1 sm:gap-2 py-2 px-1 sm:px-3 text-xs sm:text-sm">
+            <ImageIcon className="w-4 h-4" />
+            <span className="hidden sm:inline">Image Generation</span>
+            <span className="sm:hidden">Image</span>
+          </TabsTrigger>
+          <TabsTrigger value="social" className="flex-col sm:flex-row gap-1 sm:gap-2 py-2 px-1 sm:px-3 text-xs sm:text-sm">
+            <MessageSquareText className="w-4 h-4" />
+            <span className="hidden sm:inline">Social Media Post</span>
+            <span className="sm:hidden">Social</span>
+          </TabsTrigger>
+          <TabsTrigger value="blog" className="flex-col sm:flex-row gap-1 sm:gap-2 py-2 px-1 sm:px-3 text-xs sm:text-sm">
+            <Newspaper className="w-4 h-4" />
+            <span className="hidden sm:inline">Blog Post</span>
+            <span className="sm:hidden">Blog</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="image">

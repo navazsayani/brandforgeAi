@@ -399,12 +399,10 @@ export default function BrandProfilePage() {
       return;
     }
 
-    if (isAdmin) {
-        finalData.plan = data.plan;
-    } else {
-        finalData.plan = contextBrandData?.plan || 'free'; 
+    if (!isAdmin) {
+      finalData.plan = currentProfileBeingEdited?.plan || 'free'; 
     }
-
+    
     const currentImages = finalData.exampleImages || [];
     if (currentImages.length > maxImagesAllowed) {
         finalData.exampleImages = currentImages.slice(0, maxImagesAllowed);
@@ -591,19 +589,20 @@ export default function BrandProfilePage() {
                 <FormField
                   control={form.control}
                   name="industry"
-                  render={({ field }) => {
-                    const selectValue = field.value && field.value.trim() !== "" ? field.value : "_none_";
-                    return (
-                      <FormItem>
-                        <FormLabel className="flex items-center text-base"><Briefcase className="w-5 h-5 mr-2 text-primary"/>Industry</FormLabel>
-                        <Select onValueChange={field.onChange} value={selectValue} disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo}>
-                          <FormControl><SelectTrigger><SelectValue placeholder="Select industry" /></SelectTrigger></FormControl>
-                          <SelectContent><SelectGroup><SelectLabel>Industries</SelectLabel>{industries.map(ind => (<SelectItem key={ind.value} value={ind.value}>{ind.label}</SelectItem>))}</SelectGroup></SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    );
-                  }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center text-base"><Briefcase className="w-5 h-5 mr-2 text-primary"/>Industry</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value || '_none_'}
+                        disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo}
+                      >
+                        <FormControl><SelectTrigger><SelectValue placeholder="Select industry" /></SelectTrigger></FormControl>
+                        <SelectContent><SelectGroup><SelectLabel>Industries</SelectLabel>{industries.map(ind => (<SelectItem key={ind.value} value={ind.value}>{ind.label}</SelectItem>))}</SelectGroup></SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
                 <FormField
                   control={form.control}
