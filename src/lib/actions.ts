@@ -28,6 +28,21 @@ async function ensureUserBrandProfileDocExists(userId: string, userEmail?: strin
   if (!userId) {
     throw new Error("User ID is required to ensure brand profile document exists.");
   }
+  
+  // Step 1: Ensure the top-level user document exists.
+  const userDocRef = doc(db, 'users', userId);
+  const userDocSnap = await getDoc(userDocRef);
+  if (!userDocSnap.exists()) {
+    console.log(`Top-level user document for ${userId} does not exist. Creating it...`);
+    // Create the main user document. This is crucial before creating subcollections.
+    await setDoc(userDocRef, {
+      email: userEmail || 'unknown',
+      createdAt: serverTimestamp(),
+    });
+    console.log(`Successfully created top-level user document for ${userId}.`);
+  }
+
+  // Step 2: Proceed with ensuring the nested brand profile document exists.
   const brandProfileDocRef = doc(db, `users/${userId}/brandProfiles/${userId}`);
   const brandProfileDocSnap = await getDoc(brandProfileDocRef);
 
@@ -43,7 +58,7 @@ async function ensureUserBrandProfileDocExists(userId: string, userEmail?: strin
       targetKeywords: "",
       brandLogoUrl: "",
       plan: 'free',
-      createdAt: serverTimestamp() as any, // Firestore Timestamp
+      createdAt: serverTimestamp() as any,
     };
     if (userEmail) {
       initialProfileData.userEmail = userEmail;
