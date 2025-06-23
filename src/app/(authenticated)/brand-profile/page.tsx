@@ -153,11 +153,9 @@ export default function BrandProfilePage() {
   useEffect(() => {
     const dataToDisplay = isAdmin && adminTargetUserId && adminLoadedProfileData ? adminLoadedProfileData : contextBrandData;
     if (dataToDisplay) {
-        // This is the single source of truth for resetting the form.
-        // It ensures industry has a valid default if it's missing from the data.
         const currentData = {
-            ...defaultFormValues, // Start with defaults
-            ...dataToDisplay,    // Override with loaded data
+            ...defaultFormValues,
+            ...dataToDisplay,
             industry: (dataToDisplay.industry && dataToDisplay.industry.trim() !== "") ? dataToDisplay.industry : "_none_",
             plan: (dataToDisplay.plan && ['free', 'premium'].includes(dataToDisplay.plan)) ? dataToDisplay.plan : 'free',
             userEmail: dataToDisplay.userEmail || (currentUser?.email && dataToDisplay === contextBrandData ? currentUser.email : ""),
@@ -167,6 +165,9 @@ export default function BrandProfilePage() {
         currentData.exampleImages = Array.isArray(currentData.exampleImages) ? currentData.exampleImages.slice(0, currentMaxImages) : [];
 
         form.reset(currentData);
+        // Explicitly set the value for the industry field to ensure UI updates correctly on navigation.
+        form.setValue('industry', currentData.industry, { shouldValidate: true });
+
         setPreviewImages(currentData.exampleImages);
         setSelectedFileNames(currentData.exampleImages.map((_, i) => `Saved image ${i + 1}`));
         if (form.getValues("brandLogoUrl") !== generatedLogoPreview) {
@@ -178,7 +179,7 @@ export default function BrandProfilePage() {
         setSelectedFileNames([]);
         setGeneratedLogoPreview(null);
     }
-  }, [adminTargetUserId, adminLoadedProfileData, contextBrandData, isBrandContextLoading, isAdminLoadingTargetProfile, currentUser, form]);
+  }, [contextBrandData, adminLoadedProfileData, adminTargetUserId, isBrandContextLoading, isAdminLoadingTargetProfile, currentUser, form]);
 
 
   useEffect(() => {
@@ -397,8 +398,10 @@ export default function BrandProfilePage() {
       return;
     }
 
+    // This logic is now handled in the form display itself.
+    // However, it's good to keep it here as a final safeguard.
     if (!isAdmin) {
-      finalData.plan = currentProfileBeingEdited?.plan || 'free'; 
+      finalData.plan = currentProfileBeingEdited?.plan || 'free';
     }
     
     const currentImages = finalData.exampleImages || [];
