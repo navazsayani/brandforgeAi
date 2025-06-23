@@ -399,17 +399,11 @@ export default function BrandProfilePage() {
       return;
     }
 
-    // --- FIX STARTS HERE ---
-    // If a non-admin user is saving, their plan is not submitted from the form.
-    // We must preserve the plan value that is already stored in their profile data.
-    // If an admin is saving, they are allowed to change the plan, so we use the value from the form.
     if (isAdmin) {
-        finalData.plan = data.plan; // Use the value submitted by the form for admins.
+        finalData.plan = data.plan;
     } else {
-        // For regular users, ignore any 'plan' value from the form and use the authoritative one from the context.
         finalData.plan = contextBrandData?.plan || 'free'; 
     }
-    // --- FIX ENDS HERE ---
 
     const currentImages = finalData.exampleImages || [];
     if (currentImages.length > maxImagesAllowed) {
@@ -623,25 +617,35 @@ export default function BrandProfilePage() {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="plan"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center text-base"><Star className="w-5 h-5 mr-2 text-primary"/>Subscription Plan</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={!isAdmin}
-                      >
-                        <FormControl><SelectTrigger><SelectValue placeholder="Select plan" /></SelectTrigger></FormControl>
-                        <SelectContent><SelectGroup><SelectLabel>Plans</SelectLabel><SelectItem value="free">Free</SelectItem><SelectItem value="premium">Premium</SelectItem></SelectGroup></SelectContent>
-                      </Select>
-                      <FormDescription>{!isAdmin ? "Plan managed by subscription system." : "Admin can change user plan."}</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                
+                {isAdmin ? (
+                  <FormField
+                    control={form.control}
+                    name="plan"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center text-base"><Star className="w-5 h-5 mr-2 text-primary"/>Subscription Plan</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl><SelectTrigger><SelectValue placeholder="Select plan" /></SelectTrigger></FormControl>
+                          <SelectContent><SelectGroup><SelectLabel>Plans</SelectLabel><SelectItem value="free">Free</SelectItem><SelectItem value="premium">Premium</SelectItem></SelectGroup></SelectContent>
+                        </Select>
+                        <FormDescription>Admin can change user plan.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ) : (
+                  <FormItem>
+                    <FormLabel className="flex items-center text-base"><Star className="w-5 h-5 mr-2 text-primary"/>Subscription Plan</FormLabel>
+                    <Input
+                      value={currentProfileBeingEdited?.plan || 'free'}
+                      disabled
+                      className="capitalize"
+                    />
+                    <FormDescription>Your plan is managed by the subscription system.</FormDescription>
+                  </FormItem>
+                )}
+
                 <FormItem>
                   <FormLabel className="flex items-center text-base mb-2"><Sparkles className="w-5 h-5 mr-2 text-primary"/>Brand Logo</FormLabel>
                   <div className="p-4 border rounded-lg space-y-4">

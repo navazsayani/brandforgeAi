@@ -39,24 +39,24 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { user } = useAuth();
 
   const SidebarNav = () => (
-    <nav className="flex-1 px-2 py-4 space-y-1">
+    <nav className="flex-1 px-3 py-6 space-y-2">
       {navItems.map((item) => (
         <Button
           key={item.label}
           asChild
           variant={pathname === item.href ? 'secondary' : 'ghost'}
           className={cn(
-            "sidebar-nav-item", // Includes w-full, text-sidebar-foreground, hover states, touch-target
+            "sidebar-nav-item", // Enhanced with better padding and rounded corners
             "justify-start",    // Ensure left alignment of content (icon and text)
             "gap-0",            // Remove default gap from base button, rely on icon's mr-3
-            pathname === item.href 
-              ? "active shadow-md" 
+            pathname === item.href
+              ? "active shadow-md"
               : ""
           )}
         >
           <Link href={item.href}>
-            <item.icon className="w-5 h-5 mr-3 flex-shrink-0" />
-            <span className="text-break">{item.label}</span>
+            <item.icon className="w-5 h-5 mr-4 flex-shrink-0" />
+            <span className="text-break font-medium">{item.label}</span>
           </Link>
         </Button>
       ))}
@@ -65,49 +65,49 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full bg-sidebar">
-      <div className="p-4 border-b border-sidebar-border">
-        <Link 
-          href={user ? "/dashboard" : "/"} 
-          className="flex items-center gap-3 text-sidebar-foreground hover:text-sidebar-primary transition-colors duration-200"
+      <div className="p-6 border-b border-sidebar-border">
+        <Link
+          href={user ? "/dashboard" : "/"}
+          className="flex items-center gap-4 text-sidebar-foreground hover:text-sidebar-primary transition-colors duration-200"
         >
-          <div className="p-2 bg-sidebar-primary/10 rounded-lg">
-            <Sparkles className="w-6 h-6 text-sidebar-primary" />
+          <div className="p-3 bg-sidebar-primary/10 rounded-xl">
+            <Sparkles className="w-7 h-7 text-sidebar-primary" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-break">BrandForge AI</h1>
-            <p className="text-xs text-sidebar-foreground/70">AI-Powered Branding</p>
+            <h1 className="text-xl font-bold text-break">BrandForge AI</h1>
+            <p className="text-sm text-sidebar-foreground/70 font-medium">AI-Powered Branding</p>
           </div>
         </Link>
       </div>
       {user && <SidebarNav />}
-      <div className={cn("p-4 mt-auto border-t border-sidebar-border", !user && "mt-auto")}>
+      <div className={cn("p-6 mt-auto border-t border-sidebar-border", !user && "mt-auto")}>
         {user ? (
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             className={cn(
-              "sidebar-nav-item", // Includes w-full, text-sidebar-foreground, hover states, touch-target
+              "sidebar-nav-item", // Enhanced with better padding and rounded corners
               "justify-start",    // Ensure left alignment
               "gap-0"             // Remove default button gap
             )}
           >
-            <Settings className="w-5 h-5 mr-3 flex-shrink-0" />
-            <span className="text-break">Settings</span>
+            <Settings className="w-5 h-5 mr-4 flex-shrink-0" />
+            <span className="text-break font-medium">Settings</span>
           </Button>
         ) : (
-          <div className="space-y-3">
-             <Button 
-               variant="default" 
-               className="w-full justify-center btn-gradient-primary touch-target" 
+          <div className="space-y-4">
+             <Button
+               variant="default"
+               className="w-full justify-center btn-gradient-primary btn-lg-enhanced touch-target"
                asChild
              >
                 <Link href="/login">
-                    <LogInIcon className="mr-2 w-4 h-4"/> 
+                    <LogInIcon className="mr-2 w-5 h-5"/>
                     <span>Log In</span>
                 </Link>
              </Button>
-             <Button 
-               variant="outline" 
-               className="w-full justify-center text-sidebar-foreground border-sidebar-border hover:bg-sidebar-accent hover:text-sidebar-accent-foreground touch-target" 
+             <Button
+               variant="outline"
+               className="w-full justify-center text-sidebar-foreground border-sidebar-border hover:bg-sidebar-accent hover:text-sidebar-accent-foreground btn-lg-enhanced touch-target"
                asChild
              >
                  <Link href="/signup">
@@ -122,11 +122,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-      <aside className="hidden md:flex md:flex-col md:w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-lg">
+      <aside className="hidden md:flex md:flex-col md:w-72 bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-lg">
         <SidebarContent />
       </aside>
       <div className="flex flex-col flex-1 h-full min-h-0">
-        <header className="flex items-center justify-between h-16 px-4 sm:px-6 bg-card border-b md:justify-end card-enhanced flex-shrink-0">
+        <header className="flex items-center justify-between h-18 px-6 sm:px-8 bg-card border-b md:justify-end card-enhanced flex-shrink-0">
           <div className="md:hidden">
             <Sheet>
               <SheetTrigger asChild>
@@ -153,8 +153,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           <AuthUserMenu />
         </header>
         <main className="flex-1 min-h-0 overflow-hidden">
-          <div className="main-scroll-container p-4 sm:p-6 lg:p-8 container-responsive">
-            <div className="animate-fade-in">
+          <div className="main-scroll-container container-responsive py-8 sm:py-10 lg:py-12">
+            <div className="animate-fade-in content-spacing">
               {children}
             </div>
           </div>

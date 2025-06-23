@@ -47,29 +47,29 @@ export default function DashboardPage() {
   const isLoading = isBrandLoading || isAuthLoading;
 
   return (
-    <div className="space-y-6 sm:space-y-8 animate-fade-in">
+    <div className="content-spacing animate-fade-in">
       <Card className="card-enhanced">
-        <CardHeader className="pb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
-            <div className="p-3 bg-primary/10 rounded-xl w-fit">
-              <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />
+        <CardHeader className="pb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
+            <div className="p-4 bg-primary/10 rounded-2xl w-fit">
+              <Sparkles className="w-10 h-10 sm:w-12 sm:h-12 text-primary" />
             </div>
             <div className="flex-1">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
                 <div>
-                  <CardTitle className="text-break">Welcome to BrandForge AI</CardTitle>
-                  <CardDescription className="text-responsive text-break mt-2">
+                  <CardTitle className="text-break text-2xl sm:text-3xl mb-3">Welcome to BrandForge AI</CardTitle>
+                  <CardDescription className="text-responsive text-break">
                     Your intelligent partner for brand building, content creation, and campaign management.
                   </CardDescription>
                 </div>
                 {isLoading ? (
-                  <Skeleton className="h-7 w-24 mt-2 sm:mt-0 rounded-md bg-muted" />
+                  <Skeleton className="h-8 w-28 mt-3 sm:mt-0 rounded-lg bg-muted" />
                 ) : displayPlan && (
-                  <Badge 
-                    variant={isAdmin ? 'destructive' : (displayPlan === 'premium' ? 'default' : 'secondary')} 
-                    className="mt-2 sm:mt-0 py-1 px-3 text-sm self-start sm:self-center"
+                  <Badge
+                    variant={isAdmin ? 'destructive' : (displayPlan === 'premium' ? 'default' : 'secondary')}
+                    className="mt-3 sm:mt-0 py-2 px-4 text-sm font-medium self-start sm:self-center"
                   >
-                    {isAdmin ? <ShieldCheck className="w-4 h-4 mr-1.5" /> : <Star className="w-4 h-4 mr-1.5" />}
+                    {isAdmin ? <ShieldCheck className="w-4 h-4 mr-2" /> : <Star className="w-4 h-4 mr-2" />}
                     {isAdmin ? 'Admin Access' : `Plan: ${displayPlan.charAt(0).toUpperCase() + displayPlan.slice(1)}`}
                   </Badge>
                 )}
@@ -77,17 +77,17 @@ export default function DashboardPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-8">
           <p className="text-responsive text-muted-foreground text-break leading-relaxed">
             Leverage the power of AI to analyze your brand, generate compelling content,
             and automate your marketing efforts. Get started by defining your brand profile,
             then explore our content creation and campaign management tools.
           </p>
-          <div className="grid-responsive-2 gap-6">
+          <div className="grid-responsive-2 gap-8">
             
-            <div className="relative w-full max-w-sm mx-auto aspect-square rounded-xl card-enhanced overflow-hidden bg-muted/50 flex items-center justify-center">
+            <div className="relative w-full max-w-md mx-auto aspect-square rounded-2xl card-enhanced overflow-hidden bg-muted/50 flex items-center justify-center">
               {isLoading ? (
-                <Skeleton className="w-full h-full rounded-xl" />
+                <Skeleton className="w-full h-full rounded-2xl" />
               ) : logoUrl ? (
                 <NextImage
                   src={logoUrl}
@@ -96,30 +96,30 @@ export default function DashboardPage() {
                   style={{objectFit: "contain"}}
                   priority
                   data-ai-hint="brand logo main"
-                  className="rounded-xl"
+                  className="rounded-2xl"
                 />
               ) : (
-                <div className="text-center p-4 sm:p-6">
-                  <div className="relative z-10 flex flex-col items-center justify-center h-full space-y-4">
-                      <div className="p-4 bg-primary/10 rounded-2xl">
-                        <Sparkles className="w-12 h-12 sm:w-16 sm:h-16 text-primary" />
+                <div className="text-center p-6 sm:p-8">
+                  <div className="relative z-10 flex flex-col items-center justify-center h-full space-y-6">
+                      <div className="p-5 bg-primary/10 rounded-3xl">
+                        <Sparkles className="w-16 h-16 sm:w-20 sm:h-20 text-primary" />
                       </div>
-                      <div className="space-y-2">
-                        <p className="text-base sm:text-lg font-semibold text-foreground text-break">Your Brand Logo Here</p>
-                        <p className="text-xs sm:text-sm text-muted-foreground text-break">
+                      <div className="space-y-3">
+                        <p className="text-lg sm:text-xl font-semibold text-foreground text-break">Your Brand Logo Here</p>
+                        <p className="text-sm sm:text-base text-muted-foreground text-break">
                           Generate your brand logo in the Brand Profile page.
                         </p>
                       </div>
                       <Link href="/brand-profile" passHref>
-                          <Button variant="default" size="sm" className="btn-gradient-primary touch-target">
-                              Go to Brand Profile <ArrowRight className="w-4 h-4 ml-2" />
+                          <Button variant="default" size="lg" className="btn-gradient-primary btn-lg-enhanced touch-target">
+                              Go to Brand Profile <ArrowRight className="w-5 h-5 ml-2" />
                           </Button>
                       </Link>
                   </div>
                 </div>
               )}
             </div>
-            <div className="flex flex-col justify-center space-y-4 sm:space-y-6">
+            <div className="flex flex-col justify-center space-y-6 sm:space-y-8">
               <FeatureHighlight
                 icon={<Edit3 className="w-6 h-6 text-accent" />}
                 title="Define Your Brand"
@@ -143,7 +143,7 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-8 md:grid-cols-3">
         <InfoCard
           title="Brand Profile"
           description="Lay the foundation for AI-driven success by detailing your brand's essence."
@@ -176,16 +176,16 @@ interface FeatureHighlightProps {
 
 function FeatureHighlight({ icon, title, description, cta }: FeatureHighlightProps) {
   return (
-    <div className="flex items-start space-x-3 sm:space-x-4 p-4 rounded-lg hover:bg-muted/30 transition-colors duration-200">
-      <div className="flex-shrink-0 p-2 sm:p-3 bg-accent/10 rounded-full">
+    <div className="flex items-start space-x-4 sm:space-x-5 p-5 rounded-xl hover:bg-muted/30 transition-colors duration-200">
+      <div className="flex-shrink-0 p-3 sm:p-4 bg-accent/10 rounded-xl">
         {icon}
       </div>
       <div className="flex-1 min-w-0">
-        <h3 className="text-base sm:text-lg font-semibold text-break">{title}</h3>
-        <p className="text-responsive-sm text-muted-foreground text-break leading-relaxed mt-1">{description}</p>
+        <h3 className="text-lg sm:text-xl font-semibold text-break mb-2">{title}</h3>
+        <p className="text-responsive-sm text-muted-foreground text-break leading-relaxed mb-3">{description}</p>
         <Link href={cta.href} passHref>
-          <Button variant="link" className="p-0 mt-2 text-primary h-auto text-sm hover:text-primary/80 focus-enhanced">
-            {cta.label} <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
+          <Button variant="link" className="p-0 text-primary h-auto text-base font-medium hover:text-primary/80 focus-enhanced">
+            {cta.label} <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
           </Button>
         </Link>
       </div>
@@ -202,22 +202,22 @@ interface InfoCardProps {
 
 function InfoCard({ title, description, icon, link }: InfoCardProps) {
   return (
-    <Card className="card-enhanced group hover:scale-[1.02] transition-all duration-300">
-      <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
-        <CardTitle className="text-lg sm:text-xl font-semibold text-break flex-1 pr-2">{title}</CardTitle>
-        <div className="flex-shrink-0 p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors duration-200">
+    <Card className="card-feature group">
+      <CardHeader className="flex flex-row items-center justify-between pb-4 space-y-0">
+        <CardTitle className="text-xl sm:text-2xl font-semibold text-break flex-1 pr-3">{title}</CardTitle>
+        <div className="flex-shrink-0 p-3 bg-primary/10 rounded-xl group-hover:bg-primary/20 transition-colors duration-200">
           {icon}
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         <p className="text-responsive-sm text-muted-foreground text-break leading-relaxed">{description}</p>
         <Link href={link} passHref>
-          <Button 
-            variant="outline" 
-            className="w-full touch-target focus-enhanced hover:bg-primary/5 hover:border-primary/30 transition-all duration-200"
+          <Button
+            variant="outline"
+            className="w-full btn-lg-enhanced touch-target focus-enhanced hover:bg-primary/5 hover:border-primary/30 transition-all duration-200 border-2"
           >
             <span>Go to {title}</span>
-            <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
+            <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
           </Button>
         </Link>
       </CardContent>

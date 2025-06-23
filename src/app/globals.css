@@ -21,7 +21,7 @@
     --secondary-foreground: 210 20% 30%; /* Darker text for better contrast */
     
     --muted: 210 25% 96%; /* Lighter muted variant */
-    --muted-foreground: 210 20% 40%; /* Better contrast muted text */
+    --muted-foreground: 210 25% 35%; /* Enhanced contrast for better readability */
     
     --accent: 45 85% 58%; /* More vibrant Gold */
     --accent-foreground: 45 85% 12%; /* Darker text on gold for better readability */
@@ -29,8 +29,8 @@
     --destructive: 0 80% 55%; /* More vibrant destructive */
     --destructive-foreground: 0 0% 100%; 
     
-    --border: 210 20% 85%; /* More defined border color */
-    --input: 210 20% 88%; /* Better input border/bg */
+    --border: 210 25% 82%; /* More defined border color */
+    --input: 210 25% 85%; /* Better input border/bg */
     --ring: 180 55% 45%; /* Enhanced teal for focus rings */
 
     /* Enhanced chart colors */
@@ -132,41 +132,52 @@
     word-break: break-word; /* More aggressive word breaking to prevent overflow */
   }
 
-  /* Enhanced responsive typography */
+  /* Enhanced responsive typography with better readability */
   h1, h2, h3, h4, h5, h6 {
     @apply text-balance; /* Use browser's text balancing for headings */
   }
 
   h1 {
-    @apply text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight;
+    @apply text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold;
     line-height: 1.1;
+    letter-spacing: -0.025em; /* Tighter spacing for large text */
   }
   
   h2 {
-    @apply text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold tracking-tight;
+    @apply text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold;
     line-height: 1.2;
+    letter-spacing: -0.015em;
   }
   
   h3 {
-    @apply text-lg sm:text-xl md:text-2xl lg:text-3xl font-semibold;
+    @apply text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold;
     line-height: 1.3;
+    letter-spacing: -0.015em;
   }
   
   h4 {
-    @apply text-base sm:text-lg md:text-xl font-medium;
+    @apply text-lg sm:text-xl md:text-2xl font-medium;
     line-height: 1.4;
+    letter-spacing: -0.01em;
+  }
+
+  /* Enhanced body text with better line height */
+  body {
+    line-height: 1.6; /* Better reading comfort */
   }
 
   .text-responsive {
-    @apply text-sm sm:text-base md:text-lg;
+    @apply text-base sm:text-lg md:text-xl;
+    line-height: 1.6;
   }
   
   .text-responsive-sm {
-    @apply text-xs sm:text-sm md:text-base;
+    @apply text-sm sm:text-base md:text-lg;
+    line-height: 1.5;
   }
 
   .container-responsive {
-    @apply px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto;
+    @apply px-6 sm:px-8 lg:px-12 max-w-7xl mx-auto;
   }
 
   .text-break {
@@ -177,7 +188,7 @@
 
   .card-enhanced {
     background: var(--gradient-card);
-    @apply shadow-lg hover:shadow-xl transition-all duration-300 border border-border/50;
+    @apply shadow-lg hover:shadow-xl transition-all duration-300 border border-border/50 p-8 rounded-xl;
   }
 
   .btn-gradient-primary {
@@ -191,16 +202,16 @@
   }
 
   .touch-target {
-    @apply min-h-[44px] min-w-[44px];
+    @apply min-h-[48px] min-w-[48px]; /* Slightly larger for better mobile experience */
   }
 
   .grid-responsive {
-    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6;
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-10;
     max-width: 100%;
   }
   
   .grid-responsive-2 {
-    @apply grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6;
+    @apply grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8;
   }
 
   .focus-enhanced:focus {
@@ -226,11 +237,43 @@
 @layer components {
   /* Enhanced component styles */
   .sidebar-nav-item {
-    @apply w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200 touch-target;
+    @apply w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200 touch-target px-4 py-3 rounded-lg;
   }
   
   .sidebar-nav-item.active {
     @apply bg-sidebar-accent text-sidebar-accent-foreground shadow-sm;
+  }
+
+  /* Enhanced button styles */
+  .btn-enhanced {
+    @apply px-6 py-3 font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+
+  .btn-lg-enhanced {
+    @apply px-8 py-4 text-lg font-medium;
+  }
+
+  /* Enhanced spacing utilities */
+  .section-spacing {
+    @apply py-12 sm:py-16 lg:py-20;
+  }
+
+  .content-spacing {
+    @apply space-y-8 sm:space-y-10 lg:space-y-12;
+  }
+
+  /* Enhanced card variants */
+  .card-feature {
+    @apply card-enhanced hover:scale-105 transform transition-all duration-300 cursor-pointer;
+  }
+
+  .card-compact {
+    @apply bg-card border border-border/50 rounded-lg p-6 shadow-sm hover:shadow-md transition-all duration-200;
+  }
+
+  /* Better form elements */
+  .input-enhanced {
+    @apply px-4 py-3 text-base border-2 border-input rounded-lg focus:border-ring focus:ring-2 focus:ring-ring/20 transition-all duration-200;
   }
 
   .overscroll-contain {
