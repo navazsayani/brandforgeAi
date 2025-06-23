@@ -1,230 +1,249 @@
 
-"use client"; 
+"use client";
 
-import React, { useEffect, useState } from 'react'; 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Edit3, Send, TrendingUp, Sparkles, Image as ImageIconLucide, Loader2, Star, ShieldCheck } from 'lucide-react'; 
-import NextImage from 'next/image'; 
-import { useBrand } from '@/contexts/BrandContext'; 
+import NextImage from 'next/image';
+import { useBrand } from '@/contexts/BrandContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Skeleton } from '@/components/ui/skeleton'; 
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { ArrowRight, Edit3, TrendingUp, Send, Sparkles, Star, ShieldCheck, Paintbrush, FileText, Image as ImageIconLucide, Eye } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
+
 
 export default function DashboardPage() {
-  const { brandData, isLoading: isBrandLoading } = useBrand();
-  const { currentUser, isLoading: isAuthLoading } = useAuth();
-  const [logoUrl, setLogoUrl] = useState<string | undefined>(undefined);
-  const [displayPlan, setDisplayPlan] = useState<string | undefined>(undefined);
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+    const { brandData, isLoading: isBrandLoading } = useBrand();
+    const { currentUser, isLoading: isAuthLoading } = useAuth();
+    const isLoading = isBrandLoading || isAuthLoading;
 
-  useEffect(() => {
-    if (currentUser && currentUser.email === 'admin@brandforge.ai') {
-      setIsAdmin(true);
-    } else {
-      setIsAdmin(false);
-    }
-  }, [currentUser]);
+    return (
+        <div className="space-y-8 animate-fade-in">
+            <GreetingCard isLoading={isLoading} brandData={brandData} />
 
-  useEffect(() => {
-    if (isAdmin) {
-      setDisplayPlan('Admin');
-    } else if (brandData) {
-      setDisplayPlan(brandData.plan || 'free');
-    } else {
-      setDisplayPlan(undefined);
-    }
-
-    if (brandData) {
-      setLogoUrl(brandData.brandLogoUrl);
-    } else {
-      setLogoUrl(undefined);
-    }
-  }, [brandData, isAdmin]);
-
-  const isLoading = isBrandLoading || isAuthLoading;
-
-  return (
-    <div className="w-full max-w-full overflow-hidden">
-      <div className="space-y-4 sm:space-y-6 animate-fade-in">
-        <Card className="card-enhanced w-full">
-          <CardHeader className="pb-3 sm:pb-4">
-            <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
-              <div className="p-2 sm:p-3 bg-primary/10 rounded-lg sm:rounded-xl w-fit flex-shrink-0">
-                <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-                  <div className="min-w-0 flex-1">
-                    <CardTitle className="text-balance text-lg sm:text-xl lg:text-2xl mb-1 sm:mb-2">Welcome to BrandForge AI</CardTitle>
-                    <CardDescription className="text-sm sm:text-base">
-                      Your intelligent partner for brand building, content creation, and campaign management.
-                    </CardDescription>
-                  </div>
-                  {isLoading ? (
-                    <Skeleton className="h-6 w-20 rounded-md bg-muted flex-shrink-0" />
-                  ) : displayPlan && (
-                    <Badge
-                      variant={isAdmin ? 'destructive' : (displayPlan === 'premium' ? 'default' : 'secondary')}
-                      className="py-1 px-2 text-xs sm:text-sm self-start flex-shrink-0"
-                    >
-                      {isAdmin ? <ShieldCheck className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> : <Star className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />}
-                      {isAdmin ? 'Admin' : `${displayPlan.charAt(0).toUpperCase() + displayPlan.slice(1)}`}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4 sm:space-y-6">
-            <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-              Leverage the power of AI to analyze your brand, generate compelling content,
-              and automate your marketing efforts. Get started by defining your brand profile,
-              then explore our content creation and campaign management tools.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-              
-              <div className="relative w-full max-w-xs mx-auto md:max-w-none aspect-square rounded-lg overflow-hidden bg-muted/50 flex items-center justify-center border">
-              {isLoading ? (
-                <Skeleton className="w-full h-full rounded-lg" />
-              ) : logoUrl ? (
-                <NextImage
-                  src={logoUrl}
-                  alt={brandData?.brandName ? `${brandData.brandName} Logo` : "Brand Logo"}
-                  fill
-                  style={{objectFit: "contain"}}
-                  priority
-                  data-ai-hint="brand logo main"
-                  className="rounded-lg"
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <ActionCard
+                    href="/brand-profile"
+                    icon={<Edit3 className="w-8 h-8 text-primary" />}
+                    title="Brand Profile"
+                    description="Define your brand's core identity. This fuels all AI generation."
+                    isLoading={isLoading}
                 />
-              ) : (
-                <div className="text-center p-3 sm:p-4">
-                  <div className="relative z-10 flex flex-col items-center justify-center h-full space-y-3">
-                      <div className="p-3 bg-primary/10 rounded-xl">
-                        <Sparkles className="w-8 h-8 sm:w-12 sm:h-12 text-primary" />
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm sm:text-base font-semibold text-foreground">Your Brand Logo Here</p>
-                        <p className="text-xs text-muted-foreground">
-                          Generate your brand logo in the Brand Profile page.
-                        </p>
-                      </div>
-                      <Link href="/brand-profile" passHref>
-                          <Button variant="default" size="sm" className="btn-gradient-primary touch-target text-xs sm:text-sm">
-                              Go to Brand Profile <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
-                          </Button>
-                      </Link>
-                  </div>
-                </div>
-              )}
+                <ActionCard
+                    href="/content-studio"
+                    icon={<Paintbrush className="w-8 h-8 text-primary" />}
+                    title="Content Studio"
+                    description="Generate images, social posts, and blog articles tailored to your brand."
+                    isLoading={isLoading}
+                />
+                <ActionCard
+                    href="/campaign-manager"
+                    icon={<Send className="w-8 h-8 text-primary" />}
+                    title="Campaign Manager"
+                    description="Create and manage ad campaigns for Google and Meta."
+                    isLoading={isLoading}
+                />
             </div>
-            <div className="flex flex-col justify-center space-y-3 sm:space-y-4">
-              <FeatureHighlight
-                icon={<Edit3 className="w-6 h-6 text-accent" />}
-                title="Define Your Brand"
-                description="Start by setting up your brand's core identity. Upload assets, describe your vision, and let our AI understand your unique style."
-                cta={{ href: "/brand-profile", label: "Go to Brand Profile" }}
-              />
-              <FeatureHighlight
-                icon={<TrendingUp className="w-6 h-6 text-accent" />}
-                title="Create & Conquer"
-                description="Generate stunning visuals, engaging social media posts, and insightful blog articles, all tailored to your brand."
-                cta={{ href: "/content-studio", label: "Explore Content Studio" }}
-              />
-                <FeatureHighlight
-                icon={<Send className="w-6 h-6 text-accent" />}
-                title="Launch Campaigns"
-                description="Automate ad campaigns on Google and Meta. Reach your target audience effectively and efficiently."
-                cta={{ href: "/campaign-manager", label: "Manage Campaigns" }}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-4 sm:gap-6 md:grid-cols-3">
-        <InfoCard
-          title="Brand Profile"
-          description="Lay the foundation for AI-driven success by detailing your brand's essence."
-          icon={<Edit3 className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />}
-          link="/brand-profile"
-        />
-        <InfoCard
-          title="Content Studio"
-          description="Access AI tools for image, social media, and blog content generation."
-          icon={<TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />}
-          link="/content-studio"
-        />
-        <InfoCard
-          title="Campaign Manager"
-          description="Automate and optimize your advertising campaigns across major platforms."
-          icon={<Send className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />}
-          link="/campaign-manager"
-        />
-      </div>
-      </div>
-    </div>
-  );
-}
-
-interface FeatureHighlightProps {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  cta: { href: string; label: string };
-}
-
-function FeatureHighlight({ icon, title, description, cta }: FeatureHighlightProps) {
-  return (
-    <div className="flex items-start space-x-3 sm:space-x-4 p-4 rounded-lg hover:bg-muted/30 transition-colors duration-200">
-      <div className="flex-shrink-0 p-2 sm:p-3 bg-accent/10 rounded-lg">
-        {icon}
-      </div>
-      <div className="flex-1 min-w-0">
-        <h3 className="text-base sm:text-lg font-semibold text-balance mb-1">{title}</h3>
-        <p className="text-sm sm:text-base text-muted-foreground leading-relaxed mb-2">{description}</p>
-        <Link href={cta.href} passHref>
-          <Button variant="link" className="p-0 text-primary h-auto text-sm font-medium hover:text-primary/80 focus-enhanced">
-            {cta.label} <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
-          </Button>
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-interface InfoCardProps {
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  link: string;
-}
-
-function InfoCard({ title, description, icon, link }: InfoCardProps) {
-  return (
-    <Card className="card-feature group flex flex-col">
-      <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
-        <CardTitle className="text-lg sm:text-xl font-semibold text-balance flex-1 pr-2 min-w-0">{title}</CardTitle>
-        <div className="flex-shrink-0 p-2 sm:p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors duration-200">
-          {icon}
+            
+            <RecentCreations isLoading={isLoading} />
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4 flex-grow">
-        <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">{description}</p>
-      </CardContent>
-      <CardFooter className="pt-4 mt-auto">
-        <Link href={link} passHref className="w-full">
-          <Button
-            variant="outline"
-            className="w-full h-auto min-h-10 sm:min-h-12 touch-target focus-enhanced hover:bg-primary/5 hover:border-primary/30 transition-all duration-200 border-2"
-          >
-            <span className="text-balance text-left flex-1">Go to {title}</span>
-            <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
-          </Button>
+    );
+}
+
+function GreetingCard({ isLoading, brandData }: { isLoading: boolean; brandData: any }) {
+    const { currentUser } = useAuth();
+    const isAdmin = currentUser?.email === 'admin@brandforge.ai';
+    const plan = isAdmin ? 'Admin' : brandData?.plan || 'free';
+    const brandName = brandData?.brandName;
+    const isProfileComplete = brandData?.brandDescription && brandData?.brandName;
+    
+    const primaryAction = isProfileComplete
+      ? { href: "/content-studio", label: "Create New Content" }
+      : { href: "/brand-profile", label: "Complete Your Brand Profile" };
+
+    if (isLoading) {
+        return (
+            <Card className="card-enhanced">
+                <CardContent className="flex flex-col md:flex-row items-center gap-6 p-6">
+                    <Skeleton className="w-24 h-24 rounded-full flex-shrink-0" />
+                    <div className="w-full space-y-3 text-center md:text-left">
+                        <Skeleton className="h-8 w-3/4" />
+                        <Skeleton className="h-5 w-1/2" />
+                        <Skeleton className="h-10 w-48 mt-2" />
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    return (
+        <Card className="card-enhanced w-full overflow-hidden">
+            <CardContent className="p-6">
+                <div className="flex flex-col md:flex-row items-center gap-6">
+                    <div className="relative w-24 h-24 rounded-full flex-shrink-0 bg-primary/10 flex items-center justify-center border-2 border-primary/20">
+                        {brandData?.brandLogoUrl ? (
+                            <NextImage
+                                src={brandData.brandLogoUrl}
+                                alt={`${brandName || 'Brand'} Logo`}
+                                fill
+                                style={{ objectFit: "contain" }}
+                                className="p-2 rounded-full"
+                                data-ai-hint="brand logo"
+                            />
+                        ) : (
+                            <Sparkles className="w-12 h-12 text-primary" />
+                        )}
+                    </div>
+                    <div className="flex-1 text-center md:text-left">
+                        <Badge variant={isAdmin ? 'destructive' : (plan === 'premium' ? 'default' : 'secondary')} className="mb-2">
+                           {isAdmin ? <ShieldCheck className="w-4 h-4 mr-1.5" /> : <Star className="w-4 h-4 mr-1.5" />}
+                           {plan.charAt(0).toUpperCase() + plan.slice(1)}
+                        </Badge>
+                        <h1 className="text-2xl md:text-3xl font-bold text-balance">
+                            Welcome back, {brandName || 'to BrandForge AI'}!
+                        </h1>
+                        <p className="text-muted-foreground mt-1 text-balance">
+                            Ready to create something amazing for your brand today?
+                        </p>
+                    </div>
+                    <Link href={primaryAction.href} passHref className="w-full md:w-auto mt-4 md:mt-0 flex-shrink-0">
+                         <Button size="lg" className="w-full md:w-auto btn-gradient-primary touch-target">
+                           {primaryAction.label}
+                            <ArrowRight className="w-5 h-5 ml-2" />
+                         </Button>
+                    </Link>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+
+function ActionCard({ href, icon, title, description, isLoading }: { href: string; icon: React.ReactNode; title: string; description: string, isLoading: boolean }) {
+     if (isLoading) {
+        return (
+            <Card className="card-feature flex flex-col justify-between">
+                <CardHeader>
+                    <Skeleton className="w-12 h-12 rounded-lg" />
+                    <Skeleton className="h-6 w-3/4 mt-4" />
+                </CardHeader>
+                <CardContent>
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-5/6 mt-2" />
+                </CardContent>
+                <CardFooter>
+                    <Skeleton className="h-10 w-full" />
+                </CardFooter>
+            </Card>
+        );
+    }
+    
+    return (
+        <Link href={href} passHref className="group">
+            <Card className="card-feature flex flex-col justify-between h-full">
+                <div>
+                    <CardHeader>
+                        <div className="p-3 bg-primary/10 rounded-lg w-fit transition-colors duration-300 group-hover:bg-primary/20">
+                            {icon}
+                        </div>
+                        <CardTitle className="pt-4 text-xl">{title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <CardDescription>{description}</CardDescription>
+                    </CardContent>
+                </div>
+                <CardFooter>
+                     <div className="text-sm font-semibold text-primary flex items-center transition-transform duration-300 group-hover:translate-x-1">
+                        Go to {title}
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                    </div>
+                </CardFooter>
+            </Card>
         </Link>
-      </CardFooter>
-    </Card>
-  );
+    );
+}
+
+function RecentCreations() {
+    const { generatedImages, generatedSocialPosts, generatedBlogPosts, isLoading } = useBrand();
+
+    if (isLoading) {
+        return (
+             <Card>
+                <CardHeader>
+                    <Skeleton className="h-7 w-48" />
+                    <Skeleton className="h-4 w-64 mt-2" />
+                </CardHeader>
+                <CardContent className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    <Skeleton className="h-48 rounded-lg" />
+                    <Skeleton className="h-48 rounded-lg" />
+                    <Skeleton className="h-48 rounded-lg" />
+                </CardContent>
+            </Card>
+        )
+    }
+
+    const latestImage = generatedImages.length > 0 ? generatedImages[0] : null;
+    const latestSocial = generatedSocialPosts.length > 0 ? generatedSocialPosts[0] : null;
+    const latestBlog = generatedBlogPosts.length > 0 ? generatedBlogPosts[0] : null;
+    const hasRecentItems = latestImage || latestSocial || latestBlog;
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="text-2xl flex items-center">
+                    <Eye className="w-6 h-6 mr-3 text-primary" />
+                    Recent Creations
+                </CardTitle>
+                <CardDescription>
+                    A quick look at the latest content you've generated.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                {hasRecentItems ? (
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                        {latestImage && <RecentItemCard type="Image" content={latestImage.style} imageUrl={latestImage.src} />}
+                        {latestSocial && <RecentItemCard type="Social Post" content={latestSocial.caption} imageUrl={latestSocial.imageSrc} />}
+                        {latestBlog && <RecentItemCard type="Blog Post" content={latestBlog.title} />}
+                    </div>
+                ) : (
+                    <div className="text-center py-10 px-6 bg-muted rounded-lg">
+                        <h3 className="text-lg font-semibold text-foreground">No creations yet!</h3>
+                        <p className="text-muted-foreground mt-1">
+                            Head over to the <Link href="/content-studio" className="text-primary font-medium hover:underline">Content Studio</Link> to generate your first asset.
+                        </p>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
+
+function RecentItemCard({ type, content, imageUrl }: { type: 'Image' | 'Social Post' | 'Blog Post', content: string, imageUrl?: string | null }) {
+    const iconMap = {
+        'Image': <ImageIconLucide className="w-5 h-5 text-muted-foreground" />,
+        'Social Post': <FileText className="w-5 h-5 text-muted-foreground" />,
+        'Blog Post': <FileText className="w-5 h-5 text-muted-foreground" />,
+    };
+
+    return (
+        <Card className="overflow-hidden group hover:shadow-lg transition-shadow">
+            {imageUrl && (
+                 <div className="relative w-full bg-muted aspect-video overflow-hidden">
+                    <NextImage src={imageUrl} alt={`Recent ${type}`} fill style={{objectFit: 'cover'}} className="transition-transform duration-300 group-hover:scale-105" data-ai-hint="recent creation" />
+                 </div>
+            )}
+            <div className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                    {iconMap[type]}
+                    <h4 className="font-semibold text-foreground">{type}</h4>
+                </div>
+                <p className="text-sm text-muted-foreground line-clamp-2 text-balance">
+                    {content}
+                </p>
+            </div>
+        </Card>
+    );
 }
