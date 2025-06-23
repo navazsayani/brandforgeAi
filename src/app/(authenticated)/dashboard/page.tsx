@@ -2,20 +2,20 @@
 "use client"; 
 
 import React, { useEffect, useState } from 'react'; 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowRight, Edit3, Send, TrendingUp, Sparkles, Image as ImageIconLucide, Loader2, Star, ShieldCheck } from 'lucide-react'; 
 import NextImage from 'next/image'; 
 import { useBrand } from '@/contexts/BrandContext'; 
-import { useAuth } from '@/contexts/AuthContext'; // Added useAuth
+import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton'; 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 
 export default function DashboardPage() {
   const { brandData, isLoading: isBrandLoading } = useBrand();
-  const { currentUser, isLoading: isAuthLoading } = useAuth(); // Get currentUser
+  const { currentUser, isLoading: isAuthLoading } = useAuth();
   const [logoUrl, setLogoUrl] = useState<string | undefined>(undefined);
   const [displayPlan, setDisplayPlan] = useState<string | undefined>(undefined);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
@@ -58,8 +58,8 @@ export default function DashboardPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                   <div className="min-w-0 flex-1">
-                    <CardTitle className="text-break text-lg sm:text-xl lg:text-2xl mb-1 sm:mb-2">Welcome to BrandForge AI</CardTitle>
-                    <CardDescription className="text-sm sm:text-base text-break">
+                    <CardTitle className="text-balance text-lg sm:text-xl lg:text-2xl mb-1 sm:mb-2">Welcome to BrandForge AI</CardTitle>
+                    <CardDescription className="text-sm sm:text-base">
                       Your intelligent partner for brand building, content creation, and campaign management.
                     </CardDescription>
                   </div>
@@ -79,7 +79,7 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4 sm:space-y-6">
-            <p className="text-sm sm:text-base text-muted-foreground text-break leading-relaxed">
+            <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
               Leverage the power of AI to analyze your brand, generate compelling content,
               and automate your marketing efforts. Get started by defining your brand profile,
               then explore our content creation and campaign management tools.
@@ -106,8 +106,8 @@ export default function DashboardPage() {
                         <Sparkles className="w-8 h-8 sm:w-12 sm:h-12 text-primary" />
                       </div>
                       <div className="space-y-1">
-                        <p className="text-sm sm:text-base font-semibold text-foreground text-break">Your Brand Logo Here</p>
-                        <p className="text-xs text-muted-foreground text-break">
+                        <p className="text-sm sm:text-base font-semibold text-foreground">Your Brand Logo Here</p>
+                        <p className="text-xs text-muted-foreground">
                           Generate your brand logo in the Brand Profile page.
                         </p>
                       </div>
@@ -183,8 +183,8 @@ function FeatureHighlight({ icon, title, description, cta }: FeatureHighlightPro
         {icon}
       </div>
       <div className="flex-1 min-w-0">
-        <h3 className="text-base sm:text-lg font-semibold text-break mb-1">{title}</h3>
-        <p className="text-sm sm:text-base text-muted-foreground text-break leading-relaxed mb-2">{description}</p>
+        <h3 className="text-base sm:text-lg font-semibold text-balance mb-1">{title}</h3>
+        <p className="text-sm sm:text-base text-muted-foreground leading-relaxed mb-2">{description}</p>
         <Link href={cta.href} passHref>
           <Button variant="link" className="p-0 text-primary h-auto text-sm font-medium hover:text-primary/80 focus-enhanced">
             {cta.label} <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
@@ -204,25 +204,27 @@ interface InfoCardProps {
 
 function InfoCard({ title, description, icon, link }: InfoCardProps) {
   return (
-    <Card className="card-feature group">
+    <Card className="card-feature group flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
-        <CardTitle className="text-lg sm:text-xl font-semibold text-break flex-1 pr-2 min-w-0">{title}</CardTitle>
+        <CardTitle className="text-lg sm:text-xl font-semibold text-balance flex-1 pr-2 min-w-0">{title}</CardTitle>
         <div className="flex-shrink-0 p-2 sm:p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors duration-200">
           {icon}
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-sm sm:text-base text-muted-foreground text-break leading-relaxed">{description}</p>
-        <Link href={link} passHref>
+      <CardContent className="space-y-4 flex-grow">
+        <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">{description}</p>
+      </CardContent>
+      <CardFooter className="pt-4 mt-auto">
+        <Link href={link} passHref className="w-full">
           <Button
             variant="outline"
-            className="w-full whitespace-normal h-auto min-h-10 sm:min-h-12 touch-target focus-enhanced hover:bg-primary/5 hover:border-primary/30 transition-all duration-200 border-2"
+            className="w-full h-auto min-h-10 sm:min-h-12 touch-target focus-enhanced hover:bg-primary/5 hover:border-primary/30 transition-all duration-200 border-2"
           >
-            <span>Go to {title}</span>
+            <span className="text-balance text-left flex-1">Go to {title}</span>
             <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
           </Button>
         </Link>
-      </CardContent>
+      </CardFooter>
     </Card>
   );
 }
