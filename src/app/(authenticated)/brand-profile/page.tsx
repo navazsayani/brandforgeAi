@@ -28,6 +28,7 @@ import { SubmitButton } from '@/components/SubmitButton';
 import type { GenerateBrandLogoOutput } from '@/ai/flows/generate-brand-logo-flow';
 import { industries } from '@/lib/constants';
 import type { BrandData, UserProfileSelectItem } from '@/types';
+import { cn } from '@/lib/utils';
 
 const MAX_IMAGES_PREMIUM = 5;
 const MAX_IMAGES_FREE = 2;
@@ -398,7 +399,18 @@ export default function BrandProfilePage() {
       return;
     }
 
-    finalData.plan = form.getValues('plan'); 
+    // --- FIX STARTS HERE ---
+    // If a non-admin user is saving, their plan is not submitted from the form.
+    // We must preserve the plan value that is already stored in their profile data.
+    // If an admin is saving, they are allowed to change the plan, so we use the value from the form.
+    if (isAdmin) {
+        finalData.plan = data.plan; // Use the value submitted by the form for admins.
+    } else {
+        // For regular users, ignore any 'plan' value from the form and use the authoritative one from the context.
+        finalData.plan = contextBrandData?.plan || 'free'; 
+    }
+    // --- FIX ENDS HERE ---
+
     const currentImages = finalData.exampleImages || [];
     if (currentImages.length > maxImagesAllowed) {
         finalData.exampleImages = currentImages.slice(0, maxImagesAllowed);
@@ -619,8 +631,8 @@ export default function BrandProfilePage() {
                       <FormLabel className="flex items-center text-base"><Star className="w-5 h-5 mr-2 text-primary"/>Subscription Plan</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        value={field.value || 'free'}
-                        disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || !isAdmin}
+                        value={field.value}
+                        disabled={!isAdmin}
                       >
                         <FormControl><SelectTrigger><SelectValue placeholder="Select plan" /></SelectTrigger></FormControl>
                         <SelectContent><SelectGroup><SelectLabel>Plans</SelectLabel><SelectItem value="free">Free</SelectItem><SelectItem value="premium">Premium</SelectItem></SelectGroup></SelectContent>
