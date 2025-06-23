@@ -153,34 +153,32 @@ export default function BrandProfilePage() {
   useEffect(() => {
     const dataToDisplay = isAdmin && adminTargetUserId && adminLoadedProfileData ? adminLoadedProfileData : contextBrandData;
     if (dataToDisplay) {
-      const industryValue = dataToDisplay.industry && dataToDisplay.industry.trim() !== "" ? dataToDisplay.industry : "_none_";
-      const planValue = dataToDisplay.plan && ['free', 'premium'].includes(dataToDisplay.plan) ? dataToDisplay.plan : 'free';
-      const emailValue = dataToDisplay.userEmail || (currentUser?.email && dataToDisplay === contextBrandData ? currentUser.email : "");
-      
-      const currentMaxImages = planValue === 'premium' ? MAX_IMAGES_PREMIUM : MAX_IMAGES_FREE;
-      const exampleImagesArray = Array.isArray(dataToDisplay.exampleImages) ? dataToDisplay.exampleImages.slice(0, currentMaxImages) : [];
+        // This is the single source of truth for resetting the form.
+        // It ensures industry has a valid default if it's missing from the data.
+        const currentData = {
+            ...defaultFormValues, // Start with defaults
+            ...dataToDisplay,    // Override with loaded data
+            industry: (dataToDisplay.industry && dataToDisplay.industry.trim() !== "") ? dataToDisplay.industry : "_none_",
+            plan: (dataToDisplay.plan && ['free', 'premium'].includes(dataToDisplay.plan)) ? dataToDisplay.plan : 'free',
+            userEmail: dataToDisplay.userEmail || (currentUser?.email && dataToDisplay === contextBrandData ? currentUser.email : ""),
+        };
+        
+        const currentMaxImages = currentData.plan === 'premium' ? MAX_IMAGES_PREMIUM : MAX_IMAGES_FREE;
+        currentData.exampleImages = Array.isArray(currentData.exampleImages) ? currentData.exampleImages.slice(0, currentMaxImages) : [];
 
-      const currentData = {
-        ...defaultFormValues,
-        ...dataToDisplay,
-        industry: industryValue,
-        exampleImages: exampleImagesArray,
-        plan: planValue,
-        userEmail: emailValue,
-      };
-      form.reset(currentData);
-      setPreviewImages(currentData.exampleImages);
-      setSelectedFileNames(currentData.exampleImages.map((_, i) => `Saved image ${i + 1}`));
-      if (form.getValues("brandLogoUrl") !== generatedLogoPreview) {
-        setGeneratedLogoPreview(null);
-      }
+        form.reset(currentData);
+        setPreviewImages(currentData.exampleImages);
+        setSelectedFileNames(currentData.exampleImages.map((_, i) => `Saved image ${i + 1}`));
+        if (form.getValues("brandLogoUrl") !== generatedLogoPreview) {
+            setGeneratedLogoPreview(null);
+        }
     } else if (!isBrandContextLoading && !isAdminLoadingTargetProfile) {
-      form.reset({...defaultFormValues, userEmail: currentUser?.email || ""});
-      setPreviewImages([]);
-      setSelectedFileNames([]);
-      setGeneratedLogoPreview(null);
+        form.reset({...defaultFormValues, userEmail: currentUser?.email || ""});
+        setPreviewImages([]);
+        setSelectedFileNames([]);
+        setGeneratedLogoPreview(null);
     }
-  }, [adminTargetUserId, adminLoadedProfileData, contextBrandData, isBrandContextLoading, isAdminLoadingTargetProfile, currentUser, form.reset]);
+  }, [adminTargetUserId, adminLoadedProfileData, contextBrandData, isBrandContextLoading, isAdminLoadingTargetProfile, currentUser, form]);
 
 
   useEffect(() => {
