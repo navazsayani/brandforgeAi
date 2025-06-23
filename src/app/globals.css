@@ -287,12 +287,4 @@
   .overscroll-contain {
     overscroll-behavior: contain;
   }
-  
-  /* Main page scroll containment - THIS IS THE CRITICAL FIX */
-  .main-scroll-container {
-    height: 100%;
-    overflow-y: auto;
-    overscroll-behavior-y: contain;
-    overscroll-behavior-x: none;
-  }
 }
