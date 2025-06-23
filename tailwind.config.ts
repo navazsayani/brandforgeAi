@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -10,7 +11,7 @@ export default {
   theme: {
   	extend: {
   		fontFamily: {
-  			sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+  			sans: ['var(--font-sora)', 'system-ui', 'sans-serif'],
   			mono: ['var(--font-jetbrains-mono)', 'Consolas', 'monospace'],
   		},
   		fontSize: {
