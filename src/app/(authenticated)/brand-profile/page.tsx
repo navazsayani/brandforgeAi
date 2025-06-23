@@ -47,7 +47,7 @@ const brandProfileSchema = z.object({
     z.literal('').optional()
   ]).optional(),
   plan: z.enum(['free', 'premium']).optional(),
-  userEmail: z.string().email().optional().or(z.literal('')), // Added userEmail
+  userEmail: z.string().email().optional().or(z.literal('')),
 });
 
 type BrandProfileFormData = z.infer<typeof brandProfileSchema>;
@@ -180,7 +180,7 @@ export default function BrandProfilePage() {
       setSelectedFileNames([]);
       setGeneratedLogoPreview(null);
     }
-  }, [adminTargetUserId, adminLoadedProfileData, contextBrandData, form, isBrandContextLoading, isAdminLoadingTargetProfile, currentUser]);
+  }, [adminTargetUserId, adminLoadedProfileData, contextBrandData, isBrandContextLoading, isAdminLoadingTargetProfile, currentUser, form.reset]);
 
 
   useEffect(() => {
@@ -409,11 +409,10 @@ export default function BrandProfilePage() {
         toast({ title: "Image Limit Adjusted", description: `Images adjusted to ${maxImagesAllowed} for plan.`, variant: "default" });
     }
 
-    // Ensure userEmail is set correctly
-    if (!isAdmin || (isAdmin && userIdToSaveFor === currentUser?.uid)) { // Saving own profile (as admin or regular user)
+    if (!isAdmin || (isAdmin && userIdToSaveFor === currentUser?.uid)) {
       finalData.userEmail = currentUser?.email || "";
-    } else if (isAdmin && adminTargetUserId && adminLoadedProfileData) { // Admin saving another user's profile
-      finalData.userEmail = adminLoadedProfileData.userEmail || ""; // Preserve loaded email
+    } else if (isAdmin && adminTargetUserId && adminLoadedProfileData) {
+      finalData.userEmail = adminLoadedProfileData.userEmail || "";
     }
 
 
@@ -443,7 +442,7 @@ export default function BrandProfilePage() {
 
     try {
       if (isAdmin && adminTargetUserId) { 
-        await setContextBrandData(finalData, adminTargetUserId); // Using context function ensures consistency
+        await setContextBrandData(finalData, adminTargetUserId);
         setAdminLoadedProfileData(finalData); 
       } else if (currentUser) { 
         await setContextBrandData(finalData, currentUser.uid);
@@ -594,7 +593,7 @@ export default function BrandProfilePage() {
                       <FormLabel className="flex items-center text-base"><Briefcase className="w-5 h-5 mr-2 text-primary"/>Industry</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        value={field.value || '_none_'}
+                        value={field.value}
                         disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo}
                       >
                         <FormControl><SelectTrigger><SelectValue placeholder="Select industry" /></SelectTrigger></FormControl>
