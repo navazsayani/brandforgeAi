@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { ReactNode } from 'react';
@@ -127,7 +126,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex fixed inset-0 bg-background">
       <aside className="hidden md:flex md:flex-col md:w-72 bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-lg">
         <SidebarContent />
       </aside>
