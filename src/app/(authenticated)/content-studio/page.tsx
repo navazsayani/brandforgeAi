@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useActionState, startTransition, useRef } from 'react';
@@ -558,8 +559,9 @@ export default function ContentStudioPage() {
     setIsPreviewingPrompt(false);
   };
 
-  const handleSaveAllGeneratedImages = () => {
+  const handleSaveAllGeneratedImages = async () => {
     setIsSavingImages(true);
+
     const saveableImages = lastSuccessfulGeneratedImageUrls
         .filter(url => url && (url.startsWith('data:') || url.startsWith('image_url:')))
         .map(url => ({
@@ -579,14 +581,76 @@ export default function ContentStudioPage() {
         setIsSavingImages(false);
         return; 
     }
+    
+    try {
+        const compressedImages = await Promise.all(saveableImages.map(async (image) => {
+            if (image.dataUri.startsWith('data:image')) {
+                const sizeInBytes = image.dataUri.length * 0.75;
+                if (sizeInBytes > 500 * 1024) { // Compress if > 500KB
+                    try {
+                        const compressedUri = await new Promise<string>((resolve, reject) => {
+                            const img = new Image();
+                            img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                const ctx = canvas.getContext('2d');
+                                const maxWidth = 1920;
+                                const maxHeight = 1080;
+                                let { width, height } = img;
+                                if (width > height) {
+                                    if (width > maxWidth) {
+                                        height *= maxWidth / width;
+                                        width = maxWidth;
+                                    }
+                                } else {
+                                    if (height > maxHeight) {
+                                        width *= maxHeight / height;
+                                        height = maxHeight;
+                                    }
+                                }
+                                canvas.width = width;
+                                canvas.height = height;
+                                ctx?.drawImage(img, 0, 0, width, height);
+                                resolve(canvas.toDataURL('image/jpeg', 0.8)); // Use JPEG for compression
+                            };
+                            img.onerror = reject;
+                            img.src = image.dataUri;
+                        });
+                        return { ...image, dataUri: compressedUri };
+                    } catch (compressionError) {
+                        console.warn("Could not compress image, using original:", compressionError);
+                        return image;
+                    }
+                }
+            }
+            return image;
+        }));
 
-    startTransition(() => {
-       const formData = new FormData();
-       formData.append('imagesToSaveJson', JSON.stringify(saveableImages));
-       formData.append('userId', userId); 
-       formData.append('userEmail', currentUser?.email || '');
-       saveImagesAction(formData);
-    });
+        const imagesToSaveJson = JSON.stringify(compressedImages);
+        const totalPayloadSize = new TextEncoder().encode(imagesToSaveJson).length;
+
+        if (totalPayloadSize > 950 * 1024) { // Check against a safe limit (950KB)
+             toast({
+                title: "Payload Too Large",
+                description: `Total data size is too large (${(totalPayloadSize / (1024*1024)).toFixed(2)} MB), even after compression. Please try saving fewer images at a time.`,
+                variant: "destructive",
+                duration: 8000,
+            });
+            setIsSavingImages(false);
+            return;
+        }
+
+        startTransition(() => {
+           const formData = new FormData();
+           formData.append('imagesToSaveJson', imagesToSaveJson);
+           formData.append('userId', userId); 
+           formData.append('userEmail', currentUser?.email || '');
+           saveImagesAction(formData);
+        });
+
+    } catch (error: any) {
+        toast({ title: "Error during processing", description: `An error occurred before saving: ${error.message}`, variant: "destructive" });
+        setIsSavingImages(false);
+    }
   };
 
   const handleUseGeneratedImageForSocial = () => {
