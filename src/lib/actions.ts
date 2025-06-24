@@ -27,28 +27,34 @@ export interface FormState<T = any> {
 
 // Helper function to ensure user-specific brand profile document exists
 async function ensureUserBrandProfileDocExists(userId: string, userEmail?: string): Promise<void> {
+  console.log(`[ensureUserBrandProfileDocExists] Starting for userId: ${userId}`);
   if (!userId) {
+    console.error("[ensureUserBrandProfileDocExists] CRITICAL ERROR: User ID is required.");
     throw new Error("User ID is required to ensure brand profile document exists.");
   }
   
   // Step 1: Ensure the top-level user document exists.
   const userDocRef = doc(db, 'users', userId);
+  console.log(`[ensureUserBrandProfileDocExists] Checking for top-level user doc at users/${userId}`);
   const userDocSnap = await getDoc(userDocRef);
   if (!userDocSnap.exists()) {
-    console.log(`Top-level user document for ${userId} does not exist. Creating it...`);
-    // Create the main user document. This is crucial before creating subcollections.
+    console.log(`[ensureUserBrandProfileDocExists] Top-level user document for ${userId} does not exist. Creating it...`);
     await setDoc(userDocRef, {
       email: userEmail || 'unknown',
+      createdAt: new Date(), // Add a creation timestamp
     });
-    console.log(`Successfully created top-level user document for ${userId}.`);
+    console.log(`[ensureUserBrandProfileDocExists] Successfully created top-level user document for ${userId}.`);
+  } else {
+    console.log(`[ensureUserBrandProfileDocExists] Top-level user doc for ${userId} already exists.`);
   }
 
   // Step 2: Proceed with ensuring the nested brand profile document exists.
   const brandProfileDocRef = doc(db, `users/${userId}/brandProfiles/${userId}`);
+  console.log(`[ensureUserBrandProfileDocExists] Checking for nested brand profile doc at users/${userId}/brandProfiles/${userId}`);
   const brandProfileDocSnap = await getDoc(brandProfileDocRef);
 
   if (!brandProfileDocSnap.exists()) {
-    console.log(`Brand profile document for user ${userId} does not exist. Creating it...`);
+    console.log(`[ensureUserBrandProfileDocExists] Brand profile document for user ${userId} does not exist. Creating it with default data...`);
     const initialProfileData: Partial<BrandData> = {
       brandName: "",
       websiteUrl: "",
@@ -59,13 +65,14 @@ async function ensureUserBrandProfileDocExists(userId: string, userEmail?: strin
       targetKeywords: "",
       brandLogoUrl: "",
       plan: 'free',
+      userEmail: userEmail || "",
     };
-    if (userEmail) {
-      initialProfileData.userEmail = userEmail;
-    }
     await setDoc(brandProfileDocRef, initialProfileData);
-    console.log(`Successfully created brand profile document for user ${userId}.`);
+    console.log(`[ensureUserBrandProfileDocExists] Successfully created brand profile document for user ${userId}.`);
+  } else {
+    console.log(`[ensureUserBrandProfileDocExists] Nested brand profile doc for ${userId} already exists.`);
   }
+  console.log(`[ensureUserBrandProfileDocExists] Finished for userId: ${userId}`);
 }
 
 
@@ -376,35 +383,41 @@ export async function handleSaveGeneratedImagesAction(
   prevState: FormState<{savedCount: number}>,
   formData: FormData
 ): Promise<FormState<{savedCount: number}>> {
+  console.log('--- [Save Images Action] START ---');
   const userId = formData.get('userId') as string;
   const userEmail = formData.get('userEmail') as string | undefined; 
   
-  console.log(`[Save Images Action] Initiated for userId: ${userId}`);
+  console.log(`[Save Images Action] User ID received: ${userId}`);
+  console.log(`[Save Images Action] User Email received: ${userEmail}`);
 
   if (!userId || typeof userId !== 'string') {
-    console.error('[Save Images Action] ERROR: User not authenticated - userId is missing or invalid.');
-    return { error: 'User not authenticated - User not logged in cannot save image.' };
+    const errorMsg = 'User not authenticated - userId is missing or invalid.';
+    console.error(`[Save Images Action] ERROR: ${errorMsg}`);
+    return { error: errorMsg };
   }
 
   try {
+    console.log(`[Save Images Action] STEP 1: Ensuring brand profile exists for userId: ${userId}`);
     await ensureUserBrandProfileDocExists(userId, userEmail);
-    console.log(`[Save Images Action] Ensured brand profile exists for userId: ${userId}`);
+    console.log(`[Save Images Action] STEP 1 COMPLETE.`);
     
+    console.log('[Save Images Action] STEP 2: Retrieving image data from form.');
     const imagesToSaveString = formData.get('imagesToSaveJson') as string;
     if (!imagesToSaveString) {
       const errorMsg = "No image data received from the client (imagesToSaveJson is missing).";
       console.error(`[Save Images Action] ERROR: ${errorMsg}`);
       return { error: errorMsg };
     }
-    console.log(`[Save Images Action] Received imagesToSaveJson string (first 200 chars): ${imagesToSaveString.substring(0, 200)}...`);
+    console.log(`[Save Images Action] Raw imagesToSaveJson string (first 200 chars): ${imagesToSaveString.substring(0, 200)}...`);
 
 
+    console.log('[Save Images Action] STEP 3: Parsing JSON data.');
     let imagesToSave: { dataUri: string; prompt: string; style: string; }[];
     try {
       imagesToSave = JSON.parse(imagesToSaveString);
-      console.log(`[Save Images Action] Successfully parsed JSON. Number of images to process: ${imagesToSave.length}`);
+      console.log(`[Save Images Action] JSON parsed successfully. Number of images to process: ${imagesToSave.length}`);
     } catch (e: any) {
-      const errorMsg = `Invalid image data format received from client: ${e.message}. Received: ${imagesToSaveString.substring(0, 200)}...`;
+      const errorMsg = `Invalid image data format received from client: ${e.message}.`;
       console.error(`[Save Images Action] JSON PARSE ERROR: ${errorMsg}`, JSON.stringify(e, Object.getOwnPropertyNames(e), 2));
       return { error: errorMsg };
     }
@@ -415,24 +428,17 @@ export async function handleSaveGeneratedImagesAction(
       return { error: errorMsg };
     }
     
+    console.log('[Save Images Action] STEP 4: Starting loop to process and save images.');
     const brandProfileDocId = userId; 
     let savedCount = 0;
     const saveErrors: string[] = [];
 
     for (const [index, image] of imagesToSave.entries()) {
-      console.log(`[Save Images Action] Processing image ${index + 1}/${imagesToSave.length}...`);
-      const promptSnippet = image.prompt ? image.prompt.substring(0,30) + "..." : "N/A";
+      console.log(`[Save Images Action] -> Processing image ${index + 1}/${imagesToSave.length}...`);
       
-      if (!image.dataUri) {
-        const errorDetail = `Invalid data URI for image ${index + 1} (prompt: ${promptSnippet}). dataUri is missing.`;
-        console.warn(`[Save Images Action] WARNING: ${errorDetail}. Skipping save for this image.`);
-        saveErrors.push(errorDetail);
-        continue;
-      }
-
-      if (!(image.dataUri.startsWith('data:image') || image.dataUri.startsWith('image_url:') || image.dataUri.startsWith('https://'))) {
-          const errorDetail = `Invalid data URI format for image ${index + 1} (prompt: ${promptSnippet}). URI starts with: ${image.dataUri.substring(0, 30)}...`;
-          console.warn(`[Save Images Action] WARNING: ${errorDetail}. Skipping save for this image.`);
+      if (!image.dataUri || !(image.dataUri.startsWith('data:image') || image.dataUri.startsWith('image_url:') || image.dataUri.startsWith('https://'))) {
+          const errorDetail = `Invalid or missing data URI for image ${index + 1}. URI starts with: ${image.dataUri?.substring(0, 30) || 'N/A'}...`;
+          console.warn(`[Save Images Action] -> WARNING: ${errorDetail}. Skipping save for this image.`);
           saveErrors.push(errorDetail);
           continue;
       }
@@ -441,70 +447,64 @@ export async function handleSaveGeneratedImagesAction(
         let imageUrlToSave = image.dataUri;
         
         if (image.dataUri.startsWith('data:image')) {
-            console.log(`[Save Images Action] Image ${index + 1} is a data URI. Uploading to Storage...`);
+            console.log(`[Save Images Action] -> Image ${index + 1} is a data URI. Preparing to upload to Storage...`);
             const fileExtensionMatch = image.dataUri.match(/^data:image\/([a-zA-Z+]+);base64,/);
             const fileExtension = fileExtensionMatch ? fileExtensionMatch[1] : 'png';
             const filePath = `users/${userId}/brandProfiles/${brandProfileDocId}/generatedLibraryImages/${Date.now()}_${generateFilenamePart()}.${fileExtension}`;
             const imageStorageRef = storageRef(storage, filePath);
-
-            try {
-                const snapshot = await uploadString(imageStorageRef, image.dataUri, 'data_url');
-                imageUrlToSave = await getDownloadURL(snapshot.ref);
-                console.log(`[Save Images Action] Image ${index + 1} uploaded to Storage. URL: ${imageUrlToSave}`);
-            } catch (uploadError: any) {
-                const uploadErrorDetail = `Failed to upload image to Firebase Storage for prompt "${promptSnippet}": ${uploadError.message}. Code: ${uploadError.code}. Path: ${filePath}`;
-                console.error(`[Save Images Action] STORAGE UPLOAD ERROR: ${uploadErrorDetail}`, JSON.stringify(uploadError, Object.getOwnPropertyNames(uploadError)));
-                saveErrors.push(uploadErrorDetail);
-                continue;
-            }
+            console.log(`[Save Images Action] -> Uploading to path: ${filePath}`);
+            const snapshot = await uploadString(imageStorageRef, image.dataUri, 'data_url');
+            imageUrlToSave = await getDownloadURL(snapshot.ref);
+            console.log(`[Save Images Action] -> Image ${index + 1} uploaded to Storage. URL: ${imageUrlToSave}`);
         } else {
-            console.log(`[Save Images Action] Image ${index + 1} is a URL. Saving directly.`);
+            console.log(`[Save Images Action] -> Image ${index + 1} is a URL. Saving directly.`);
             if (image.dataUri.startsWith('image_url:')) {
                 imageUrlToSave = image.dataUri.substring(10);
             }
         }
 
         const firestoreCollectionPath = `users/${userId}/brandProfiles/${brandProfileDocId}/savedLibraryImages`;
-        console.log(`[Save Images Action] Writing image ${index + 1} metadata to Firestore at path: ${firestoreCollectionPath}`);
-        
+        console.log(`[Save Images Action] -> Preparing to write image ${index + 1} metadata to Firestore at path: ${firestoreCollectionPath}`);
         const firestoreCollectionRef = collection(db, firestoreCollectionPath);
-        try {
-            await addDoc(firestoreCollectionRef, {
-                storageUrl: imageUrlToSave,
-                prompt: image.prompt || "N/A",
-                style: image.style || "N/A",
-                createdAt: new Date(),
-            });
-            console.log(`[Save Images Action] Successfully wrote image ${index + 1} metadata to Firestore.`);
-            savedCount++;
-        } catch (firestoreError: any) {
-            const firestoreErrorDetail = `Failed to save image metadata to Firestore for prompt "${promptSnippet}": ${firestoreError.message}. Code: ${firestoreError.code}. Path: ${firestoreCollectionPath}`;
-            console.error(`[Save Images Action] FIRESTORE WRITE ERROR: ${firestoreErrorDetail}`, JSON.stringify(firestoreError, Object.getOwnPropertyNames(firestoreError)));
-            saveErrors.push(firestoreErrorDetail);
-            continue;
-        }
-
+        const docToWrite = {
+            storageUrl: imageUrlToSave,
+            prompt: image.prompt || "N/A",
+            style: image.style || "N/A",
+            createdAt: new Date(),
+        };
+        console.log(`[Save Images Action] -> Document to write:`, docToWrite);
+        await addDoc(firestoreCollectionRef, docToWrite);
+        console.log(`[Save Images Action] -> Successfully wrote image ${index + 1} metadata to Firestore.`);
+        savedCount++;
       } catch (e: any) {
-        const specificError = `Failed to save image ${index + 1} (prompt: ${promptSnippet}): ${(e as Error).message?.substring(0,100)}`;
-        console.error(`[Save Images Action] LOOP ERROR: ${specificError}. Full error:`, JSON.stringify(e, Object.getOwnPropertyNames(e)));
+        const specificError = `Failed during processing of image ${index + 1}: ${(e as Error).message?.substring(0,150)}`;
+        console.error(`[Save Images Action] -> LOOP ERROR for image ${index+1}: ${specificError}. Full error:`, JSON.stringify(e, Object.getOwnPropertyNames(e)));
         saveErrors.push(specificError);
         continue;
       }
     }
 
-    console.log(`[Save Images Action] Finished processing all images. Saved: ${savedCount}, Errors: ${saveErrors.length}`);
+    console.log(`[Save Images Action] STEP 4 COMPLETE. Finished processing all images. Saved: ${savedCount}, Errors: ${saveErrors.length}`);
 
     if (savedCount > 0 && saveErrors.length > 0) {
-      return { data: {savedCount}, message: `Successfully saved ${savedCount} image(s). Some errors occurred: ${saveErrors.join('. ')}` };
+      const finalMessage = `Successfully saved ${savedCount} image(s). Some errors occurred: ${saveErrors.join('. ')}`;
+      console.log(`[Save Images Action] RETURNING (partial success): ${finalMessage}`);
+      return { data: {savedCount}, message: finalMessage };
     } else if (savedCount > 0) {
-      return { data: {savedCount}, message: `${savedCount} image(s) saved successfully to your library!` };
+      const finalMessage = `${savedCount} image(s) saved successfully to your library!`;
+      console.log(`[Save Images Action] RETURNING (full success): ${finalMessage}`);
+      return { data: {savedCount}, message: finalMessage };
     } else if (saveErrors.length > 0) {
-      return { error: `Failed to save any images. Errors: ${saveErrors.join('. ')}` };
+      const finalMessage = `Failed to save any images. Errors: ${saveErrors.join('. ')}`;
+      console.log(`[Save Images Action] RETURNING (full failure): ${finalMessage}`);
+      return { error: finalMessage };
     } else {
-      return { error: "No images were processed or saved. This might be due to an issue with the input data or no images being selected."};
+      const finalMessage = "No images were processed or saved. This might be due to an issue with the input data or no images being selected.";
+      console.log(`[Save Images Action] RETURNING (no images processed): ${finalMessage}`);
+      return { error: finalMessage };
     }
   } catch (e: any) {
-      const criticalErrorMsg = `A critical server error occurred during image saving: ${e.message || "Unknown error"}. Please check server logs. UserId used: '${userId}'`;
+      const criticalErrorMsg = `A critical server error occurred during image saving: ${e.message || "Unknown error"}.`;
       console.error("[Save Images Action] CRITICAL ERROR (outer try-catch):", JSON.stringify(e, Object.getOwnPropertyNames(e), 2), `UserId: '${userId}'`);
       return { error: criticalErrorMsg };
   }
