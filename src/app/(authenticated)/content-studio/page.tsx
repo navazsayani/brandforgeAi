@@ -1413,31 +1413,29 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
             {lastSuccessfulGeneratedImageUrls.length > 0 && (
               <Card className="mt-6 mb-4 shadow-sm">
                   <CardHeader>
-                      <div className="flex justify-between items-center">
-                          <CardTitle className="text-xl flex items-center">
-                              <ImageIcon className="w-5 h-5 mr-2 text-primary" />
-                              Generated Image{lastSuccessfulGeneratedImageUrls.length > 1 ? 's' : ''}
-                              {lastUsedImageProvider && <span className="text-xs text-muted-foreground ml-2">(via {!isAdmin ? 'Gemini (Google AI)' : lastUsedImageProvider})</span>}
-                          </CardTitle>
-                          <div className="flex items-center gap-2">
-                              {lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url.startsWith('image_url:')) && (
-                                    <Button
-                                      type="button"
-                                      onClick={handleSaveAllGeneratedImages}
-                                      disabled={isSavingImages || !lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url.startsWith('image_url:'))}
-                                      size="sm"
-                                  >
-                                      {isSavingImages ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                      Save All to Library
-                                  </Button>
-                              )}
-                              <Button variant="outline" size="sm" onClick={handleClearGeneratedImages}>
-                                  <Trash2 className="mr-2 h-4 w-4" /> Clear Image{lastSuccessfulGeneratedImageUrls.length > 1 ? 's' : ''}
-                              </Button>
-                          </div>
-                      </div>
+                      <CardTitle className="text-xl flex items-center">
+                          <ImageIcon className="w-5 h-5 mr-2 text-primary" />
+                          Generated Image{lastSuccessfulGeneratedImageUrls.length > 1 ? 's' : ''}
+                          {lastUsedImageProvider && <span className="text-xs text-muted-foreground ml-2">(via {!isAdmin ? 'Gemini (Google AI)' : lastUsedImageProvider})</span>}
+                      </CardTitle>
                   </CardHeader>
                   <CardContent className="overflow-hidden">
+                    <div className="flex flex-wrap items-center gap-2 mb-4">
+                        {lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url.startsWith('image_url:')) && (
+                              <Button
+                                type="button"
+                                onClick={handleSaveAllGeneratedImages}
+                                disabled={isSavingImages || !lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url.startsWith('image_url:'))}
+                                size="sm"
+                            >
+                                {isSavingImages ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                Save All to Library
+                            </Button>
+                        )}
+                        <Button variant="outline" size="sm" onClick={handleClearGeneratedImages}>
+                            <Trash2 className="mr-2 h-4 w-4" /> Clear Image{lastSuccessfulGeneratedImageUrls.length > 1 ? 's' : ''}
+                        </Button>
+                    </div>
                     <ImprovedImageGrid 
                         imageUrls={lastSuccessfulGeneratedImageUrls}
                         onDownload={downloadImage}
