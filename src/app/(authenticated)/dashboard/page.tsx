@@ -97,7 +97,7 @@ function GreetingCard({ isLoading, brandData }: { isLoading: boolean; brandData:
                             <Sparkles className="w-12 h-12 text-primary" />
                         )}
                     </div>
-                    <div className="flex-1 text-center md:text-left">
+                    <div className="flex-1 text-center md:text-left min-w-0">
                         <Badge variant={isAdmin ? 'destructive' : (plan === 'premium' ? 'default' : 'secondary')} className="mb-2">
                            {isAdmin ? <ShieldCheck className="w-4 h-4 mr-1.5" /> : <Star className="w-4 h-4 mr-1.5" />}
                            {plan.charAt(0).toUpperCase() + plan.slice(1)}
