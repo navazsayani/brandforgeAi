@@ -158,32 +158,40 @@ export default function BrandProfilePage() {
   useEffect(() => {
     const dataToDisplay = isAdmin && adminTargetUserId && adminLoadedProfileData ? adminLoadedProfileData : contextBrandData;
     
-    if (dataToDisplay) {
-        const currentData = {
-            ...defaultFormValues,
-            ...dataToDisplay,
-            industry: (dataToDisplay.industry && dataToDisplay.industry.trim() !== "") ? dataToDisplay.industry : "_none_",
-            plan: (dataToDisplay.plan && ['free', 'premium'].includes(dataToDisplay.plan)) ? dataToDisplay.plan : 'free',
-            userEmail: dataToDisplay.userEmail || (currentUser?.email && dataToDisplay === contextBrandData ? currentUser.email : ""),
-        };
-        
-        const currentMaxImages = currentData.plan === 'premium' ? MAX_IMAGES_PREMIUM : MAX_IMAGES_FREE;
-        currentData.exampleImages = Array.isArray(currentData.exampleImages) ? currentData.exampleImages.slice(0, currentMaxImages) : [];
+    // Do not run if data is still loading
+    if (isBrandContextLoading || isAdminLoadingTargetProfile || !dataToDisplay) {
+        return;
+    }
 
-        form.reset(currentData);
+    const currentData = {
+        ...defaultFormValues,
+        ...dataToDisplay,
+        industry: (dataToDisplay.industry && dataToDisplay.industry.trim() !== "") ? dataToDisplay.industry : "_none_",
+        plan: (dataToDisplay.plan && ['free', 'premium'].includes(dataToDisplay.plan)) ? dataToDisplay.plan : 'free',
+        userEmail: dataToDisplay.userEmail || (currentUser?.email && dataToDisplay === contextBrandData ? currentUser.email : ""),
+    };
+    
+    const currentMaxImages = currentData.plan === 'premium' ? MAX_IMAGES_PREMIUM : MAX_IMAGES_FREE;
+    currentData.exampleImages = Array.isArray(currentData.exampleImages) ? currentData.exampleImages.slice(0, currentMaxImages) : [];
 
-        setPreviewImages(currentData.exampleImages);
-        setSelectedFileNames(currentData.exampleImages.map((_, i) => `Saved image ${i + 1}`));
-        if (form.getValues("brandLogoUrl") !== generatedLogoPreview) {
-            setGeneratedLogoPreview(null);
-        }
-    } else if (!isBrandContextLoading && !isAdminLoadingTargetProfile) {
-        form.reset({...defaultFormValues, userEmail: currentUser?.email || ""});
-        setPreviewImages([]);
-        setSelectedFileNames([]);
+    form.reset(currentData);
+
+    setPreviewImages(currentData.exampleImages);
+    setSelectedFileNames(currentData.exampleImages.map((_, i) => `Saved image ${i + 1}`));
+    if (form.getValues("brandLogoUrl") !== generatedLogoPreview) {
         setGeneratedLogoPreview(null);
     }
-  }, [contextBrandData, adminLoadedProfileData, adminTargetUserId, isBrandContextLoading, isAdminLoadingTargetProfile, currentUser, form.reset, isAdmin, form, generatedLogoPreview]);
+  }, [
+      contextBrandData, 
+      adminLoadedProfileData, 
+      adminTargetUserId, 
+      isBrandContextLoading, 
+      isAdminLoadingTargetProfile, 
+      currentUser, 
+      isAdmin, 
+      generatedLogoPreview,
+      form.reset
+  ]);
 
 
   useEffect(() => {
@@ -595,7 +603,7 @@ export default function BrandProfilePage() {
                       <FormLabel className="flex items-center text-base"><Briefcase className="w-5 h-5 mr-2 text-primary"/>Industry</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        value={field.value || '_none_'}
+                        value={field.value ?? '_none_'}
                         disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo}
                       >
                         <FormControl><SelectTrigger><SelectValue placeholder="Select industry" /></SelectTrigger></FormControl>

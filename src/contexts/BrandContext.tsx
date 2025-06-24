@@ -149,7 +149,9 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
 
       if (dataToSet) {
         const normalizedData = { ...defaultEmptyBrandData, ...dataToSet }; 
-        if (!normalizedData.industry) normalizedData.industry = "_none_";
+        if (!normalizedData.industry || normalizedData.industry.trim() === "") {
+            normalizedData.industry = "_none_";
+        }
         if (!normalizedData.plan) normalizedData.plan = 'free';
         
         // If user email is missing from the data, add it and flag for saving.
