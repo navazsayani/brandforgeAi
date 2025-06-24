@@ -631,7 +631,7 @@ export default function ContentStudioPage() {
         if (totalPayloadSize > 950 * 1024) { // Check against a safe limit (950KB)
              toast({
                 title: "Payload Too Large",
-                description: `Total data size is too large (${(totalPayloadSize / (1024*1024)).toFixed(2)} MB), even after compression. Please try saving fewer images at a time.`,
+                description: `Total data size is too large (${(totalPayloadSize / (1024*1024)).toFixed(2)} MB). Please clear these results and try generating fewer images at once to stay within the 1MB limit.`,
                 variant: "destructive",
                 duration: 8000,
             });
