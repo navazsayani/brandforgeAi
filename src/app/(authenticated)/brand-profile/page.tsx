@@ -183,7 +183,7 @@ export default function BrandProfilePage() {
         setSelectedFileNames([]);
         setGeneratedLogoPreview(null);
     }
-  }, [contextBrandData, adminLoadedProfileData, adminTargetUserId, isBrandContextLoading, isAdminLoadingTargetProfile, currentUser, form]);
+  }, [contextBrandData, adminLoadedProfileData, adminTargetUserId, isBrandContextLoading, isAdminLoadingTargetProfile, currentUser, form.reset, isAdmin, form, generatedLogoPreview]);
 
 
   useEffect(() => {
@@ -595,7 +595,7 @@ export default function BrandProfilePage() {
                       <FormLabel className="flex items-center text-base"><Briefcase className="w-5 h-5 mr-2 text-primary"/>Industry</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        value={field.value}
+                        value={field.value ?? '_none_'}
                         disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo}
                       >
                         <FormControl><SelectTrigger><SelectValue placeholder="Select industry" /></SelectTrigger></FormControl>
