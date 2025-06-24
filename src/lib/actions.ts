@@ -473,7 +473,7 @@ export async function handleSaveGeneratedImagesAction(
                 storageUrl: imageUrlToSave,
                 prompt: image.prompt || "N/A",
                 style: image.style || "N/A",
-                createdAt: serverTimestamp(),
+                createdAt: new Date(),
             });
             console.log(`[Save Images Action] Successfully wrote image ${index + 1} metadata to Firestore.`);
             savedCount++;
