@@ -25,7 +25,7 @@ export interface SavedGeneratedImage {
   storageUrl: string; // Firebase Storage URL
   prompt: string;
   style: string;
-  createdAt: any; // Firestore Timestamp
+  createdAt?: any; // Firestore Timestamp (optional)
 }
 
 export interface GeneratedSocialMediaPost {

@@ -39,7 +39,6 @@ async function ensureUserBrandProfileDocExists(userId: string, userEmail?: strin
     // Create the main user document. This is crucial before creating subcollections.
     await setDoc(userDocRef, {
       email: userEmail || 'unknown',
-      createdAt: serverTimestamp(),
     });
     console.log(`Successfully created top-level user document for ${userId}.`);
   }
@@ -50,7 +49,7 @@ async function ensureUserBrandProfileDocExists(userId: string, userEmail?: strin
 
   if (!brandProfileDocSnap.exists()) {
     console.log(`Brand profile document for user ${userId} does not exist. Creating it...`);
-    const initialProfileData: Partial<BrandData> & { createdAt?: any } = {
+    const initialProfileData: Partial<BrandData> = {
       brandName: "",
       websiteUrl: "",
       brandDescription: "",
@@ -60,7 +59,6 @@ async function ensureUserBrandProfileDocExists(userId: string, userEmail?: strin
       targetKeywords: "",
       brandLogoUrl: "",
       plan: 'free',
-      createdAt: serverTimestamp() as any,
     };
     if (userEmail) {
       initialProfileData.userEmail = userEmail;
@@ -215,7 +213,6 @@ export async function handleGenerateSocialMediaCaptionAction(
       caption: result.caption || "",
       hashtags: result.hashtags || "",
       imageSrc: imageSrc,
-      createdAt: serverTimestamp()
     });
     return { data: { ...result, imageSrc: imageSrc }, message: "Social media content generated and saved successfully!" };
   } catch (e: any)
@@ -286,7 +283,6 @@ export async function handleGenerateBlogContentAction(
       title: result.title || "Untitled",
       content: result.content || "",
       tags: result.tags || "",
-      createdAt: serverTimestamp()
     });
     return { data: result, message: "Blog content generated and saved successfully!" };
   } catch (e: any) {
@@ -348,7 +344,6 @@ export async function handleGenerateAdCampaignAction(
       targetKeywords: input.targetKeywords,
       budget: input.budget,
       platforms: input.platforms,
-      createdAt: serverTimestamp()
     });
     return { data: result, message: "Ad campaign variations generated and saved successfully!" };
   } catch (e: any) {
@@ -474,7 +469,6 @@ export async function handleSaveGeneratedImagesAction(
                 storageUrl: imageUrlToSave,
                 prompt: image.prompt || "N/A",
                 style: image.style || "N/A",
-                createdAt: serverTimestamp(),
             });
             
             savedCount++;
@@ -614,7 +608,6 @@ export async function handleGenerateBrandLogoAction(
     await addDoc(firestoreCollectionRef, {
       logoData: result.logoDataUri || "", 
       brandName: input.brandName,
-      createdAt: serverTimestamp()
     });
     return { data: result, message: "Brand logo generated and saved successfully!" };
   } catch (e: any) {
