@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { getModelConfig } from '@/lib/model-config';
 
 const GenerateBrandLogoInputSchema = z.object({
   brandName: z.string().describe('The name of the brand.'),
@@ -69,9 +70,11 @@ const generateBrandLogoFlow = ai.defineFlow(
     const promptText = generateLogoPromptText(input);
     console.log("Attempting logo generation with prompt:", promptText);
 
+    const { imageGenerationModel } = await getModelConfig();
+
     try {
       const {media} = await ai.generate({
-        model: 'googleai/gemini-2.0-flash-preview-image-generation',
+        model: imageGenerationModel,
         prompt: promptText,
         config: {
           responseModalities: ['TEXT', 'IMAGE'],

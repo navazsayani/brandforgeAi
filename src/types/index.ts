@@ -68,3 +68,11 @@ export interface UserProfileSelectItem {
   brandName: string;
   userEmail: string;
 }
+
+// Type for the model configuration
+export interface ModelConfig {
+  imageGenerationModel: string;
+  fastModel: string;
+  visionModel: string;
+  powerfulModel: string;
+}

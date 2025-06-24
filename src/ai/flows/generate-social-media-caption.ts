@@ -11,6 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { getModelConfig } from '@/lib/model-config';
 
 const GenerateSocialMediaCaptionInputSchema = z.object({
   brandDescription: z.string().describe('The description of the brand.'),
@@ -30,11 +31,20 @@ export async function generateSocialMediaCaption(input: GenerateSocialMediaCapti
   return generateSocialMediaCaptionFlow(input);
 }
 
-const prompt = ai.definePrompt({
-  name: 'generateSocialMediaCaptionPrompt',
-  input: {schema: GenerateSocialMediaCaptionInputSchema},
-  output: {schema: GenerateSocialMediaCaptionOutputSchema},
-  prompt: `You are an expert social media manager.
+const generateSocialMediaCaptionFlow = ai.defineFlow(
+  {
+    name: 'generateSocialMediaCaptionFlow',
+    inputSchema: GenerateSocialMediaCaptionInputSchema,
+    outputSchema: GenerateSocialMediaCaptionOutputSchema,
+  },
+  async input => {
+    const { fastModel } = await getModelConfig();
+    const prompt = ai.definePrompt({
+      name: 'generateSocialMediaCaptionPrompt',
+      model: fastModel,
+      input: {schema: GenerateSocialMediaCaptionInputSchema},
+      output: {schema: GenerateSocialMediaCaptionOutputSchema},
+      prompt: `You are an expert social media manager.
 
 You will generate an engaging caption and relevant hashtags for a social media post.
 Consider the brand's description, its industry (if provided), the desired tone (which may include nuances), and an optional image description.
@@ -58,15 +68,8 @@ The caption should reflect the nuances in the "Desired Tone" if any are provided
 
 Caption:
 Hashtags:`,
-});
+    });
 
-const generateSocialMediaCaptionFlow = ai.defineFlow(
-  {
-    name: 'generateSocialMediaCaptionFlow',
-    inputSchema: GenerateSocialMediaCaptionInputSchema,
-    outputSchema: GenerateSocialMediaCaptionOutputSchema,
-  },
-  async input => {
     const {output} = await prompt(input);
     if (!output) {
         throw new Error("AI failed to generate a social media caption.");
@@ -74,5 +77,3 @@ const generateSocialMediaCaptionFlow = ai.defineFlow(
     return output;
   }
 );
-
-    

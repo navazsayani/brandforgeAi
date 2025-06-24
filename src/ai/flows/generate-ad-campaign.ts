@@ -11,6 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { getModelConfig } from '@/lib/model-config';
 
 const GenerateAdCampaignInputSchema = z.object({
   brandName: z.string().describe('The name of the brand.'),
@@ -37,11 +38,21 @@ export async function generateAdCampaign(input: GenerateAdCampaignInput): Promis
   return generateAdCampaignFlow(input);
 }
 
-const generateAdCampaignPrompt = ai.definePrompt({
-  name: 'generateAdCampaignPrompt',
-  input: {schema: GenerateAdCampaignInputSchema},
-  output: {schema: GenerateAdCampaignOutputSchema},
-  prompt: `You are an expert digital advertising strategist specializing in the {{{industry}}} industry. Your task is to generate creative ad campaign assets based on the provided brand information, inspirational content, and target keywords.
+const generateAdCampaignFlow = ai.defineFlow(
+  {
+    name: 'generateAdCampaignFlow',
+    inputSchema: GenerateAdCampaignInputSchema,
+    outputSchema: GenerateAdCampaignOutputSchema,
+  },
+  async input => {
+    const { powerfulModel } = await getModelConfig();
+
+    const generateAdCampaignPrompt = ai.definePrompt({
+      name: 'generateAdCampaignPrompt',
+      model: powerfulModel,
+      input: {schema: GenerateAdCampaignInputSchema},
+      output: {schema: GenerateAdCampaignOutputSchema},
+      prompt: `You are an expert digital advertising strategist specializing in the {{{industry}}} industry. Your task is to generate creative ad campaign assets based on the provided brand information, inspirational content, and target keywords.
 
 Brand Name: {{{brandName}}}
 Brand Description: {{{brandDescription}}}
@@ -61,15 +72,8 @@ Instructions:
 
 Ensure all generated text is professional, engaging, and directly relevant to the brand, its industry, and the inspirational content.
 `,
-});
+    });
 
-const generateAdCampaignFlow = ai.defineFlow(
-  {
-    name: 'generateAdCampaignFlow',
-    inputSchema: GenerateAdCampaignInputSchema,
-    outputSchema: GenerateAdCampaignOutputSchema,
-  },
-  async input => {
     const {output} = await generateAdCampaignPrompt(input);
     if (!output) {
         throw new Error("AI failed to generate ad campaign variations.");

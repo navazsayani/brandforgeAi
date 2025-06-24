@@ -9,6 +9,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { getModelConfig } from '@/lib/model-config';
 
 const GenerateBrandForgeAppLogoOutputSchema = z.object({
   logoDataUri: z.string().describe('The generated logo image for BrandForge AI as a data URI.'),
@@ -50,10 +51,11 @@ Example direction: Think of a sleek, abstract 'B' that subtly incorporates a spa
 `;
 
     console.log("Attempting BrandForge AI app logo generation with REFINED prompt:", promptText);
+    const { imageGenerationModel } = await getModelConfig();
 
     try {
       const {media} = await ai.generate({
-        model: 'googleai/gemini-2.0-flash-preview-image-generation',
+        model: imageGenerationModel,
         prompt: promptText,
         config: {
           responseModalities: ['TEXT', 'IMAGE'],

@@ -11,6 +11,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { fetchWebsiteContentTool } from '@/ai/tools/fetch-website-content-tool';
+import { getModelConfig } from '@/lib/model-config';
 
 const GenerateBlogOutlineInputSchema = z.object({
   brandName: z.string().describe('The name of the brand.'),
@@ -30,19 +31,45 @@ export async function generateBlogOutline(input: GenerateBlogOutlineInput): Prom
   return generateBlogOutlineFlow(input);
 }
 
-const prompt = ai.definePrompt({
-  name: 'generateBlogOutlinePrompt',
-  input: {schema: z.object({
-    brandName: GenerateBlogOutlineInputSchema.shape.brandName,
-    brandDescription: GenerateBlogOutlineInputSchema.shape.brandDescription,
-    industry: GenerateBlogOutlineInputSchema.shape.industry,
-    keywords: GenerateBlogOutlineInputSchema.shape.keywords,
-    websiteUrl: GenerateBlogOutlineInputSchema.shape.websiteUrl,
-    websiteContent: z.string().optional().describe('The main text content extracted from the website, if URL was provided and fetching was successful.'),
-    extractionError: z.string().optional().describe('Any error that occurred during website content extraction.')
-  })},
-  output: {schema: GenerateBlogOutlineOutputSchema},
-  prompt: `You are an expert content strategist and blog writer. Your task is to generate a detailed and structured blog post outline.
+const generateBlogOutlineFlow = ai.defineFlow(
+  {
+    name: 'generateBlogOutlineFlow',
+    inputSchema: GenerateBlogOutlineInputSchema,
+    outputSchema: GenerateBlogOutlineOutputSchema,
+  },
+  async (input) => {
+    let websiteContent: string | undefined = undefined;
+    let extractionError: string | undefined = undefined;
+
+    if (input.websiteUrl) {
+      try {
+        const fetchResult = await fetchWebsiteContentTool({ url: input.websiteUrl });
+        if (fetchResult.error) {
+          extractionError = fetchResult.error;
+        } else {
+          websiteContent = fetchResult.textContent;
+        }
+      } catch (e: any) {
+        extractionError = `Failed to fetch website content: ${e.message}`;
+      }
+    }
+
+    const { fastModel } = await getModelConfig();
+
+    const prompt = ai.definePrompt({
+      name: 'generateBlogOutlinePrompt',
+      model: fastModel,
+      input: {schema: z.object({
+        brandName: GenerateBlogOutlineInputSchema.shape.brandName,
+        brandDescription: GenerateBlogOutlineInputSchema.shape.brandDescription,
+        industry: GenerateBlogOutlineInputSchema.shape.industry,
+        keywords: GenerateBlogOutlineInputSchema.shape.keywords,
+        websiteUrl: GenerateBlogOutlineInputSchema.shape.websiteUrl,
+        websiteContent: z.string().optional().describe('The main text content extracted from the website, if URL was provided and fetching was successful.'),
+        extractionError: z.string().optional().describe('Any error that occurred during website content extraction.')
+      })},
+      output: {schema: GenerateBlogOutlineOutputSchema},
+      prompt: `You are an expert content strategist and blog writer. Your task is to generate a detailed and structured blog post outline.
 
 Brand Name: {{{brandName}}}
 Brand Description: {{{brandDescription}}}
@@ -98,31 +125,8 @@ Output the outline as a well-formatted text. For example:
 - Reiterate brand relevance within the industry
 - Final call to action or thought-provoking question for the industry
 `,
-});
-
-const generateBlogOutlineFlow = ai.defineFlow(
-  {
-    name: 'generateBlogOutlineFlow',
-    inputSchema: GenerateBlogOutlineInputSchema,
-    outputSchema: GenerateBlogOutlineOutputSchema,
-  },
-  async (input) => {
-    let websiteContent: string | undefined = undefined;
-    let extractionError: string | undefined = undefined;
-
-    if (input.websiteUrl) {
-      try {
-        const fetchResult = await fetchWebsiteContentTool({ url: input.websiteUrl });
-        if (fetchResult.error) {
-          extractionError = fetchResult.error;
-        } else {
-          websiteContent = fetchResult.textContent;
-        }
-      } catch (e: any) {
-        extractionError = `Failed to fetch website content: ${e.message}`;
-      }
-    }
-
+    });
+    
     const {output} = await prompt({
       brandName: input.brandName,
       brandDescription: input.brandDescription,

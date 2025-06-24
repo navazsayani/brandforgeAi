@@ -6,6 +6,7 @@ import {z} from 'genkit';
 import { Action } from 'genkit'; 
 import { describeImage } from './describe-image-flow'; // For Freepik description
 import { industries, freepikValidStyles } from '../../lib/constants'; // Added freepikValidStyles
+import { getModelConfig } from '@/lib/model-config';
 
 const GenerateImagesInputSchema = z.object({
   provider: z.enum(['GEMINI', 'FREEPIK', 'LEONARDO_AI', 'IMAGEN']).optional().describe("The image generation provider to use."),
@@ -63,12 +64,13 @@ async function _generateImageWithGemini(params: {
   promptParts: ({text: string} | {media: {url: string}})[];
 }): Promise<string> {
   const { aiInstance, promptParts } = params;
+  const { imageGenerationModel } = await getModelConfig();
 
   console.log("Final prompt parts array for Gemini _generateImageWithGemini:", JSON.stringify(promptParts, null, 2));
 
   try {
     const {media} = await aiInstance.generate({
-      model: 'googleai/gemini-2.0-flash-preview-image-generation',
+      model: imageGenerationModel,
       prompt: promptParts,
       config: {
         responseModalities: ['TEXT', 'IMAGE'],

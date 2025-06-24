@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { getModelConfig } from '@/lib/model-config';
 
 const DescribeImageInputSchema = z.object({
   imageDataUri: z
@@ -36,16 +37,6 @@ export async function describeImage(
   return describeImageFlow(input);
 }
 
-const prompt = ai.definePrompt({
-  name: 'describeImagePrompt',
-  model: 'googleai/gemini-1.5-flash-latest', // Explicitly set a vision model
-  input: {schema: DescribeImageInputSchema},
-  output: {schema: DescribeImageOutputSchema},
-  prompt: `Analyze the provided image and generate a concise, engaging description (1-2 sentences) suitable for a social media post. Focus on the main subject, key visual elements, and the overall mood or atmosphere of the image.
-
-Image: {{media url=imageDataUri}}`,
-});
-
 const describeImageFlow = ai.defineFlow(
   {
     name: 'describeImageFlow',
@@ -57,6 +48,17 @@ const describeImageFlow = ai.defineFlow(
     console.log('describeImageFlow received imageDataUri:', input.imageDataUri);
     
     // The check for imageDataUri presence is now handled by Zod schema validation (.min(1))
+    const { visionModel } = await getModelConfig();
+
+    const prompt = ai.definePrompt({
+      name: 'describeImagePrompt',
+      model: visionModel,
+      input: {schema: DescribeImageInputSchema},
+      output: {schema: DescribeImageOutputSchema},
+      prompt: `Analyze the provided image and generate a concise, engaging description (1-2 sentences) suitable for a social media post. Focus on the main subject, key visual elements, and the overall mood or atmosphere of the image.
+
+Image: {{media url=imageDataUri}}`,
+    });
 
     const {output} = await prompt(input);
     if (!output) {

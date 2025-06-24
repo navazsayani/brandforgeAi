@@ -13,7 +13,9 @@ import { generateBrandForgeAppLogo, type GenerateBrandForgeAppLogoOutput } from 
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where, collectionGroup } from 'firebase/firestore';
-import type { UserProfileSelectItem, BrandData } from '@/types';
+import type { UserProfileSelectItem, BrandData, ModelConfig } from '@/types';
+import { getModelConfig } from './model-config';
+import { auth } from '@/lib/firebaseConfig';
 
 // Generic type for form state with error
 export interface FormState<T = any> {
@@ -669,5 +671,54 @@ export async function handleGetAllUserProfilesForAdminAction(
     }
     
     return { error: `Failed to fetch user profiles: ${e.message || "Unknown error"}` };
+  }
+}
+
+export async function handleGetSettingsAction(
+  prevState: FormState<ModelConfig>,
+  formData: FormData
+): Promise<FormState<ModelConfig>> {
+  const adminRequesterEmail = formData.get('adminRequesterEmail') as string;
+  if (adminRequesterEmail !== 'admin@brandforge.ai') {
+    return { error: "Unauthorized: You do not have permission to perform this action." };
+  }
+  try {
+    const modelConfig = await getModelConfig();
+    return { data: modelConfig, message: "Model configuration loaded." };
+  } catch (e: any) {
+    console.error("Error in handleGetSettingsAction:", e);
+    return { error: `Failed to load model configuration: ${e.message || "Unknown error."}` };
+  }
+}
+
+export async function handleUpdateSettingsAction(
+  prevState: FormState<ModelConfig>,
+  formData: FormData
+): Promise<FormState<ModelConfig>> {
+  const adminRequesterEmail = formData.get('adminRequesterEmail') as string;
+  if (adminRequesterEmail !== 'admin@brandforge.ai') {
+    return { error: "Unauthorized: You do not have permission to perform this action." };
+  }
+
+  try {
+    const modelConfig: ModelConfig = {
+      imageGenerationModel: formData.get("imageGenerationModel") as string,
+      fastModel: formData.get("fastModel") as string,
+      visionModel: formData.get("visionModel") as string,
+      powerfulModel: formData.get("powerfulModel") as string,
+    };
+    
+    // Basic validation
+    if (!modelConfig.imageGenerationModel || !modelConfig.fastModel || !modelConfig.visionModel || !modelConfig.powerfulModel) {
+        return { error: "All model fields are required." };
+    }
+
+    const configDocRef = doc(db, 'configuration', 'models');
+    await setDoc(configDocRef, modelConfig, { merge: true });
+
+    return { data: modelConfig, message: "Model configuration updated successfully." };
+  } catch (e: any) {
+    console.error("Error in handleUpdateSettingsAction:", e);
+    return { error: `Failed to update model configuration: ${e.message || "Unknown error."}` };
   }
 }

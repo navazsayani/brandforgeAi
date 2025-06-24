@@ -37,6 +37,7 @@ const navItems: NavItem[] = [
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { user } = useAuth();
+  const isAdmin = user?.email === 'admin@brandforge.ai';
 
   const SidebarNav = () => (
     <nav className="flex-1 px-3 py-6 space-y-2">
@@ -60,6 +61,23 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
         </Button>
       ))}
+       {isAdmin && (
+         <Button
+            asChild
+            variant={pathname === '/settings' ? 'secondary' : 'ghost'}
+            className={cn(
+              "sidebar-nav-item",
+              "justify-start",
+              "gap-0",
+              pathname === '/settings' && "active shadow-md"
+            )}
+          >
+            <Link href="/settings">
+                <Settings className="w-5 h-5 mr-4 flex-shrink-0" />
+                <span className="text-break font-medium">Settings</span>
+            </Link>
+         </Button>
+       )}
     </nav>
   );
 
@@ -81,19 +99,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
       {user && <SidebarNav />}
       <div className={cn("p-6 mt-auto border-t border-sidebar-border", !user && "mt-auto")}>
-        {user ? (
-          <Button
-            variant="ghost"
-            className={cn(
-              "sidebar-nav-item", // Enhanced with better padding and rounded corners
-              "justify-start",    // Ensure left alignment
-              "gap-0"             // Remove default button gap
-            )}
-          >
-            <Settings className="w-5 h-5 mr-4 flex-shrink-0" />
-            <span className="text-break font-medium">Settings</span>
-          </Button>
-        ) : (
+        {!user && (
           <div className="space-y-4">
              <Button
                variant="default"
