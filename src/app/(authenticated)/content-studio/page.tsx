@@ -804,7 +804,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     }
     
     startTransition(() => {
-        const formData = new FormData(document.getElementById('imageGenerationFormFields') as HTMLFormElement);
+        const formData = new FormData();
 
         formData.append("finalizedTextPrompt", currentTextPromptForEditing || ""); 
 
