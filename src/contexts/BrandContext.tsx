@@ -3,7 +3,7 @@
 
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { doc, getDoc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore'; // Added deleteDoc and serverTimestamp for potential future use
+import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore'; // Added deleteDoc for potential future use
 import { db } from '@/lib/firebaseConfig';
 import type { BrandData, GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign } from '@/types';
 import { useAuth } from './AuthContext'; 
@@ -63,7 +63,6 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
     if (!userIdToSaveFor) {
       const noUserError = "User ID to save for is missing. Cannot save brand profile.";
       setError(noUserError);
-      console.error(noUserError);
       throw new Error(noUserError);
     }
 
