@@ -87,6 +87,9 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         dataToSave.userEmail = data.userEmail;
       }
 
+      // LOGGING: Check what industry value is being saved to Firestore
+      console.log('[BrandContext] Saving data to Firestore. Industry value:', dataToSave.industry);
+
       const brandDocRef = doc(db, "users", userIdToSaveFor, "brandProfiles", userIdToSaveFor); 
       await setDoc(brandDocRef, dataToSave, { merge: true }); 
 
@@ -162,6 +165,9 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
             normalizedData.userEmail = currentUser.email;
             needsSave = true; 
         }
+
+        // LOGGING: Check the industry value after fetching and normalizing
+        console.log('[BrandContext] Fetched and normalized data. Industry value:', normalizedData.industry);
         
         setBrandDataState(normalizedData);
 

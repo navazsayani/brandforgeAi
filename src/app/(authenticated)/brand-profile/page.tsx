@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState, useRef, useActionState, startTransition } from 'react';
@@ -156,6 +157,10 @@ export default function BrandProfilePage() {
 
   useEffect(() => {
     const dataToDisplay = isAdmin && adminTargetUserId && adminLoadedProfileData ? adminLoadedProfileData : contextBrandData;
+    
+    // LOGGING: Check what industry value is coming from the context
+    console.log('[BrandProfilePage] useEffect (form reset): dataToDisplay.industry =', dataToDisplay?.industry);
+
     if (dataToDisplay) {
         const currentData = {
             ...defaultFormValues,
@@ -391,6 +396,9 @@ export default function BrandProfilePage() {
   };
 
   const onSubmit: SubmitHandler<BrandProfileFormData> = async (data) => {
+    // LOGGING: Check what industry value is being submitted
+    console.log('[BrandProfilePage] onSubmit: Submitting industry value =', data.industry);
+
     let finalData = { ...data };
     const userIdToSaveFor = isAdmin && adminTargetUserId ? adminTargetUserId : currentUser?.uid;
 
