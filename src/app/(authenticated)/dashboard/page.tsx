@@ -68,11 +68,11 @@ function GreetingCard({ isLoading, brandData }: { isLoading: boolean; brandData:
         return (
             <Card className="card-enhanced">
                 <CardContent className="flex flex-col md:flex-row items-center gap-6 p-6">
-                    <Skeleton className="w-24 h-24 rounded-full flex-shrink-0" />
+                    <Skeleton className="w-32 h-32 rounded-full flex-shrink-0" />
                     <div className="w-full space-y-3 text-center md:text-left">
                         <Skeleton className="h-8 w-3/4" />
                         <Skeleton className="h-5 w-1/2" />
-                        <Skeleton className="h-10 w-48 mt-2" />
+                        <Skeleton className="h-10 w-48 mt-4" />
                     </div>
                 </CardContent>
             </Card>
@@ -83,38 +83,40 @@ function GreetingCard({ isLoading, brandData }: { isLoading: boolean; brandData:
         <Card className="card-enhanced w-full overflow-hidden">
             <CardContent className="p-6">
                 <div className="flex flex-col md:flex-row items-center gap-6">
-                    <div className="relative w-24 h-24 rounded-full flex-shrink-0 bg-primary/10 flex items-center justify-center border-2 border-primary/20">
+                    <div className="relative w-32 h-32 rounded-full flex-shrink-0 bg-primary/10 flex items-center justify-center border-2 border-primary/20">
                         {brandData?.brandLogoUrl ? (
                             <NextImage
                                 src={brandData.brandLogoUrl}
                                 alt={`${brandName || 'Brand'} Logo`}
                                 fill
                                 style={{ objectFit: "contain" }}
-                                className="p-2 rounded-full"
+                                className="p-3 rounded-full"
                                 data-ai-hint="brand logo"
                             />
                         ) : (
-                            <Sparkles className="w-12 h-12 text-primary" />
+                            <Sparkles className="w-16 h-16 text-primary" />
                         )}
                     </div>
-                    <div className="flex-1 text-center md:text-left min-w-0">
-                        <Badge variant={isAdmin ? 'destructive' : (plan === 'premium' ? 'default' : 'secondary')} className="mb-2">
-                           {isAdmin ? <ShieldCheck className="w-4 h-4 mr-1.5" /> : <Star className="w-4 h-4 mr-1.5" />}
-                           {plan.charAt(0).toUpperCase() + plan.slice(1)}
-                        </Badge>
-                        <h1 className="text-2xl md:text-3xl font-bold text-balance">
-                            Welcome back, {brandName || 'to BrandForge AI'}!
-                        </h1>
-                        <p className="text-muted-foreground mt-1 text-balance">
-                            Ready to create something amazing for your brand today?
-                        </p>
+                    <div className="flex-1 flex flex-col items-center md:items-start gap-4">
+                        <div className="w-full text-center md:text-left min-w-0">
+                            <Badge variant={isAdmin ? 'destructive' : (plan === 'premium' ? 'default' : 'secondary')} className="mb-2">
+                               {isAdmin ? <ShieldCheck className="w-4 h-4 mr-1.5" /> : <Star className="w-4 h-4 mr-1.5" />}
+                               {plan.charAt(0).toUpperCase() + plan.slice(1)}
+                            </Badge>
+                            <h1 className="text-2xl md:text-3xl font-bold text-balance">
+                                Welcome back, {brandName || 'to BrandForge AI'}!
+                            </h1>
+                            <p className="text-muted-foreground mt-1 text-balance">
+                                Ready to create something amazing for your brand today?
+                            </p>
+                        </div>
+                        <Link href={primaryAction.href} passHref className="w-full md:w-auto">
+                             <Button size="lg" className="w-full md:w-auto btn-gradient-primary touch-target">
+                               {primaryAction.label}
+                                <ArrowRight className="w-5 h-5 ml-2" />
+                             </Button>
+                        </Link>
                     </div>
-                    <Link href={primaryAction.href} passHref className="w-full md:w-auto mt-4 md:mt-0 flex-shrink-0">
-                         <Button size="lg" className="w-full md:w-auto btn-gradient-primary touch-target">
-                           {primaryAction.label}
-                            <ArrowRight className="w-5 h-5 ml-2" />
-                         </Button>
-                    </Link>
                 </div>
             </CardContent>
         </Card>
