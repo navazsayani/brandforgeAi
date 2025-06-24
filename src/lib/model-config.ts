@@ -1,5 +1,4 @@
 
-'use server';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebaseConfig';
 import type { ModelConfig } from '@/types';
