@@ -158,9 +158,6 @@ export default function BrandProfilePage() {
   useEffect(() => {
     const dataToDisplay = isAdmin && adminTargetUserId && adminLoadedProfileData ? adminLoadedProfileData : contextBrandData;
     
-    // LOGGING: Check what industry value is coming from the context
-    console.log('[BrandProfilePage] useEffect (form reset): dataToDisplay.industry =', dataToDisplay?.industry);
-
     if (dataToDisplay) {
         const currentData = {
             ...defaultFormValues,
@@ -174,8 +171,6 @@ export default function BrandProfilePage() {
         currentData.exampleImages = Array.isArray(currentData.exampleImages) ? currentData.exampleImages.slice(0, currentMaxImages) : [];
 
         form.reset(currentData);
-        // Explicitly set the value for the industry field to ensure UI updates correctly on navigation.
-        form.setValue('industry', currentData.industry, { shouldValidate: true });
 
         setPreviewImages(currentData.exampleImages);
         setSelectedFileNames(currentData.exampleImages.map((_, i) => `Saved image ${i + 1}`));
@@ -396,9 +391,6 @@ export default function BrandProfilePage() {
   };
 
   const onSubmit: SubmitHandler<BrandProfileFormData> = async (data) => {
-    // LOGGING: Check what industry value is being submitted
-    console.log('[BrandProfilePage] onSubmit: Submitting industry value =', data.industry);
-
     let finalData = { ...data };
     const userIdToSaveFor = isAdmin && adminTargetUserId ? adminTargetUserId : currentUser?.uid;
 
@@ -603,7 +595,7 @@ export default function BrandProfilePage() {
                       <FormLabel className="flex items-center text-base"><Briefcase className="w-5 h-5 mr-2 text-primary"/>Industry</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        value={field.value}
+                        value={field.value || '_none_'}
                         disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo}
                       >
                         <FormControl><SelectTrigger><SelectValue placeholder="Select industry" /></SelectTrigger></FormControl>

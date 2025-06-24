@@ -87,9 +87,6 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         dataToSave.userEmail = data.userEmail;
       }
 
-      // LOGGING: Check what industry value is being saved to Firestore
-      console.log('[BrandContext] Saving data to Firestore. Industry value:', dataToSave.industry);
-
       const brandDocRef = doc(db, "users", userIdToSaveFor, "brandProfiles", userIdToSaveFor); 
       await setDoc(brandDocRef, dataToSave, { merge: true }); 
 
@@ -102,7 +99,6 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
           }
       };
       await setDoc(userIndexRef, indexUpdateData, { merge: true });
-      console.log(`BrandContext: Wrote/updated userIndex for user ${userIdToSaveFor}.`);
 
       if (currentUser && userIdToSaveFor === currentUser.uid) {
         setBrandDataState(dataToSave); 
@@ -143,13 +139,10 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
       let needsSave = false; // Flag to trigger save/migration
 
       if (docSnap.exists()) {
-        console.log("BrandContext: Found data at new path.");
         dataToSet = docSnap.data() as BrandData;
       } else {
-        console.log("BrandContext: No data at new path, checking old path...");
         docSnap = await getDoc(oldBrandDocRef);
         if (docSnap.exists()) {
-          console.log("BrandContext: Found data at old path. Flagging for migration.");
           dataToSet = docSnap.data() as BrandData;
           needsSave = true; // Data needs to be saved to new path.
         }
@@ -166,17 +159,12 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
             needsSave = true; 
         }
 
-        // LOGGING: Check the industry value after fetching and normalizing
-        console.log('[BrandContext] Fetched and normalized data. Industry value:', normalizedData.industry);
-        
         setBrandDataState(normalizedData);
 
         if (needsSave) {
-          console.log("BrandContext: Data needs save/migration, calling setBrandDataCB to update and create index entry.");
           await setBrandDataCB(normalizedData, userId);
         }
       } else {
-        console.log("BrandContext: No data found at all. Creating and saving default profile to trigger index creation.");
         const defaultWithEmail = { ...defaultEmptyBrandData, userEmail: currentUser.email || "" };
         setBrandDataState(defaultWithEmail);
         await setBrandDataCB(defaultWithEmail, userId);
