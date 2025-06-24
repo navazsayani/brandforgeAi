@@ -584,7 +584,7 @@ export default function ContentStudioPage() {
     
     try {
         const compressedImages = await Promise.all(saveableImages.map(async (image) => {
-            // ALWAYS compress if it's a data URI, not just if it's large.
+            // ALWAYS compress if it's a data URI.
             // This converts potentially large PNGs from generation into more efficient JPEGs.
             if (image.dataUri.startsWith('data:image')) {
                 try {
@@ -956,88 +956,80 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
   };
 
   const handleSocialSubmit = async (formData: FormData) => {
-      let imageSrc = formData.get("selectedImageSrcForSocialPost") as string | null;
-      const MAX_IMAGE_SIZE_BYTES = 1000 * 1024; 
+    let imageSrc = formData.get("selectedImageSrcForSocialPost") as string | null;
 
-      if (imageSrc && imageSrc.startsWith('data:')) {
-          const originalImageSizeInBytes = imageSrc.length * 0.75;
+    if (imageSrc && imageSrc.startsWith('data:')) {
+      try {
+        // Always compress data URIs to a web-friendly format before sending to server
+        const compressedImageUri = await new Promise<string>((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
 
-          if (originalImageSizeInBytes > MAX_IMAGE_SIZE_BYTES) {
-              toast({
-                  title: "Compressing Image...",
-                  description: `Image size (${(originalImageSizeInBytes / (1024*1024)).toFixed(2)} MB) exceeds 1MB. Attempting client-side compression.`,
-                  duration: 3000,
-              });
+            const maxWidth = 1920; 
+            const maxHeight = 1080; 
+            let width = img.width;
+            let height = img.height;
 
-              try {
-                  const compressedImageUri = await new Promise<string>((resolve, reject) => {
-                      const img = new Image();
-                      img.onload = () => {
-                          const canvas = document.createElement('canvas');
-                          const ctx = canvas.getContext('2d');
+            if (width > height) {
+                if (width > maxWidth) {
+                    height *= maxWidth / width;
+                    width = maxWidth;
+                }
+            } else {
+                if (height > maxHeight) {
+                    width *= maxHeight / height;
+                    height = maxHeight;
+                }
+            }
 
-                          const maxWidth = 1920; 
-                          const maxHeight = 1080; 
-                          let width = img.width;
-                          let height = img.height;
+            canvas.width = width;
+            canvas.height = height;
+            ctx?.drawImage(img, 0, 0, width, height);
 
-                          if (width > height) {
-                              if (width > maxWidth) {
-                                  height *= maxWidth / width;
-                                  width = maxWidth;
-                              }
-                          } else {
-                              if (height > maxHeight) {
-                                  width *= maxHeight / height;
-                                  height = maxHeight;
-                              }
-                          }
+            // Use a high-quality JPEG setting for a good balance
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            resolve(dataUrl);
+          };
+          img.onerror = reject;
+          img.src = imageSrc as string;
+        });
 
-                          canvas.width = width;
-                          canvas.height = height;
-
-                          ctx?.drawImage(img, 0, 0, width, height);
-
-                          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-                          resolve(dataUrl);
-                      };
-                      img.onerror = reject;
-                      img.src = imageSrc;
-                  });
-
-                  const compressedSizeInBytes = compressedImageUri.length * 0.75;
-                  if (compressedSizeInBytes > MAX_IMAGE_SIZE_BYTES) {
-                      toast({
-                          title: "Compression Failed",
-                          description: `Even after compression, the image (${(compressedSizeInBytes / (1024*1024)).toFixed(2)} MB) is still too large. Please use a smaller image or generate the text and upload the image manually.`,
-                          variant: "destructive",
-                          duration: 8000,
-                      });
-                      return; 
-                  } else {
-                      toast({
-                          title: "Image Compressed",
-                          description: `Image successfully compressed to ${(compressedSizeInBytes / 1024).toFixed(2)} KB.`,
-                          duration: 3000,
-                      });
-                      formData.set("selectedImageSrcForSocialPost", compressedImageUri); 
-                  }
-              } catch (error) {
-                  console.error("Image compression error:", error);
-                  toast({
-                      title: "Image Compression Error",
-                      description: "Could not compress image. Please try a different image or generate text only.",
-                      variant: "destructive",
-                      duration: 8000,
-                  });
-                  return; 
-              }
-          }
+        // Check if even the compressed size is too large (edge case)
+        const MAX_IMAGE_SIZE_BYTES = 950 * 1024; // A safer limit
+        const compressedSizeInBytes = compressedImageUri.length * 0.75;
+        if (compressedSizeInBytes > MAX_IMAGE_SIZE_BYTES) {
+          toast({
+              title: "Image Too Large",
+              description: `Even after compression, this image is too large. Please use a smaller one.`,
+              variant: "destructive",
+              duration: 8000,
+          });
+          return; // Stop the submission
+        }
+        
+        formData.set("selectedImageSrcForSocialPost", compressedImageUri);
+        toast({
+            title: "Image Processed",
+            description: `Image optimized for upload.`,
+            duration: 2000,
+        });
+      } catch (error) {
+        console.error("Image compression error:", error);
+        toast({
+            title: "Image Processing Error",
+            description: "Could not process the image. Please try a different one.",
+            variant: "destructive",
+            duration: 8000,
+        });
+        return; // Stop the submission
       }
-      
-      startTransition(() => {
-          socialAction(formData);
-      });
+    }
+    
+    startTransition(() => {
+        socialAction(formData);
+    });
   };
 
 
