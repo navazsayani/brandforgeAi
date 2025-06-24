@@ -107,6 +107,10 @@ export default function BrandProfilePage() {
     resolver: zodResolver(brandProfileSchema),
     defaultValues: defaultFormValues,
   });
+  
+  const watchedPlan = form.watch('plan');
+  const maxImagesAllowed = watchedPlan === 'premium' ? MAX_IMAGES_PREMIUM : MAX_IMAGES_FREE;
+
 
   useEffect(() => {
     if (currentUser && currentUser.email === 'admin@brandforge.ai') {
@@ -296,9 +300,6 @@ export default function BrandProfilePage() {
     startTransition(() => generateLogoAction(formData));
   };
 
-  const currentPlanForLimits = (isAdmin && adminTargetUserId && adminLoadedProfileData?.plan) ? adminLoadedProfileData.plan : (contextBrandData?.plan || 'free');
-  const maxImagesAllowed = currentPlanForLimits === 'premium' ? MAX_IMAGES_PREMIUM : MAX_IMAGES_FREE;
-
   const uploadImageToStorage = async (file: File, index: number, totalFiles: number): Promise<string> => {
     return new Promise((resolve, reject) => {
       if (!effectiveUserIdForStorage) {
@@ -334,7 +335,7 @@ export default function BrandProfilePage() {
       if (currentSavedImages.length + files.length > maxImagesAllowed) {
         toast({
           title: "Limit Exceeded",
-          description: `Plan (${currentPlanForLimits}) allows ${maxImagesAllowed} images. Have ${currentSavedImages.length}, tried to add ${files.length}.`,
+          description: `Plan (${watchedPlan || 'free'}) allows ${maxImagesAllowed} images. Have ${currentSavedImages.length}, tried to add ${files.length}.`,
           variant: "destructive",
         });
         if (fileInputRef.current) fileInputRef.current.value = "";
@@ -679,7 +680,7 @@ export default function BrandProfilePage() {
                 />
                 <FormItem>
                   <FormLabel className="flex items-center text-base"><UploadCloud className="w-5 h-5 mr-2 text-primary"/>Example Images</FormLabel>
-                  <FormDescription>Plan ({currentPlanForLimits}) allows {maxImagesAllowed} images. Current: {(form.getValues("exampleImages")?.length || 0)}/{maxImagesAllowed}.</FormDescription>
+                  <FormDescription>Plan ({(watchedPlan || 'free')}) allows {maxImagesAllowed} images. Current: {(form.getValues("exampleImages")?.length || 0)}/{maxImagesAllowed}.</FormDescription>
                   <FormControl>
                     <div className="flex items-center justify-center w-full">
                       <Label htmlFor="dropzone-file" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer border-border bg-card hover:bg-secondary ${isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || !canUploadMoreImages ? 'opacity-50 cursor-not-allowed' : ''}`}>
@@ -696,7 +697,7 @@ export default function BrandProfilePage() {
                   </FormControl>
                   {isUploading && <Progress value={uploadProgress} className="w-full h-2 mt-2" />}
                   <FormField control={form.control} name="exampleImages" render={() => <FormMessage />} />
-                  {!canUploadMoreImages && !isUploading && <p className="text-xs text-destructive mt-1">Max {maxImagesAllowed} images for {currentPlanForLimits} plan.</p>}
+                  {!canUploadMoreImages && !isUploading && <p className="text-xs text-destructive mt-1">Max {maxImagesAllowed} images for {watchedPlan || 'free'} plan.</p>}
                 </FormItem>
                 {previewImages.length > 0 && (
                   <div className="mt-2 space-y-3">
