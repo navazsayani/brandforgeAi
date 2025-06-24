@@ -71,7 +71,7 @@ const generateBrandLogoFlow = ai.defineFlow(
 
     try {
       const {media} = await ai.generate({
-        model: 'googleai/gemini-2.0-flash-exp', // Model already updated
+        model: 'googleai/gemini-2.0-flash-preview-image-generation',
         prompt: promptText,
         config: {
           responseModalities: ['TEXT', 'IMAGE'],
@@ -91,5 +91,7 @@ const generateBrandLogoFlow = ai.defineFlow(
   }
 );
 
+
+    
 
     

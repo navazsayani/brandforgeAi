@@ -1,3 +1,4 @@
+
 'use server';
 
 import {ai} from '@/ai/genkit';
@@ -67,7 +68,7 @@ async function _generateImageWithGemini(params: {
 
   try {
     const {media} = await aiInstance.generate({
-      model: 'googleai/gemini-2.0-flash-exp', // Updated model
+      model: 'googleai/gemini-2.0-flash-preview-image-generation',
       prompt: promptParts,
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
@@ -602,3 +603,5 @@ Create a compelling visual that represents: "${brandDescription}"${industryConte
 //         schema: GenerateImagesOutputSchema,
 //     },
 // });
+
+    

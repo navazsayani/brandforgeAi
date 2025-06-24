@@ -53,7 +53,7 @@ Example direction: Think of a sleek, abstract 'B' that subtly incorporates a spa
 
     try {
       const {media} = await ai.generate({
-        model: 'googleai/gemini-2.0-flash-exp', // Updated model
+        model: 'googleai/gemini-2.0-flash-preview-image-generation',
         prompt: promptText,
         config: {
           responseModalities: ['TEXT', 'IMAGE'],
@@ -73,5 +73,7 @@ Example direction: Think of a sleek, abstract 'B' that subtly incorporates a spa
   }
 );
 
+
+    
 
     
