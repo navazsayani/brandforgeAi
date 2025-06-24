@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState, useRef, useActionState, startTransition } from 'react';
+import React, { useEffect, useState, useRef, useActionState, startTransition, useMemo } from 'react';
 import NextImage from 'next/image';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -103,14 +103,40 @@ export default function BrandProfilePage() {
 
   const currentProfileBeingEdited = isAdmin && adminTargetUserId && adminLoadedProfileData ? adminLoadedProfileData : contextBrandData;
   const effectiveUserIdForStorage = isAdmin && adminTargetUserId ? adminTargetUserId : currentUser?.uid;
+  
+  const formValues = useMemo(() => {
+    const dataToUse = currentProfileBeingEdited || defaultFormValues;
+    const currentData = {
+        ...defaultFormValues,
+        ...dataToUse,
+        industry: (dataToUse.industry && dataToUse.industry.trim() !== "" && dataToUse.industry !== "undefined") ? dataToUse.industry : "_none_",
+        plan: (dataToUse.plan && ['free', 'premium'].includes(dataToUse.plan)) ? dataToUse.plan : 'free',
+        userEmail: dataToUse.userEmail || (currentUser?.email && dataToUse === contextBrandData ? currentUser.email : ""),
+    };
+     const currentMaxImages = currentData.plan === 'premium' ? MAX_IMAGES_PREMIUM : MAX_IMAGES_FREE;
+    currentData.exampleImages = Array.isArray(currentData.exampleImages) ? currentData.exampleImages.slice(0, currentMaxImages) : [];
+    
+    return currentData;
+  }, [currentProfileBeingEdited, currentUser, contextBrandData]);
+  
 
   const form = useForm<BrandProfileFormData>({
     resolver: zodResolver(brandProfileSchema),
-    defaultValues: defaultFormValues,
+    values: formValues, // Use `values` to keep form in sync with data
   });
   
   const watchedPlan = form.watch('plan');
   const maxImagesAllowed = watchedPlan === 'premium' ? MAX_IMAGES_PREMIUM : MAX_IMAGES_FREE;
+
+  // This useEffect handles UI side-effects when the form data changes
+  useEffect(() => {
+    setPreviewImages(formValues.exampleImages || []);
+    setSelectedFileNames((formValues.exampleImages || []).map((_, i) => `Saved image ${i + 1}`));
+    if (form.getValues("brandLogoUrl") !== generatedLogoPreview) {
+        setGeneratedLogoPreview(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formValues.exampleImages, formValues.brandLogoUrl]);
 
 
   useEffect(() => {
@@ -153,45 +179,6 @@ export default function BrandProfilePage() {
       toast({ title: "Error Fetching User Profiles", description: adminFetchProfilesServerState.error, variant: "destructive"});
     }
   }, [adminFetchProfilesServerState, toast]);
-
-
-  useEffect(() => {
-    const dataToDisplay = isAdmin && adminTargetUserId && adminLoadedProfileData ? adminLoadedProfileData : contextBrandData;
-    
-    // Do not run if data is still loading
-    if (isBrandContextLoading || isAdminLoadingTargetProfile || !dataToDisplay) {
-        return;
-    }
-
-    const currentData = {
-        ...defaultFormValues,
-        ...dataToDisplay,
-        industry: (dataToDisplay.industry && dataToDisplay.industry.trim() !== "") ? dataToDisplay.industry : "_none_",
-        plan: (dataToDisplay.plan && ['free', 'premium'].includes(dataToDisplay.plan)) ? dataToDisplay.plan : 'free',
-        userEmail: dataToDisplay.userEmail || (currentUser?.email && dataToDisplay === contextBrandData ? currentUser.email : ""),
-    };
-    
-    const currentMaxImages = currentData.plan === 'premium' ? MAX_IMAGES_PREMIUM : MAX_IMAGES_FREE;
-    currentData.exampleImages = Array.isArray(currentData.exampleImages) ? currentData.exampleImages.slice(0, currentMaxImages) : [];
-
-    form.reset(currentData);
-
-    setPreviewImages(currentData.exampleImages);
-    setSelectedFileNames(currentData.exampleImages.map((_, i) => `Saved image ${i + 1}`));
-    if (form.getValues("brandLogoUrl") !== generatedLogoPreview) {
-        setGeneratedLogoPreview(null);
-    }
-  }, [
-      contextBrandData, 
-      adminLoadedProfileData, 
-      adminTargetUserId, 
-      isBrandContextLoading, 
-      isAdminLoadingTargetProfile, 
-      currentUser, 
-      isAdmin, 
-      generatedLogoPreview,
-      form.reset
-  ]);
 
 
   useEffect(() => {
