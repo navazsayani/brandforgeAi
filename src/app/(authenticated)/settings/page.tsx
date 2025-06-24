@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState, useActionState, startTransition } from 'react';
@@ -10,12 +11,12 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { handleGetSettingsAction, handleUpdateSettingsAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from '@/components/SubmitButton';
 import { DEFAULT_MODEL_CONFIG } from '@/lib/model-config';
 import type { ModelConfig } from '@/types';
-import { Settings, Loader2 } from 'lucide-react';
+import { Settings, Loader2, ExternalLink } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const settingsSchema = z.object({
@@ -133,7 +134,13 @@ export default function SettingsPage() {
                <Alert>
                   <AlertTitle>Important Note</AlertTitle>
                   <AlertDescription>
+                    <p>
                     Changing these values will directly affect the AI's performance and capabilities. Ensure model names are valid and compatible with their intended use (e.g., image models for image generation). Incorrect names will cause AI features to fail.
+                    </p>
+                    <a href="https://ai.google.dev/models/gemini" target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center font-medium text-primary underline-offset-4 hover:underline">
+                      View available Google AI models
+                      <ExternalLink className="ml-1.5 h-4 w-4" />
+                    </a>
                   </AlertDescription>
                 </Alert>
               <FormField
