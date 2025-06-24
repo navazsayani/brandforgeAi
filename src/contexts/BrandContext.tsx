@@ -42,9 +42,9 @@ const defaultEmptyBrandData: BrandData = {
     imageStyleNotes: "",
     exampleImages: [],
     targetKeywords: "",
-    brandLogoUrl: undefined,
+    brandLogoUrl: "", // Changed from undefined to empty string to prevent Firestore errors
     plan: 'free',
-    userEmail: "", // Added userEmail
+    userEmail: "",
 };
 
 export const BrandProvider = ({ children }: { children: ReactNode }) => {
@@ -128,6 +128,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     setError(null);
     const userId = currentUser.uid;
+    let isNewUserSetupFlow = false; // Flag to track if this is a new user setup
 
     try {
       const newBrandDocRef = doc(db, "users", userId, "brandProfiles", userId);
@@ -135,7 +136,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
 
       let docSnap = await getDoc(newBrandDocRef);
       let dataToSet: BrandData | null = null;
-      let needsSave = false; // Flag to trigger save/migration
+      let needsSave = false;
 
       if (docSnap.exists()) {
         dataToSet = docSnap.data() as BrandData;
@@ -143,7 +144,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         docSnap = await getDoc(oldBrandDocRef);
         if (docSnap.exists()) {
           dataToSet = docSnap.data() as BrandData;
-          needsSave = true; // Data needs to be saved to new path.
+          needsSave = true;
         }
       }
 
@@ -154,7 +155,6 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         }
         if (!normalizedData.plan) normalizedData.plan = 'free';
         
-        // If user email is missing from the data, add it and flag for saving.
         if (!normalizedData.userEmail && currentUser.email) {
             normalizedData.userEmail = currentUser.email;
             needsSave = true; 
@@ -163,24 +163,35 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         setBrandDataState(normalizedData);
 
         if (needsSave) {
+          isNewUserSetupFlow = true; // This is part of setup/migration
           await setBrandDataCB(normalizedData, userId);
         }
       } else {
+        isNewUserSetupFlow = true; // This is a new user setup
         const defaultWithEmail = { ...defaultEmptyBrandData, userEmail: currentUser.email || "" };
         setBrandDataState(defaultWithEmail);
         await setBrandDataCB(defaultWithEmail, userId);
       }
     } catch (e: any) {
-      console.error("Error fetching brand data from Firestore:", e);
-      let specificError = `Failed to fetch brand data: ${e.message || "Unknown error. Check console."}`;
-      if (e.code === 'unavailable' || (e.message && (e.message.toLowerCase().includes("client is offline") || e.message.toLowerCase().includes("could not reach cloud firestore backend")))) {
-        specificError = "Connection Error: Unable to reach Firestore. Please check your internet connection or Firebase status. The app may operate with cached data if available.";
-        console.warn("FIRESTORE OFFLINE: Could not reach Cloud Firestore backend. Client operating in offline mode.", e);
-      } else if (e.message && e.message.toLowerCase().includes("missing or insufficient permissions")) {
-        specificError = "Database permission error. Please check your Firestore security rules in the Firebase console.";
+      // If the error happens during the new user setup flow, just log it
+      // and don't show a disruptive toast message.
+      if (isNewUserSetupFlow) {
+        console.error("Non-critical error during initial brand profile setup:", e);
+        // Fallback to a clean default state without showing an error to the user
+        setBrandDataState({ ...defaultEmptyBrandData, userEmail: currentUser?.email || "" });
+      } else {
+        // For existing users, an error fetching data is more critical.
+        console.error("Error fetching brand data from Firestore:", e);
+        let specificError = `Failed to fetch brand data: ${e.message || "Unknown error. Check console."}`;
+        if (e.code === 'unavailable' || (e.message && (e.message.toLowerCase().includes("client is offline") || e.message.toLowerCase().includes("could not reach cloud firestore backend")))) {
+          specificError = "Connection Error: Unable to reach Firestore. Please check your internet connection or Firebase status. The app may operate with cached data if available.";
+          console.warn("FIRESTORE OFFLINE: Could not reach Cloud Firestore backend. Client operating in offline mode.", e);
+        } else if (e.message && e.message.toLowerCase().includes("missing or insufficient permissions")) {
+          specificError = "Database permission error. Please check your Firestore security rules in the Firebase console.";
+        }
+        setError(specificError);
+        setBrandDataState({ ...defaultEmptyBrandData, userEmail: currentUser?.email || "" });
       }
-      setError(specificError);
-      setBrandDataState({ ...defaultEmptyBrandData, userEmail: currentUser?.email || "" });
     } finally {
       setIsLoading(false);
     }
