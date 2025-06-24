@@ -379,36 +379,39 @@ export async function handleSaveGeneratedImagesAction(
   const userId = formData.get('userId') as string;
   const userEmail = formData.get('userEmail') as string | undefined; 
   
-
+  console.log(`[Save Images Action] Initiated for userId: ${userId}`);
 
   if (!userId || typeof userId !== 'string') {
-    console.error('handleSaveGeneratedImagesAction: User not authenticated - userId is missing or invalid.');
+    console.error('[Save Images Action] ERROR: User not authenticated - userId is missing or invalid.');
     return { error: 'User not authenticated - User not logged in cannot save image.' };
   }
 
   try {
-    
     await ensureUserBrandProfileDocExists(userId, userEmail);
+    console.log(`[Save Images Action] Ensured brand profile exists for userId: ${userId}`);
     
     const imagesToSaveString = formData.get('imagesToSaveJson') as string;
     if (!imagesToSaveString) {
       const errorMsg = "No image data received from the client (imagesToSaveJson is missing).";
-      console.error(`handleSaveGeneratedImagesAction: ${errorMsg}`);
+      console.error(`[Save Images Action] ERROR: ${errorMsg}`);
       return { error: errorMsg };
     }
+    console.log(`[Save Images Action] Received imagesToSaveJson string (first 200 chars): ${imagesToSaveString.substring(0, 200)}...`);
+
 
     let imagesToSave: { dataUri: string; prompt: string; style: string; }[];
     try {
       imagesToSave = JSON.parse(imagesToSaveString);
+      console.log(`[Save Images Action] Successfully parsed JSON. Number of images to process: ${imagesToSave.length}`);
     } catch (e: any) {
       const errorMsg = `Invalid image data format received from client: ${e.message}. Received: ${imagesToSaveString.substring(0, 200)}...`;
-      console.error(`handleSaveGeneratedImagesAction: ${errorMsg}`, JSON.stringify(e, Object.getOwnPropertyNames(e), 2));
+      console.error(`[Save Images Action] JSON PARSE ERROR: ${errorMsg}`, JSON.stringify(e, Object.getOwnPropertyNames(e), 2));
       return { error: errorMsg };
     }
 
     if (!Array.isArray(imagesToSave) || imagesToSave.length === 0) {
       const errorMsg = "No images selected or data is not in expected array format after parsing.";
-      console.error(`handleSaveGeneratedImagesAction: ${errorMsg}. Parsed data:`, imagesToSave);
+      console.error(`[Save Images Action] ERROR: ${errorMsg}. Parsed data:`, imagesToSave);
       return { error: errorMsg };
     }
     
@@ -416,52 +419,53 @@ export async function handleSaveGeneratedImagesAction(
     let savedCount = 0;
     const saveErrors: string[] = [];
 
-    for (const image of imagesToSave) {
+    for (const [index, image] of imagesToSave.entries()) {
+      console.log(`[Save Images Action] Processing image ${index + 1}/${imagesToSave.length}...`);
       const promptSnippet = image.prompt ? image.prompt.substring(0,30) + "..." : "N/A";
+      
       if (!image.dataUri) {
-        const errorDetail = `Invalid data URI or URL for an image (prompt: ${promptSnippet}). dataUri is missing.`;
-        console.warn(`handleSaveGeneratedImagesAction: ${errorDetail}. Skipping save for this image.`);
+        const errorDetail = `Invalid data URI for image ${index + 1} (prompt: ${promptSnippet}). dataUri is missing.`;
+        console.warn(`[Save Images Action] WARNING: ${errorDetail}. Skipping save for this image.`);
         saveErrors.push(errorDetail);
         continue;
       }
 
       if (!(image.dataUri.startsWith('data:image') || image.dataUri.startsWith('image_url:') || image.dataUri.startsWith('https://'))) {
-          const errorDetail = `Invalid data URI or URL format for an image (prompt: ${promptSnippet}). URI starts with: ${image.dataUri.substring(0, 30)}...`;
-          console.warn(`handleSaveGeneratedImagesAction: ${errorDetail}. Skipping save for this image.`);
+          const errorDetail = `Invalid data URI format for image ${index + 1} (prompt: ${promptSnippet}). URI starts with: ${image.dataUri.substring(0, 30)}...`;
+          console.warn(`[Save Images Action] WARNING: ${errorDetail}. Skipping save for this image.`);
           saveErrors.push(errorDetail);
           continue;
       }
 
       try {
-        
         let imageUrlToSave = image.dataUri;
-        let isFreepikImage = false;
-
+        
         if (image.dataUri.startsWith('data:image')) {
+            console.log(`[Save Images Action] Image ${index + 1} is a data URI. Uploading to Storage...`);
             const fileExtensionMatch = image.dataUri.match(/^data:image\/([a-zA-Z+]+);base64,/);
             const fileExtension = fileExtensionMatch ? fileExtensionMatch[1] : 'png';
             const filePath = `users/${userId}/brandProfiles/${brandProfileDocId}/generatedLibraryImages/${Date.now()}_${generateFilenamePart()}.${fileExtension}`;
             const imageStorageRef = storageRef(storage, filePath);
 
-            
             try {
                 const snapshot = await uploadString(imageStorageRef, image.dataUri, 'data_url');
                 imageUrlToSave = await getDownloadURL(snapshot.ref);
+                console.log(`[Save Images Action] Image ${index + 1} uploaded to Storage. URL: ${imageUrlToSave}`);
             } catch (uploadError: any) {
                 const uploadErrorDetail = `Failed to upload image to Firebase Storage for prompt "${promptSnippet}": ${uploadError.message}. Code: ${uploadError.code}. Path: ${filePath}`;
-                console.error(`handleSaveGeneratedImagesAction Storage Upload Error: ${uploadErrorDetail}`, JSON.stringify(uploadError, Object.getOwnPropertyNames(uploadError)));
+                console.error(`[Save Images Action] STORAGE UPLOAD ERROR: ${uploadErrorDetail}`, JSON.stringify(uploadError, Object.getOwnPropertyNames(uploadError)));
                 saveErrors.push(uploadErrorDetail);
                 continue;
             }
-        } else if (image.dataUri.startsWith('image_url:')) {
-            imageUrlToSave = image.dataUri.substring(10);
-            
-            isFreepikImage = true;
-        } else if (image.dataUri.startsWith('https://')) {
-            
+        } else {
+            console.log(`[Save Images Action] Image ${index + 1} is a URL. Saving directly.`);
+            if (image.dataUri.startsWith('image_url:')) {
+                imageUrlToSave = image.dataUri.substring(10);
+            }
         }
 
         const firestoreCollectionPath = `users/${userId}/brandProfiles/${brandProfileDocId}/savedLibraryImages`;
+        console.log(`[Save Images Action] Writing image ${index + 1} metadata to Firestore at path: ${firestoreCollectionPath}`);
         
         const firestoreCollectionRef = collection(db, firestoreCollectionPath);
         try {
@@ -469,33 +473,26 @@ export async function handleSaveGeneratedImagesAction(
                 storageUrl: imageUrlToSave,
                 prompt: image.prompt || "N/A",
                 style: image.style || "N/A",
+                createdAt: serverTimestamp(),
             });
-            
+            console.log(`[Save Images Action] Successfully wrote image ${index + 1} metadata to Firestore.`);
             savedCount++;
         } catch (firestoreError: any) {
             const firestoreErrorDetail = `Failed to save image metadata to Firestore for prompt "${promptSnippet}": ${firestoreError.message}. Code: ${firestoreError.code}. Path: ${firestoreCollectionPath}`;
-            console.error(`handleSaveGeneratedImagesAction Firestore Write Error: ${firestoreErrorDetail}`, JSON.stringify(firestoreError, Object.getOwnPropertyNames(firestoreError)));
+            console.error(`[Save Images Action] FIRESTORE WRITE ERROR: ${firestoreErrorDetail}`, JSON.stringify(firestoreError, Object.getOwnPropertyNames(firestoreError)));
             saveErrors.push(firestoreErrorDetail);
             continue;
         }
 
-        if (isFreepikImage) {
-            try {
-                new URL(imageUrlToSave);
-            } catch (urlError: any) {
-                const urlErrorDetail = `Freepik image URL is invalid for prompt "${promptSnippet}": ${urlError.message}`;
-                console.error(`handleSaveGeneratedImagesAction: ${urlErrorDetail}`);
-                saveErrors.push(urlErrorDetail);
-                continue;
-            }
-        }
       } catch (e: any) {
-        const specificError = `Failed to save image (prompt: ${promptSnippet}): ${(e as Error).message?.substring(0,100)}`;
-        console.error(`handleSaveGeneratedImagesAction Loop Error: ${specificError}. Full error:`, JSON.stringify(e, Object.getOwnPropertyNames(e)));
+        const specificError = `Failed to save image ${index + 1} (prompt: ${promptSnippet}): ${(e as Error).message?.substring(0,100)}`;
+        console.error(`[Save Images Action] LOOP ERROR: ${specificError}. Full error:`, JSON.stringify(e, Object.getOwnPropertyNames(e)));
         saveErrors.push(specificError);
         continue;
       }
     }
+
+    console.log(`[Save Images Action] Finished processing all images. Saved: ${savedCount}, Errors: ${saveErrors.length}`);
 
     if (savedCount > 0 && saveErrors.length > 0) {
       return { data: {savedCount}, message: `Successfully saved ${savedCount} image(s). Some errors occurred: ${saveErrors.join('. ')}` };
@@ -508,7 +505,7 @@ export async function handleSaveGeneratedImagesAction(
     }
   } catch (e: any) {
       const criticalErrorMsg = `A critical server error occurred during image saving: ${e.message || "Unknown error"}. Please check server logs. UserId used: '${userId}'`;
-      console.error("Critical error in handleSaveGeneratedImagesAction (outer try-catch):", JSON.stringify(e, Object.getOwnPropertyNames(e), 2), `UserId: '${userId}'`);
+      console.error("[Save Images Action] CRITICAL ERROR (outer try-catch):", JSON.stringify(e, Object.getOwnPropertyNames(e), 2), `UserId: '${userId}'`);
       return { error: criticalErrorMsg };
   }
 }

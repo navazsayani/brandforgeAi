@@ -21,20 +21,13 @@ const fetchSavedLibraryImages = async (userId: string): Promise<SavedGeneratedIm
   // The brandProfileDocId is the same as userId for user-specific brand profiles
   const brandProfileDocId = userId;
   const imagesCollectionRef = collection(db, `users/${userId}/brandProfiles/${brandProfileDocId}/savedLibraryImages`);
-  const q = query(imagesCollectionRef); // Removed orderBy("createdAt", "desc")
+  const q = query(imagesCollectionRef, orderBy("createdAt", "desc"));
   const querySnapshot = await getDocs(q);
   const images: SavedGeneratedImage[] = [];
   querySnapshot.forEach((doc) => {
     images.push({ id: doc.id, ...doc.data() } as SavedGeneratedImage);
   });
-  // Manual sort on the client-side as a fallback. Note: this is less efficient for large datasets.
-  // And requires createdAt to be sent from Firestore, which it might not be if it was never set.
-  return images.sort((a, b) => {
-    if (a.createdAt && b.createdAt) {
-      return b.createdAt.toMillis() - a.createdAt.toMillis();
-    }
-    return 0; // Keep original order if timestamps are missing
-  });
+  return images;
 };
 
 export default function ImageLibraryPage() {
