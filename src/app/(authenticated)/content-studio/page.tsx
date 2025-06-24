@@ -584,44 +584,45 @@ export default function ContentStudioPage() {
     
     try {
         const compressedImages = await Promise.all(saveableImages.map(async (image) => {
+            // ALWAYS compress if it's a data URI, not just if it's large.
+            // This converts potentially large PNGs from generation into more efficient JPEGs.
             if (image.dataUri.startsWith('data:image')) {
-                const sizeInBytes = image.dataUri.length * 0.75;
-                if (sizeInBytes > 500 * 1024) { // Compress if > 500KB
-                    try {
-                        const compressedUri = await new Promise<string>((resolve, reject) => {
-                            const img = new Image();
-                            img.onload = () => {
-                                const canvas = document.createElement('canvas');
-                                const ctx = canvas.getContext('2d');
-                                const maxWidth = 1920;
-                                const maxHeight = 1080;
-                                let { width, height } = img;
-                                if (width > height) {
-                                    if (width > maxWidth) {
-                                        height *= maxWidth / width;
-                                        width = maxWidth;
-                                    }
-                                } else {
-                                    if (height > maxHeight) {
-                                        width *= maxHeight / height;
-                                        height = maxHeight;
-                                    }
+                try {
+                    const compressedUri = await new Promise<string>((resolve, reject) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            const maxWidth = 1920;
+                            const maxHeight = 1080;
+                            let { width, height } = img;
+                            if (width > height) {
+                                if (width > maxWidth) {
+                                    height *= maxWidth / width;
+                                    width = maxWidth;
                                 }
-                                canvas.width = width;
-                                canvas.height = height;
-                                ctx?.drawImage(img, 0, 0, width, height);
-                                resolve(canvas.toDataURL('image/jpeg', 0.8)); // Use JPEG for compression
-                            };
-                            img.onerror = reject;
-                            img.src = image.dataUri;
-                        });
-                        return { ...image, dataUri: compressedUri };
-                    } catch (compressionError) {
-                        console.warn("Could not compress image, using original:", compressionError);
-                        return image;
-                    }
+                            } else {
+                                if (height > maxHeight) {
+                                    width *= maxHeight / height;
+                                    height = maxHeight;
+                                }
+                            }
+                            canvas.width = width;
+                            canvas.height = height;
+                            ctx?.drawImage(img, 0, 0, width, height);
+                            // Use JPEG for better compression of photographic images from AI
+                            resolve(canvas.toDataURL('image/jpeg', 0.8)); 
+                        };
+                        img.onerror = reject;
+                        img.src = image.dataUri;
+                    });
+                    return { ...image, dataUri: compressedUri };
+                } catch (compressionError) {
+                    console.warn("Could not compress image, using original:", compressionError);
+                    return image; // Fallback to original if compression fails
                 }
             }
+            // If it's already a URL (like from Freepik or already saved), just pass it through.
             return image;
         }));
 
