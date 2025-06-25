@@ -487,7 +487,7 @@ export default function BrandProfilePage() {
                   }}
                   disabled={isLoadingAdminProfiles || isAdminLoadingTargetProfile}
                 >
-                  <SelectTrigger className="flex-grow min-w-0 h-auto min-h-10 [&>span]:text-wrap">
+                  <SelectTrigger className="flex-grow min-w-0 h-auto min-h-10 [&>span]:whitespace-normal [&>span]:line-clamp-none">
                     <SelectValue placeholder={isLoadingAdminProfiles ? "Loading users..." : "Select a user to load/edit"} />
                   </SelectTrigger>
                   <SelectContent className="w-[var(--radix-select-trigger-width)]">
