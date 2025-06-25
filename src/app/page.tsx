@@ -129,6 +129,14 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t bg-card/50 backdrop-blur-sm">
         <div className="container-responsive py-12 text-center">
+            <div className="flex justify-center gap-x-6 gap-y-2 flex-wrap mb-4">
+                 <Button variant="link" asChild className="text-muted-foreground">
+                    <Link href="/terms-of-service">Terms of Service</Link>
+                </Button>
+                 <Button variant="link" asChild className="text-muted-foreground">
+                    <Link href="/privacy-policy">Privacy Policy</Link>
+                </Button>
+            </div>
           <p className="text-responsive-sm text-muted-foreground text-break">
             &copy; {new Date().getFullYear()} BrandForge AI. All rights reserved.
           </p>
