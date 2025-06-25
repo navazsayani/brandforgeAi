@@ -421,11 +421,11 @@ export default function ContentStudioPage() {
             };
             addGeneratedImage(newImage); 
         });
-          toast({ title: "Success", description: `${displayableImages.length} image(s) processed using ${imageState.data.providerUsed || 'default provider'}.` });
+          toast({ title: "Success", description: `${displayableImages.length} image(s) processed.` });
       } else if (imageState.data.generatedImages.some(url => url.startsWith('task_id:'))) {
         toast({ title: "Freepik Task Started", description: "Freepik image generation task started. Use 'Check Status' to retrieve images." });
       } else if (!imageState.data.generatedImages || imageState.data.generatedImages.length === 0) {
-        toast({ title: "No Images/Tasks Generated", description: `Received empty list from ${imageState.data?.providerUsed || 'default provider'}.`, variant: "default" });
+        toast({ title: "No Images/Tasks Generated", description: `Received empty list.`, variant: "default" });
       }
       setIsPreviewingPrompt(false);
       setFormSnapshot(null);
@@ -557,6 +557,7 @@ export default function ContentStudioPage() {
     setSessionLastImageGenerationResult(null); 
     setFormSnapshot(null);
     setIsPreviewingPrompt(false);
+    setCurrentTextPromptForEditing("");
   };
 
   const handleSaveAllGeneratedImages = async () => {
@@ -704,7 +705,7 @@ export default function ContentStudioPage() {
 
     const industryCtx = (industryLabelForPreview && industryLabelForPreview !== "None / Not Applicable" && industryLabelForPreview !== "_none_") ? ` The brand operates in the ${industryLabelForPreview} industry.` : "";
     const exampleImg = useExampleImageForGen ? currentExampleImageForGen : ""; 
-    const combinedStyle = selectedImageStylePreset + (customStyleNotesInput ? `. ${customStyleNotesInput}` : "");
+    const combinedStyle = selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "");
     const negPrompt = imageGenNegativePrompt;
     const aspect = selectedAspectRatio;
     const numImages = parseInt(numberOfImagesToGenerate, 10);
@@ -713,6 +714,7 @@ export default function ContentStudioPage() {
     const compositionGuidance = "IMPORTANT COMPOSITION RULE: When depicting human figures as the primary subject, the image *must* be well-composed. Avoid awkward or unintentional cropping of faces or key body parts. Ensure the figure is presented naturally and fully within the frame, unless the prompt *explicitly* requests a specific framing like 'close-up', 'headshot', 'upper body shot', or an artistic crop. Prioritize showing the entire subject if it's a person.";
 
     let textPromptContent = "";
+    let coreInstructions = "";
 
     if (selectedImageProvider === 'FREEPIK') {
         if (exampleImg) {
@@ -739,9 +741,9 @@ export default function ContentStudioPage() {
         
         textPromptContent += `\n\n${compositionGuidance}`;
 
-    } else { 
+    } else { // This is Gemini and other non-Freepik providers
         if (exampleImg) {
-            textPromptContent = `You are creating a strategic brand marketing image designed to drive engagement, build brand awareness, and convert viewers into customers on social media platforms.
+            coreInstructions = `You are creating a strategic brand marketing image designed to drive engagement, build brand awareness, and convert viewers into customers on social media platforms.
 
 **BRAND STRATEGY CONTEXT:**
 The provided example image serves as a category reference only. Your mission is to create a completely new, brand-aligned visual asset that:
@@ -787,7 +789,7 @@ The provided example image serves as a category reference only. Your mission is 
 - Technically excellent (lighting, composition, clarity)
 - Brand-appropriate and on-message`;
         } else {
-            textPromptContent = `You are creating a strategic brand marketing image designed to maximize social media engagement and brand recognition.
+            coreInstructions = `You are creating a strategic brand marketing image designed to maximize social media engagement and brand recognition.
 
 **BRAND MARKETING OBJECTIVE:**
 Create a compelling visual that represents: "${imageGenBrandDescription}"${industryCtx}
@@ -818,6 +820,8 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
 - Brand-consistent and strategically aligned`;
         }
 
+        textPromptContent = `Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.\n\n${coreInstructions}`;
+        
         if (negPrompt) {
             textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negPrompt}.`;
         }
@@ -1103,7 +1107,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
             <CardHeader>
               <CardTitle>Generate Brand Images</CardTitle>
               <p className="text-sm text-muted-foreground">Create unique images. Uses brand description and style. Optionally use an example image from your Brand Profile.</p>
-                {lastUsedImageProvider && <p className="text-xs text-primary mt-1">Image(s) last generated using: {!isAdmin ? 'Gemini (Google AI)' : lastUsedImageProvider}</p>}
+                {lastUsedImageProvider && <p className="text-xs text-primary mt-1">Image(s) last generated using: {lastUsedImageProvider}</p>}
             </CardHeader>
             {isAdmin && isPreviewingPrompt ? (
               <form onSubmit={handleImageGenerationSubmit}>
@@ -1416,7 +1420,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                       <CardTitle className="text-xl flex items-center">
                           <ImageIcon className="w-5 h-5 mr-2 text-primary" />
                           Generated Image{lastSuccessfulGeneratedImageUrls.length > 1 ? 's' : ''}
-                          {lastUsedImageProvider && <span className="text-xs text-muted-foreground ml-2">(via {!isAdmin ? 'Gemini (Google AI)' : lastUsedImageProvider})</span>}
+                          {lastUsedImageProvider && <span className="text-xs text-muted-foreground ml-2">(via {lastUsedImageProvider})</span>}
                       </CardTitle>
                   </CardHeader>
                   <CardContent className="overflow-hidden">

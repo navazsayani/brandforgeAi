@@ -497,7 +497,7 @@ export default function BrandProfilePage() {
                       {!isLoadingAdminProfiles && userProfilesForAdmin.length === 0 && <SelectItem value="nousers" disabled>No user profiles found.</SelectItem>}
                       {userProfilesForAdmin.map(profile => (
                         <SelectItem key={profile.userId} value={profile.userId}>
-                          <div className="truncate">
+                          <div className="whitespace-normal break-words">
                             {profile.brandName || "Unnamed Brand"} - ({profile.userEmail || profile.userId.substring(0,8)+"..."})
                           </div>
                         </SelectItem>
