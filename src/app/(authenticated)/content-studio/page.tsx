@@ -291,7 +291,7 @@ export default function ContentStudioPage() {
 
   const [checkingTaskId, setCheckingTaskId] = useState<string | null>(null);
   const [selectedBlogIndustry, setSelectedBlogIndustry] = useState<string>("_none_"); 
-  const isClearingRef = useRef(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [useExampleImageForGen, setUseExampleImageForGen] = useState<boolean>(true); 
@@ -554,10 +554,12 @@ export default function ContentStudioPage() {
   };
 
  const handleClearGeneratedImages = () => {
+    setIsClearing(true);
     setSessionLastImageGenerationResult(null); 
     setFormSnapshot(null);
     setIsPreviewingPrompt(false);
     setCurrentTextPromptForEditing("");
+    setTimeout(() => { setIsClearing(false); }, 200);
   };
 
   const handleSaveAllGeneratedImages = async () => {
@@ -1137,7 +1139,14 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                 </CardFooter>
               </form>
             ) : (
-              <form id="imageGenerationFormFields" onSubmit={handleImageGenerationSubmit}>
+              <form id="imageGenerationFormFields" onSubmit={(e) => {
+                  e.preventDefault(); 
+                  if (isAdmin) {
+                    handlePreviewPromptClick(e as any);
+                  } else {
+                    handleImageGenerationSubmit(e);
+                  }
+              }}>
                 <input type="hidden" name="industry" value={selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || ""} />
                 <CardContent className="space-y-6">
                   {isAdmin && (
@@ -1398,7 +1407,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                 </CardContent>
                 <CardFooter>
                   {isAdmin ? (
-                    <Button type="button" onClick={handlePreviewPromptClick} className="w-full">
+                    <Button type="submit" className="w-full" disabled={isClearing}>
                         <Eye className="mr-2 h-4 w-4" /> Preview Prompt
                     </Button>
                   ) : (
@@ -1406,6 +1415,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                         className="w-full" 
                         loadingText={parseInt(numberOfImagesToGenerate,10) > 1 ? "Generating Images..." : "Generating Image..."}
                         type="submit"
+                        disabled={isClearing}
                     >
                         Generate {parseInt(numberOfImagesToGenerate,10) > 1 ? `${numberOfImagesToGenerate} Images` : "Image"}
                     </SubmitButton>
@@ -1436,8 +1446,9 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                 Save All to Library
                             </Button>
                         )}
-                        <Button variant="outline" size="sm" onClick={handleClearGeneratedImages}>
-                            <Trash2 className="mr-2 h-4 w-4" /> Clear Image{lastSuccessfulGeneratedImageUrls.length > 1 ? 's' : ''}
+                        <Button variant="outline" size="sm" onClick={handleClearGeneratedImages} disabled={isClearing}>
+                            {isClearing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                            {isClearing ? 'Clearing...' : `Clear Image${lastSuccessfulGeneratedImageUrls.length > 1 ? 's' : ''}`}
                         </Button>
                     </div>
                     <ImprovedImageGrid 
