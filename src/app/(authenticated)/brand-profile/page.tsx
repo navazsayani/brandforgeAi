@@ -507,7 +507,7 @@ export default function BrandProfilePage() {
                 </Select>
               </div>
               {adminTargetUserId && (
-                <Button onClick={handleAdminLoadMyProfile} variant="outline" size="sm" className="w-full">
+                <Button onClick={handleAdminLoadMyProfile} variant="outline" size="sm" className="w-full h-auto whitespace-normal">
                   Switch to Editing My Own Profile
                 </Button>
               )}
