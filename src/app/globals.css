@@ -286,4 +286,44 @@
   .overscroll-contain {
     overscroll-behavior: contain;
   }
+
+  /* Sidebar scrolling enhancements */
+  .sidebar-nav-scrollable {
+    @apply flex-1 overflow-y-auto overscroll-contain;
+    /* Custom scrollbar styling for better appearance */
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--sidebar-border)) transparent;
+  }
+
+  .sidebar-nav-scrollable::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .sidebar-nav-scrollable::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .sidebar-nav-scrollable::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--sidebar-border));
+    border-radius: 3px;
+  }
+
+  .sidebar-nav-scrollable::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--sidebar-accent));
+  }
+
+  .sidebar-content-area {
+    @apply flex flex-col h-full min-h-0;
+  }
+
+  /* Mobile sidebar scrolling */
+  .mobile-sidebar-content {
+    @apply flex flex-col h-full overflow-hidden;
+  }
+
+  .mobile-sidebar-nav {
+    @apply flex-1 overflow-y-auto overscroll-contain;
+    /* Ensure smooth scrolling on mobile */
+    -webkit-overflow-scrolling: touch;
+  }
 }

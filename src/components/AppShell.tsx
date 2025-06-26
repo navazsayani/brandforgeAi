@@ -41,7 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isAdmin = user?.email === 'admin@brandforge.ai';
 
   const SidebarNav = () => (
-    <nav className="flex-1 px-3 py-6 space-y-2">
+    <nav className="sidebar-nav-scrollable px-3 py-6 space-y-2">
       {navItems.map((item) => (
         <Button
           key={item.label}
@@ -83,8 +83,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-sidebar">
-      <div className="p-6 border-b border-sidebar-border">
+    <div className="sidebar-content-area bg-sidebar">
+      <div className="flex-shrink-0 p-6 border-b border-sidebar-border">
         <Link
           href={user ? "/dashboard" : "/"}
           className="flex items-center gap-4 text-sidebar-foreground hover:text-sidebar-primary transition-colors duration-200"
@@ -99,7 +99,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Link>
       </div>
       {user && <SidebarNav />}
-      <div className={cn("p-6 mt-auto border-t border-sidebar-border", !user && "mt-auto")}>
+      <div className={cn("flex-shrink-0 p-6 border-t border-sidebar-border", !user && "mt-auto")}>
         {!user && (
           <div className="space-y-4">
              <Button
@@ -153,7 +153,88 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <SheetHeader className="sr-only">
                   <SheetTitle>Main Navigation Menu</SheetTitle>
                 </SheetHeader>
-                <SidebarContent />
+                <div className="mobile-sidebar-content">
+                  <div className="flex-shrink-0 p-6 border-b border-sidebar-border">
+                    <Link
+                      href={user ? "/dashboard" : "/"}
+                      className="flex items-center gap-4 text-sidebar-foreground hover:text-sidebar-primary transition-colors duration-200"
+                    >
+                      <div className="p-3 bg-sidebar-primary/10 rounded-xl">
+                        <Sparkles className="w-7 h-7 text-sidebar-primary" />
+                      </div>
+                      <div>
+                        <h1 className="text-xl font-bold text-break">BrandForge AI</h1>
+                        <p className="text-sm text-sidebar-foreground/70 font-medium">AI-Powered Branding</p>
+                      </div>
+                    </Link>
+                  </div>
+                  {user && (
+                    <nav className="mobile-sidebar-nav px-3 py-6 space-y-2">
+                      {navItems.map((item) => (
+                        <Button
+                          key={item.label}
+                          asChild
+                          variant={pathname === item.href ? 'secondary' : 'ghost'}
+                          className={cn(
+                            "sidebar-nav-item",
+                            "justify-start",
+                            "gap-0",
+                            pathname === item.href
+                              ? "active shadow-md"
+                              : ""
+                          )}
+                        >
+                          <Link href={item.href}>
+                            <item.icon className="w-5 h-5 mr-4 flex-shrink-0" />
+                            <span className="text-break font-medium">{item.label}</span>
+                          </Link>
+                        </Button>
+                      ))}
+                      {isAdmin && (
+                        <Button
+                          asChild
+                          variant={pathname === '/settings' ? 'secondary' : 'ghost'}
+                          className={cn(
+                            "sidebar-nav-item",
+                            "justify-start",
+                            "gap-0",
+                            pathname === '/settings' && "active shadow-md"
+                          )}
+                        >
+                          <Link href="/settings">
+                            <Settings className="w-5 h-5 mr-4 flex-shrink-0" />
+                            <span className="text-break font-medium">Settings</span>
+                          </Link>
+                        </Button>
+                      )}
+                    </nav>
+                  )}
+                  <div className={cn("flex-shrink-0 p-6 border-t border-sidebar-border", !user && "mt-auto")}>
+                    {!user && (
+                      <div className="space-y-4">
+                        <Button
+                          variant="default"
+                          className="w-full justify-center btn-gradient-primary btn-lg-enhanced touch-target"
+                          asChild
+                        >
+                          <Link href="/login">
+                            <LogInIcon className="mr-2 w-5 h-5"/>
+                            <span>Log In</span>
+                          </Link>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-center text-sidebar-foreground border-sidebar-border hover:bg-sidebar-accent hover:text-sidebar-accent-foreground btn-lg-enhanced touch-target"
+                          asChild
+                        >
+                          <Link href="/signup">
+                            <span>Sign Up</span>
+                          </Link>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </SheetContent>
             </Sheet>
           </div>
