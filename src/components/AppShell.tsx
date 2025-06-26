@@ -1,9 +1,10 @@
+
 "use client";
 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, UserCircle, ImageIcon, MessageSquare, Send, Settings, Briefcase, Images, Menu, LogOut, LogIn as LogInIcon, Sparkles } from 'lucide-react';
+import { Home, UserCircle, ImageIcon, MessageSquare, Send, Settings, Briefcase, Images, Menu, LogOut, LogIn as LogInIcon, Sparkles, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
@@ -31,6 +32,7 @@ const navItems: NavItem[] = [
   { href: '/image-library', label: 'Image Library', icon: Images },
   { href: '/campaign-manager', label: 'Campaign Manager', icon: Briefcase },
   { href: '/deployment-hub', label: 'Deployment Hub', icon: Send },
+  { href: '/pricing', label: 'Pricing', icon: CreditCard },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {

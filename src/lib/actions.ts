@@ -13,9 +13,11 @@ import { generateBrandForgeAppLogo, type GenerateBrandForgeAppLogoOutput } from 
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where, collectionGroup } from 'firebase/firestore';
-import type { UserProfileSelectItem, BrandData, ModelConfig } from '@/types';
+import type { UserProfileSelectItem, BrandData, ModelConfig, PricingPlan } from '@/types';
 import { getModelConfig } from './model-config';
 import { auth } from '@/lib/firebaseConfig';
+import Razorpay from 'razorpay';
+import { plans } from '@/lib/pricing';
 
 // Generic type for form state with error
 export interface FormState<T = any> {
@@ -710,5 +712,66 @@ export async function handleUpdateSettingsAction(
   } catch (e: any) {
     console.error("Error in handleUpdateSettingsAction:", e);
     return { error: `Failed to update model configuration: ${e.message || "Unknown error."}` };
+  }
+}
+
+export async function handleCreateSubscriptionAction(
+  prevState: FormState<{ orderId: string; amount: number; currency: string } | null>,
+  formData: FormData
+): Promise<FormState<{ orderId: string; amount: number; currency: string } | null>> {
+  const planId = formData.get('planId') as string;
+  const userId = formData.get('userId') as string;
+  const currency = formData.get('currency') as 'USD' | 'INR';
+
+  if (!planId || !userId || !currency) {
+    return { error: "Plan, user ID, and currency are required to create a subscription." };
+  }
+
+  const planDetails = plans[currency]?.find(p => p.id === planId);
+  if (!planDetails || !planDetails.price.amount.match(/\d+/)) {
+      return { error: "Selected plan is invalid or has no price." };
+  }
+  
+  // For now, we only handle Razorpay (INR)
+  if (currency !== 'INR') {
+    return { error: "Only INR payments are supported at this time." };
+  }
+  
+  const amountInPaise = parseInt(planDetails.price.amount.replace(/[^0-9]/g, ''), 10) * 100;
+
+  try {
+    const razorpay = new Razorpay({
+      key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+      key_secret: process.env.RAZORPAY_KEY_SECRET!,
+    });
+
+    const options = {
+      amount: amountInPaise,
+      currency: currency,
+      receipt: `receipt_brandforge_${userId}_${Date.now()}`,
+      notes: {
+        userId: userId,
+        planId: planId,
+      }
+    };
+    
+    const order = await razorpay.orders.create(options);
+    
+    if (!order) {
+        return { error: "Failed to create order with payment gateway." };
+    }
+
+    return { 
+        data: {
+            orderId: order.id,
+            amount: order.amount,
+            currency: order.currency
+        },
+        message: "Order created successfully."
+    };
+
+  } catch (e: any) {
+    console.error("Error creating Razorpay order:", e);
+    return { error: `Failed to create subscription order: ${e.message || "Unknown error"}` };
   }
 }

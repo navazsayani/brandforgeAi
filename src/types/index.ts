@@ -76,3 +76,23 @@ export interface ModelConfig {
   visionModel: string;
   powerfulModel: string;
 }
+
+// Types for pricing plans
+export interface PlanFeature {
+  name: string;
+  included: boolean;
+}
+
+export interface PlanPrice {
+  amount: string;
+  unit: string;
+}
+
+export interface PricingPlan {
+  id: string;
+  name: string;
+  description: string;
+  price: PlanPrice;
+  features: PlanFeature[];
+  cta: string;
+}
