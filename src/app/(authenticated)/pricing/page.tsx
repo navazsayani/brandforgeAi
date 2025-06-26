@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useActionState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
@@ -12,7 +13,7 @@ import { Check, ArrowRight, Star, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { plans, type Plan } from '@/lib/pricing';
 import type { FormState } from '@/lib/actions';
-import { handleCreateSubscriptionAction } from '@/lib/actions';
+import { handleCreateSubscriptionAction, handleVerifyPaymentAction } from '@/lib/actions';
 
 declare global {
     interface Window {
@@ -21,6 +22,8 @@ declare global {
 }
 
 const initialSubscriptionState: FormState<{ orderId: string; amount: number; currency: string } | null> = { data: null, error: undefined, message: undefined };
+const initialVerifyState: FormState<{ success: boolean }> = { data: undefined, error: undefined, message: undefined };
+
 
 export default function PricingPage() {
     const { currentUser } = useAuth();
@@ -29,8 +32,10 @@ export default function PricingPage() {
     const { toast } = useToast();
     const [geo, setGeo] = useState<{ country: string | null }>({ country: null });
     const [isLoadingGeo, setIsLoadingGeo] = useState(true);
+    const queryClient = useQueryClient();
 
     const [subscriptionState, createSubscriptionAction] = useActionState(handleCreateSubscriptionAction, initialSubscriptionState);
+    const [verifyState, verifyAction] = useActionState(handleVerifyPaymentAction, initialVerifyState);
     const [isProcessing, setIsProcessing] = useState(false);
     const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
 
@@ -103,10 +108,12 @@ export default function PricingPage() {
                     description: 'Pro Plan Subscription',
                     order_id: subscriptionState.data.orderId,
                     handler: function (response: any) {
-                        toast({ title: 'Payment Successful!', description: 'Your plan has been upgraded.' });
-                        // Here you would typically verify the payment signature on your backend
-                        // and then update the user's plan in Firestore via a server action.
-                        router.refresh();
+                        const formData = new FormData();
+                        formData.append('razorpay_payment_id', response.razorpay_payment_id);
+                        formData.append('razorpay_order_id', response.razorpay_order_id);
+                        formData.append('razorpay_signature', response.razorpay_signature);
+                        formData.append('userId', currentUser.uid);
+                        verifyAction(formData);
                     },
                     prefill: {
                         name: currentUser.displayName || '',
@@ -124,6 +131,8 @@ export default function PricingPage() {
                 });
                 
                 rzp.open();
+                 // Note: We don't set isProcessing to false here because the modal is now open.
+                 // It will be set to false on success or failure of the payment itself.
             }
         };
 
@@ -137,6 +146,21 @@ export default function PricingPage() {
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [subscriptionState, currentUser]);
+
+    useEffect(() => {
+        if (verifyState.data?.success) {
+            toast({ title: 'Payment Verified!', description: 'Your plan has been upgraded to Premium.' });
+            queryClient.invalidateQueries({ queryKey: ['brandData', currentUser?.uid] });
+            router.push('/dashboard');
+        }
+        if (verifyState.error) {
+            toast({ title: 'Payment Verification Failed', description: verifyState.error, variant: 'destructive'});
+        }
+        if(verifyState.data || verifyState.error) {
+            setIsProcessing(false);
+        }
+    }, [verifyState, router, toast, queryClient, currentUser?.uid]);
+
 
     if (isLoadingGeo || isBrandLoading) {
         return (

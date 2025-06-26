@@ -1,6 +1,7 @@
 
 "use server";
 
+import crypto from 'crypto';
 import { generateImages, type GenerateImagesInput } from '@/ai/flows/generate-images';
 import { generateSocialMediaCaption, type GenerateSocialMediaCaptionInput } from '@/ai/flows/generate-social-media-caption';
 import { generateBlogContent, type GenerateBlogContentInput } from '@/ai/flows/generate-blog-content';
@@ -732,7 +733,6 @@ export async function handleCreateSubscriptionAction(
       return { error: "Selected plan is invalid or has no price." };
   }
   
-  // For now, we only handle Razorpay (INR)
   if (currency !== 'INR') {
     return { error: "Only INR payments are supported at this time." };
   }
@@ -741,7 +741,7 @@ export async function handleCreateSubscriptionAction(
 
   try {
     const razorpay = new Razorpay({
-      key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+      key_id: process.env.RAZORPAY_KEY_ID!,
       key_secret: process.env.RAZORPAY_KEY_SECRET!,
     });
 
@@ -773,5 +773,41 @@ export async function handleCreateSubscriptionAction(
   } catch (e: any) {
     console.error("Error creating Razorpay order:", e);
     return { error: `Failed to create subscription order: ${e.message || "Unknown error"}` };
+  }
+}
+
+export async function handleVerifyPaymentAction(
+  prevState: FormState<{ success: boolean }>,
+  formData: FormData
+): Promise<FormState<{ success: boolean }>> {
+  const razorpay_payment_id = formData.get('razorpay_payment_id') as string;
+  const razorpay_order_id = formData.get('razorpay_order_id') as string;
+  const razorpay_signature = formData.get('razorpay_signature') as string;
+  const userId = formData.get('userId') as string;
+
+  if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature || !userId) {
+    return { error: 'Missing payment verification details.' };
+  }
+
+  const body = razorpay_order_id + '|' + razorpay_payment_id;
+
+  try {
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
+      .update(body.toString())
+      .digest('hex');
+
+    if (expectedSignature === razorpay_signature) {
+      // Payment is legit. Update user's plan in Firestore.
+      const brandDocRef = doc(db, 'users', userId, 'brandProfiles', userId);
+      await setDoc(brandDocRef, { plan: 'premium' }, { merge: true });
+      
+      return { data: { success: true }, message: 'Payment verified and plan updated.' };
+    } else {
+      return { error: 'Payment verification failed. Invalid signature.' };
+    }
+  } catch (e: any) {
+    console.error('Error during payment verification:', e);
+    return { error: `An unexpected error occurred: ${e.message}` };
   }
 }
