@@ -13,8 +13,8 @@ import { generateBrandLogo, type GenerateBrandLogoInput, type GenerateBrandLogoO
 import { enhanceBrandDescription, type EnhanceBrandDescriptionInput, type EnhanceBrandDescriptionOutput } from '@/ai/flows/enhance-brand-description-flow';
 import { generateBrandForgeAppLogo, type GenerateBrandForgeAppLogoOutput } from '@/ai/flows/generate-brandforge-app-logo-flow';
 import { storage, db } from '@/lib/firebaseConfig';
-import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
-import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where, collectionGroup } from 'firebase/firestore';
+import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
+import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where, collectionGroup, deleteDoc } from 'firebase/firestore';
 import type { UserProfileSelectItem, BrandData, ModelConfig, PricingPlan } from '@/types';
 import { getModelConfig } from './model-config';
 import { auth } from '@/lib/firebaseConfig';
@@ -530,6 +530,47 @@ export async function handleSaveGeneratedImagesAction(
       const criticalErrorMsg = `A critical server error occurred during image saving: ${e.message || "Unknown error"}.`;
       console.error("[Save Images Action] CRITICAL ERROR (outer try-catch):", JSON.stringify(e, Object.getOwnPropertyNames(e), 2), `UserId: '${userId}'`);
       return { error: criticalErrorMsg };
+  }
+}
+
+export async function handleDeleteSavedImageAction(
+  prevState: FormState<{ success: boolean }>,
+  formData: FormData
+): Promise<FormState<{ success: boolean }>> {
+  const userId = formData.get('userId') as string;
+  const imageId = formData.get('imageId') as string;
+  const storageUrl = formData.get('storageUrl') as string;
+
+  if (!userId || !imageId || !storageUrl) {
+      return { error: 'Missing required information to delete the image.' };
+  }
+  
+  // In a real production app, you'd verify the userId against the authenticated session.
+  // Here, we rely on the client sending the correct ID and Firestore rules for security.
+
+  try {
+      // Delete the Firestore document first
+      const imageDocRef = doc(db, 'users', userId, 'brandProfiles', userId, 'savedLibraryImages', imageId);
+      await deleteDoc(imageDocRef);
+
+      // Then, delete the file from Firebase Storage
+      try {
+          const imageStorageRef = storageRef(storage, storageUrl);
+          await deleteObject(imageStorageRef);
+      } catch (storageError: any) {
+          // Log this error but don't fail the whole action, as the reference is already gone from the UI.
+          // This can happen if the storage object was already deleted or permissions changed.
+          console.warn(`[handleDeleteSavedImageAction] Failed to delete file from Storage, but Firestore doc was deleted. This may result in an orphaned file. URL: ${storageUrl}. Error:`, storageError);
+      }
+
+      return { data: { success: true }, message: 'Image deleted successfully.' };
+
+  } catch (e: any) {
+      console.error('Error in handleDeleteSavedImageAction:', e);
+      if (e.code === 'permission-denied') {
+          return { error: "Permission denied. You can't delete this image." };
+      }
+      return { error: `Failed to delete image: ${e.message || "Unknown error."}` };
   }
 }
 

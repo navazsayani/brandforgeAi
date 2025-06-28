@@ -1,18 +1,24 @@
 
 "use client";
 
-import React from 'react';
+import React, { useActionState, useEffect, useRef } from 'react';
+import { useFormStatus } from 'react-dom';
 import NextImage from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { db } from '@/lib/firebaseConfig';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import type { SavedGeneratedImage } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Images, UserCircle, FileImage } from 'lucide-react';
+import { AlertCircle, Images, UserCircle, FileImage, Trash2, Loader2 } from 'lucide-react';
 import { Alert, AlertTitle } from '@/components/ui/alert';
 import { useBrand } from '@/contexts/BrandContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { handleDeleteSavedImageAction } from '@/lib/actions';
+import type { FormState as DeleteFormState } from '@/lib/actions';
+
 
 const fetchSavedLibraryImages = async (userId: string): Promise<SavedGeneratedImage[]> => {
   if (!userId) {
@@ -29,6 +35,71 @@ const fetchSavedLibraryImages = async (userId: string): Promise<SavedGeneratedIm
   });
   return images;
 };
+
+function DeleteButton() {
+    const { pending } = useFormStatus();
+    return (
+        <Button
+            type="submit"
+            variant="destructive"
+            size="icon"
+            className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+            disabled={pending}
+            title="Delete image"
+        >
+            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+        </Button>
+    );
+}
+
+function SavedImageCard({ image, userId }: { image: SavedGeneratedImage; userId: string }) {
+    const { toast } = useToast();
+    const queryClient = useQueryClient();
+    const formRef = useRef<HTMLFormElement>(null);
+    const initialDeleteState: DeleteFormState<{ success: boolean }> = { error: undefined, data: undefined };
+
+    const [state, formAction] = useActionState(handleDeleteSavedImageAction, initialDeleteState);
+
+    useEffect(() => {
+        if (state.error) {
+            toast({ title: "Deletion Failed", description: state.error, variant: "destructive" });
+        }
+        if (state.data?.success) {
+            toast({ title: "Image Deleted", description: state.message });
+            queryClient.invalidateQueries({ queryKey: ['savedLibraryImages', userId] });
+        }
+    }, [state, toast, queryClient, userId]);
+
+    return (
+        <Card className="overflow-hidden shadow-md hover:shadow-xl transition-shadow group">
+            <div className="relative w-full aspect-square bg-muted overflow-hidden">
+                <NextImage
+                    src={image.storageUrl}
+                    alt={`Saved image generated with prompt: ${image.prompt.substring(0, 50)}...`}
+                    fill
+                    style={{ objectFit: "contain" }}
+                    className="transition-transform duration-300 group-hover:scale-105"
+                    data-ai-hint="library image"
+                />
+                <form action={formAction} ref={formRef}>
+                    <input type="hidden" name="userId" value={userId} />
+                    <input type="hidden" name="imageId" value={image.id} />
+                    <input type="hidden" name="storageUrl" value={image.storageUrl} />
+                    <DeleteButton />
+                </form>
+            </div>
+            <CardContent className="p-3 space-y-1">
+                <p className="text-xs text-muted-foreground truncate" title={image.prompt}>
+                    <strong>Prompt:</strong> {image.prompt || 'N/A'}
+                </p>
+                <p className="text-xs text-muted-foreground truncate" title={image.style}>
+                    <strong>Style:</strong> {image.style || 'N/A'}
+                </p>
+            </CardContent>
+        </Card>
+    );
+}
+
 
 export default function ImageLibraryPage() {
   const { user, isLoading: isLoadingUser } = useAuth();
@@ -155,29 +226,10 @@ export default function ImageLibraryPage() {
             </CardContent>
           </Card>
         )}
-        {!isLoadingSaved && !errorSaved && savedImages.length > 0 && (
+        {!isLoadingSaved && !errorSaved && savedImages.length > 0 && user && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {savedImages.map((image) => (
-              <Card key={image.id} className="overflow-hidden shadow-md hover:shadow-xl transition-shadow group">
-                <div className="relative w-full aspect-square bg-muted overflow-hidden">
-                  <NextImage
-                    src={image.storageUrl}
-                    alt={`Saved image generated with prompt: ${image.prompt.substring(0, 50)}...`}
-                    fill
-                    style={{ objectFit: "contain" }}
-                    className="transition-transform duration-300 group-hover:scale-105"
-                    data-ai-hint="library image"
-                  />
-                </div>
-                <CardContent className="p-3 space-y-1">
-                  <p className="text-xs text-muted-foreground truncate" title={image.prompt}>
-                    <strong>Prompt:</strong> {image.prompt || 'N/A'}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate" title={image.style}>
-                    <strong>Style:</strong> {image.style || 'N/A'}
-                  </p>
-                </CardContent>
-              </Card>
+                <SavedImageCard key={image.id} image={image} userId={user.uid} />
             ))}
           </div>
         )}

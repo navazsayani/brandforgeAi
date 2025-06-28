@@ -1780,7 +1780,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                       <div>
                           <Label htmlFor="generatedHashtags" className="text-sm font-medium mb-1 text-muted-foreground">Generated Hashtags:</Label>
                           <div className="p-3 border rounded-md bg-muted/50">
-                              <p id="generatedHashtags" className="text-sm">{generatedSocialPost.hashtags}</p>
+                              <p id="generatedHashtags" className="text-sm whitespace-pre-wrap break-words">{generatedSocialPost.hashtags}</p>
                           </div>
                           <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedSocialPost.hashtags, "Hashtags")} className="mt-1 text-muted-foreground hover:text-primary">
                               <Copy className="w-3 h-3 mr-1" /> Copy Hashtags
