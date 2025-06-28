@@ -96,7 +96,7 @@ function GreetingCard({ isLoading, brandData, paymentMode }: { isLoading: boolea
     const isPremiumActive = plan === 'premium' && endDate && endDate > now;
     const daysRemaining = endDate ? Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 0;
     
-    let planLabel = isAdmin ? 'Admin' : (isPremiumActive ? 'Premium' : 'Free');
+    let planLabel = isPremiumActive ? 'Premium' : 'Free';
     const isFreeUser = !isPremiumActive && !isAdmin;
     
     const primaryAction = isProfileComplete
@@ -124,10 +124,18 @@ function GreetingCard({ isLoading, brandData, paymentMode }: { isLoading: boolea
                         </div>
                         <div className="flex-1 flex flex-col items-center md:items-start gap-4">
                             <div className="w-full text-center md:text-left min-w-0">
-                                <Badge variant={isAdmin ? 'destructive' : (isPremiumActive ? 'default' : 'secondary')} className="mb-2">
-                                {isAdmin ? <ShieldCheck className="w-4 h-4 mr-1.5" /> : <Star className="w-4 h-4 mr-1.5" />}
-                                {planLabel}
-                                </Badge>
+                                <div className="flex items-center gap-2 mb-2 justify-center md:justify-start">
+                                    <Badge variant={isPremiumActive ? 'default' : 'secondary'} className="capitalize">
+                                        <Star className="w-4 h-4 mr-1.5" />
+                                        {planLabel} Plan
+                                    </Badge>
+                                    {isAdmin && (
+                                        <Badge variant="destructive">
+                                            <ShieldCheck className="w-4 h-4 mr-1.5" />
+                                            Admin
+                                        </Badge>
+                                    )}
+                                </div>
                                 <h1 className="text-2xl md:text-3xl font-bold text-balance">
                                     Welcome back, {brandName || 'to BrandForge AI'}!
                                 </h1>
