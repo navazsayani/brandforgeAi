@@ -1076,17 +1076,17 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
   
   return (
     <div className="w-full">
-      <CardHeader className="px-0 mb-6">
+      <div className="px-0 mb-6">
         <div className="flex items-center space-x-3">
             <Paintbrush className="w-10 h-10 text-primary" />
             <div>
-              <CardTitle className="text-3xl font-bold">Content Studio</CardTitle>
+              <h1 className="text-3xl font-bold">Content Studio</h1>
               <p className="text-lg text-muted-foreground">
                 Generate images, social media posts, and blog articles powered by AI.
               </p>
             </div>
           </div>
-      </CardHeader>
+      </div>
 
       <Tabs defaultValue="image" value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3 mb-6 h-auto">
@@ -1560,7 +1560,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                           <div className="flex items-center space-x-2">
                               <RadioGroupItem value="generated" id="social-generated" disabled={!sessionLastImageGenerationResult?.generatedImages?.some(url => url?.startsWith('data:') || url?.startsWith('image_url:'))}/>
                               <Label htmlFor="social-generated" className={(!sessionLastImageGenerationResult?.generatedImages?.some(url => url?.startsWith('data:') || url?.startsWith('image_url:'))) ? "text-muted-foreground" : ""}>
-                                  Use Last Generated Image {(!sessionLastImageGenerationResult?.generatedImages?.some(url => url?.startsWith('data:') || url?.startsWith('image_url:'))) ? "(None available/suitable)" : `(${(sessionLastImageGenerationResult?.generatedImages?.filter(url => url?.startsWith('data:') || url?.startsWith('image_url:')).length} available)`}
+                                  Use Last Generated Image {(!sessionLastImageGenerationResult?.generatedImages?.some(url => url?.startsWith('data:') || url?.startsWith('image_url:'))) ? "(None available/suitable)" : `(${(sessionLastImageGenerationResult)?.generatedImages?.filter(url => url?.startsWith('data:') || url?.startsWith('image_url:')).length} available)`}
                               </Label>
                           </div>
                           <div className="flex items-center space-x-2">
