@@ -9,11 +9,11 @@ export default {
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
+    fontFamily: {
+        sans: ['var(--font-sora)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-jetbrains-mono)', 'Consolas', 'monospace'],
+    },
   	extend: {
-  		fontFamily: {
-  			sans: ['var(--font-sora)', 'system-ui', 'sans-serif'],
-  			mono: ['var(--font-jetbrains-mono)', 'Consolas', 'monospace'],
-  		},
   		fontSize: {
   			'xs': ['0.75rem', { lineHeight: '1.5' }],
   			'sm': ['0.875rem', { lineHeight: '1.5' }],
