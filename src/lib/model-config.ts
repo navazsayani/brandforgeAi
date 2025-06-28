@@ -8,6 +8,7 @@ export const DEFAULT_MODEL_CONFIG: ModelConfig = {
   fastModel: 'googleai/gemini-1.5-flash-latest',
   visionModel: 'googleai/gemini-1.5-flash-latest',
   powerfulModel: 'googleai/gemini-1.5-pro-latest',
+  paymentMode: 'test',
 };
 
 // Simple in-memory cache

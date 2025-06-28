@@ -16,14 +16,16 @@ import { handleGetSettingsAction, handleUpdateSettingsAction, type FormState } f
 import { SubmitButton } from '@/components/SubmitButton';
 import { DEFAULT_MODEL_CONFIG } from '@/lib/model-config';
 import type { ModelConfig } from '@/types';
-import { Settings, Loader2, ExternalLink } from 'lucide-react';
+import { Settings, Loader2, ExternalLink, TestTube, ShoppingCart } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const settingsSchema = z.object({
   imageGenerationModel: z.string().min(1, "Image generation model name cannot be empty."),
   fastModel: z.string().min(1, "Fast text model name cannot be empty."),
   visionModel: z.string().min(1, "Vision model name cannot be empty."),
   powerfulModel: z.string().min(1, "Powerful text model name cannot be empty."),
+  paymentMode: z.enum(['live', 'test']).optional(),
 });
 
 type SettingsFormData = z.infer<typeof settingsSchema>;
@@ -92,7 +94,9 @@ export default function SettingsPage() {
       const formData = new FormData();
       formData.append('adminRequesterEmail', currentUser.email);
       Object.entries(data).forEach(([key, value]) => {
-        formData.append(key, value);
+         if (value !== undefined && value !== null) {
+            formData.append(key, value);
+        }
       });
       startTransition(() => {
         updateAction(formData);
@@ -121,9 +125,9 @@ export default function SettingsPage() {
           <div className="flex items-center space-x-3">
             <Settings className="w-10 h-10 text-primary" />
             <div>
-              <CardTitle className="text-3xl font-bold">Admin Model Settings</CardTitle>
+              <CardTitle className="text-3xl font-bold">Admin Settings</CardTitle>
               <CardDescription className="text-lg">
-                Manage the AI models used across the application.
+                Manage the AI models and payment gateway settings for the application.
               </CardDescription>
             </div>
           </div>
@@ -131,11 +135,49 @@ export default function SettingsPage() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <CardContent className="space-y-6">
+               <FormField
+                  control={form.control}
+                  name="paymentMode"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3 p-4 border rounded-lg bg-secondary/30">
+                      <FormLabel className="text-base font-semibold">Payment Gateway Mode</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          value={field.value || 'test'}
+                          className="flex flex-col space-y-2 pt-2"
+                        >
+                          <FormItem className="flex items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value="test" id="mode-test" />
+                            </FormControl>
+                            <FormLabel htmlFor="mode-test" className="font-normal flex items-center gap-2">
+                              <TestTube className="w-4 h-4 text-amber-500"/> Test Mode (Uses Test API Keys)
+                            </FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value="live" id="mode-live" />
+                            </FormControl>
+                            <FormLabel htmlFor="mode-live" className="font-normal flex items-center gap-2">
+                              <ShoppingCart className="w-4 h-4 text-green-500"/> Live Mode (Uses Production API Keys)
+                            </FormLabel>
+                          </FormItem>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormDescription>
+                        Select whether to use Razorpay's test or live environment for payments. Ensure the corresponding keys are in your .env file.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                <Alert>
-                  <AlertTitle>Important Note</AlertTitle>
+                  <AlertTitle>Important: AI Model Configuration</AlertTitle>
                   <AlertDescription>
                     <p>
-                    Changing these values will directly affect the AI's performance and capabilities. Ensure model names are valid and compatible with their intended use (e.g., image models for image generation). Incorrect names will cause AI features to fail.
+                    Changing these values will directly affect the AI's performance and capabilities. Ensure model names are valid and compatible with their intended use. Incorrect names will cause AI features to fail.
                     </p>
                     <a href="https://ai.google.dev/models/gemini" target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center font-medium text-primary underline-offset-4 hover:underline">
                       View available Google AI models
@@ -202,7 +244,7 @@ export default function SettingsPage() {
             </CardContent>
             <CardFooter>
               <SubmitButton className="w-full" size="lg" loadingText="Saving Settings...">
-                Save Model Configuration
+                Save Configuration
               </SubmitButton>
             </CardFooter>
           </form>

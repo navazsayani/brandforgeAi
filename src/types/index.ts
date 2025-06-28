@@ -78,6 +78,7 @@ export interface ModelConfig {
   fastModel: string;
   visionModel: string;
   powerfulModel: string;
+  paymentMode?: 'live' | 'test';
 }
 
 // Types for pricing plans

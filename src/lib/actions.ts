@@ -769,6 +769,7 @@ export async function handleUpdateSettingsAction(
       fastModel: formData.get("fastModel") as string,
       visionModel: formData.get("visionModel") as string,
       powerfulModel: formData.get("powerfulModel") as string,
+      paymentMode: formData.get("paymentMode") as 'live' | 'test' | undefined,
     };
     
     // Basic validation
@@ -793,13 +794,17 @@ export async function handleCreateSubscriptionAction(
   const planId = formData.get('planId') as string;
   const userId = formData.get('userId') as string;
   const currency = formData.get('currency') as 'USD' | 'INR';
-  
-  const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-  const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
+  const settings = await getModelConfig();
+  const isTestMode = settings.paymentMode === 'test';
+
+  const keyId = isTestMode ? process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID_TEST : process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+  const keySecret = isTestMode ? process.env.RAZORPAY_KEY_SECRET_TEST : process.env.RAZORPAY_KEY_SECRET;
+  
   if (!keyId || !keySecret) {
-    console.error("Razorpay API keys are not configured correctly in environment variables. NEXT_PUBLIC_RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET is missing.");
-    return { error: "Payment gateway is not configured correctly. Please contact support." };
+    const errorMsg = "Payment gateway is not configured correctly for the selected mode (Live/Test). Please contact support.";
+    console.error(`Razorpay API keys are not configured correctly for ${isTestMode ? 'Test' : 'Live'} mode.`);
+    return { error: errorMsg };
   }
 
   if (!planId || !userId || !currency) {
@@ -871,10 +876,17 @@ export async function handleVerifyPaymentAction(
   const body = razorpay_order_id + '|' + razorpay_payment_id;
 
   try {
-    // This is the crucial security step. We recreate the signature on the server using
-    // our secret key. If it matches the one from Razorpay, we know the payment is authentic.
+    const settings = await getModelConfig();
+    const isTestMode = settings.paymentMode === 'test';
+    const secretToUse = isTestMode ? process.env.RAZORPAY_KEY_SECRET_TEST : process.env.RAZORPAY_KEY_SECRET;
+
+    if (!secretToUse) {
+      console.error(`Razorpay secret key is not configured for the current payment mode: ${isTestMode ? 'Test' : 'Live'}`);
+      return { error: "Payment verification failed: Server configuration error." };
+    }
+    
     const expectedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
+      .createHmac('sha256', secretToUse)
       .update(body.toString())
       .digest('hex');
 
