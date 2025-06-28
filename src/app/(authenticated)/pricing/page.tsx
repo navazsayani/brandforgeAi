@@ -1,7 +1,6 @@
-
 "use client";
 
-import React, { useState, useEffect, useActionState, useMemo } from 'react';
+import React, { useState, useEffect, useActionState, useMemo, startTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -103,7 +102,9 @@ export default function PricingPage() {
         formData.append('userId', currentUser.uid);
         formData.append('currency', currency);
         
-        createSubscriptionAction(formData);
+        startTransition(() => {
+            createSubscriptionAction(formData);
+        });
     };
 
     useEffect(() => {
