@@ -1176,7 +1176,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                     </AccordionContent>
                 </AccordionItem>
             </Accordion>
-            {(isAdmin) && isPreviewingPrompt ? (
+            {isAdmin && isPreviewingPrompt ? (
               <form onSubmit={handleImageGenerationSubmit}>
                 <CardContent className="space-y-6">
                   <div>
@@ -2033,5 +2033,6 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     </div>
   );
 }
+
 
 
