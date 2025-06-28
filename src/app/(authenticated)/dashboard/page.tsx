@@ -1,7 +1,7 @@
 
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import NextImage from 'next/image';
 import { useBrand } from '@/contexts/BrandContext';
@@ -14,16 +14,31 @@ import { ArrowRight, Edit3, TrendingUp, Send, Sparkles, Star, ShieldCheck, Paint
 import { cn } from '@/lib/utils';
 import type { BrandData, GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-
+import { getPaymentMode } from '@/lib/actions';
 
 export default function DashboardPage() {
     const { brandData, isLoading: isBrandLoading } = useBrand();
     const { currentUser, isLoading: isAuthLoading } = useAuth();
-    const isLoading = isBrandLoading || isAuthLoading;
+    const [paymentMode, setPaymentMode] = useState<'live' | 'test' | 'loading'>('loading');
+    
+    useEffect(() => {
+        async function fetchMode() {
+            const result = await getPaymentMode();
+            if (result.error) {
+                console.error("Failed to get payment mode:", result.error);
+                setPaymentMode('live'); // Default to live on error for safety
+            } else {
+                setPaymentMode(result.paymentMode);
+            }
+        }
+        fetchMode();
+    }, []);
+
+    const isLoading = isBrandLoading || isAuthLoading || paymentMode === 'loading';
 
     return (
         <div className="space-y-8 animate-fade-in">
-            <GreetingCard isLoading={isLoading} brandData={brandData} />
+            <GreetingCard isLoading={isLoading} brandData={brandData} paymentMode={paymentMode} />
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 <ActionCard
@@ -54,10 +69,9 @@ export default function DashboardPage() {
     );
 }
 
-function GreetingCard({ isLoading, brandData }: { isLoading: boolean; brandData: BrandData | null }) {
+function GreetingCard({ isLoading, brandData, paymentMode }: { isLoading: boolean; brandData: BrandData | null, paymentMode: 'live' | 'test' | 'loading' }) {
     const { currentUser } = useAuth();
     const isAdmin = currentUser?.email === 'admin@brandforge.ai';
-    const isProfileComplete = brandData?.brandDescription && brandData?.brandName;
 
     if (isLoading) {
         return (
@@ -76,6 +90,7 @@ function GreetingCard({ isLoading, brandData }: { isLoading: boolean; brandData:
     
     const { plan, subscriptionEndDate } = brandData || {};
     const brandName = brandData?.brandName;
+    const isProfileComplete = brandData?.brandDescription && brandData?.brandName;
     const endDate = subscriptionEndDate?.toDate ? subscriptionEndDate.toDate() : (subscriptionEndDate ? new Date(subscriptionEndDate) : null);
     const now = new Date();
     const isPremiumActive = plan === 'premium' && endDate && endDate > now;
@@ -150,7 +165,23 @@ function GreetingCard({ isLoading, brandData }: { isLoading: boolean; brandData:
                             </Link>
                         </div>
                     </div>
-                     {isFreeUser && (
+
+                    {paymentMode === 'test' && (
+                        <Alert className="mt-4 border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-300 shadow-md w-full">
+                            <TestTube className="h-4 w-4 !text-amber-500" />
+                            <AlertTitle className="font-bold text-amber-600 dark:text-amber-400">Developer Test Mode is Active</AlertTitle>
+                            <AlertDescription>
+                                You can test the Pro plan features. No real money will be charged during the upgrade process.
+                                <Button variant="link" asChild className="p-0 h-auto ml-1 font-bold text-amber-600 dark:text-amber-400 hover:text-amber-500 dark:hover:text-amber-200">
+                                    <Link href="/pricing">
+                                        Test the Upgrade Flow <ArrowRight className="w-4 h-4 ml-1" />
+                                    </Link>
+                                </Button>
+                            </AlertDescription>
+                        </Alert>
+                    )}
+                    
+                     {isFreeUser && paymentMode !== 'test' && (
                         <Alert className="mt-4 border-accent/50 bg-accent/5 text-accent-foreground shadow-md w-full">
                             <Star className="h-4 w-4 text-accent" />
                             <AlertTitle className="font-bold text-accent">Unlock Your Brand's Full Potential</AlertTitle>
@@ -296,5 +327,7 @@ function RecentItemCard({ type, content, imageUrl }: { type: 'Image' | 'Social P
         </Card>
     );
 }
+
+    
 
     
