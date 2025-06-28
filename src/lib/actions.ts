@@ -793,6 +793,14 @@ export async function handleCreateSubscriptionAction(
   const planId = formData.get('planId') as string;
   const userId = formData.get('userId') as string;
   const currency = formData.get('currency') as 'USD' | 'INR';
+  
+  const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+  if (!keyId || !keySecret) {
+    console.error("Razorpay API keys are not configured correctly in environment variables. NEXT_PUBLIC_RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET is missing.");
+    return { error: "Payment gateway is not configured correctly. Please contact support." };
+  }
 
   if (!planId || !userId || !currency) {
     return { error: "Plan, user ID, and currency are required to create a subscription." };
@@ -811,8 +819,8 @@ export async function handleCreateSubscriptionAction(
 
   try {
     const razorpay = new Razorpay({
-      key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
-      key_secret: process.env.RAZORPAY_KEY_SECRET!,
+      key_id: keyId,
+      key_secret: keySecret,
     });
 
     const options = {
@@ -841,8 +849,9 @@ export async function handleCreateSubscriptionAction(
     };
 
   } catch (e: any) {
-    console.error("Error creating Razorpay order:", e);
-    return { error: `Failed to create subscription order: ${e.message || "Unknown error"}` };
+    console.error("Error creating Razorpay order:", JSON.stringify(e, null, 2));
+    const errorMessage = e?.error?.description || e.message || "An unexpected error occurred with the payment gateway.";
+    return { error: `Failed to create subscription order: ${errorMessage}` };
   }
 }
 
