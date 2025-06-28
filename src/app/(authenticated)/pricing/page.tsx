@@ -194,18 +194,30 @@ export default function PricingPage() {
     }, [subscriptionState, currentUser, paymentMode]);
 
     useEffect(() => {
-        if (verifyState.data?.success) {
+        // Define an async function to handle the successful payment verification
+        const handleSuccess = async () => {
             toast({ title: 'Payment Verified!', description: 'Your plan has been upgraded to Premium.' });
-            queryClient.invalidateQueries({ queryKey: ['brandData', currentUser?.uid] });
+            
+            // Invalidate the query to force a refetch of the user's brand data.
+            // await this call to ensure the refetch completes before navigating.
+            await queryClient.invalidateQueries({ queryKey: ['brandData', currentUser?.uid] });
+
+            // Now that the data is fresh, navigate to the dashboard.
             router.push('/dashboard');
-        }
-        if (verifyState.error) {
+        };
+
+        if (verifyState.data?.success) {
+            // Call the async handler
+            handleSuccess();
+        } else if (verifyState.error) {
+            // Handle verification errors
             toast({ title: 'Payment Verification Failed', description: verifyState.error, variant: 'destructive'});
-        }
-        if(verifyState.data || verifyState.error) {
+            setIsProcessing(false);
+        } else if (verifyState.data) {
+             // Handle cases where there might be data but success is not explicitly true
             setIsProcessing(false);
         }
-    }, [verifyState, router, toast, queryClient, currentUser?.uid]);
+    }, [verifyState, currentUser?.uid, queryClient, router, toast]);
 
 
     if (isLoadingGeo || isBrandLoading || paymentMode === 'loading') {
