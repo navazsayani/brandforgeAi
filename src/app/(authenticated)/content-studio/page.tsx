@@ -244,6 +244,7 @@ export default function ContentStudioPage() {
   const [isClearing, setIsClearing] = useState(false);
 
   const [imageState, imageAction] = useActionState(handleGenerateImagesAction, initialImageFormState);
+  const prevImageStateRef = useRef(imageState);
   const [socialState, socialAction] = useActionState(handleGenerateSocialMediaCaptionAction, initialSocialFormState);
   const [blogState, blogAction] = useActionState(handleGenerateBlogContentAction, initialBlogFormState);
   const [describeImageState, describeImageAction] = useActionState(handleDescribeImageAction, initialDescribeImageState);
@@ -425,35 +426,40 @@ export default function ContentStudioPage() {
 
 
   useEffect(() => {
-    if (imageState.data && imageState.data.generatedImages && imageState.data.generatedImages.length > 0) {
-      setSessionLastImageGenerationResult(imageState.data); 
+    // Only run the effect if the imageState object reference has actually changed.
+    if (imageState !== prevImageStateRef.current) {
+      if (imageState.data && imageState.data.generatedImages && imageState.data.generatedImages.length > 0) {
+        setSessionLastImageGenerationResult(imageState.data); 
 
-      const displayableImages = imageState.data.generatedImages.filter(url => url && (url.startsWith('data:') || url.startsWith('image_url:')));
-      if (displayableImages.length > 0) {
-        displayableImages.forEach(url => {
-            const displayUrl = url.startsWith('image_url:') ? url.substring(10) : url;
-            const newImage: GeneratedImage = {
-                id: `${new Date().toISOString()}-${Math.random().toString(36).substring(2, 9)}`,
-                src: displayUrl,
-                prompt: imageState.data?.promptUsed || "",
-                style: selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")
-            };
-            addGeneratedImage(newImage); 
-        });
-          toast({ title: "Success", description: `${displayableImages.length} image(s) processed.` });
-      } else if (imageState.data.generatedImages.some(url => url.startsWith('task_id:'))) {
-        toast({ title: "Freepik Task Started", description: "Freepik image generation task started. Use 'Check Status' to retrieve images." });
-      } else if (!imageState.data.generatedImages || imageState.data.generatedImages.length === 0) {
-        toast({ title: "No Images/Tasks Generated", description: `Received empty list.`, variant: "default" });
+        const displayableImages = imageState.data.generatedImages.filter(url => url && (url.startsWith('data:') || url.startsWith('image_url:')));
+        if (displayableImages.length > 0) {
+          displayableImages.forEach(url => {
+              const displayUrl = url.startsWith('image_url:') ? url.substring(10) : url;
+              const newImage: GeneratedImage = {
+                  id: `${new Date().toISOString()}-${Math.random().toString(36).substring(2, 9)}`,
+                  src: displayUrl,
+                  prompt: imageState.data?.promptUsed || "",
+                  style: selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")
+              };
+              addGeneratedImage(newImage); 
+          });
+            toast({ title: "Success", description: `${displayableImages.length} image(s) processed.` });
+        } else if (imageState.data.generatedImages.some(url => url.startsWith('task_id:'))) {
+          toast({ title: "Freepik Task Started", description: "Freepik image generation task started. Use 'Check Status' to retrieve images." });
+        } else if (!imageState.data.generatedImages || imageState.data.generatedImages.length === 0) {
+          toast({ title: "No Images/Tasks Generated", description: `Received empty list.`, variant: "default" });
+        }
+        setIsPreviewingPrompt(false);
+        setFormSnapshot(null);
       }
-      setIsPreviewingPrompt(false);
-      setFormSnapshot(null);
+      if (imageState.error) {
+        toast({ title: "Error generating images", description: imageState.error, variant: "destructive" });
+        setIsPreviewingPrompt(false);
+        setFormSnapshot(null);
+      }
     }
-    if (imageState.error) {
-      toast({ title: "Error generating images", description: imageState.error, variant: "destructive" });
-      setIsPreviewingPrompt(false);
-      setFormSnapshot(null);
-    }
+    // Always update the ref to the current state for the next render's comparison.
+    prevImageStateRef.current = imageState;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageState, toast, addGeneratedImage, customStyleNotesInput, selectedImageStylePreset, setSessionLastImageGenerationResult]);
 
@@ -2027,4 +2033,5 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     </div>
   );
 }
+
 
