@@ -32,30 +32,50 @@ export async function generateBrandLogo(
 }
 
 const generateLogoPromptText = (input: GenerateBrandLogoInput): string => {
-  let prompt = `Generate a concept for a brand logo.
-Brand Name: "${input.brandName}"
-Brand Description: "${input.brandDescription}"
-{{#if industry}}Industry: {{industry}}{{/if}}
-{{#if targetKeywords}}Keywords: {{targetKeywords}}{{/if}}
+  let prompt = `
+**Task: Generate a professional and modern brand logo.**
 
-The logo should be:
-- Simple, clean, and modern.
-- Memorable and iconic.
-- Visually representative of the brand's essence as described.
-- Suitable for use as a brand identity mark (e.g., on websites, social media, products).
-- Preferably vector-like or easily convertible to a vector format. Avoid overly complex photographic details or textures that would not scale well.
-- Focus on typography, abstract shapes, simple icons, or a combination thereof.
-- If the brand name is short and distinctive, consider a logotype (text-based logo). If it's longer, an abstract mark or icon with the name might be better.
-- Ensure high contrast and readability.
-- The output should be a square image.
-- Do not include any additional explanatory text, only the logo image.
+**Brand Information:**
+- **Brand Name:** "${input.brandName}"
+- **Brand Description:** "${input.brandDescription}"
+{{#if industry}}
+- **Industry:** "{{industry}}"
+{{/if}}
+{{#if targetKeywords}}
+- **Keywords:** "{{targetKeywords}}"
+{{/if}}
+
+**Core Logo Requirements (MUST be followed):**
+- **Style:** Create a **clean, modern, and minimalist** logo. It must be a **vector-style graphic**, suitable for high-resolution use and scaling.
+- **Simplicity:** The design should be iconic and easily recognizable at a small size.
+- **Background:** Generate the logo on a **plain white or transparent background**. This is critical.
+- **Format:** The final output must be a single, square image containing only the logo. **Do NOT include any text, descriptions, or labels like "Logo Concept" in the image itself.**
+
+**What to AVOID (Strictly):**
+- **NO 3D rendering or complex gradients.**
+- **NO photographic elements, shadows, or realistic textures.**
+- **NO overly intricate or busy details.**
+
+**Creative Direction & Concepts:**
+- **Conceptual Link:** The logo should visually represent the brand's core essence. For example, if the brand is about "growth," consider abstract leaf or arrow shapes. If it's about "connectivity," think about nodes or links.
+- **Typography:** If using a logotype (text-based), choose a modern, clean sans-serif font. Consider a unique monogram (e.g., using initials) if the brand name is long.
+- **Color Palette:** Use a simple and professional color palette (2-3 colors maximum) that aligns with the brand's industry and description. Ensure high contrast for readability.
 `;
+  
+  // Refined industry-specific hints
   if (input.industry?.toLowerCase().includes('fashion') || input.brandDescription.toLowerCase().includes('fashion')) {
-    prompt += "\n- For fashion, consider elegance, style, and perhaps a unique monogram or abstract mark.";
+    prompt += "\n- **Industry Hint (Fashion):** Lean towards elegance and sophistication. A stylish monogram, abstract mark, or a refined wordmark would be appropriate.";
   }
   if (input.industry?.toLowerCase().includes('technology') || input.brandDescription.toLowerCase().includes('technology')) {
-    prompt += "\n- For technology, think modern, sleek, perhaps abstract representations of connectivity or innovation.";
+    prompt += "\n- **Industry Hint (Technology):** Emphasize a sleek, modern, and precise feel. Geometric shapes, abstract representations of data, circuits, or connectivity are good starting points.";
   }
+  if (input.industry?.toLowerCase().includes('food') || input.brandDescription.toLowerCase().includes('food')) {
+    prompt += "\n- **Industry Hint (Food & Beverage):** Consider organic shapes, natural elements, or minimalist representations of food/drink items. The feeling should be fresh and appealing.";
+  }
+  if (input.industry?.toLowerCase().includes('health') || input.brandDescription.toLowerCase().includes('health')) {
+    prompt += "\n- **Industry Hint (Health & Wellness):** Focus on clean lines, calming colors, and abstract symbols of balance, nature, or vitality (like a simple leaf, heart, or plus sign).";
+  }
+
   return prompt;
 };
 
@@ -93,9 +113,3 @@ const generateBrandLogoFlow = ai.defineFlow(
     }
   }
 );
-
-
-    
-
-    
-
