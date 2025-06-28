@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useActionState, useMemo, startTransition } from 'react';
@@ -138,6 +139,12 @@ export default function PricingPage() {
                     },
                     theme: {
                         color: '#14706F'
+                    },
+                    modal: {
+                        ondismiss: function() {
+                            setIsProcessing(false);
+                            toast({ title: 'Payment Cancelled', description: 'The subscription process was cancelled.', variant: 'default'});
+                        }
                     }
                 };
 
