@@ -12,6 +12,7 @@ import { generateBlogOutline, type GenerateBlogOutlineInput, type GenerateBlogOu
 import { generateBrandLogo, type GenerateBrandLogoInput, type GenerateBrandLogoOutput } from '@/ai/flows/generate-brand-logo-flow';
 import { enhanceBrandDescription, type EnhanceBrandDescriptionInput, type EnhanceBrandDescriptionOutput } from '@/ai/flows/enhance-brand-description-flow';
 import { generateBrandForgeAppLogo, type GenerateBrandForgeAppLogoOutput } from '@/ai/flows/generate-brandforge-app-logo-flow';
+import { populateImageForm, type PopulateImageFormInput, type PopulateImageFormOutput } from '@/ai/flows/populate-image-form-flow';
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where, collectionGroup, deleteDoc } from 'firebase/firestore';
@@ -397,6 +398,25 @@ export async function handleEnhanceBrandDescriptionAction(
   } catch (e: any) {
     console.error("Error in handleEnhanceBrandDescriptionAction:", e);
     return { error: `Failed to enhance description: ${e.message || "Unknown error."}` };
+  }
+}
+
+export async function handlePopulateImageFormAction(
+  prevState: FormState<PopulateImageFormOutput>,
+  formData: FormData
+): Promise<FormState<PopulateImageFormOutput>> {
+  const userRequest = formData.get("userRequest") as string;
+  const currentBrandDescription = formData.get("currentBrandDescription") as string;
+  if (!userRequest) {
+    return { error: "Please describe what you want to create." };
+  }
+  try {
+    const input: PopulateImageFormInput = { userRequest, currentBrandDescription };
+    const result = await populateImageForm(input);
+    return { data: result, message: "Form fields populated by AI!" };
+  } catch (e: any) {
+    console.error("Error in handlePopulateImageFormAction:", e);
+    return { error: `Failed to populate form: ${e.message || "Unknown error."}` };
   }
 }
 
@@ -976,3 +996,4 @@ export async function getPaymentMode(): Promise<{ paymentMode: 'live' | 'test', 
     return { paymentMode: 'test', error: `Could not retrieve payment mode configuration.` };
   }
 }
+

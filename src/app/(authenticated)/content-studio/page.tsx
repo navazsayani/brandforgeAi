@@ -19,17 +19,19 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from '@/contexts/AuthContext'; 
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download, Library, Star, Lock } from 'lucide-react';
-import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, type FormState } from '@/lib/actions';
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download, Library, Star, Lock, Sparkles as SparklesIcon } from 'lucide-react';
+import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, handlePopulateImageFormAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage } from '@/types';
 import type { DescribeImageOutput } from "@/ai/flows/describe-image-flow";
 import type { GenerateBlogOutlineOutput } from "@/ai/flows/generate-blog-outline-flow";
 import type { GenerateImagesInput } from '@/ai/flows/generate-images';
+import type { PopulateImageFormOutput } from '@/ai/flows/populate-image-form-flow';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; 
 import { industries, imageStylePresets, freepikImagen3EffectColors, freepikImagen3EffectLightnings, freepikImagen3EffectFramings, freepikImagen3AspectRatios, generalAspectRatios, blogTones, freepikValidStyles } from '@/lib/constants';
 import Link from 'next/link';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 // --- START: Image Grid Fix Components ---
 /**
@@ -202,6 +204,7 @@ const initialBlogFormState: FormState<{ title: string; content: string; tags: st
 const initialDescribeImageState: FormState<DescribeImageOutput> = { error: undefined, data: undefined, message: undefined };
 const initialBlogOutlineState: FormState<GenerateBlogOutlineOutput> = { error: undefined, data: undefined, message: undefined };
 const initialSaveImagesState: FormState<{savedCount: number}> = { error: undefined, data: undefined, message: undefined };
+const initialPopulateFormState: FormState<PopulateImageFormOutput> = { error: undefined, data: undefined, message: undefined };
 const initialFreepikTaskStatusState: FormState<{ status: string; images: string[] | null; taskId: string;}> = { error: undefined, data: undefined, message: undefined, taskId: "" };
 
 const imageGenerationProviders = [
@@ -300,6 +303,11 @@ export default function ContentStudioPage() {
 
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [useExampleImageForGen, setUseExampleImageForGen] = useState<boolean>(true); 
+
+  // AI Quick Start State
+  const [populateFormState, populateFormAction] = useActionState(handlePopulateImageFormAction, initialPopulateFormState);
+  const [isPopulatingForm, setIsPopulatingForm] = useState(false);
+  const [quickStartRequest, setQuickStartRequest] = useState("");
 
   const isPremiumActive = useMemo(() => {
     if (!brandData) return false;
@@ -555,6 +563,22 @@ export default function ContentStudioPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [freepikTaskStatusState, checkingTaskId]); // Added checkingTaskId dependency
+
+    useEffect(() => {
+        setIsPopulatingForm(false);
+        if (populateFormState.data) {
+            const { data } = populateFormState;
+            setImageGenBrandDescription(data.refinedBrandDescription);
+            setSelectedImageStylePreset(data.imageStylePreset);
+            setCustomStyleNotesInput(data.customStyleNotes || "");
+            setImageGenNegativePrompt(data.negativePrompt || "");
+            setSelectedAspectRatio(data.aspectRatio);
+            toast({ title: "Form Populated!", description: "AI has filled out the fields for you. Feel free to adjust them." });
+        }
+        if (populateFormState.error) {
+            toast({ title: "Population Error", description: populateFormState.error, variant: "destructive" });
+        }
+    }, [populateFormState, toast]);
 
 
   const copyToClipboard = (text: string, type: string) => {
@@ -920,28 +944,21 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
         }
 
         if (providerToUse === 'FREEPIK') {
-            const fColorsFromSnapshot = formSnapshot?.freepikStylingColors; 
-            const fColorsInputStrToUse = (isAdmin || isPremiumActive) && fColorsFromSnapshot 
-                ? fColorsFromSnapshot.map(c => c.color).join(',') 
-                : freepikDominantColorsInput;
+            const fColorsInputStrToUse = (isAdmin || isPremiumActive) ? (formSnapshot?.freepikStylingColors?.map(c => c.color).join(',') || "") : freepikDominantColorsInput;
             if (fColorsInputStrToUse) formData.set("freepikDominantColorsInput", fColorsInputStrToUse);
-             else formData.delete("freepikDominantColorsInput");
-
+            else formData.delete("freepikDominantColorsInput");
 
             const fEffectColorToUse = (isAdmin || isPremiumActive) ? (formSnapshot?.freepikEffectColor || freepikEffectColor) : freepikEffectColor;
             if (fEffectColorToUse && fEffectColorToUse !== "none") formData.set("freepikEffectColor", fEffectColorToUse);
              else formData.delete("freepikEffectColor");
 
-
             const fEffectLightningToUse = (isAdmin || isPremiumActive) ? (formSnapshot?.freepikEffectLightning || freepikEffectLightning) : freepikEffectLightning;
             if (fEffectLightningToUse && fEffectLightningToUse !== "none") formData.set("freepikEffectLightning", fEffectLightningToUse);
             else formData.delete("freepikEffectLightning");
 
-
             const fEffectFramingToUse = (isAdmin || isPremiumActive) ? (formSnapshot?.freepikEffectFraming || freepikEffectFraming) : freepikEffectFraming;
             if (fEffectFramingToUse && fEffectFramingToUse !== "none") formData.set("freepikEffectFraming", fEffectFramingToUse);
             else formData.delete("freepikEffectFraming");
-
         }
                 
         imageAction(formData);
@@ -966,6 +983,20 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
         blogOutlineAction(formData);
     });
   };
+
+  const handleQuickStartSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!quickStartRequest.trim()) {
+            toast({ title: "Empty Request", description: "Please describe what you want to create.", variant: "default" });
+            return;
+        }
+        setIsPopulatingForm(true);
+        const formData = new FormData(event.currentTarget);
+        formData.append("currentBrandDescription", imageGenBrandDescription);
+        startTransition(() => {
+            populateFormAction(formData);
+        });
+    };
 
   const handleSocialSubmit = async (formData: FormData) => {
     let imageSrc = formData.get("selectedImageSrcForSocialPost") as string | null;
@@ -1114,6 +1145,31 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
               <p className="text-sm text-muted-foreground">Create unique images. Uses brand description and style. Optionally use an example image from your Brand Profile.</p>
                 {lastUsedImageProvider && <p className="text-xs text-primary mt-1">Image(s) last generated using: {lastUsedImageProvider}</p>}
             </CardHeader>
+            <Accordion type="single" collapsible className="w-full px-6">
+                <AccordionItem value="item-1">
+                    <AccordionTrigger className="hover:no-underline -mx-2 px-2 rounded-md hover:bg-accent">
+                        <div className="flex items-center gap-2">
+                           <SparklesIcon className="w-5 h-5 text-accent-foreground/80" />
+                            <span className="font-semibold text-md">AI Quick Start</span>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                        <form onSubmit={handleQuickStartSubmit} className="pt-4">
+                            <Label htmlFor="quickStartRequest" className="mb-2 block">Don't know where to start? Just describe what you want, and AI will fill out the form for you.</Label>
+                            <Textarea
+                                id="quickStartRequest"
+                                name="userRequest"
+                                value={quickStartRequest}
+                                onChange={(e) => setQuickStartRequest(e.target.value)}
+                                placeholder="e.g., a professional photo of my new shoe for an instagram post"
+                            />
+                            <SubmitButton className="mt-3" loadingText="Populating..." disabled={isPopulatingForm || !quickStartRequest}>
+                                Populate Form Fields
+                            </SubmitButton>
+                        </form>
+                    </AccordionContent>
+                </AccordionItem>
+            </Accordion>
             {(isAdmin) && isPreviewingPrompt ? (
               <form onSubmit={handleImageGenerationSubmit}>
                 <CardContent className="space-y-6">
@@ -1300,7 +1356,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                     />
                   </div>
                   
-                  {selectedImageProvider === 'FREEPIK' && (isAdmin || isPremiumActive) && ( 
+                  {selectedImageProvider === 'FREEPIK' && (isPremiumActive || isAdmin) && ( 
                       <>
                           <div className="pt-4 mt-4 border-t">
                               <h4 className="text-md font-semibold mb-3 text-primary flex items-center"><Paintbrush className="w-5 h-5 mr-2"/>Freepik Specific Styling (imagen3 model)</h4>
@@ -1971,3 +2027,4 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     </div>
   );
 }
+
