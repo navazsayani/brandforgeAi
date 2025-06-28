@@ -697,17 +697,29 @@ export async function handleUpdateUserPlanByAdminAction(
 
   try {
     const brandProfileRef = doc(db, 'users', userId, 'brandProfiles', userId);
-    
     const updateData: Partial<BrandData> = { plan: newPlan };
-    
+
     if (newPlan === 'premium') {
+      // If a specific end date is provided from the calendar, use it.
       if (newEndDateStr) {
         updateData.subscriptionEndDate = new Date(newEndDateStr);
       } else {
-        // If no date is provided for premium, default to 30 days from now
-        const newEndDate = new Date();
-        newEndDate.setDate(newEndDate.getDate() + 30);
-        updateData.subscriptionEndDate = newEndDate;
+        // If no date is provided, check if we need to set a new one.
+        // This handles upgrading from free or renewing an expired sub.
+        const profileSnap = await getDoc(brandProfileRef);
+        const currentData = profileSnap.data() as BrandData | undefined;
+        const currentEndDate = currentData?.subscriptionEndDate?.toDate
+          ? currentData.subscriptionEndDate.toDate()
+          : currentData?.subscriptionEndDate
+          ? new Date(currentData.subscriptionEndDate)
+          : null;
+
+        if (!currentEndDate || currentEndDate <= new Date()) {
+          const newEndDate = new Date();
+          newEndDate.setDate(newEndDate.getDate() + 30);
+          updateData.subscriptionEndDate = newEndDate;
+        }
+        // If there's already a valid, future end date, we don't overwrite it unless a new date was explicitly provided.
       }
     } else { // 'free' plan
       updateData.subscriptionEndDate = null;

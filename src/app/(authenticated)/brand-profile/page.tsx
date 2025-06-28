@@ -412,10 +412,16 @@ export default function BrandProfilePage() {
     } else {
         if (finalData.plan === 'free') {
             finalData.subscriptionEndDate = null;
-        } else if (finalData.plan === 'premium' && !finalData.subscriptionEndDate) {
-            const newEndDate = new Date();
-            newEndDate.setDate(newEndDate.getDate() + 30);
-            finalData.subscriptionEndDate = newEndDate;
+        } else if (finalData.plan === 'premium') {
+            const currentEndDate = finalData.subscriptionEndDate?.toDate
+                ? finalData.subscriptionEndDate.toDate()
+                : finalData.subscriptionEndDate ? new Date(finalData.subscriptionEndDate) : null;
+            
+            if (!currentEndDate || currentEndDate <= new Date()) {
+                const newEndDate = new Date();
+                newEndDate.setDate(newEndDate.getDate() + 30);
+                finalData.subscriptionEndDate = newEndDate;
+            }
         }
     }
     
