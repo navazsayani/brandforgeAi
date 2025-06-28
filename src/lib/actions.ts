@@ -816,10 +816,6 @@ export async function handleCreateSubscriptionAction(
       return { error: "Selected plan is invalid or has no price." };
   }
   
-  if (currency !== 'INR' && settings.paymentMode === 'live') {
-    return { error: "Only INR payments are supported at this time." };
-  }
-  
   const amountInPaise = parseInt(planDetails.price.amount.replace(/[^0-9]/g, ''), 10) * 100;
 
   try {
@@ -920,5 +916,3 @@ export async function getPaymentMode(): Promise<{ paymentMode: 'live' | 'test', 
     return { paymentMode: 'test', error: `Could not retrieve payment mode configuration.` };
   }
 }
-
-    

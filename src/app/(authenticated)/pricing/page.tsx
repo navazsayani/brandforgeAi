@@ -99,11 +99,6 @@ export default function PricingPage() {
             router.push('/login');
             return;
         }
-
-        if (currency !== 'INR' && paymentMode === 'live') {
-            toast({ title: 'Coming Soon', description: 'International payments will be enabled shortly. Thank you for your patience!', variant: 'default' });
-            return;
-        }
         
         setIsProcessing(true);
         setSelectedPlanId(planId);
