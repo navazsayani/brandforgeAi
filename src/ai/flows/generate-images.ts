@@ -389,7 +389,7 @@ const generateImagesFlow = ai.defineFlow(
                 
                 if (chosenProvider !== 'FREEPIK') { 
                     if (aspectRatio && !finalizedTextPrompt.toLowerCase().includes("aspect ratio")) {
-                      textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally, and the image content itself must fully occupy this ${aspectRatio} frame, without any artificial letterboxing or pillarboxing.`;
+                      textPromptContent += `\n\n**CRITICAL REQUIREMENT**: The generated image *must* have an aspect ratio of exactly **${aspectRatio}**. The entire image canvas must conform to this ratio without any letterboxing or pillarboxing. This is a primary constraint.`;
                     }
                     if (seed !== undefined && !finalizedTextPrompt.toLowerCase().includes("seed:")) {
                       textPromptContent += `\n\nUse seed: ${seed}.`;
@@ -503,7 +503,7 @@ Create a compelling visual that represents: "${brandDescription}"${industryConte
                       textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
                   }
                   if (aspectRatio) { 
-                    textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspectRatio} (e.g., square for 1:1, portrait for 4:5, landscape for 16:9). Ensure the composition fits this ratio naturally, and the image content itself must fully occupy this ${aspectRatio} frame, without any artificial letterboxing or pillarboxing.`;
+                    textPromptContent += `\n\n**CRITICAL REQUIREMENT**: The generated image *must* have an aspect ratio of exactly **${aspectRatio}**. The entire image canvas must conform to this ratio without any letterboxing or pillarboxing. This is a primary constraint.`;
                   }
                   if (seed !== undefined) { 
                     textPromptContent += `\n\nUse seed: ${seed}.`;

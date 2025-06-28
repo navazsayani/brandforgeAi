@@ -146,7 +146,7 @@ const ImageGridItem = ({
   };
 
   return (
-    <div className="relative group aspect-square overflow-hidden rounded-md border bg-muted">
+    <div className="relative group w-full overflow-hidden rounded-md border bg-muted aspect-video">
       {isDisplayableImage ? (
         <>
           <NextImage
@@ -154,7 +154,7 @@ const ImageGridItem = ({
             alt={`Generated brand image ${index + 1}`}
             fill
             sizes="(max-width: 639px) 90vw, (max-width: 767px) 45vw, (max-width: 1023px) 30vw, 23vw"
-            style={{objectFit: 'cover', objectPosition: 'center'}}
+            style={{objectFit: 'contain', objectPosition: 'center'}}
             data-ai-hint="brand marketing"
             className="transition-opacity duration-300 opacity-100 group-hover:opacity-80"
           />
@@ -169,7 +169,7 @@ const ImageGridItem = ({
           </Button>
         </>
       ) : isTaskId ? (
-        <div className="flex flex-col items-center justify-center h-full text-xs text-muted-foreground p-2 text-center aspect-square">
+        <div className="flex flex-col items-center justify-center h-full text-xs text-muted-foreground p-2 text-center">
           <Loader2 className="w-6 h-6 animate-spin mb-2" />
           Freepik image task pending. <br/> Task ID: {url.substring(8).substring(0,8)}...
           <Button
@@ -184,7 +184,7 @@ const ImageGridItem = ({
           </Button>
         </div>
       ) : (
-        <div className="flex items-center justify-center h-full text-xs text-muted-foreground aspect-square">
+        <div className="flex items-center justify-center h-full text-xs text-muted-foreground">
           Image not available
         </div>
       )}
@@ -834,7 +834,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
             textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negPrompt}.`;
         }
         if (aspect) {
-            textPromptContent += `\n\nThe final image should have an aspect ratio of ${aspect}. Ensure the composition fits this ratio naturally, and the image content itself must fully occupy this ${aspect} frame, without any artificial letterboxing or pillarboxing.`;
+            textPromptContent += `\n\n**CRITICAL REQUIREMENT**: The generated image *must* have an aspect ratio of exactly **${aspect}**. The entire image canvas must conform to this ratio without any letterboxing or pillarboxing. This is a primary constraint.`;
         }
         if (seedValue !== undefined) {
             textPromptContent += `\n\nUse seed: ${seedValue}.`;
