@@ -45,6 +45,7 @@ const defaultEmptyBrandData: BrandData = {
     brandLogoUrl: "", // Changed from undefined to empty string to prevent Firestore errors
     plan: 'free',
     userEmail: "",
+    subscriptionEndDate: null,
 };
 
 export const BrandProvider = ({ children }: { children: ReactNode }) => {
@@ -78,6 +79,9 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
       }
       if (!dataToSave.plan || !['free', 'premium'].includes(dataToSave.plan)) {
         dataToSave.plan = 'free';
+      }
+       if (dataToSave.plan === 'free') {
+        dataToSave.subscriptionEndDate = null;
       }
 
       if (currentUser && userIdToSaveFor === currentUser.uid && currentUser.email) {
@@ -160,6 +164,16 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
             needsSave = true; 
         }
 
+        if (normalizedData.plan === 'premium' && normalizedData.subscriptionEndDate) {
+            const endDate = (normalizedData.subscriptionEndDate as any).toDate();
+            if (new Date() > endDate) {
+                // Subscription has expired, downgrade to free
+                normalizedData.plan = 'free';
+                normalizedData.subscriptionEndDate = null;
+                needsSave = true;
+            }
+        }
+
         setBrandDataState(normalizedData);
 
         if (needsSave) {
@@ -168,7 +182,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         }
       } else {
         isNewUserSetupFlow = true; // This is a new user setup
-        const defaultWithEmail = { ...defaultEmptyBrandData, userEmail: currentUser.email || "" };
+        const defaultWithEmail = { ...defaultEmptyBrandData, userEmail: currentUser.email || "", subscriptionEndDate: null };
         setBrandDataState(defaultWithEmail);
         await setBrandDataCB(defaultWithEmail, userId);
       }
@@ -178,7 +192,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
       if (isNewUserSetupFlow) {
         console.error("Non-critical error during initial brand profile setup:", e);
         // Fallback to a clean default state without showing an error to the user
-        setBrandDataState({ ...defaultEmptyBrandData, userEmail: currentUser?.email || "" });
+        setBrandDataState({ ...defaultEmptyBrandData, userEmail: currentUser?.email || "", subscriptionEndDate: null });
       } else {
         // For existing users, an error fetching data is more critical.
         console.error("Error fetching brand data from Firestore:", e);
@@ -190,7 +204,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
           specificError = "Database permission error. Please check your Firestore security rules in the Firebase console.";
         }
         setError(specificError);
-        setBrandDataState({ ...defaultEmptyBrandData, userEmail: currentUser?.email || "" });
+        setBrandDataState({ ...defaultEmptyBrandData, userEmail: currentUser?.email || "", subscriptionEndDate: null });
       }
     } finally {
       setIsLoading(false);

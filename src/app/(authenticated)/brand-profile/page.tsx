@@ -49,6 +49,7 @@ const brandProfileSchema = z.object({
   ]).optional(),
   plan: z.enum(['free', 'premium']).optional(),
   userEmail: z.string().email().optional().or(z.literal('')),
+  subscriptionEndDate: z.any().optional(),
 });
 
 type BrandProfileFormData = z.infer<typeof brandProfileSchema>;
@@ -64,6 +65,7 @@ const defaultFormValues: BrandProfileFormData = {
   brandLogoUrl: "",
   plan: 'free',
   userEmail: "",
+  subscriptionEndDate: null,
 };
 
 const initialExtractState: ExtractFormState<{ brandDescription: string; targetKeywords: string; }> = { error: undefined, data: undefined, message: undefined };
@@ -103,7 +105,15 @@ export default function BrandProfilePage() {
 
   const currentProfileBeingEdited = isAdmin && adminTargetUserId && adminLoadedProfileData ? adminLoadedProfileData : contextBrandData;
   const effectiveUserIdForStorage = isAdmin && adminTargetUserId ? adminTargetUserId : currentUser?.uid;
-  
+
+  const isPremiumActive = useMemo(() => {
+    if (!currentProfileBeingEdited) return false;
+    const { plan, subscriptionEndDate } = currentProfileBeingEdited;
+    if (plan !== 'premium' || !subscriptionEndDate) return false;
+    const endDate = subscriptionEndDate.toDate ? subscriptionEndDate.toDate() : new Date(subscriptionEndDate);
+    return endDate > new Date();
+  }, [currentProfileBeingEdited]);
+
   const formValues = useMemo(() => {
     const dataToUse = currentProfileBeingEdited || defaultFormValues;
     const currentData = {
@@ -113,11 +123,11 @@ export default function BrandProfilePage() {
         plan: (dataToUse.plan && ['free', 'premium'].includes(dataToUse.plan)) ? dataToUse.plan : 'free',
         userEmail: dataToUse.userEmail || (currentUser?.email && dataToUse === contextBrandData ? currentUser.email : ""),
     };
-     const currentMaxImages = currentData.plan === 'premium' ? MAX_IMAGES_PREMIUM : MAX_IMAGES_FREE;
+    const currentMaxImages = isPremiumActive ? MAX_IMAGES_PREMIUM : MAX_IMAGES_FREE;
     currentData.exampleImages = Array.isArray(currentData.exampleImages) ? currentData.exampleImages.slice(0, currentMaxImages) : [];
     
     return currentData;
-  }, [currentProfileBeingEdited, currentUser, contextBrandData]);
+  }, [currentProfileBeingEdited, currentUser, contextBrandData, isPremiumActive]);
   
 
   const form = useForm<BrandProfileFormData>({
@@ -126,7 +136,7 @@ export default function BrandProfilePage() {
   });
   
   const watchedPlan = form.watch('plan');
-  const maxImagesAllowed = watchedPlan === 'premium' ? MAX_IMAGES_PREMIUM : MAX_IMAGES_FREE;
+  const maxImagesAllowed = isPremiumActive ? MAX_IMAGES_PREMIUM : MAX_IMAGES_FREE;
 
   // This useEffect handles UI side-effects when the form data changes
   useEffect(() => {
@@ -220,9 +230,11 @@ export default function BrandProfilePage() {
       const targetUserDocRef = doc(db, "users", uidToLoad, "brandProfiles", uidToLoad);
       const docSnap = await getDoc(targetUserDocRef);
       if (docSnap.exists()) {
-        setAdminLoadedProfileData(docSnap.data() as BrandData);
+        const data = docSnap.data() as BrandData;
+        setAdminLoadedProfileData(data);
         setAdminTargetUserId(uidToLoad);
-        toast({ title: "Profile Loaded", description: `Displaying profile for User: ${docSnap.data()?.userEmail || uidToLoad.substring(0,8)}...` });
+        form.reset(data); // reset form with loaded data
+        toast({ title: "Profile Loaded", description: `Displaying profile for User: ${data?.userEmail || uidToLoad.substring(0,8)}...` });
       } else {
         toast({ title: "Not Found", description: `No profile found for User ID: ${uidToLoad}`, variant: "destructive" });
         setAdminTargetUserId("");
@@ -251,7 +263,8 @@ export default function BrandProfilePage() {
   const handleAdminLoadMyProfile = () => {
       setAdminTargetUserId("");
       setAdminLoadedProfileData(null);
-      setAdminSelectedUserIdFromDropdown(""); 
+      setAdminSelectedUserIdFromDropdown("");
+      form.reset(contextBrandData || defaultFormValues);
       toast({ title: "My Profile", description: "Displaying your own brand profile." });
   };
 
@@ -286,9 +299,8 @@ export default function BrandProfilePage() {
     if (industry) formData.append("industry", industry);
     if (targetKeywords) formData.append("targetKeywords", targetKeywords);
     if (effectiveUserIdForStorage) formData.append("userId", effectiveUserIdForStorage);
-    // Add userEmail if creating logo for own profile, or if admin is creating for user and email is known
-    const profileBeingEdited = isAdmin && adminTargetUserId && adminLoadedProfileData ? adminLoadedProfileData : contextBrandData;
-    const emailForLogoAction = profileBeingEdited?.userEmail || (currentUser?.uid === effectiveUserIdForStorage ? currentUser?.email : undefined);
+    
+    const emailForLogoAction = currentProfileBeingEdited?.userEmail || (currentUser?.uid === effectiveUserIdForStorage ? currentUser?.email : undefined);
     if (emailForLogoAction) formData.append("userEmail", emailForLogoAction);
 
 
@@ -330,7 +342,7 @@ export default function BrandProfilePage() {
       if (currentSavedImages.length + files.length > maxImagesAllowed) {
         toast({
           title: "Limit Exceeded",
-          description: `Plan (${watchedPlan || 'free'}) allows ${maxImagesAllowed} images. Have ${currentSavedImages.length}, tried to add ${files.length}.`,
+          description: `Plan allows ${maxImagesAllowed} images. Have ${currentSavedImages.length}, tried to add ${files.length}.`,
           variant: "destructive",
         });
         if (fileInputRef.current) fileInputRef.current.value = "";
@@ -394,10 +406,17 @@ export default function BrandProfilePage() {
       return;
     }
 
-    // This logic is now handled in the form display itself.
-    // However, it's good to keep it here as a final safeguard.
     if (!isAdmin) {
       finalData.plan = currentProfileBeingEdited?.plan || 'free';
+      finalData.subscriptionEndDate = currentProfileBeingEdited?.subscriptionEndDate || null;
+    } else {
+        if (finalData.plan === 'free') {
+            finalData.subscriptionEndDate = null;
+        } else if (finalData.plan === 'premium' && !finalData.subscriptionEndDate) {
+            const newEndDate = new Date();
+            newEndDate.setDate(newEndDate.getDate() + 30);
+            finalData.subscriptionEndDate = newEndDate;
+        }
     }
     
     const currentImages = finalData.exampleImages || [];
@@ -633,11 +652,11 @@ export default function BrandProfilePage() {
                   <FormItem>
                     <FormLabel className="flex items-center text-base"><Star className="w-5 h-5 mr-2 text-primary"/>Subscription Plan</FormLabel>
                     <Input
-                      value={currentProfileBeingEdited?.plan || 'free'}
+                      value={`${isPremiumActive ? 'Premium' : 'Free'} ${currentProfileBeingEdited?.subscriptionEndDate ? `(Expires: ${currentProfileBeingEdited.subscriptionEndDate.toDate().toLocaleDateString()})` : ''}`}
                       disabled
                       className="capitalize"
                     />
-                    <FormDescription>Your plan is managed by the subscription system.</FormDescription>
+                    <FormDescription>Your plan is managed from the Pricing page.</FormDescription>
                   </FormItem>
                 )}
 
@@ -675,7 +694,7 @@ export default function BrandProfilePage() {
                 />
                 <FormItem>
                   <FormLabel className="flex items-center text-base"><UploadCloud className="w-5 h-5 mr-2 text-primary"/>Example Images</FormLabel>
-                  <FormDescription>Plan ({(watchedPlan || 'free')}) allows {maxImagesAllowed} images. Current: {(form.getValues("exampleImages")?.length || 0)}/{maxImagesAllowed}.</FormDescription>
+                  <FormDescription>Plan allows {maxImagesAllowed} images. Current: {(form.getValues("exampleImages")?.length || 0)}/{maxImagesAllowed}.</FormDescription>
                   <FormControl>
                     <div className="flex items-center justify-center w-full">
                       <Label htmlFor="dropzone-file" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer border-border bg-card hover:bg-secondary ${isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || !canUploadMoreImages ? 'opacity-50 cursor-not-allowed' : ''}`}>
@@ -692,7 +711,7 @@ export default function BrandProfilePage() {
                   </FormControl>
                   {isUploading && <Progress value={uploadProgress} className="w-full h-2 mt-2" />}
                   <FormField control={form.control} name="exampleImages" render={() => <FormMessage />} />
-                  {!canUploadMoreImages && !isUploading && <p className="text-xs text-destructive mt-1">Max {maxImagesAllowed} images for {watchedPlan || 'free'} plan.</p>}
+                  {!canUploadMoreImages && !isUploading && <p className="text-xs text-destructive mt-1">Max {maxImagesAllowed} images for your current plan.</p>}
                 </FormItem>
                 {previewImages.length > 0 && (
                   <div className="mt-2 space-y-3">

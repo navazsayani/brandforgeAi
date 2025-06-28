@@ -10,9 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Edit3, TrendingUp, Send, Sparkles, Star, ShieldCheck, Paintbrush, FileText, Image as ImageIconLucide, Eye } from 'lucide-react';
+import { ArrowRight, Edit3, TrendingUp, Send, Sparkles, Star, ShieldCheck, Paintbrush, FileText, Image as ImageIconLucide, Eye, AlertCircle, RefreshCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
+import type { BrandData, GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 export default function DashboardPage() {
@@ -53,16 +54,10 @@ export default function DashboardPage() {
     );
 }
 
-function GreetingCard({ isLoading, brandData }: { isLoading: boolean; brandData: any }) {
+function GreetingCard({ isLoading, brandData }: { isLoading: boolean; brandData: BrandData | null }) {
     const { currentUser } = useAuth();
     const isAdmin = currentUser?.email === 'admin@brandforge.ai';
-    const plan = isAdmin ? 'Admin' : brandData?.plan || 'free';
-    const brandName = brandData?.brandName;
     const isProfileComplete = brandData?.brandDescription && brandData?.brandName;
-    
-    const primaryAction = isProfileComplete
-      ? { href: "/content-studio", label: "Create New Content" }
-      : { href: "/brand-profile", label: "Complete Your Brand Profile" };
 
     if (isLoading) {
         return (
@@ -78,6 +73,19 @@ function GreetingCard({ isLoading, brandData }: { isLoading: boolean; brandData:
             </Card>
         );
     }
+    
+    const { plan, subscriptionEndDate } = brandData || {};
+    const brandName = brandData?.brandName;
+    const endDate = subscriptionEndDate?.toDate ? subscriptionEndDate.toDate() : null;
+    const now = new Date();
+    const isPremiumActive = plan === 'premium' && endDate && endDate > now;
+    const daysRemaining = endDate ? Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+    
+    let planLabel = isAdmin ? 'Admin' : (isPremiumActive ? 'Premium' : 'Free');
+    
+    const primaryAction = isProfileComplete
+      ? { href: "/content-studio", label: "Create New Content" }
+      : { href: "/brand-profile", label: "Complete Your Brand Profile" };
 
     return (
         <Card className="card-enhanced w-full overflow-hidden">
@@ -99,9 +107,9 @@ function GreetingCard({ isLoading, brandData }: { isLoading: boolean; brandData:
                     </div>
                     <div className="flex-1 flex flex-col items-center md:items-start gap-4">
                         <div className="w-full text-center md:text-left min-w-0">
-                            <Badge variant={isAdmin ? 'destructive' : (plan === 'premium' ? 'default' : 'secondary')} className="mb-2">
+                            <Badge variant={isAdmin ? 'destructive' : (isPremiumActive ? 'default' : 'secondary')} className="mb-2">
                                {isAdmin ? <ShieldCheck className="w-4 h-4 mr-1.5" /> : <Star className="w-4 h-4 mr-1.5" />}
-                               {plan.charAt(0).toUpperCase() + plan.slice(1)}
+                               {planLabel}
                             </Badge>
                             <h1 className="text-2xl md:text-3xl font-bold text-balance">
                                 Welcome back, {brandName || 'to BrandForge AI'}!
@@ -110,10 +118,32 @@ function GreetingCard({ isLoading, brandData }: { isLoading: boolean; brandData:
                                 Ready to create something amazing for your brand today?
                             </p>
                         </div>
+
+                        {isPremiumActive && daysRemaining <= 7 && (
+                           <Alert variant="destructive" className="bg-amber-500/10 border-amber-500/50 text-amber-700 dark:text-amber-300 w-full">
+                                <AlertCircle className="h-4 w-4 !text-amber-500" />
+                                <AlertTitle className="font-semibold">Subscription Expiring Soon</AlertTitle>
+                                <AlertDescription>
+                                    Your Pro plan will expire in {daysRemaining} day{daysRemaining > 1 ? 's' : ''}. 
+                                    <Link href="/pricing" className="font-bold underline ml-1 hover:text-amber-600 dark:hover:text-amber-200">Renew now</Link> to maintain access.
+                                </AlertDescription>
+                            </Alert>
+                        )}
+
+                        {!isPremiumActive && plan === 'premium' && (
+                             <Alert variant="destructive" className="w-full">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertTitle>Your Pro Plan Has Expired</AlertTitle>
+                                <AlertDescription>
+                                    Your access to premium features has ended. 
+                                    <Link href="/pricing" className="font-bold underline ml-1">Renew your subscription</Link> to continue.
+                                </AlertDescription>
+                            </Alert>
+                        )}
+
                         <Link href={primaryAction.href} passHref className="w-full md:w-auto">
                              <Button size="lg" className="w-full md:w-auto btn-gradient-primary touch-target">
-                               {primaryAction.label}
-                                <ArrowRight className="w-5 h-5 ml-2" />
+                               {!isPremiumActive && plan === 'premium' ? (<><RefreshCcw className="w-5 h-5 mr-2" /> Renew and Create</>) : (<>{primaryAction.label} <ArrowRight className="w-5 h-5 ml-2" /></>)}
                              </Button>
                         </Link>
                     </div>

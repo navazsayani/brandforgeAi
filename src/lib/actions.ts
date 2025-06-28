@@ -69,6 +69,7 @@ async function ensureUserBrandProfileDocExists(userId: string, userEmail?: strin
       brandLogoUrl: "",
       plan: 'free',
       userEmail: userEmail || "",
+      subscriptionEndDate: null,
     };
     await setDoc(brandProfileDocRef, initialProfileData);
     console.log(`[ensureUserBrandProfileDocExists] Successfully created brand profile document for user ${userId}.`);
@@ -800,7 +801,13 @@ export async function handleVerifyPaymentAction(
     if (expectedSignature === razorpay_signature) {
       // Payment is legit. Update user's plan in Firestore.
       const brandDocRef = doc(db, 'users', userId, 'brandProfiles', userId);
-      await setDoc(brandDocRef, { plan: 'premium' }, { merge: true });
+      const subscriptionEndDate = new Date();
+      subscriptionEndDate.setDate(subscriptionEndDate.getDate() + 30); // Set expiry to 30 days from now
+
+      await setDoc(brandDocRef, { 
+        plan: 'premium',
+        subscriptionEndDate: subscriptionEndDate 
+      }, { merge: true });
       
       return { data: { success: true }, message: 'Payment verified and plan updated.' };
     } else {

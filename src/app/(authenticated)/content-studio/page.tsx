@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useActionState, startTransition, useRef } from 'react';
+import React, { useState, useEffect, useActionState, startTransition, useRef, useMemo } from 'react';
 import NextImage from 'next/image';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/lib/firebaseConfig'; 
@@ -235,6 +235,8 @@ export default function ContentStudioPage() {
 
   const [imageTabKey, setImageTabKey] = useState(Date.now());
   const [activeTab, setActiveTab] = useState<string>("image");
+  
+  const [isClearing, setIsClearing] = useState(false);
 
   const [imageState, imageAction] = useActionState(handleGenerateImagesAction, initialImageFormState);
   const [socialState, socialAction] = useActionState(handleGenerateSocialMediaCaptionAction, initialSocialFormState);
@@ -297,7 +299,13 @@ export default function ContentStudioPage() {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [useExampleImageForGen, setUseExampleImageForGen] = useState<boolean>(true); 
 
-  const currentPlan = brandData?.plan || 'free';
+  const isPremiumActive = useMemo(() => {
+    if (!brandData) return false;
+    const { plan, subscriptionEndDate } = brandData;
+    if (plan !== 'premium' || !subscriptionEndDate) return false;
+    const endDate = subscriptionEndDate.toDate ? subscriptionEndDate.toDate() : new Date(subscriptionEndDate);
+    return endDate > new Date();
+  }, [brandData]);
 
   const { 
     data: savedLibraryImages = [], 
@@ -353,7 +361,7 @@ export default function ContentStudioPage() {
         }
 
         const currentNumImages = parseInt(numberOfImagesToGenerate, 10);
-        if (currentPlan === 'free' && currentNumImages > 1 && !isAdmin) {
+        if (!isPremiumActive && currentNumImages > 1 && !isAdmin) {
             setNumberOfImagesToGenerate("1");
         }
 
@@ -366,7 +374,7 @@ export default function ContentStudioPage() {
         if (!isAdmin) setSelectedImageProvider('GEMINI'); 
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brandData, useImageForSocialPost, socialImageChoice, sessionLastImageGenerationResult, savedLibraryImages, numberOfImagesToGenerate, currentPlan, isAdmin]);
+  }, [brandData, useImageForSocialPost, socialImageChoice, sessionLastImageGenerationResult, savedLibraryImages, numberOfImagesToGenerate, isPremiumActive, isAdmin]);
 
 
   useEffect(() => {
@@ -379,7 +387,7 @@ export default function ContentStudioPage() {
   }, [currentUser]);
 
   useEffect(() => {
-    if (selectedImageProvider === 'FREEPIK' && (isAdmin || currentPlan === 'premium')) { 
+    if (selectedImageProvider === 'FREEPIK' && (isAdmin || isPremiumActive)) { 
       setCurrentAspectRatioOptions(freepikImagen3AspectRatios);
       if (!freepikImagen3AspectRatios.find(ar => ar.value === selectedAspectRatio)) {
         setSelectedAspectRatio(freepikImagen3AspectRatios[0].value);
@@ -390,7 +398,7 @@ export default function ContentStudioPage() {
         setSelectedAspectRatio(generalAspectRatios[0].value);
       }
     }
-  }, [selectedImageProvider, selectedAspectRatio, isAdmin, currentPlan]); 
+  }, [selectedImageProvider, selectedAspectRatio, isAdmin, isPremiumActive]); 
 
 
   useEffect(() => {
@@ -555,11 +563,13 @@ export default function ContentStudioPage() {
   };
 
  const handleClearGeneratedImages = () => {
+    setIsClearing(true);
     setSessionLastImageGenerationResult(null); 
     setFormSnapshot(null);
     setIsPreviewingPrompt(false);
     setCurrentTextPromptForEditing("");
     setImageTabKey(Date.now());
+    setTimeout(() => setIsClearing(false), 100); 
   };
 
   const handleSaveAllGeneratedImages = async () => {
@@ -587,8 +597,6 @@ export default function ContentStudioPage() {
     
     try {
         const compressedImages = await Promise.all(saveableImages.map(async (image) => {
-            // ALWAYS compress if it's a data URI.
-            // This converts potentially large PNGs from generation into more efficient JPEGs.
             if (image.dataUri.startsWith('data:image')) {
                 try {
                     const compressedUri = await new Promise<string>((resolve, reject) => {
@@ -613,7 +621,6 @@ export default function ContentStudioPage() {
                             canvas.width = width;
                             canvas.height = height;
                             ctx?.drawImage(img, 0, 0, width, height);
-                            // Use JPEG for better compression of photographic images from AI
                             resolve(canvas.toDataURL('image/jpeg', 0.8)); 
                         };
                         img.onerror = reject;
@@ -622,10 +629,9 @@ export default function ContentStudioPage() {
                     return { ...image, dataUri: compressedUri };
                 } catch (compressionError) {
                     console.warn("Could not compress image, using original:", compressionError);
-                    return image; // Fallback to original if compression fails
+                    return image;
                 }
             }
-            // If it's already a URL (like from Freepik or already saved), just pass it through.
             return image;
         }));
 
@@ -879,7 +885,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
 
         formData.append("finalizedTextPrompt", currentTextPromptForEditing || ""); 
 
-        const providerToUse = (isAdmin || currentPlan === 'premium') ? (formSnapshot?.provider || selectedImageProvider) : 'GEMINI';
+        const providerToUse = (isAdmin || isPremiumActive) ? (formSnapshot?.provider || selectedImageProvider) : 'GEMINI';
         formData.set("provider", providerToUse as string); 
 
         formData.set("brandDescription", String(brandDesc || "")); 
@@ -889,7 +895,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
         
         formData.set("imageStyle", imageStyle);
         
-        const exampleImgToUse = (isAdmin || currentPlan === 'premium') ? formSnapshot?.exampleImage : (useExampleImageForGen && currentExampleImageForGen ? currentExampleImageForGen : undefined);
+        const exampleImgToUse = (isAdmin || isPremiumActive) ? formSnapshot?.exampleImage : (useExampleImageForGen && currentExampleImageForGen ? currentExampleImageForGen : undefined);
         if (typeof exampleImgToUse === 'string' && exampleImgToUse.trim() !== "") {
           formData.set("exampleImage", exampleImgToUse);
         } else {
@@ -899,14 +905,14 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
         formData.set("aspectRatio", formSnapshot?.aspectRatio || selectedAspectRatio); 
         formData.set("numberOfImages", String(formSnapshot?.numberOfImages || parseInt(numberOfImagesToGenerate,10))); 
 
-        const negPromptValue = (isAdmin || currentPlan === 'premium') ? formSnapshot?.negativePrompt : imageGenNegativePrompt; 
+        const negPromptValue = (isAdmin || isPremiumActive) ? formSnapshot?.negativePrompt : imageGenNegativePrompt; 
         if (negPromptValue && negPromptValue.toString().trim() !== "") { 
             formData.set("negativePrompt", negPromptValue.toString()); 
         } else {
             formData.delete("negativePrompt");
         }
 
-        const seedValueNum = (isAdmin || currentPlan === 'premium') ? formSnapshot?.seed : (imageGenSeed && !isNaN(parseInt(imageGenSeed)) ? parseInt(imageGenSeed) : undefined); 
+        const seedValueNum = (isAdmin || isPremiumActive) ? formSnapshot?.seed : (imageGenSeed && !isNaN(parseInt(imageGenSeed)) ? parseInt(imageGenSeed) : undefined); 
         if (seedValueNum !== undefined) {
           formData.set("seed", String(seedValueNum));
         } else {
@@ -915,24 +921,24 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
 
         if (providerToUse === 'FREEPIK') {
             const fColorsFromSnapshot = formSnapshot?.freepikStylingColors; 
-            const fColorsInputStrToUse = (isAdmin || currentPlan === 'premium') && fColorsFromSnapshot 
+            const fColorsInputStrToUse = (isAdmin || isPremiumActive) && fColorsFromSnapshot 
                 ? fColorsFromSnapshot.map(c => c.color).join(',') 
                 : freepikDominantColorsInput;
             if (fColorsInputStrToUse) formData.set("freepikDominantColorsInput", fColorsInputStrToUse);
              else formData.delete("freepikDominantColorsInput");
 
 
-            const fEffectColorToUse = (isAdmin || currentPlan === 'premium') ? (formSnapshot?.freepikEffectColor || freepikEffectColor) : freepikEffectColor;
+            const fEffectColorToUse = (isAdmin || isPremiumActive) ? (formSnapshot?.freepikEffectColor || freepikEffectColor) : freepikEffectColor;
             if (fEffectColorToUse && fEffectColorToUse !== "none") formData.set("freepikEffectColor", fEffectColorToUse);
              else formData.delete("freepikEffectColor");
 
 
-            const fEffectLightningToUse = (isAdmin || currentPlan === 'premium') ? (formSnapshot?.freepikEffectLightning || freepikEffectLightning) : freepikEffectLightning;
+            const fEffectLightningToUse = (isAdmin || isPremiumActive) ? (formSnapshot?.freepikEffectLightning || freepikEffectLightning) : freepikEffectLightning;
             if (fEffectLightningToUse && fEffectLightningToUse !== "none") formData.set("freepikEffectLightning", fEffectLightningToUse);
             else formData.delete("freepikEffectLightning");
 
 
-            const fEffectFramingToUse = (isAdmin || currentPlan === 'premium') ? (formSnapshot?.freepikEffectFraming || freepikEffectFraming) : freepikEffectFraming;
+            const fEffectFramingToUse = (isAdmin || isPremiumActive) ? (formSnapshot?.freepikEffectFraming || freepikEffectFraming) : freepikEffectFraming;
             if (fEffectFramingToUse && fEffectFramingToUse !== "none") formData.set("freepikEffectFraming", fEffectFramingToUse);
             else formData.delete("freepikEffectFraming");
 
@@ -966,7 +972,6 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
 
     if (imageSrc && imageSrc.startsWith('data:')) {
       try {
-        // Always compress data URIs to a web-friendly format before sending to server
         const compressedImageUri = await new Promise<string>((resolve, reject) => {
           const img = new Image();
           img.onload = () => {
@@ -994,7 +999,6 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
             canvas.height = height;
             ctx?.drawImage(img, 0, 0, width, height);
 
-            // Use a high-quality JPEG setting for a good balance
             const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
             resolve(dataUrl);
           };
@@ -1002,8 +1006,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
           img.src = imageSrc as string;
         });
 
-        // Check if even the compressed size is too large (edge case)
-        const MAX_IMAGE_SIZE_BYTES = 950 * 1024; // A safer limit
+        const MAX_IMAGE_SIZE_BYTES = 950 * 1024;
         const compressedSizeInBytes = compressedImageUri.length * 0.75;
         if (compressedSizeInBytes > MAX_IMAGE_SIZE_BYTES) {
           toast({
@@ -1012,7 +1015,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
               variant: "destructive",
               duration: 8000,
           });
-          return; // Stop the submission
+          return; 
         }
         
         formData.set("selectedImageSrcForSocialPost", compressedImageUri);
@@ -1029,7 +1032,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
             variant: "destructive",
             duration: 8000,
         });
-        return; // Stop the submission
+        return; 
       }
     }
     
@@ -1111,7 +1114,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
               <p className="text-sm text-muted-foreground">Create unique images. Uses brand description and style. Optionally use an example image from your Brand Profile.</p>
                 {lastUsedImageProvider && <p className="text-xs text-primary mt-1">Image(s) last generated using: {lastUsedImageProvider}</p>}
             </CardHeader>
-            {(isAdmin || currentPlan === 'premium') && isPreviewingPrompt ? (
+            {(isAdmin || isPremiumActive) && isPreviewingPrompt ? (
               <form onSubmit={handleImageGenerationSubmit}>
                 <CardContent className="space-y-6">
                   <div>
@@ -1130,10 +1133,10 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                   </div>
                 </CardContent>
                 <CardFooter className="flex flex-col sm:flex-row gap-2">
-                  <Button type="button" variant="outline" onClick={() => { setIsPreviewingPrompt(false); setFormSnapshot(null);}} className="w-full sm:w-auto">
+                  <Button type="button" variant="outline" onClick={() => { setIsPreviewingPrompt(false); setFormSnapshot(null);}} className="w-full sm:w-auto" disabled={isClearing}>
                       Back to Edit Fields
                   </Button>
-                  <SubmitButton className="w-full sm:flex-1" loadingText={parseInt(formSnapshot?.numberOfImages?.toString() || "1") > 1 ? "Generating Images..." : "Generating Image..."}>
+                  <SubmitButton className="w-full sm:flex-1" loadingText={parseInt(formSnapshot?.numberOfImages?.toString() || "1") > 1 ? "Generating Images..." : "Generating Image..."} disabled={isClearing}>
                       Generate {parseInt(formSnapshot?.numberOfImages?.toString() || "1") > 1 ? `${formSnapshot?.numberOfImages} Images` : "Image"} with This Prompt
                   </SubmitButton>
                 </CardFooter>
@@ -1141,7 +1144,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
             ) : (
               <form id="imageGenerationFormFields" onSubmit={(e) => {
                   e.preventDefault(); 
-                  if (isAdmin || currentPlan === 'premium') {
+                  if (isAdmin || isPremiumActive) {
                     handlePreviewPromptClick(e as any);
                   } else {
                     handleImageGenerationSubmit(e);
@@ -1162,15 +1165,15 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                     <SelectItem 
                                       key={provider.value} 
                                       value={provider.value} 
-                                      disabled={provider.disabled || (provider.premium && !isAdmin && currentPlan === 'free')}
+                                      disabled={provider.disabled || (provider.premium && !isAdmin && !isPremiumActive)}
                                     >
                                         <div className="flex items-center gap-2">
                                           <span>{provider.label}</span>
                                           {provider.premium && (
-                                            <span className={cn("text-xs flex items-center gap-1", (provider.premium && !isAdmin && currentPlan === 'free') ? "text-muted-foreground" : "text-amber-500")}>
+                                            <span className={cn("text-xs flex items-center gap-1", (provider.premium && !isAdmin && !isPremiumActive) ? "text-muted-foreground" : "text-amber-500")}>
                                                 <Star className="h-3 w-3" />
                                                 Premium
-                                                {!isAdmin && currentPlan === 'free' && <Lock className="h-3 w-3 ml-1" />}
+                                                {!isAdmin && !isPremiumActive && <Lock className="h-3 w-3 ml-1" />}
                                             </span>
                                           )}
                                         </div>
@@ -1273,7 +1276,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                 { currentExampleImageForGen && ( 
                                     <p className="text-xs text-muted-foreground">
                                         Using image {selectedProfileImageIndexForGen !== null && brandData.exampleImages && brandData.exampleImages.length > 1 ? selectedProfileImageIndexForGen + 1 : "1"} as reference.
-                                        {selectedImageProvider === 'FREEPIK' && (isAdmin || currentPlan === 'premium') && " (Freepik/Imagen3 uses AI description of this image, not the image directly for text-to-image.)"}
+                                        {selectedImageProvider === 'FREEPIK' && (isAdmin || isPremiumActive) && " (Freepik/Imagen3 uses AI description of this image, not the image directly for text-to-image.)"}
                                     </p>
                                 )}
                             </div>
@@ -1295,7 +1298,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                     />
                   </div>
                   
-                  {selectedImageProvider === 'FREEPIK' && (isAdmin || currentPlan === 'premium') && ( 
+                  {selectedImageProvider === 'FREEPIK' && (isAdmin || isPremiumActive) && ( 
                       <>
                           <div className="pt-4 mt-4 border-t">
                               <h4 className="text-md font-semibold mb-3 text-primary flex items-center"><Paintbrush className="w-5 h-5 mr-2"/>Freepik Specific Styling (imagen3 model)</h4>
@@ -1383,11 +1386,11 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                     <SelectItem 
                                         key={num} 
                                         value={String(num)}
-                                        disabled={!isAdmin && currentPlan === 'free' && num > 1}
+                                        disabled={!isAdmin && !isPremiumActive && num > 1}
                                     >
                                         <div className="flex items-center gap-2">
                                         {num}
-                                        {!isAdmin && currentPlan === 'free' && num > 1 &&
+                                        {!isAdmin && !isPremiumActive && num > 1 &&
                                             <span className="text-xs text-muted-foreground flex items-center gap-1">(<Lock className="h-3 w-3" /> Premium)</span>
                                         }
                                         </div>
@@ -1395,7 +1398,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                 ))}
                             </SelectContent>
                         </Select>
-                        {!isAdmin && currentPlan === 'free' && (
+                        {!isAdmin && !isPremiumActive && (
                              <p className="text-xs text-muted-foreground mt-1">Free plan allows 1 image per generation.</p>
                         )}
                     </div>
@@ -1410,16 +1413,16 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                       onChange={(e) => setImageGenSeed(e.target.value)}
                       placeholder="Enter a number for reproducible results"
                       min="0"
-                      disabled={selectedImageProvider === 'FREEPIK' && (isAdmin || currentPlan === 'premium')}
+                      disabled={(selectedImageProvider === 'FREEPIK' && (isAdmin || isPremiumActive)) || isClearing}
                     />
                       <p className="text-xs text-muted-foreground">
-                        {(selectedImageProvider === 'FREEPIK' && (isAdmin || currentPlan === 'premium')) ? "Seed is ignored for Freepik/Imagen3 UI integration." : "Seed might not be strictly enforced by all models."}
+                        {(selectedImageProvider === 'FREEPIK' && (isAdmin || isPremiumActive)) ? "Seed is ignored for Freepik/Imagen3 UI integration." : "Seed might not be strictly enforced by all models."}
                       </p>
                   </div>
                 </CardContent>
                 <CardFooter>
-                  {(isAdmin || currentPlan === 'premium') ? (
-                    <Button type="submit" className="w-full">
+                  {(isAdmin || isPremiumActive) ? (
+                    <Button type="submit" className="w-full" disabled={isClearing}>
                         <Eye className="mr-2 h-4 w-4" /> Preview Prompt
                     </Button>
                   ) : (
@@ -1427,6 +1430,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                         className="w-full" 
                         loadingText={parseInt(numberOfImagesToGenerate,10) > 1 ? "Generating Images..." : "Generating Image..."}
                         type="submit"
+                        disabled={isClearing}
                     >
                         Generate {parseInt(numberOfImagesToGenerate,10) > 1 ? `${numberOfImagesToGenerate} Images` : "Image"}
                     </SubmitButton>
@@ -1457,7 +1461,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                 Save All to Library
                             </Button>
                         )}
-                        <Button variant="outline" size="sm" onClick={handleClearGeneratedImages}>
+                        <Button variant="outline" size="sm" onClick={handleClearGeneratedImages} disabled={isClearing}>
                             <Trash2 className="mr-2 h-4 w-4" />
                             {`Clear Image${lastSuccessfulGeneratedImageUrls.length > 1 ? 's' : ''}`}
                         </Button>
@@ -1467,7 +1471,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                         onDownload={downloadImage}
                         className="w-full"
                     />
-                    {(isAdmin || currentPlan === 'premium') && lastUsedImageGenPrompt && ( 
+                    {(isAdmin || isPremiumActive) && lastUsedImageGenPrompt && ( 
                       <div className="mt-4">
                           <div className="flex justify-between items-center mb-1">
                               <Label htmlFor="usedImagePromptDisplay" className="flex items-center text-sm font-medium"><FileText className="w-4 h-4 mr-2 text-primary" />Prompt Used:</Label>
@@ -1556,7 +1560,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                           <div className="flex items-center space-x-2">
                               <RadioGroupItem value="generated" id="social-generated" disabled={!sessionLastImageGenerationResult?.generatedImages?.some(url => url?.startsWith('data:') || url?.startsWith('image_url:'))}/>
                               <Label htmlFor="social-generated" className={(!sessionLastImageGenerationResult?.generatedImages?.some(url => url?.startsWith('data:') || url?.startsWith('image_url:'))) ? "text-muted-foreground" : ""}>
-                                  Use Last Generated Image {(!sessionLastImageGenerationResult?.generatedImages?.some(url => url?.startsWith('data:') || url?.startsWith('image_url:'))) ? "(None available/suitable)" : `(First of ${sessionLastImageGenerationResult?.generatedImages?.filter(url => url?.startsWith('data:') || url?.startsWith('image_url:')).length} available will be used)`}
+                                  Use Last Generated Image {(!sessionLastImageGenerationResult?.generatedImages?.some(url => url?.startsWith('data:') || url?.startsWith('image_url:'))) ? "(None available/suitable)" : `(${(sessionLastImageGenerationResult?.generatedImages?.filter(url => url?.startsWith('data:') || url?.startsWith('image_url:')).length} available)`}
                               </Label>
                           </div>
                           <div className="flex items-center space-x-2">
@@ -1904,13 +1908,13 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                         disabled={
                             isGeneratingOutline || 
                             !generatedBlogOutline.trim() ||
-                            (!isAdmin && currentPlan === 'free')
+                            (!isAdmin && !isPremiumActive)
                         }
                     >
-                        {!isAdmin && currentPlan === 'free' ? <Lock className="mr-2 h-4 w-4" /> : null}
-                        Generate Blog Post {!isAdmin && currentPlan === 'free' ? '(Premium Feature)' : ''}
+                        {!isAdmin && !isPremiumActive ? <Lock className="mr-2 h-4 w-4" /> : null}
+                        Generate Blog Post {!isAdmin && !isPremiumActive ? '(Premium Feature)' : ''}
                     </SubmitButton>
-                    {!isAdmin && currentPlan === 'free' && (
+                    {!isAdmin && !isPremiumActive && (
                         <p className="text-xs text-muted-foreground mt-2">
                             Full blog post generation is a premium feature. 
                             <Button variant="link" className="p-0 h-auto ml-1 text-xs" asChild>
@@ -1965,4 +1969,3 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     </div>
   );
 }
-

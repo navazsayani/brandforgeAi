@@ -10,6 +10,7 @@ export interface BrandData {
   brandLogoUrl?: string; // URL from Firebase Storage for the brand logo
   plan?: 'free' | 'premium';
   userEmail?: string; // Added user's email
+  subscriptionEndDate?: any; // Can be a Firestore Timestamp object
 }
 
 export interface GeneratedImage {
