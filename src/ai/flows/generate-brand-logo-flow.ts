@@ -64,10 +64,10 @@ const generateLogoPromptText = (input: GenerateBrandLogoInput): string => {
   
   // Refined industry-specific hints
   if (input.industry?.toLowerCase().includes('fashion') || input.brandDescription.toLowerCase().includes('fashion')) {
-    prompt += "\n- **Industry Hint (Fashion):** Lean towards elegance and sophistication. A stylish monogram, abstract mark, or a refined wordmark would be appropriate.";
+    prompt += "\n- **Industry Hint (Fashion):** Lean towards elegance and sophistication. A stylish monogram, an abstract mark that evokes fabric or form, or a refined, unique wordmark would be appropriate.";
   }
   if (input.industry?.toLowerCase().includes('technology') || input.brandDescription.toLowerCase().includes('technology')) {
-    prompt += "\n- **Industry Hint (Technology):** Emphasize a sleek, modern, and precise feel. Geometric shapes, abstract representations of data, circuits, or connectivity are good starting points.";
+    prompt += "\n- **Industry Hint (Technology):** Emphasize a sleek, modern, and precise feel. Think beyond literal circuits. Consider abstract representations of data, interconnected nodes, or a subtle spark of intelligence. Geometric shapes are excellent.";
   }
   if (input.industry?.toLowerCase().includes('food') || input.brandDescription.toLowerCase().includes('food')) {
     prompt += "\n- **Industry Hint (Food & Beverage):** Consider organic shapes, natural elements, or minimalist representations of food/drink items. The feeling should be fresh and appealing.";
