@@ -8,7 +8,7 @@ import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Check, ArrowRight, Star, X, Loader2, Info, RefreshCcw, TestTube } from 'lucide-react';
+import { Check, ArrowRight, Star, X, Loader2, Info, RefreshCcw, TestTube, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { plans, type Plan } from '@/lib/pricing';
 import type { FormState } from '@/lib/actions';
@@ -165,6 +165,7 @@ export default function PricingPage() {
                     modal: {
                         ondismiss: function() {
                             setIsProcessing(false);
+                            setSelectedPlanId(null);
                             toast({ title: 'Payment Cancelled', description: 'The subscription process was cancelled.', variant: 'default'});
                         }
                     }
@@ -174,6 +175,7 @@ export default function PricingPage() {
                 rzp.on('payment.failed', function (response: any) {
                     toast({ title: 'Payment Failed', description: response.error.description, variant: 'destructive'});
                     setIsProcessing(false);
+                    setSelectedPlanId(null);
                 });
                 
                 rzp.open();
@@ -187,6 +189,7 @@ export default function PricingPage() {
         if (subscriptionState?.error) {
             toast({ title: 'Subscription Error', description: subscriptionState.error, variant: 'destructive'});
             setIsProcessing(false);
+            setSelectedPlanId(null);
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [subscriptionState, currentUser, paymentMode]);
@@ -210,12 +213,19 @@ export default function PricingPage() {
             // Handle verification errors
             toast({ title: 'Payment Verification Failed', description: verifyState.error, variant: 'destructive'});
             setIsProcessing(false);
+            setSelectedPlanId(null);
         } else if (verifyState.data) {
              // Handle cases where there might be data but success is not explicitly true
             setIsProcessing(false);
+            setSelectedPlanId(null);
         }
     }, [verifyState, router, toast, refetchBrandData]);
 
+    const handleCopyTestCardNumber = () => {
+        const testCardNumber = '5267 3181 8797 5449';
+        navigator.clipboard.writeText(testCardNumber.replace(/\s/g, ''));
+        toast({ title: "Copied!", description: "Test card number copied to clipboard." });
+    };
 
     if (isLoadingGeo || isBrandLoading || paymentMode === 'loading') {
         return (
@@ -241,8 +251,23 @@ export default function PricingPage() {
                     <AlertDescription>
                         <p>This is a test environment, and **no real money will be charged**.</p>
                         <p className="mt-2">Use the following details for testing:</p>
-                        <ul className="list-disc pl-5 mt-1 text-xs">
-                            <li><strong>Card Number:</strong> 5267 3181 8797 5449</li>
+                        <ul className="list-disc pl-5 mt-1 text-xs space-y-1">
+                            <li>
+                                <div className="flex items-center gap-2">
+                                    <strong>Card Number:</strong> 
+                                    <span>5267 3181 8797 5449</span>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-5 w-5 text-current hover:bg-amber-500/20"
+                                        onClick={handleCopyTestCardNumber}
+                                    >
+                                        <Copy className="h-3 w-3" />
+                                        <span className="sr-only">Copy card number</span>
+                                    </Button>
+                                </div>
+                            </li>
                             <li><strong>Expiry Date:</strong> Any future date</li>
                             <li><strong>CVV:</strong> Any random 3 digits</li>
                         </ul>
@@ -371,5 +396,3 @@ export default function PricingPage() {
         </div>
     );
 }
-
-    
