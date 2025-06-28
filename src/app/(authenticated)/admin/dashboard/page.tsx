@@ -16,6 +16,7 @@ import { Loader2, ShieldCheck, CalendarIcon, X } from 'lucide-react';
 import { format } from 'date-fns';
 import type { UserProfileSelectItem } from '@/types';
 import { SubmitButton } from '@/components/SubmitButton';
+import { Label } from '@/components/ui/label';
 
 const initialFetchState: FormState<UserProfileSelectItem[]> = { error: undefined, data: undefined, message: undefined };
 const initialUpdateState: FormState<{ success: boolean }> = { error: undefined, data: undefined, message: undefined };
@@ -116,7 +117,7 @@ export default function AdminDashboardPage() {
                                         </TableCell>
                                         <TableCell>
                                             {user.subscriptionEndDate
-                                                ? format(user.subscriptionEndDate.toDate ? user.subscriptionEndDate.toDate() : new Date(user.subscriptionEndDate), 'PPP')
+                                                ? format(new Date(user.subscriptionEndDate), 'PPP')
                                                 : 'N/A'}
                                         </TableCell>
                                         <TableCell className="text-right">
@@ -137,7 +138,7 @@ export default function AdminDashboardPage() {
 function EditUserSubscriptionForm({ user, onUpdate }: { user: UserProfileSelectItem, onUpdate: (formData: FormData) => void }) {
     const [plan, setPlan] = useState<'free' | 'premium'>(user.plan || 'free');
     const [endDate, setEndDate] = useState<Date | undefined>(
-        user.subscriptionEndDate?.toDate ? user.subscriptionEndDate.toDate() : (user.subscriptionEndDate ? new Date(user.subscriptionEndDate) : undefined)
+        user.subscriptionEndDate ? new Date(user.subscriptionEndDate) : undefined
     );
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
@@ -206,4 +207,3 @@ function EditUserSubscriptionForm({ user, onUpdate }: { user: UserProfileSelectI
         </Popover>
     );
 }
-

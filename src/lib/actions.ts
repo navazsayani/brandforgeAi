@@ -656,12 +656,13 @@ export async function handleGetAllUserProfilesForAdminAction(
 
       if (profileDocSnap.exists()) {
         const data = profileDocSnap.data() as BrandData;
+        const endDate = data.subscriptionEndDate;
         profiles.push({
           userId: userId,
           brandName: data.brandName || "Unnamed Brand",
           userEmail: data.userEmail || userDoc.data().email || "No Email",
           plan: data.plan || 'free',
-          subscriptionEndDate: data.subscriptionEndDate || null,
+          subscriptionEndDate: endDate ? endDate.toDate().toISOString() : null,
         });
       }
     }
