@@ -1,6 +1,16 @@
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Shield } from 'lucide-react';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy',
+  description: 'Privacy Policy for BrandForge AI. Understand how we collect, use, and protect your data.',
+  alternates: {
+    canonical: '/privacy-policy',
+  },
+};
 
 export default function PrivacyPolicyPage() {
   return (

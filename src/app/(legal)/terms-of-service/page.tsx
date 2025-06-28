@@ -1,6 +1,17 @@
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { FileText } from 'lucide-react';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Terms of Service',
+  description: 'Terms of Service for BrandForge AI. Read the terms and conditions for using our application.',
+  alternates: {
+    canonical: '/terms-of-service',
+  },
+};
+
 
 export default function TermsOfServicePage() {
   return (
