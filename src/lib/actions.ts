@@ -10,6 +10,7 @@ import { extractBrandInfoFromUrl, type ExtractBrandInfoFromUrlInput, type Extrac
 import { describeImage, type DescribeImageInput, type DescribeImageOutput } from "@/ai/flows/describe-image-flow";
 import { generateBlogOutline, type GenerateBlogOutlineInput, type GenerateBlogOutlineOutput } from '@/ai/flows/generate-blog-outline-flow';
 import { generateBrandLogo, type GenerateBrandLogoInput, type GenerateBrandLogoOutput } from '@/ai/flows/generate-brand-logo-flow';
+import { enhanceBrandDescription, type EnhanceBrandDescriptionInput, type EnhanceBrandDescriptionOutput } from '@/ai/flows/enhance-brand-description-flow';
 import { generateBrandForgeAppLogo, type GenerateBrandForgeAppLogoOutput } from '@/ai/flows/generate-brandforge-app-logo-flow';
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
@@ -378,6 +379,24 @@ export async function handleExtractBrandInfoFromUrlAction(
   } catch (e: any) {
       console.error("Error in handleExtractBrandInfoFromUrlAction (Outer):", JSON.stringify(e, Object.getOwnPropertyNames(e)));
       return { error: `Failed to extract brand information from URL: ${e.message || "Unknown error. Check server logs."}` };
+  }
+}
+
+export async function handleEnhanceBrandDescriptionAction(
+  prevState: FormState<EnhanceBrandDescriptionOutput>,
+  formData: FormData
+): Promise<FormState<EnhanceBrandDescriptionOutput>> {
+  const brandDescription = formData.get("brandDescription") as string;
+  if (!brandDescription || brandDescription.length < 10) {
+    return { error: "Brand description must be at least 10 characters long to enhance." };
+  }
+  try {
+    const input: EnhanceBrandDescriptionInput = { brandDescription };
+    const result = await enhanceBrandDescription(input);
+    return { data: result, message: "Description enhanced successfully." };
+  } catch (e: any) {
+    console.error("Error in handleEnhanceBrandDescriptionAction:", e);
+    return { error: `Failed to enhance description: ${e.message || "Unknown error."}` };
   }
 }
 

@@ -18,15 +18,16 @@ import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
-import { UserCircle, LinkIcon, FileText, UploadCloud, Tag, Brain, Loader2, Trash2, Edit, Briefcase, Image as ImageIconLucide, Sparkles, Star, ShieldCheck, UserSearch, Users } from 'lucide-react';
+import { UserCircle, LinkIcon, FileText, UploadCloud, Tag, Brain, Loader2, Trash2, Edit, Briefcase, Image as ImageIconLucide, Sparkles, Star, ShieldCheck, UserSearch, Users, Wand2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { handleExtractBrandInfoFromUrlAction, handleGenerateBrandLogoAction, handleGetAllUserProfilesForAdminAction, type FormState as ExtractFormState, type FormState as GenerateLogoFormState, type FormState as AdminFetchProfilesState } from '@/lib/actions';
+import { handleExtractBrandInfoFromUrlAction, handleGenerateBrandLogoAction, handleGetAllUserProfilesForAdminAction, handleEnhanceBrandDescriptionAction, type FormState as ExtractFormState, type FormState as GenerateLogoFormState, type FormState as AdminFetchProfilesState, type FormState as EnhanceDescriptionState } from '@/lib/actions';
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject, uploadString } from 'firebase/storage';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { SubmitButton } from '@/components/SubmitButton';
 import type { GenerateBrandLogoOutput } from '@/ai/flows/generate-brand-logo-flow';
+import type { EnhanceBrandDescriptionOutput } from '@/ai/flows/enhance-brand-description-flow';
 import { industries } from '@/lib/constants';
 import type { BrandData, UserProfileSelectItem } from '@/types';
 import { cn } from '@/lib/utils';
@@ -71,6 +72,7 @@ const defaultFormValues: BrandProfileFormData = {
 const initialExtractState: ExtractFormState<{ brandDescription: string; targetKeywords: string; }> = { error: undefined, data: undefined, message: undefined };
 const initialGenerateLogoState: GenerateLogoFormState<GenerateBrandLogoOutput> = { error: undefined, data: undefined, message: undefined };
 const initialAdminFetchProfilesState: AdminFetchProfilesState<UserProfileSelectItem[]> = { error: undefined, data: undefined, message: undefined };
+const initialEnhanceState: EnhanceDescriptionState<EnhanceBrandDescriptionOutput> = { error: undefined, data: undefined, message: undefined };
 
 export default function BrandProfilePage() {
   const { currentUser, isLoading: isAuthLoading } = useAuth();
@@ -92,6 +94,9 @@ export default function BrandProfilePage() {
 
   const [extractState, extractAction] = useActionState(handleExtractBrandInfoFromUrlAction, initialExtractState);
   const [isExtracting, setIsExtracting] = useState(false);
+  
+  const [enhanceState, enhanceAction] = useActionState(handleEnhanceBrandDescriptionAction, initialEnhanceState);
+  const [isEnhancing, setIsEnhancing] = useState(false);
 
   const [generateLogoState, generateLogoAction] = useActionState(handleGenerateBrandLogoAction, initialGenerateLogoState);
   const [generatedLogoPreview, setGeneratedLogoPreview] = useState<string | null>(null);
@@ -206,6 +211,17 @@ export default function BrandProfilePage() {
     if (extractState.error) toast({ title: "Extraction Error", description: extractState.error, variant: "destructive" });
     setIsExtracting(false);
   }, [extractState, form, toast]);
+  
+  useEffect(() => {
+    setIsEnhancing(false);
+    if (enhanceState.data?.enhancedDescription) {
+        form.setValue('brandDescription', enhanceState.data.enhancedDescription, { shouldValidate: true });
+        toast({ title: "Description Enhanced", description: enhanceState.message || "The brand description has been updated by AI." });
+    }
+    if (enhanceState.error) {
+        toast({ title: "Enhancement Error", description: enhanceState.error, variant: "destructive" });
+    }
+  }, [enhanceState, form, toast]);
 
   useEffect(() => {
     setIsGeneratingLogo(false);
@@ -279,6 +295,20 @@ export default function BrandProfilePage() {
       const formData = new FormData();
       formData.append("websiteUrl", websiteUrl);
       extractAction(formData);
+    });
+  };
+  
+  const handleEnhanceDescription = () => {
+    const brandDescription = form.getValues("brandDescription");
+    if (!brandDescription || brandDescription.length < 10) {
+        toast({ title: "Not Enough Text", description: "Please provide at least 10 characters in the description to enhance.", variant: "default" });
+        return;
+    }
+    setIsEnhancing(true);
+    const formData = new FormData();
+    formData.append("brandDescription", brandDescription);
+    startTransition(() => {
+        enhanceAction(formData);
     });
   };
 
@@ -561,7 +591,7 @@ export default function BrandProfilePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><UserCircle className="w-5 h-5 mr-2 text-primary"/>Brand Name <span className="text-destructive ml-1">*</span></FormLabel>
-                      <FormControl><Input placeholder="Acme Innovations" {...field} disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo} /></FormControl>
+                      <FormControl><Input placeholder="Acme Innovations" {...field} disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -586,9 +616,9 @@ export default function BrandProfilePage() {
                       <FormLabel className="flex items-center text-base"><LinkIcon className="w-5 h-5 mr-2 text-primary"/>Website URL</FormLabel>
                       <div className="flex items-center space-x-2">
                         <div className="flex-grow min-w-0">
-                           <FormControl><Input placeholder="https://example.com" {...field} disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo} /></FormControl>
+                           <FormControl><Input placeholder="https://example.com" {...field} disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing} /></FormControl>
                         </div>
-                        <Button type="button" onClick={handleAutoFill} disabled={isExtracting || isBrandContextLoading || isAdminLoadingTargetProfile || !field.value || form.getFieldState("websiteUrl").invalid || isUploading || isGeneratingLogo || isUploadingLogo} variant="outline" size="sm" title="Auto-fill">
+                        <Button type="button" onClick={handleAutoFill} disabled={isExtracting || isBrandContextLoading || isAdminLoadingTargetProfile || !field.value || form.getFieldState("websiteUrl").invalid || isUploading || isGeneratingLogo || isUploadingLogo || isEnhancing} variant="outline" size="sm" title="Auto-fill">
                           {isExtracting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="w-4 h-4" />}
                         </Button>
                       </div>
@@ -602,7 +632,29 @@ export default function BrandProfilePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><FileText className="w-5 h-5 mr-2 text-primary"/>Brand Description <span className="text-destructive ml-1">*</span></FormLabel>
-                      <FormControl><Textarea placeholder="Describe brand, values, audience..." rows={5} {...field} disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo} /></FormControl>
+                      <div className="relative">
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Describe brand, values, audience..." 
+                            rows={5} 
+                            {...field} 
+                            disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing} 
+                            className="pr-12"
+                          />
+                        </FormControl>
+                        <Button 
+                          type="button" 
+                          variant="ghost"
+                          size="icon"
+                          className="absolute bottom-2 right-2 h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                          onClick={handleEnhanceDescription}
+                          disabled={isEnhancing || isExtracting || !field.value || field.value.length < 10}
+                          title="Enhance description with AI"
+                        >
+                          {isEnhancing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Wand2 className="h-5 w-5" />}
+                          <span className="sr-only">Enhance description with AI</span>
+                        </Button>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -616,7 +668,7 @@ export default function BrandProfilePage() {
                       <Select
                         onValueChange={field.onChange}
                         value={field.value ?? '_none_'}
-                        disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo}
+                        disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing}
                       >
                         <FormControl><SelectTrigger><SelectValue placeholder="Select industry" /></SelectTrigger></FormControl>
                         <SelectContent><SelectGroup><SelectLabel>Industries</SelectLabel>{industries.map(ind => (<SelectItem key={ind.value} value={ind.value}>{ind.label}</SelectItem>))}</SelectGroup></SelectContent>
@@ -631,7 +683,7 @@ export default function BrandProfilePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><Tag className="w-5 h-5 mr-2 text-primary"/>Target Keywords</FormLabel>
-                      <FormControl><Input placeholder="innovation, tech, eco (comma-separated)" {...field} disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo} /></FormControl>
+                      <FormControl><Input placeholder="innovation, tech, eco (comma-separated)" {...field} disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing} /></FormControl>
                       <p className="text-sm text-muted-foreground">Keywords for brand & industry.</p>
                       <FormMessage />
                     </FormItem>
@@ -692,7 +744,7 @@ export default function BrandProfilePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><Edit className="w-5 h-5 mr-2 text-primary"/>Image Style Notes</FormLabel>
-                      <FormControl><Textarea placeholder="General aesthetic notes for brand images." rows={3} {...field} disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo} /></FormControl>
+                      <FormControl><Textarea placeholder="General aesthetic notes for brand images." rows={3} {...field} disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing} /></FormControl>
                       <FormDescription>General guidance for AI. Specific styles in Content Studio.</FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -703,7 +755,7 @@ export default function BrandProfilePage() {
                   <FormDescription>Plan allows {maxImagesAllowed} images. Current: {(form.getValues("exampleImages")?.length || 0)}/{maxImagesAllowed}.</FormDescription>
                   <FormControl>
                     <div className="flex items-center justify-center w-full">
-                      <Label htmlFor="dropzone-file" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer border-border bg-card hover:bg-secondary ${isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || !canUploadMoreImages ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      <Label htmlFor="dropzone-file" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer border-border bg-card hover:bg-secondary ${isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing || !canUploadMoreImages ? 'opacity-50 cursor-not-allowed' : ''}`}>
                         <div className="flex flex-col items-center justify-center pt-5 pb-6">
                           {isUploading ? <Loader2 className="w-8 h-8 mb-2 text-muted-foreground animate-spin" /> : <UploadCloud className="w-8 h-8 mb-2 text-muted-foreground" />}
                           <p className="mb-1 text-sm text-muted-foreground">
@@ -711,7 +763,7 @@ export default function BrandProfilePage() {
                           </p>
                           {selectedFileNames.length === 0 && !isUploading && canUploadMoreImages && <p className="text-xs text-muted-foreground">Max 5MB per file.</p>}
                         </div>
-                        <Input id="dropzone-file" type="file" multiple className="hidden" onChange={handleImageFileChange} accept="image/*" disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || !canUploadMoreImages || isGeneratingLogo || isUploadingLogo} ref={fileInputRef} />
+                        <Input id="dropzone-file" type="file" multiple className="hidden" onChange={handleImageFileChange} accept="image/*" disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || !canUploadMoreImages || isGeneratingLogo || isUploadingLogo || isEnhancing} ref={fileInputRef} />
                       </Label>
                     </div>
                   </FormControl>
@@ -726,7 +778,7 @@ export default function BrandProfilePage() {
                       {previewImages.map((src, index) => (
                         <div key={src || index} className="relative group aspect-square">
                           <NextImage src={src} alt={`Preview ${index + 1}`} fill style={{objectFit: 'contain'}} className="rounded border" data-ai-hint="brand example"/>
-                          <Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDeleteImage(src, index)} disabled={isUploading || isExtracting || isBrandContextLoading || isAdminLoadingTargetProfile || isGeneratingLogo || isUploadingLogo} title="Delete">
+                          <Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDeleteImage(src, index)} disabled={isUploading || isExtracting || isBrandContextLoading || isAdminLoadingTargetProfile || isGeneratingLogo || isUploadingLogo || isEnhancing} title="Delete">
                             <Trash2 className="h-3 w-3" />
                           </Button>
                         </div>
@@ -743,7 +795,7 @@ export default function BrandProfilePage() {
               form="brandProfileFormReal"
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
               size="lg"
-              disabled={isAuthLoading || isBrandContextLoading || isAdminLoadingTargetProfile || form.formState.isSubmitting || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isLoadingAdminProfiles}
+              disabled={isAuthLoading || isBrandContextLoading || isAdminLoadingTargetProfile || form.formState.isSubmitting || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing || isLoadingAdminProfiles}
             >
               {(isUploadingLogo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null)}
               {isUploadingLogo ? 'Uploading & Saving...' : (isUploading ? 'Uploading Image(s)...' : (isAuthLoading || isBrandContextLoading || isAdminLoadingTargetProfile ? 'Loading...' : (form.formState.isSubmitting ? 'Saving...' : (isExtracting ? 'Extracting...' : 'Save Brand Profile'))))}
