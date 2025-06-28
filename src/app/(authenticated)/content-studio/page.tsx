@@ -1152,37 +1152,39 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
               }}>
                 <input type="hidden" name="industry" value={selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || ""} />
                 <CardContent className="space-y-6">
-                  <div>
-                    <Label htmlFor="imageGenProviderSelect" className="flex items-center mb-1"><Server className="w-4 h-4 mr-2 text-primary" />Image Generation Provider</Label>
-                    <Select name="provider" value={selectedImageProvider || 'GEMINI'} onValueChange={(value) => setSelectedImageProvider(value as GenerateImagesInput['provider'])}>
-                        <SelectTrigger id="imageGenProviderSelect">
-                            <SelectValue placeholder="Select image generation provider" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectGroup>
-                                <SelectLabel>Providers</SelectLabel>
-                                {imageGenerationProviders.map(provider => (
-                                    <SelectItem 
-                                      key={provider.value} 
-                                      value={provider.value} 
-                                      disabled={provider.disabled || (provider.premium && !isAdmin && !isPremiumActive)}
-                                    >
-                                        <div className="flex items-center gap-2">
-                                          <span>{provider.label}</span>
-                                          {provider.premium && (
-                                            <span className={cn("text-xs flex items-center gap-1", (provider.premium && !isAdmin && !isPremiumActive) ? "text-muted-foreground" : "text-amber-500")}>
-                                                <Star className="h-3 w-3" />
-                                                Premium
-                                                {!isAdmin && !isPremiumActive && <Lock className="h-3 w-3 ml-1" />}
-                                            </span>
-                                          )}
-                                        </div>
-                                    </SelectItem>
-                                ))}
-                            </SelectGroup>
-                        </SelectContent>
-                    </Select>
-                  </div>
+                  {isAdmin && (
+                    <div>
+                      <Label htmlFor="imageGenProviderSelect" className="flex items-center mb-1"><Server className="w-4 h-4 mr-2 text-primary" />Image Generation Provider</Label>
+                      <Select name="provider" value={selectedImageProvider || 'GEMINI'} onValueChange={(value) => setSelectedImageProvider(value as GenerateImagesInput['provider'])}>
+                          <SelectTrigger id="imageGenProviderSelect">
+                              <SelectValue placeholder="Select image generation provider" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              <SelectGroup>
+                                  <SelectLabel>Providers</SelectLabel>
+                                  {imageGenerationProviders.map(provider => (
+                                      <SelectItem 
+                                        key={provider.value} 
+                                        value={provider.value} 
+                                        disabled={provider.disabled || (provider.premium && !isAdmin && !isPremiumActive)}
+                                      >
+                                          <div className="flex items-center gap-2">
+                                            <span>{provider.label}</span>
+                                            {provider.premium && (
+                                              <span className={cn("text-xs flex items-center gap-1", (provider.premium && !isAdmin && !isPremiumActive) ? "text-muted-foreground" : "text-amber-500")}>
+                                                  <Star className="h-3 w-3" />
+                                                  Premium
+                                                  {!isAdmin && !isPremiumActive && <Lock className="h-3 w-3 ml-1" />}
+                                              </span>
+                                            )}
+                                          </div>
+                                      </SelectItem>
+                                  ))}
+                              </SelectGroup>
+                          </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   <div>
                     <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
