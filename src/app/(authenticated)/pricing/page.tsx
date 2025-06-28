@@ -239,7 +239,13 @@ export default function PricingPage() {
                     <TestTube className="h-4 w-4 !text-amber-500" />
                     <AlertTitle className="font-bold text-amber-600 dark:text-amber-400">Developer Test Mode is Active</AlertTitle>
                     <AlertDescription>
-                        You've been selected to try our Pro features! This is a test environment, and **no real money will be charged**. Please proceed with the upgrade to help us test and provide your valuable feedback.
+                        <p>This is a test environment, and **no real money will be charged**.</p>
+                        <p className="mt-2">Use the following details for testing:</p>
+                        <ul className="list-disc pl-5 mt-1 text-xs">
+                            <li><strong>Card Number:</strong> 5267 3181 8797 5449</li>
+                            <li><strong>Expiry Date:</strong> Any future date</li>
+                            <li><strong>CVV:</strong> Any random 3 digits</li>
+                        </ul>
                     </AlertDescription>
                 </Alert>
             )}
@@ -365,3 +371,5 @@ export default function PricingPage() {
         </div>
     );
 }
+
+    
