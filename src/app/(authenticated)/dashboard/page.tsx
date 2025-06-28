@@ -64,7 +64,7 @@ export default function DashboardPage() {
                 />
             </div>
             
-            <RecentCreations isLoading={isLoading} />
+            <RecentCreations />
         </div>
     );
 }

@@ -859,10 +859,10 @@ export async function handleCreateSubscriptionAction(
         return { error: "Failed to create order with payment gateway." };
     }
 
-    return { 
+    return {
         data: {
             orderId: order.id,
-            amount: order.amount,
+            amount: Number(order.amount),
             currency: order.currency
         },
         message: "Order created successfully."

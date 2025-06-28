@@ -113,7 +113,7 @@ async function _generateImageWithImagen_stub(params: {
   imageStyle: string;
   exampleImage?: string;
   aspectRatio?: string;
-  negativePrompt?: number;
+  negativePrompt?: string;
   seed?: number;
   textPrompt: string;
 }): Promise<string> {

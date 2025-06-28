@@ -36,9 +36,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
       if (firebaseUser) {
         // If user is authenticated, and they are on login/signup, redirect to dashboard
-        if (router.pathname === '/login' || router.pathname === '/signup') {
-          router.push('/dashboard');
-        }
+        // Note: In App Router, we can't access pathname directly, so we'll handle this in the components
+        // This redirect logic should be moved to the login/signup page components
       }
     });
     return () => unsubscribe();

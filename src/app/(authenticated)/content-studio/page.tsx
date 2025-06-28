@@ -115,10 +115,12 @@ const ImageGridItem = ({
       } else if (status === 'FAILED') {
         toast({ title: `Task ${taskId.substring(0,8)}... Failed`, description: "Freepik failed to generate images for this task.", variant: "destructive" });
           if (sessionLastImageGenerationResult) {
-            setSessionLastImageGenerationResult({
-              ...sessionLastImageGenerationResult,
-              generatedImages: sessionLastImageGenerationResult.generatedImages.filter(existingUrl => existingUrl !== `task_id:${taskId}`),
-            });
+            if (sessionLastImageGenerationResult) {
+              setSessionLastImageGenerationResult({
+                ...sessionLastImageGenerationResult,
+                generatedImages: sessionLastImageGenerationResult.generatedImages.filter((existingUrl: string) => existingUrl !== `task_id:${taskId}`),
+              });
+            }
           }
       } else { 
           toast({ title: `Task ${taskId.substring(0,8)}... Status: ${status}`, description: "Could not retrieve images or task has an unexpected status." });
@@ -532,24 +534,22 @@ export default function ContentStudioPage() {
         if (taskId && sessionLastImageGenerationResult?.generatedImages.some(url => url === `task_id:${taskId}`)) {
             if (status === 'COMPLETED' && retrievedImageUrls && retrievedImageUrls.length > 0) {
                 const newImageUrlsForTask = retrievedImageUrls.map(url => `image_url:${url}`);
-                setSessionLastImageGenerationResult(prevResult => {
-                    if (!prevResult) return null;
-                    return {
-                        ...prevResult,
-                        generatedImages: prevResult.generatedImages.map(
-                            url => (url === `task_id:${taskId}` ? newImageUrlsForTask : url)
+                if (sessionLastImageGenerationResult) {
+                    setSessionLastImageGenerationResult({
+                        ...sessionLastImageGenerationResult,
+                        generatedImages: sessionLastImageGenerationResult.generatedImages.map(
+                            (url: string) => (url === `task_id:${taskId}` ? newImageUrlsForTask : url)
                         ).flat(),
-                    };
-                });
+                    });
+                }
                 toast({ title: `Task ${taskId.substring(0,8)}... Completed`, description: `${retrievedImageUrls.length} image(s) retrieved.` });
             } else if (status === 'FAILED') {
-                setSessionLastImageGenerationResult(prevResult => {
-                    if (!prevResult) return null;
-                    return {
-                        ...prevResult,
-                        generatedImages: prevResult.generatedImages.filter(url => url !== `task_id:${taskId}`),
-                    };
-                });
+                if (sessionLastImageGenerationResult) {
+                    setSessionLastImageGenerationResult({
+                        ...sessionLastImageGenerationResult,
+                        generatedImages: sessionLastImageGenerationResult.generatedImages.filter((url: string) => url !== `task_id:${taskId}`),
+                    });
+                }
             }
         }
     }

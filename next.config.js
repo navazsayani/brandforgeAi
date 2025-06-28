@@ -1,7 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverActions: {
-    bodySizeLimit: 8388608, // 8MB in bytes
+  experimental: {
+    serverActions: {
+      bodySizeLimit: 8388608, // 8MB in bytes
+    },
   },
   /* config options here */
   typescript: {
