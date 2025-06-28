@@ -1,5 +1,5 @@
 
-// use server'
+'use server';
 
 /**
  * @fileOverview A social media caption generator AI agent.
@@ -31,20 +31,11 @@ export async function generateSocialMediaCaption(input: GenerateSocialMediaCapti
   return generateSocialMediaCaptionFlow(input);
 }
 
-const generateSocialMediaCaptionFlow = ai.defineFlow(
-  {
-    name: 'generateSocialMediaCaptionFlow',
-    inputSchema: GenerateSocialMediaCaptionInputSchema,
-    outputSchema: GenerateSocialMediaCaptionOutputSchema,
-  },
-  async input => {
-    const { fastModel } = await getModelConfig();
-    const prompt = ai.definePrompt({
-      name: 'generateSocialMediaCaptionPrompt',
-      model: fastModel,
-      input: {schema: GenerateSocialMediaCaptionInputSchema},
-      output: {schema: GenerateSocialMediaCaptionOutputSchema},
-      prompt: `You are an expert social media manager.
+const generateSocialMediaCaptionPrompt = ai.definePrompt({
+  name: 'generateSocialMediaCaptionPrompt',
+  input: {schema: GenerateSocialMediaCaptionInputSchema},
+  output: {schema: GenerateSocialMediaCaptionOutputSchema},
+  prompt: `You are an expert social media manager.
 
 You will generate an engaging caption and relevant hashtags for a social media post.
 Consider the brand's description, its industry (if provided), the desired tone (which may include nuances), and an optional image description.
@@ -68,9 +59,18 @@ The caption should reflect the nuances in the "Desired Tone" if any are provided
 
 Caption:
 Hashtags:`,
-    });
+});
 
-    const {output} = await prompt(input);
+const generateSocialMediaCaptionFlow = ai.defineFlow(
+  {
+    name: 'generateSocialMediaCaptionFlow',
+    inputSchema: GenerateSocialMediaCaptionInputSchema,
+    outputSchema: GenerateSocialMediaCaptionOutputSchema,
+  },
+  async input => {
+    const { fastModel } = await getModelConfig();
+    
+    const {output} = await generateSocialMediaCaptionPrompt(input, { model: fastModel });
     if (!output) {
         throw new Error("AI failed to generate a social media caption.");
     }

@@ -36,48 +36,22 @@ export async function generateBlogContent(input: GenerateBlogContentInput): Prom
   return generateBlogContentFlow(input);
 }
 
-const generateBlogContentFlow = ai.defineFlow(
-  {
-    name: 'generateBlogContentFlow',
-    inputSchema: GenerateBlogContentInputSchema,
-    outputSchema: GenerateBlogContentOutputSchema,
-  },
-  async (input) => {
-    let websiteContent: string | undefined = undefined;
-    let extractionError: string | undefined = undefined;
-
-    if (input.websiteUrl) {
-      try {
-        const fetchResult = await fetchWebsiteContentTool({ url: input.websiteUrl });
-        if (fetchResult.error) {
-          extractionError = fetchResult.error;
-        } else {
-          websiteContent = fetchResult.textContent;
-        }
-      } catch (e: any) {
-        extractionError = `Failed to fetch website content: ${e.message}`;
-      }
-    }
-
-    const { powerfulModel } = await getModelConfig();
-    
-    const prompt = ai.definePrompt({
-      name: 'generateBlogContentPrompt',
-      model: powerfulModel,
-      input: {schema: z.object({
-        brandName: GenerateBlogContentInputSchema.shape.brandName,
-        brandDescription: GenerateBlogContentInputSchema.shape.brandDescription,
-        industry: GenerateBlogContentInputSchema.shape.industry,
-        keywords: GenerateBlogContentInputSchema.shape.keywords,
-        targetPlatform: GenerateBlogContentInputSchema.shape.targetPlatform,
-        websiteUrl: GenerateBlogContentInputSchema.shape.websiteUrl,
-        blogOutline: GenerateBlogContentInputSchema.shape.blogOutline,
-        blogTone: GenerateBlogContentInputSchema.shape.blogTone,
-        websiteContent: z.string().optional().describe('The main text content extracted from the website, if URL was provided and fetching was successful.'),
-        extractionError: z.string().optional().describe('Any error that occurred during website content extraction.')
-      })},
-      output: {schema: GenerateBlogContentOutputSchema},
-      prompt: `You are an expert blog content creator specializing in the {{{industry}}} industry. Your task is to write a complete blog post based *strictly* on the provided outline, brand information, desired tone, and keywords.
+const generateBlogContentPrompt = ai.definePrompt({
+  name: 'generateBlogContentPrompt',
+  input: {schema: z.object({
+    brandName: GenerateBlogContentInputSchema.shape.brandName,
+    brandDescription: GenerateBlogContentInputSchema.shape.brandDescription,
+    industry: GenerateBlogContentInputSchema.shape.industry,
+    keywords: GenerateBlogContentInputSchema.shape.keywords,
+    targetPlatform: GenerateBlogContentInputSchema.shape.targetPlatform,
+    websiteUrl: GenerateBlogContentInputSchema.shape.websiteUrl,
+    blogOutline: GenerateBlogContentInputSchema.shape.blogOutline,
+    blogTone: GenerateBlogContentInputSchema.shape.blogTone,
+    websiteContent: z.string().optional().describe('The main text content extracted from the website, if URL was provided and fetching was successful.'),
+    extractionError: z.string().optional().describe('Any error that occurred during website content extraction.')
+  })},
+  output: {schema: GenerateBlogContentOutputSchema},
+  prompt: `You are an expert blog content creator specializing in the {{{industry}}} industry. Your task is to write a complete blog post based *strictly* on the provided outline, brand information, desired tone, and keywords.
 
 Brand Name: {{{brandName}}}
 Brand Description: {{{brandDescription}}}
@@ -113,9 +87,34 @@ Instructions:
 
 Output the generated title, content, and tags.
 `,
-    });
+});
 
-    const {output} = await prompt({
+const generateBlogContentFlow = ai.defineFlow(
+  {
+    name: 'generateBlogContentFlow',
+    inputSchema: GenerateBlogContentInputSchema,
+    outputSchema: GenerateBlogContentOutputSchema,
+  },
+  async (input) => {
+    let websiteContent: string | undefined = undefined;
+    let extractionError: string | undefined = undefined;
+
+    if (input.websiteUrl) {
+      try {
+        const fetchResult = await fetchWebsiteContentTool({ url: input.websiteUrl });
+        if (fetchResult.error) {
+          extractionError = fetchResult.error;
+        } else {
+          websiteContent = fetchResult.textContent;
+        }
+      } catch (e: any) {
+        extractionError = `Failed to fetch website content: ${e.message}`;
+      }
+    }
+
+    const { powerfulModel } = await getModelConfig();
+    
+    const {output} = await generateBlogContentPrompt({
       brandName: input.brandName,
       brandDescription: input.brandDescription,
       industry: input.industry,
@@ -126,7 +125,7 @@ Output the generated title, content, and tags.
       blogTone: input.blogTone,
       websiteContent: websiteContent,
       extractionError: extractionError,
-    });
+    }, { model: powerfulModel });
 
     if (!output) {
         throw new Error("AI failed to generate blog content.");

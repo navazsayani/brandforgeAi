@@ -38,21 +38,11 @@ export async function generateAdCampaign(input: GenerateAdCampaignInput): Promis
   return generateAdCampaignFlow(input);
 }
 
-const generateAdCampaignFlow = ai.defineFlow(
-  {
-    name: 'generateAdCampaignFlow',
-    inputSchema: GenerateAdCampaignInputSchema,
-    outputSchema: GenerateAdCampaignOutputSchema,
-  },
-  async input => {
-    const { powerfulModel } = await getModelConfig();
-
-    const generateAdCampaignPrompt = ai.definePrompt({
-      name: 'generateAdCampaignPrompt',
-      model: powerfulModel,
-      input: {schema: GenerateAdCampaignInputSchema},
-      output: {schema: GenerateAdCampaignOutputSchema},
-      prompt: `You are an expert digital advertising strategist specializing in the {{{industry}}} industry. Your task is to generate creative ad campaign assets based on the provided brand information, inspirational content, and target keywords.
+const generateAdCampaignPrompt = ai.definePrompt({
+  name: 'generateAdCampaignPrompt',
+  input: {schema: GenerateAdCampaignInputSchema},
+  output: {schema: GenerateAdCampaignOutputSchema},
+  prompt: `You are an expert digital advertising strategist specializing in the {{{industry}}} industry. Your task is to generate creative ad campaign assets based on the provided brand information, inspirational content, and target keywords.
 
 Brand Name: {{{brandName}}}
 Brand Description: {{{brandDescription}}}
@@ -72,9 +62,18 @@ Instructions:
 
 Ensure all generated text is professional, engaging, and directly relevant to the brand, its industry, and the inspirational content.
 `,
-    });
+});
 
-    const {output} = await generateAdCampaignPrompt(input);
+const generateAdCampaignFlow = ai.defineFlow(
+  {
+    name: 'generateAdCampaignFlow',
+    inputSchema: GenerateAdCampaignInputSchema,
+    outputSchema: GenerateAdCampaignOutputSchema,
+  },
+  async input => {
+    const { powerfulModel } = await getModelConfig();
+
+    const {output} = await generateAdCampaignPrompt(input, { model: powerfulModel });
     if (!output) {
         throw new Error("AI failed to generate ad campaign variations.");
     }

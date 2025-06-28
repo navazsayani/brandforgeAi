@@ -37,6 +37,15 @@ export async function describeImage(
   return describeImageFlow(input);
 }
 
+const describeImagePrompt = ai.definePrompt({
+  name: 'describeImagePrompt',
+  input: {schema: DescribeImageInputSchema},
+  output: {schema: DescribeImageOutputSchema},
+  prompt: `Analyze the provided image and generate a concise, engaging description (1-2 sentences) suitable for a social media post. Focus on the main subject, key visual elements, and the overall mood or atmosphere of the image.
+
+Image: {{media url=imageDataUri}}`,
+});
+
 const describeImageFlow = ai.defineFlow(
   {
     name: 'describeImageFlow',
@@ -47,20 +56,9 @@ const describeImageFlow = ai.defineFlow(
     // Log the input URI to help debug
     console.log('describeImageFlow received imageDataUri:', input.imageDataUri);
     
-    // The check for imageDataUri presence is now handled by Zod schema validation (.min(1))
     const { visionModel } = await getModelConfig();
 
-    const prompt = ai.definePrompt({
-      name: 'describeImagePrompt',
-      model: visionModel,
-      input: {schema: DescribeImageInputSchema},
-      output: {schema: DescribeImageOutputSchema},
-      prompt: `Analyze the provided image and generate a concise, engaging description (1-2 sentences) suitable for a social media post. Focus on the main subject, key visual elements, and the overall mood or atmosphere of the image.
-
-Image: {{media url=imageDataUri}}`,
-    });
-
-    const {output} = await prompt(input);
+    const {output} = await describeImagePrompt(input, { model: visionModel });
     if (!output) {
       throw new Error('AI failed to generate an image description.');
     }

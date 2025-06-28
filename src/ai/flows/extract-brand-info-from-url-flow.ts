@@ -28,29 +28,16 @@ export async function extractBrandInfoFromUrl(input: ExtractBrandInfoFromUrlInpu
   return extractBrandInfoFromUrlFlow(input);
 }
 
-const extractBrandInfoFromUrlFlow = ai.defineFlow(
-  {
-    name: 'extractBrandInfoFromUrlFlow',
-    inputSchema: ExtractBrandInfoFromUrlInputSchema,
-    outputSchema: ExtractBrandInfoFromUrlOutputSchema,
-  },
-  async (input) => {
-    // First, use the tool to fetch website content
-    const fetchResult = await fetchWebsiteContentTool({ url: input.websiteUrl });
-
-    const { powerfulModel } = await getModelConfig();
-
-    const prompt = ai.definePrompt({
-      name: 'extractBrandInfoPrompt',
-      model: powerfulModel,
-      input: {schema: z.object({
-        websiteUrl: ExtractBrandInfoFromUrlInputSchema.shape.websiteUrl,
-        websiteContent: z.string().describe('The main text content extracted from the website.'),
-        extractionError: z.string().optional().describe('Any error that occurred during website content extraction.')
-      })},
-      output: {schema: ExtractBrandInfoFromUrlOutputSchema},
-      tools: [fetchWebsiteContentTool], // Make the tool available
-      prompt: `You are an expert brand analyst. Your task is to extract key brand information from the provided website content.
+const extractBrandInfoPrompt = ai.definePrompt({
+  name: 'extractBrandInfoPrompt',
+  input: {schema: z.object({
+    websiteUrl: ExtractBrandInfoFromUrlInputSchema.shape.websiteUrl,
+    websiteContent: z.string().describe('The main text content extracted from the website.'),
+    extractionError: z.string().optional().describe('Any error that occurred during website content extraction.')
+  })},
+  output: {schema: ExtractBrandInfoFromUrlOutputSchema},
+  tools: [fetchWebsiteContentTool], // Make the tool available
+  prompt: `You are an expert brand analyst. Your task is to extract key brand information from the provided website content.
 
 Website URL: {{{websiteUrl}}}
 
@@ -68,14 +55,26 @@ If the content is sparse or uninformative, make a reasonable attempt to infer th
 Do not use placeholders like "[Brand Name]".
 {{/if}}
 `,
-    });
+});
+
+const extractBrandInfoFromUrlFlow = ai.defineFlow(
+  {
+    name: 'extractBrandInfoFromUrlFlow',
+    inputSchema: ExtractBrandInfoFromUrlInputSchema,
+    outputSchema: ExtractBrandInfoFromUrlOutputSchema,
+  },
+  async (input) => {
+    // First, use the tool to fetch website content
+    const fetchResult = await fetchWebsiteContentTool({ url: input.websiteUrl });
+
+    const { powerfulModel } = await getModelConfig();
 
     // Then, pass the fetched content (or error) to the main prompt
-    const {output} = await prompt({
+    const {output} = await extractBrandInfoPrompt({
       websiteUrl: input.websiteUrl,
       websiteContent: fetchResult.textContent,
       extractionError: fetchResult.error,
-    });
+    }, { model: powerfulModel });
     
     if (!output) {
         throw new Error("AI failed to generate brand information.");

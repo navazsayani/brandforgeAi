@@ -26,21 +26,11 @@ export async function enhanceBrandDescription(input: EnhanceBrandDescriptionInpu
   return enhanceBrandDescriptionFlow(input);
 }
 
-const enhanceBrandDescriptionFlow = ai.defineFlow(
-  {
-    name: 'enhanceBrandDescriptionFlow',
-    inputSchema: EnhanceBrandDescriptionInputSchema,
-    outputSchema: EnhanceBrandDescriptionOutputSchema,
-  },
-  async (input) => {
-    const { fastModel } = await getModelConfig();
-
-    const prompt = ai.definePrompt({
-      name: 'enhanceBrandDescriptionPrompt',
-      model: fastModel,
-      input: {schema: EnhanceBrandDescriptionInputSchema},
-      output: {schema: EnhanceBrandDescriptionOutputSchema},
-      prompt: `You are an expert brand strategist and copywriter. Your task is to take the following brand description and enhance it.
+const enhanceBrandDescriptionPrompt = ai.definePrompt({
+  name: 'enhanceBrandDescriptionPrompt',
+  input: {schema: EnhanceBrandDescriptionInputSchema},
+  output: {schema: EnhanceBrandDescriptionOutputSchema},
+  prompt: `You are an expert brand strategist and copywriter. Your task is to take the following brand description and enhance it.
 
 Original Description:
 "{{{brandDescription}}}"
@@ -53,9 +43,18 @@ Instructions:
 
 Produce only the enhanced description text.
 `,
-    });
+});
 
-    const {output} = await prompt(input);
+const enhanceBrandDescriptionFlow = ai.defineFlow(
+  {
+    name: 'enhanceBrandDescriptionFlow',
+    inputSchema: EnhanceBrandDescriptionInputSchema,
+    outputSchema: EnhanceBrandDescriptionOutputSchema,
+  },
+  async (input) => {
+    const { fastModel } = await getModelConfig();
+
+    const {output} = await enhanceBrandDescriptionPrompt(input, { model: fastModel });
 
     if (!output) {
       throw new Error("AI failed to generate an enhanced description.");
