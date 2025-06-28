@@ -3,7 +3,6 @@
 
 import React, { useState, useEffect, useActionState, useMemo, startTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
@@ -29,12 +28,11 @@ const initialVerifyState: FormState<{ success: boolean }> = { data: undefined, e
 
 export default function PricingPage() {
     const { currentUser } = useAuth();
-    const { brandData, isLoading: isBrandLoading } = useBrand();
+    const { brandData, isLoading: isBrandLoading, refetchBrandData } = useBrand();
     const router = useRouter();
     const { toast } = useToast();
     const [geo, setGeo] = useState<{ country: string | null }>({ country: null });
     const [isLoadingGeo, setIsLoadingGeo] = useState(true);
-    const queryClient = useQueryClient();
 
     const [subscriptionState, createSubscriptionAction] = useActionState(handleCreateSubscriptionAction, initialSubscriptionState);
     const [verifyState, verifyAction] = useActionState(handleVerifyPaymentAction, initialVerifyState);
@@ -198,9 +196,8 @@ export default function PricingPage() {
         const handleSuccess = async () => {
             toast({ title: 'Payment Verified!', description: 'Your plan has been upgraded to Premium.' });
             
-            // Invalidate the query to force a refetch of the user's brand data.
-            // await this call to ensure the refetch completes before navigating.
-            await queryClient.invalidateQueries({ queryKey: ['brandData', currentUser?.uid] });
+            // Explicitly refetch the brand data and wait for it to complete.
+            await refetchBrandData();
 
             // Now that the data is fresh, navigate to the dashboard.
             router.push('/dashboard');
@@ -217,7 +214,7 @@ export default function PricingPage() {
              // Handle cases where there might be data but success is not explicitly true
             setIsProcessing(false);
         }
-    }, [verifyState, currentUser?.uid, queryClient, router, toast]);
+    }, [verifyState, router, toast, refetchBrandData]);
 
 
     if (isLoadingGeo || isBrandLoading || paymentMode === 'loading') {

@@ -20,6 +20,7 @@ interface BrandContextType {
   setBrandData: (data: BrandData, userId: string) => Promise<void>; 
   isLoading: boolean;
   error: string | null;
+  refetchBrandData: () => Promise<void>;
   generatedImages: GeneratedImage[];
   addGeneratedImage: (image: GeneratedImage) => void;
   generatedSocialPosts: GeneratedSocialMediaPost[];
@@ -211,6 +212,10 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [currentUser, setBrandDataCB]); 
 
+  const refetchBrandData = useCallback(async () => {
+    await fetchBrandDataCB();
+  }, [fetchBrandDataCB]);
+
   useEffect(() => {
     fetchBrandDataCB();
   }, [fetchBrandDataCB]); 
@@ -241,6 +246,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
     setBrandData: setBrandDataCB,
     isLoading,
     error,
+    refetchBrandData,
     generatedImages,
     addGeneratedImage: addGeneratedImageCB,
     generatedSocialPosts,
@@ -252,7 +258,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
     sessionLastImageGenerationResult, 
     setSessionLastImageGenerationResult: setSessionLastImageGenerationResultCB 
   }), [
-    currentUser, brandData, setBrandDataCB, isLoading, error, 
+    currentUser, brandData, setBrandDataCB, isLoading, error, refetchBrandData,
     generatedImages, addGeneratedImageCB,
     generatedSocialPosts, addGeneratedSocialPostCB,
     generatedBlogPosts, addGeneratedBlogPostCB,
