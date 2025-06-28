@@ -129,9 +129,19 @@ export default function PricingPage() {
                     setIsProcessing(false);
                     return;
                 }
+                
+                const keyIdToUse = paymentMode === 'test' 
+                    ? process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID_TEST 
+                    : process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+                
+                if (!keyIdToUse) {
+                    toast({ title: 'Configuration Error', description: 'Payment gateway key is not set up for the current mode.', variant: 'destructive' });
+                    setIsProcessing(false);
+                    return;
+                }
 
                 const options = {
-                    key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+                    key: keyIdToUse,
                     amount: subscriptionState.data.amount,
                     currency: subscriptionState.data.currency,
                     name: 'BrandForge AI',
@@ -181,7 +191,7 @@ export default function PricingPage() {
             setIsProcessing(false);
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [subscriptionState, currentUser]);
+    }, [subscriptionState, currentUser, paymentMode]);
 
     useEffect(() => {
         if (verifyState.data?.success) {
@@ -346,5 +356,3 @@ export default function PricingPage() {
         </div>
     );
 }
-
-    
