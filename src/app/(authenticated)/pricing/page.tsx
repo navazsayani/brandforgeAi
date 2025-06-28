@@ -9,11 +9,11 @@ import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Check, ArrowRight, Star, X, Loader2, Info, RefreshCcw } from 'lucide-react';
+import { Check, ArrowRight, Star, X, Loader2, Info, RefreshCcw, TestTube } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { plans, type Plan } from '@/lib/pricing';
 import type { FormState } from '@/lib/actions';
-import { handleCreateSubscriptionAction, handleVerifyPaymentAction } from '@/lib/actions';
+import { handleCreateSubscriptionAction, handleVerifyPaymentAction, getPaymentMode } from '@/lib/actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
 
@@ -40,6 +40,7 @@ export default function PricingPage() {
     const [verifyState, verifyAction] = useActionState(handleVerifyPaymentAction, initialVerifyState);
     const [isProcessing, setIsProcessing] = useState(false);
     const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+    const [paymentMode, setPaymentMode] = useState<'live' | 'test' | 'loading'>('loading');
 
     useEffect(() => {
         fetch('https://ipapi.co/json/')
@@ -52,7 +53,18 @@ export default function PricingPage() {
                 setGeo({ country: 'US' }); 
                 setIsLoadingGeo(false);
             });
-    }, []);
+        
+        async function fetchMode() {
+            const result = await getPaymentMode();
+            if (result.error) {
+                toast({ title: "Config Error", description: result.error, variant: "destructive" });
+                setPaymentMode('live'); // Default to live on error for safety
+            } else {
+                setPaymentMode(result.paymentMode);
+            }
+        }
+        fetchMode();
+    }, [toast]);
 
     const { planStatus, isPremiumActive, expiryDate, needsRenewal } = useMemo(() => {
         if (!brandData) {
@@ -90,7 +102,7 @@ export default function PricingPage() {
             return;
         }
 
-        if (currency !== 'INR') {
+        if (currency !== 'INR' && paymentMode === 'live') {
             toast({ title: 'Coming Soon', description: 'International payments will be enabled shortly. Thank you for your patience!', variant: 'default' });
             return;
         }
@@ -131,7 +143,9 @@ export default function PricingPage() {
                         formData.append('razorpay_order_id', response.razorpay_order_id);
                         formData.append('razorpay_signature', response.razorpay_signature);
                         formData.append('userId', currentUser.uid);
-                        verifyAction(formData);
+                        startTransition(() => {
+                            verifyAction(formData);
+                        });
                     },
                     prefill: {
                         name: currentUser.displayName || '',
@@ -184,7 +198,7 @@ export default function PricingPage() {
     }, [verifyState, router, toast, queryClient, currentUser?.uid]);
 
 
-    if (isLoadingGeo || isBrandLoading) {
+    if (isLoadingGeo || isBrandLoading || paymentMode === 'loading') {
         return (
             <div className="flex items-center justify-center h-[calc(100vh-10rem)]">
                 <Loader2 className="w-12 h-12 text-primary animate-spin" />
@@ -200,6 +214,16 @@ export default function PricingPage() {
                     Start for free and scale as you grow. Unlock powerful AI features to forge your brand identity.
                 </p>
             </header>
+            
+            {paymentMode === 'test' && (
+                <Alert className="mb-8 border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-300 shadow-md">
+                    <TestTube className="h-4 w-4 !text-amber-500" />
+                    <AlertTitle className="font-bold text-amber-600 dark:text-amber-400">Developer Test Mode is Active</AlertTitle>
+                    <AlertDescription>
+                        You've been selected to try our Pro features! This is a test environment, and **no real money will be charged**. Please proceed with the upgrade to help us test and provide your valuable feedback.
+                    </AlertDescription>
+                </Alert>
+            )}
 
             {planStatus === 'premium' && (
                 <Alert className="mb-8 border-primary/50 bg-primary/5 text-primary-foreground shadow-md">
@@ -322,3 +346,5 @@ export default function PricingPage() {
         </div>
     );
 }
+
+    

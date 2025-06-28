@@ -816,7 +816,7 @@ export async function handleCreateSubscriptionAction(
       return { error: "Selected plan is invalid or has no price." };
   }
   
-  if (currency !== 'INR') {
+  if (currency !== 'INR' && settings.paymentMode === 'live') {
     return { error: "Only INR payments are supported at this time." };
   }
   
@@ -910,3 +910,15 @@ export async function handleVerifyPaymentAction(
     return { error: `An unexpected error occurred: ${e.message}` };
   }
 }
+
+export async function getPaymentMode(): Promise<{ paymentMode: 'live' | 'test', error?: string }> {
+  try {
+    const { paymentMode } = await getModelConfig();
+    return { paymentMode: paymentMode || 'test' };
+  } catch (e: any) {
+    console.error("Error fetching payment mode:", e);
+    return { paymentMode: 'test', error: `Could not retrieve payment mode configuration.` };
+  }
+}
+
+    

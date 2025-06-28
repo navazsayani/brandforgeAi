@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Edit3, TrendingUp, Send, Sparkles, Star, ShieldCheck, Paintbrush, FileText, Image as ImageIconLucide, Eye, AlertCircle, RefreshCcw } from 'lucide-react';
+import { ArrowRight, Edit3, TrendingUp, Send, Sparkles, Star, ShieldCheck, Paintbrush, FileText, Image as ImageIconLucide, Eye, AlertCircle, RefreshCcw, TestTube } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { BrandData, GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -76,12 +76,13 @@ function GreetingCard({ isLoading, brandData }: { isLoading: boolean; brandData:
     
     const { plan, subscriptionEndDate } = brandData || {};
     const brandName = brandData?.brandName;
-    const endDate = subscriptionEndDate?.toDate ? subscriptionEndDate.toDate() : null;
+    const endDate = subscriptionEndDate?.toDate ? subscriptionEndDate.toDate() : (subscriptionEndDate ? new Date(subscriptionEndDate) : null);
     const now = new Date();
     const isPremiumActive = plan === 'premium' && endDate && endDate > now;
     const daysRemaining = endDate ? Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 0;
     
     let planLabel = isAdmin ? 'Admin' : (isPremiumActive ? 'Premium' : 'Free');
+    const isFreeUser = !isPremiumActive && !isAdmin;
     
     const primaryAction = isProfileComplete
       ? { href: "/content-studio", label: "Create New Content" }
@@ -90,63 +91,79 @@ function GreetingCard({ isLoading, brandData }: { isLoading: boolean; brandData:
     return (
         <Card className="card-enhanced w-full overflow-hidden">
             <CardContent className="p-6">
-                <div className="flex flex-col md:flex-row items-center gap-6">
-                    <div className="relative w-32 h-32 rounded-full flex-shrink-0 bg-primary/10 flex items-center justify-center border-2 border-primary/20">
-                        {brandData?.brandLogoUrl ? (
-                            <NextImage
-                                src={brandData.brandLogoUrl}
-                                alt={`${brandName || 'Brand'} Logo`}
-                                fill
-                                style={{ objectFit: "contain" }}
-                                className="p-3 rounded-full"
-                                data-ai-hint="brand logo"
-                            />
-                        ) : (
-                            <Sparkles className="w-16 h-16 text-primary" />
-                        )}
-                    </div>
-                    <div className="flex-1 flex flex-col items-center md:items-start gap-4">
-                        <div className="w-full text-center md:text-left min-w-0">
-                            <Badge variant={isAdmin ? 'destructive' : (isPremiumActive ? 'default' : 'secondary')} className="mb-2">
-                               {isAdmin ? <ShieldCheck className="w-4 h-4 mr-1.5" /> : <Star className="w-4 h-4 mr-1.5" />}
-                               {planLabel}
-                            </Badge>
-                            <h1 className="text-2xl md:text-3xl font-bold text-balance">
-                                Welcome back, {brandName || 'to BrandForge AI'}!
-                            </h1>
-                            <p className="text-muted-foreground mt-1 text-balance">
-                                Ready to create something amazing for your brand today?
-                            </p>
+                <div className="flex flex-col items-center gap-6">
+                    <div className="flex flex-col md:flex-row items-center gap-6 w-full">
+                        <div className="relative w-32 h-32 rounded-full flex-shrink-0 bg-primary/10 flex items-center justify-center border-2 border-primary/20">
+                            {brandData?.brandLogoUrl ? (
+                                <NextImage
+                                    src={brandData.brandLogoUrl}
+                                    alt={`${brandName || 'Brand'} Logo`}
+                                    fill
+                                    style={{ objectFit: "contain" }}
+                                    className="p-3 rounded-full"
+                                    data-ai-hint="brand logo"
+                                />
+                            ) : (
+                                <Sparkles className="w-16 h-16 text-primary" />
+                            )}
                         </div>
+                        <div className="flex-1 flex flex-col items-center md:items-start gap-4">
+                            <div className="w-full text-center md:text-left min-w-0">
+                                <Badge variant={isAdmin ? 'destructive' : (isPremiumActive ? 'default' : 'secondary')} className="mb-2">
+                                {isAdmin ? <ShieldCheck className="w-4 h-4 mr-1.5" /> : <Star className="w-4 h-4 mr-1.5" />}
+                                {planLabel}
+                                </Badge>
+                                <h1 className="text-2xl md:text-3xl font-bold text-balance">
+                                    Welcome back, {brandName || 'to BrandForge AI'}!
+                                </h1>
+                                <p className="text-muted-foreground mt-1 text-balance">
+                                    Ready to create something amazing for your brand today?
+                                </p>
+                            </div>
 
-                        {isPremiumActive && daysRemaining <= 7 && (
-                           <Alert variant="destructive" className="bg-amber-500/10 border-amber-500/50 text-amber-700 dark:text-amber-300 w-full">
-                                <AlertCircle className="h-4 w-4 !text-amber-500" />
-                                <AlertTitle className="font-semibold">Subscription Expiring Soon</AlertTitle>
-                                <AlertDescription>
-                                    Your Pro plan will expire in {daysRemaining} day{daysRemaining > 1 ? 's' : ''}. 
-                                    <Link href="/pricing" className="font-bold underline ml-1 hover:text-amber-600 dark:hover:text-amber-200">Renew now</Link> to maintain access.
-                                </AlertDescription>
-                            </Alert>
-                        )}
+                            {isPremiumActive && daysRemaining <= 7 && (
+                            <Alert variant="destructive" className="bg-amber-500/10 border-amber-500/50 text-amber-700 dark:text-amber-300 w-full">
+                                    <AlertCircle className="h-4 w-4 !text-amber-500" />
+                                    <AlertTitle className="font-semibold">Subscription Expiring Soon</AlertTitle>
+                                    <AlertDescription>
+                                        Your Pro plan will expire in {daysRemaining} day{daysRemaining > 1 ? 's' : ''}. 
+                                        <Link href="/pricing" className="font-bold underline ml-1 hover:text-amber-600 dark:hover:text-amber-200">Renew now</Link> to maintain access.
+                                    </AlertDescription>
+                                </Alert>
+                            )}
 
-                        {!isPremiumActive && plan === 'premium' && (
-                             <Alert variant="destructive" className="w-full">
-                                <AlertCircle className="h-4 w-4" />
-                                <AlertTitle>Your Pro Plan Has Expired</AlertTitle>
-                                <AlertDescription>
-                                    Your access to premium features has ended. 
-                                    <Link href="/pricing" className="font-bold underline ml-1">Renew your subscription</Link> to continue.
-                                </AlertDescription>
-                            </Alert>
-                        )}
+                            {!isPremiumActive && plan === 'premium' && (
+                                <Alert variant="destructive" className="w-full">
+                                    <AlertCircle className="h-4 w-4" />
+                                    <AlertTitle>Your Pro Plan Has Expired</AlertTitle>
+                                    <AlertDescription>
+                                        Your access to premium features has ended. 
+                                        <Link href="/pricing" className="font-bold underline ml-1">Renew your subscription</Link> to continue.
+                                    </AlertDescription>
+                                </Alert>
+                            )}
 
-                        <Link href={primaryAction.href} passHref className="w-full md:w-auto">
-                             <Button size="lg" className="w-full md:w-auto btn-gradient-primary touch-target">
-                               {!isPremiumActive && plan === 'premium' ? (<><RefreshCcw className="w-5 h-5 mr-2" /> Renew and Create</>) : (<>{primaryAction.label} <ArrowRight className="w-5 h-5 ml-2" /></>)}
-                             </Button>
-                        </Link>
+                            <Link href={primaryAction.href} passHref className="w-full md:w-auto">
+                                <Button size="lg" className="w-full md:w-auto btn-gradient-primary touch-target">
+                                {!isPremiumActive && plan === 'premium' ? (<><RefreshCcw className="w-5 h-5 mr-2" /> Renew and Create</>) : (<>{primaryAction.label} <ArrowRight className="w-5 h-5 ml-2" /></>)}
+                                </Button>
+                            </Link>
+                        </div>
                     </div>
+                     {isFreeUser && (
+                        <Alert className="mt-4 border-accent/50 bg-accent/5 text-accent-foreground shadow-md w-full">
+                            <Star className="h-4 w-4 text-accent" />
+                            <AlertTitle className="font-bold text-accent">Unlock Your Brand's Full Potential</AlertTitle>
+                            <AlertDescription>
+                                You're on the Free plan. Upgrade to Pro to unlock powerful features like full blog generation, premium image models, and more generation credits.
+                                <Button variant="link" asChild className="p-0 h-auto ml-1 font-bold text-accent hover:text-accent/80">
+                                    <Link href="/pricing">
+                                        Upgrade Now <ArrowRight className="w-4 h-4 ml-1" />
+                                    </Link>
+                                </Button>
+                            </AlertDescription>
+                        </Alert>
+                    )}
                 </div>
             </CardContent>
         </Card>
@@ -279,3 +296,5 @@ function RecentItemCard({ type, content, imageUrl }: { type: 'Image' | 'Social P
         </Card>
     );
 }
+
+    
