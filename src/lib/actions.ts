@@ -662,7 +662,7 @@ export async function handleGetAllUserProfilesForAdminAction(
           brandName: data.brandName || "Unnamed Brand",
           userEmail: data.userEmail || userDoc.data().email || "No Email",
           plan: data.plan || 'free',
-          subscriptionEndDate: endDate ? endDate.toDate().toISOString() : null,
+          subscriptionEndDate: endDate ? (endDate as any).toDate().toISOString() : null,
         });
       }
     }
@@ -826,7 +826,7 @@ export async function handleCreateSubscriptionAction(
     const options = {
       amount: amountInPaise,
       currency: currency,
-      receipt: `receipt_brandforge_${userId}_${Date.now()}`,
+      receipt: `bf_rcpt_${crypto.randomBytes(8).toString('hex')}`,
       notes: {
         userId: userId,
         planId: planId,
@@ -871,6 +871,8 @@ export async function handleVerifyPaymentAction(
   const body = razorpay_order_id + '|' + razorpay_payment_id;
 
   try {
+    // This is the crucial security step. We recreate the signature on the server using
+    // our secret key. If it matches the one from Razorpay, we know the payment is authentic.
     const expectedSignature = crypto
       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
       .update(body.toString())
