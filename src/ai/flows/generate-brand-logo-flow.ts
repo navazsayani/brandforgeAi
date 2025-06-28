@@ -32,48 +32,76 @@ export async function generateBrandLogo(
 }
 
 const generateLogoPromptText = (input: GenerateBrandLogoInput): string => {
+  // Base prompt with stricter guidelines
   let prompt = `
-**Task: Generate a professional and modern brand logo.**
+**Objective: Generate a versatile, professional, and modern brand logo.**
 
 **Brand Information:**
 - **Brand Name:** "${input.brandName}"
 - **Brand Description:** "${input.brandDescription}"
-{{#if industry}}
-- **Industry:** "{{industry}}"
-{{/if}}
-{{#if targetKeywords}}
-- **Keywords:** "{{targetKeywords}}"
-{{/if}}
+- **Industry:** "${input.industry || 'General'}"
+- **Keywords:** "${input.targetKeywords || 'N/A'}"
 
-**Core Logo Requirements (MUST be followed):**
-- **Style:** Create a **clean, modern, and minimalist** logo. It must be a **vector-style graphic**, suitable for high-resolution use and scaling.
-- **Simplicity:** The design should be iconic and easily recognizable at a small size.
-- **Background:** Generate the logo on a **plain white or transparent background**. This is critical.
-- **Format:** The final output must be a single, square image containing only the logo. **Do NOT include any text, descriptions, or labels like "Logo Concept" in the image itself.**
+**CRITICAL LOGO REQUIREMENTS (MUST be strictly followed):**
+1.  **Style:** A **clean, modern, minimalist, and flat vector-style graphic**. The design must be iconic and memorable. It should be suitable for high-resolution use, scaling, and app icons.
+2.  **Background:** Generate ONLY the logo on a **plain white background**. This is non-negotiable. A transparent background is also acceptable if possible.
+3.  **Content:** The output image must be a single, square image containing ONLY the logo graphic. **Absolutely NO extra text**, labels like "Logo Concept", or descriptions should be part of the image itself.
+4.  **Simplicity:** The design must be simple enough to be easily recognizable even at a very small size. Avoid clutter.
 
-**What to AVOID (Strictly):**
-- **NO 3D rendering or complex gradients.**
-- **NO photographic elements, shadows, or realistic textures.**
-- **NO overly intricate or busy details.**
+**STRICT AVOIDANCE LIST (DO NOT include these elements):**
+- **NO 3D rendering**, complex gradients, bevels, or embossing.
+- **NO photographic elements**, shadows, realistic textures, or lighting effects.
+- **NO overly intricate, busy, or complex details** that would be lost at small sizes.
+- **NO literal or clichéd representations** of the industry (e.g., no dollar signs for finance, no shopping carts for e-commerce). Think abstractly and conceptually.
 
-**Creative Direction & Concepts:**
-- **Conceptual Link:** The logo should visually represent the brand's core essence. For example, if the brand is about "growth," consider abstract leaf or arrow shapes. If it's about "connectivity," think about nodes or links.
-- **Typography:** If using a logotype (text-based), choose a modern, clean sans-serif font. Consider a unique monogram (e.g., using initials) if the brand name is long.
-- **Color Palette:** Use a simple and professional color palette (2-3 colors maximum) that aligns with the brand's industry and description. Ensure high contrast for readability.
+**Creative & Conceptual Direction:**
+- **Abstract Representation:** The logo should visually symbolize the brand's core essence, values, or offerings in an abstract manner.
+- **Typography (if used):** If creating a logotype or a mark that includes text, use a modern, clean, geometric, or professional sans-serif font. Consider a unique monogram (e.g., using initials) if the brand name is long. The text must be perfectly legible.
+- **Color Palette:** Use a simple and professional color palette (2-3 colors maximum is ideal) that aligns with the brand's industry and description. Ensure high contrast for readability.
 `;
-  
-  // Refined industry-specific hints
-  if (input.industry?.toLowerCase().includes('fashion') || input.brandDescription.toLowerCase().includes('fashion')) {
-    prompt += "\n- **Industry Hint (Fashion):** Lean towards elegance and sophistication. A stylish monogram, an abstract mark that evokes fabric or form, or a refined, unique wordmark would be appropriate.";
-  }
-  if (input.industry?.toLowerCase().includes('technology') || input.brandDescription.toLowerCase().includes('technology')) {
-    prompt += "\n- **Industry Hint (Technology):** Emphasize a sleek, modern, and precise feel. Think beyond literal circuits. Consider abstract representations of data, interconnected nodes, or a subtle spark of intelligence. Geometric shapes are excellent.";
-  }
-  if (input.industry?.toLowerCase().includes('food') || input.brandDescription.toLowerCase().includes('food')) {
-    prompt += "\n- **Industry Hint (Food & Beverage):** Consider organic shapes, natural elements, or minimalist representations of food/drink items. The feeling should be fresh and appealing.";
-  }
-  if (input.industry?.toLowerCase().includes('health') || input.brandDescription.toLowerCase().includes('health')) {
-    prompt += "\n- **Industry Hint (Health & Wellness):** Focus on clean lines, calming colors, and abstract symbols of balance, nature, or vitality (like a simple leaf, heart, or plus sign).";
+
+  // --- Industry-Specific Conceptual Refinements ---
+  const industry = input.industry?.toLowerCase() || '';
+
+  if (industry.includes('tech') || industry.includes('saas')) {
+      prompt += `
+- **Industry Refinement (Technology & SaaS):** Focus on concepts of **efficiency, connectivity, intelligence, and data flow**. AVOID literal circuits, computer chips, or mouse pointers. Think abstractly about interconnected nodes, a subtle spark of intelligence, geometric forms suggesting structure or platforms, or an elegant monogram that feels modern and precise.`;
+  } else if (industry.includes('fashion') || industry.includes('apparel')) {
+      prompt += `
+- **Industry Refinement (Fashion & Apparel):** Emphasize **elegance, style, and craftsmanship**. AVOID literal clothing items like a t-shirt or dress. Consider a stylish and unique monogram, an abstract mark that evokes fabric flow or a sophisticated stitch pattern, or a refined, high-end wordmark.`;
+  } else if (industry.includes('beauty') || industry.includes('cosmetic')) {
+      prompt += `
+- **Industry Refinement (Beauty & Cosmetics):** Convey **freshness, nature, and science**. AVOID literal makeup items like lipstick tubes. Think about abstract organic shapes, a stylized leaf or petal, a minimalist water drop, or clean, scientific-looking geometric forms.`;
+  } else if (industry.includes('food') || industry.includes('beverage')) {
+      prompt += `
+- **Industry Refinement (Food & Beverage):** Focus on **freshness, community, and quality**. AVOID generic forks and spoons. Consider minimalist and abstract representations of natural ingredients (e.g., a stylized leaf, grain, or fruit), or a shape that evokes a communal table or a plate.`;
+  } else if (industry.includes('health') || industry.includes('wellness')) {
+      prompt += `
+- **Industry Refinement (Health & Wellness):** Emphasize **balance, vitality, and calm**. AVOID overly complex human figures. Focus on clean lines, calming colors, and abstract symbols of balance (e.g., stacked stones), nature (a simple leaf), vitality (a subtle pulse or spark), or care (abstracted heart or plus sign).`;
+  } else if (industry.includes('travel') || industry.includes('hospitality')) {
+      prompt += `
+- **Industry Refinement (Travel & Hospitality):** Suggest **adventure, direction, and comfort**. AVOID generic airplanes or suitcases. Think about abstract compass lines, a stylized map pointer, a simple wave or sun, or an icon that combines a location pin with another element like a leaf or bed.`;
+  } else if (industry.includes('commerce') || industry.includes('retail')) {
+      prompt += `
+- **Industry Refinement (E-commerce & Retail):** Focus on **speed, connection, and discovery**. AVOID literal shopping carts. Consider an abstract arrow indicating movement or delivery, an iconic, stylized representation of a package or gift box, or interlocking shapes representing connection between buyer and seller.`;
+  } else if (industry.includes('education')) {
+      prompt += `
+- **Industry Refinement (Education):** Convey **growth, knowledge, and pathways**. AVOID literal graduation caps. Think about an abstract open book, a stylized tree of knowledge, overlapping shapes representing learning blocks, or an upward-pointing arrow forming part of an initial.`;
+  } else if (industry.includes('finance') || industry.includes('fintech')) {
+      prompt += `
+- **Industry Refinement (Finance & Fintech):** Emphasize **trust, growth, and security**. AVOID literal dollar signs or money bags. Consider an abstract upward-trending graph, a modern and secure shield or lock shape, or stylized geometric shapes representing blocks or a distributed ledger.`;
+  } else if (industry.includes('real estate')) {
+      prompt += `
+- **Industry Refinement (Real Estate):** Suggest **shelter, community, and property**. AVOID overly detailed house illustrations. Focus on a minimalist roofline, an abstract key shape, interlocking geometric forms representing community or plots of land, or a combination of a location pin and a house outline.`;
+  } else if (industry.includes('arts') || industry.includes('entertainment')) {
+      prompt += `
+- **Industry Refinement (Arts & Entertainment):** Convey **creativity, sound, and vision**. Consider an abstract soundwave, a stylized spotlight, minimalist filmstrip geometry, or a play button integrated into a letterform.`;
+  } else if (industry.includes('automotive')) {
+      prompt += `
+- **Industry Refinement (Automotive):** Focus on **speed, precision, and mechanics**. Think about abstract motion lines, a stylized representation of a road or a wheel, or a geometric shape that feels engineered and precise, like a modern shield or emblem.`;
+  } else if (industry.includes('non-profit') || industry.includes('nonprofit')) {
+      prompt += `
+- **Industry Refinement (Non-profit):** Emphasize **community, help, and growth**. Think about abstract shapes of helping hands, a growing plant or sprout, interlocking circles representing community, or a simple heart integrated into the design.`;
   }
 
   return prompt;
