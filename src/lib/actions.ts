@@ -641,32 +641,88 @@ export async function handleGetAllUserProfilesForAdminAction(
   }
 
   try {
-    const userIndexRef = doc(db, "userIndex", "profiles");
-    const userIndexSnap = await getDoc(userIndexRef);
-
-    if (!userIndexSnap.exists()) {
-        return { data: [], message: "No user profiles have been saved yet." };
+    const usersCollectionRef = collection(db, 'users');
+    const userDocsSnapshot = await getDocs(usersCollectionRef);
+    
+    if (userDocsSnapshot.empty) {
+      return { data: [], message: "No users found in the database." };
     }
 
-    const indexData = userIndexSnap.data();
-    const profiles: UserProfileSelectItem[] = Object.entries(indexData).map(([userId, userData]) => ({
-      userId: userId,
-      brandName: (userData as any).brandName || "Unnamed Brand",
-      userEmail: (userData as any).userEmail || "No Email",
-    }));
+    const profiles: UserProfileSelectItem[] = [];
+    for (const userDoc of userDocsSnapshot.docs) {
+      const userId = userDoc.id;
+      const profileDocRef = doc(db, 'users', userId, 'brandProfiles', userId);
+      const profileDocSnap = await getDoc(profileDocRef);
+
+      if (profileDocSnap.exists()) {
+        const data = profileDocSnap.data() as BrandData;
+        profiles.push({
+          userId: userId,
+          brandName: data.brandName || "Unnamed Brand",
+          userEmail: data.userEmail || userDoc.data().email || "No Email",
+          plan: data.plan || 'free',
+          subscriptionEndDate: data.subscriptionEndDate || null,
+        });
+      }
+    }
     
     return { data: profiles, message: "User profiles fetched successfully." };
 
   } catch (e: any) {
     if (e.code === 'permission-denied') {
-        return { error: "Database permission error. Please check your Firestore security rules in the Firebase console." };
+        return { error: "Database permission error. Check Firestore rules." };
     } else if (e.code === 'unavailable') {
-        return { error: "Database unavailable. Please check your internet connection." };
+        return { error: "Database unavailable. Check internet connection." };
     }
     
     return { error: `Failed to fetch user profiles: ${e.message || "Unknown error"}` };
   }
 }
+
+export async function handleUpdateUserPlanByAdminAction(
+  prevState: FormState<{ success: boolean }>,
+  formData: FormData
+): Promise<FormState<{ success: boolean }>> {
+  const adminRequesterEmail = formData.get('adminRequesterEmail') as string;
+  const userId = formData.get('userId') as string;
+  const newPlan = formData.get('plan') as 'free' | 'premium';
+  const newEndDateStr = formData.get('subscriptionEndDate') as string | null;
+
+  if (adminRequesterEmail !== 'admin@brandforge.ai') {
+    return { error: "Unauthorized: You do not have permission to perform this action." };
+  }
+  if (!userId || !newPlan) {
+    return { error: "User ID and new plan are required." };
+  }
+
+  try {
+    const brandProfileRef = doc(db, 'users', userId, 'brandProfiles', userId);
+    
+    const updateData: Partial<BrandData> = { plan: newPlan };
+    
+    if (newPlan === 'premium') {
+      if (newEndDateStr) {
+        updateData.subscriptionEndDate = new Date(newEndDateStr);
+      } else {
+        // If no date is provided for premium, default to 30 days from now
+        const newEndDate = new Date();
+        newEndDate.setDate(newEndDate.getDate() + 30);
+        updateData.subscriptionEndDate = newEndDate;
+      }
+    } else { // 'free' plan
+      updateData.subscriptionEndDate = null;
+    }
+
+    await setDoc(brandProfileRef, updateData, { merge: true });
+    
+    return { data: { success: true }, message: `Successfully updated ${userId}'s plan to ${newPlan}.` };
+
+  } catch (e: any) {
+    console.error("Error updating user plan by admin:", e);
+    return { error: `Failed to update user plan: ${e.message || "Unknown error"}` };
+  }
+}
+
 
 export async function handleGetSettingsAction(
   prevState: FormState<ModelConfig>,

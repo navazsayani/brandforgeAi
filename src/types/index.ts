@@ -68,6 +68,8 @@ export interface UserProfileSelectItem {
   userId: string;
   brandName: string;
   userEmail: string;
+  plan?: 'free' | 'premium';
+  subscriptionEndDate?: any;
 }
 
 // Type for the model configuration
