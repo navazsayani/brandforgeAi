@@ -8,13 +8,15 @@ import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Check, ArrowRight, Star, X, Loader2, Info, RefreshCcw, TestTube, Copy } from 'lucide-react';
+import { Check, ArrowRight, Star, X, Loader2, Info, RefreshCcw, TestTube, Copy, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { plans, type Plan } from '@/lib/pricing';
 import type { FormState } from '@/lib/actions';
 import { handleCreateSubscriptionAction, handleVerifyPaymentAction, getPaymentMode } from '@/lib/actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 declare global {
     interface Window {
@@ -39,6 +41,11 @@ export default function PricingPage() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
     const [paymentMode, setPaymentMode] = useState<'live' | 'test' | 'loading'>('loading');
+    
+    // Admin-specific state for testing
+    const isAdmin = currentUser?.email === 'admin@brandforge.ai';
+    const [adminGeoOverride, setAdminGeoOverride] = useState<string | null>(null);
+
 
     useEffect(() => {
         fetch('https://ipapi.co/json/')
@@ -79,8 +86,9 @@ export default function PricingPage() {
         };
     }, [brandData]);
 
-    const currency = geo.country === 'IN' ? 'INR' : 'USD';
-    const displayedPlans = plans[currency];
+    const detectedCountry = adminGeoOverride || geo.country;
+    const currency = detectedCountry === 'IN' ? 'INR' : 'USD';
+    const displayedPlans = plans[currency] || plans['USD']; // Fallback to USD
     const currentPlanId = isPremiumActive ? `pro_${currency.toLowerCase()}` : (needsRenewal ? `pro_${currency.toLowerCase()}_expired` : 'free');
     
     const loadRazorpayScript = () => {
@@ -190,27 +198,21 @@ export default function PricingPage() {
     }, [subscriptionState, currentUser, paymentMode]);
 
     useEffect(() => {
-        // Define an async function to handle the successful payment verification
         const handleSuccess = async () => {
             toast({ title: 'Payment Verified!', description: 'Your plan has been upgraded to Premium.' });
             
-            // Explicitly refetch the brand data and wait for it to complete.
             await refetchBrandData();
 
-            // Now that the data is fresh, navigate to the dashboard.
             router.push('/dashboard');
         };
 
         if (verifyState.data?.success) {
-            // Call the async handler
             handleSuccess();
         } else if (verifyState.error) {
-            // Handle verification errors
             toast({ title: 'Payment Verification Failed', description: verifyState.error, variant: 'destructive'});
             setIsProcessing(false);
             setSelectedPlanId(null);
         } else if (verifyState.data) {
-             // Handle cases where there might be data but success is not explicitly true
             setIsProcessing(false);
             setSelectedPlanId(null);
         }
@@ -239,6 +241,39 @@ export default function PricingPage() {
                 </p>
             </header>
             
+            {isAdmin && (
+                <Card className="mb-8 bg-secondary/30 shadow-md border-primary/20">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Globe className="w-5 h-5 text-primary"/>Admin: Geolocation Tester</CardTitle>
+                        <CardDescription>
+                            Override your detected location to test the pricing display for different regions.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <RadioGroup
+                            value={adminGeoOverride || 'auto'}
+                            onValueChange={(value) => {
+                                setAdminGeoOverride(value === 'auto' ? null : value);
+                            }}
+                            className="space-y-2"
+                        >
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="auto" id="geo-auto" />
+                                <Label htmlFor="geo-auto">Auto-detect my location ({isLoadingGeo ? 'loading...' : geo.country})</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="IN" id="geo-in" />
+                                <Label htmlFor="geo-in">Simulate India (IN) - Show INR Pricing</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="US" id="geo-us" />
+                                <Label htmlFor="geo-us">Simulate USA (US) - Show USD Pricing</Label>
+                            </div>
+                        </RadioGroup>
+                    </CardContent>
+                </Card>
+            )}
+
             {paymentMode === 'test' && (
                 <Alert className="mb-8 border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-300 shadow-md">
                     <TestTube className="h-4 w-4 !text-amber-500" />
