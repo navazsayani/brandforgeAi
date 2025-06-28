@@ -1114,7 +1114,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
               <p className="text-sm text-muted-foreground">Create unique images. Uses brand description and style. Optionally use an example image from your Brand Profile.</p>
                 {lastUsedImageProvider && <p className="text-xs text-primary mt-1">Image(s) last generated using: {lastUsedImageProvider}</p>}
             </CardHeader>
-            {(isAdmin || isPremiumActive) && isPreviewingPrompt ? (
+            {(isAdmin) && isPreviewingPrompt ? (
               <form onSubmit={handleImageGenerationSubmit}>
                 <CardContent className="space-y-6">
                   <div>
@@ -1144,7 +1144,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
             ) : (
               <form id="imageGenerationFormFields" onSubmit={(e) => {
                   e.preventDefault(); 
-                  if (isAdmin || isPremiumActive) {
+                  if (isAdmin) {
                     handlePreviewPromptClick(e as any);
                   } else {
                     handleImageGenerationSubmit(e);
@@ -1423,7 +1423,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                   </div>
                 </CardContent>
                 <CardFooter>
-                  {(isAdmin || isPremiumActive) ? (
+                  {isAdmin ? (
                     <Button type="submit" className="w-full" disabled={isClearing}>
                         <Eye className="mr-2 h-4 w-4" /> Preview Prompt
                     </Button>
@@ -1473,7 +1473,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                         onDownload={downloadImage}
                         className="w-full"
                     />
-                    {(isAdmin || isPremiumActive) && lastUsedImageGenPrompt && ( 
+                    {(isAdmin) && lastUsedImageGenPrompt && ( 
                       <div className="mt-4">
                           <div className="flex justify-between items-center mb-1">
                               <Label htmlFor="usedImagePromptDisplay" className="flex items-center text-sm font-medium"><FileText className="w-4 h-4 mr-2 text-primary" />Prompt Used:</Label>
@@ -1495,7 +1495,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                       variant="outline"
                       className="mt-4"
                       onClick={handleUseGeneratedImageForSocial}
-                      disabled={!lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url.startsWith('image_url:'))}
+                      disabled={!lastSuccessfulGeneratedImageUrls.some(url => url?.startsWith('data:') || url?.startsWith('image_url:'))}
                     >
                       <ImageUp className="mr-2 h-4 w-4" /> Use First Image for Social Post
                     </Button>
