@@ -18,11 +18,10 @@ import { populateBlogForm, type PopulateBlogFormInput, type PopulateBlogFormOutp
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where, collectionGroup, deleteDoc } from 'firebase/firestore';
-import type { UserProfileSelectItem, BrandData, ModelConfig, PricingPlan } from '@/types';
+import type { UserProfileSelectItem, BrandData, ModelConfig, PlansConfig } from '@/types';
 import { getModelConfig } from './model-config';
-import { auth } from '@/lib/firebaseConfig';
+import { getPlansConfig, DEFAULT_PLANS_CONFIG } from './plans-config';
 import Razorpay from 'razorpay';
-import { plans } from '@/lib/pricing';
 
 // Generic type for form state with error
 export interface FormState<T = any> {
@@ -286,6 +285,22 @@ export async function handleGenerateBlogContentAction(
     const userId = formData.get('userId') as string; 
     const userEmail = formData.get('userEmail') as string | undefined;
 
+    if (!userId) return { error: "User ID is missing. Cannot generate blog post." };
+
+    // Feature Gating Check
+    const userDocRef = doc(db, 'users', userId, 'brandProfiles', userId);
+    const userDocSnap = await getDoc(userDocRef);
+    if (!userDocSnap.exists()) return { error: "User profile not found." };
+    const brandData = userDocSnap.data() as BrandData;
+    
+    const plansConfig = await getPlansConfig();
+    const planDetails = plansConfig.USD[brandData.plan || 'free']; // Assume USD for quota logic
+
+    if ((brandData.plan || 'free') === 'free' && planDetails.quotas.blogPosts <= 0) {
+      return { error: "Full blog post generation is a premium feature. Please upgrade your plan." };
+    }
+
+
     const input: GenerateBlogContentInput = {
       brandName: formData.get("brandName") as string,
       brandDescription: formData.get("blogBrandDescription") as string,
@@ -305,9 +320,7 @@ export async function handleGenerateBlogContentAction(
     if (input.industry === "" || input.industry === undefined) delete input.industry;
     if (input.articleStyle === "" || input.articleStyle === undefined) delete input.articleStyle;
     if (input.targetAudience === "" || input.targetAudience === undefined) delete input.targetAudience;
-    if (!userId) {
-        return { error: "User ID is missing. Cannot save blog post."};
-    }
+    
     await ensureUserBrandProfileDocExists(userId, userEmail);
 
     const result = await generateBlogContent(input);
@@ -844,12 +857,9 @@ export async function handleUpdateUserPlanByAdminAction(
     const updateData: Partial<BrandData> = { plan: newPlan };
 
     if (newPlan === 'premium') {
-      // If a specific end date is provided from the calendar, use it.
       if (newEndDateStr) {
         updateData.subscriptionEndDate = new Date(newEndDateStr);
       } else {
-        // If no date is provided, check if we need to set a new one.
-        // This handles upgrading from free or renewing an expired sub.
         const profileSnap = await getDoc(brandProfileRef);
         const currentData = profileSnap.data() as BrandData | undefined;
         const currentEndDate = currentData?.subscriptionEndDate?.toDate
@@ -863,7 +873,6 @@ export async function handleUpdateUserPlanByAdminAction(
           newEndDate.setDate(newEndDate.getDate() + 30);
           updateData.subscriptionEndDate = newEndDate;
         }
-        // If there's already a valid, future end date, we don't overwrite it unless a new date was explicitly provided.
       }
     } else { // 'free' plan
       updateData.subscriptionEndDate = null;
@@ -916,7 +925,6 @@ export async function handleUpdateSettingsAction(
       freepikEnabled: formData.get("freepikEnabled") === 'true',
     };
     
-    // Basic validation
     if (!modelConfig.imageGenerationModel || !modelConfig.fastModel || !modelConfig.visionModel || !modelConfig.powerfulModel) {
         return { error: "All model fields are required." };
     }
@@ -955,7 +963,9 @@ export async function handleCreateSubscriptionAction(
     return { error: "Plan, user ID, and currency are required to create a subscription." };
   }
 
-  const planDetails = plans[currency]?.find(p => p.id === planId);
+  const plansConfig = await getPlansConfig();
+  const planDetails = plansConfig[currency]?.pro;
+
   if (!planDetails || !planDetails.price.amount.match(/\d+/)) {
       return { error: "Selected plan is invalid or has no price." };
   }
@@ -1058,5 +1068,97 @@ export async function getPaymentMode(): Promise<{ paymentMode: 'live' | 'test', 
   } catch (e: any) {
     console.error("Error fetching payment mode:", e);
     return { paymentMode: 'test', freepikEnabled: false, error: `Could not retrieve payment mode configuration.` };
+  }
+}
+
+
+// New actions for plan configuration
+export async function handleGetPlansConfigAction(
+  prevState: FormState<PlansConfig>,
+  formData?: FormData
+): Promise<FormState<PlansConfig>> {
+   const adminRequesterEmail = formData?.get('adminRequesterEmail') as string | undefined;
+   // Allow non-admins to fetch read-only plan data, but check for admin for updates.
+   // This action is safe as it's read-only.
+  try {
+    const plansConfig = await getPlansConfig();
+    return { data: plansConfig, message: "Plans configuration loaded." };
+  } catch (e: any) {
+    console.error("Error in handleGetPlansConfigAction:", e);
+    return { error: `Failed to load plans configuration: ${e.message || "Unknown error."}` };
+  }
+}
+
+export async function handleUpdatePlansConfigAction(
+  prevState: FormState<PlansConfig>,
+  formData: FormData
+): Promise<FormState<PlansConfig>> {
+  const adminRequesterEmail = formData.get('adminRequesterEmail') as string;
+  if (adminRequesterEmail !== 'admin@brandforge.ai') {
+    return { error: "Unauthorized: You do not have permission to perform this action." };
+  }
+
+  try {
+    const currentConfig = await getPlansConfig();
+
+    const updatedConfig: PlansConfig = {
+      ...currentConfig,
+      USD: {
+        ...currentConfig.USD,
+        pro: {
+          ...currentConfig.USD.pro,
+          price: {
+            ...currentConfig.USD.pro.price,
+            amount: formData.get('usd_pro_price') as string,
+            originalAmount: formData.get('usd_pro_original_price') as string || undefined,
+          },
+          quotas: {
+            imageGenerations: parseInt(formData.get('pro_images_quota') as string, 10),
+            socialPosts: parseInt(formData.get('pro_social_quota') as string, 10),
+            blogPosts: parseInt(formData.get('pro_blogs_quota') as string, 10),
+          }
+        },
+        free: {
+          ...currentConfig.USD.free,
+           quotas: {
+            imageGenerations: parseInt(formData.get('free_images_quota') as string, 10),
+            socialPosts: parseInt(formData.get('free_social_quota') as string, 10),
+            blogPosts: parseInt(formData.get('free_blogs_quota') as string, 10),
+          }
+        }
+      },
+      INR: {
+        ...currentConfig.INR,
+        pro: {
+          ...currentConfig.INR.pro,
+          price: {
+            ...currentConfig.INR.pro.price,
+            amount: formData.get('inr_pro_price') as string,
+            originalAmount: formData.get('inr_pro_original_price') as string || undefined,
+          },
+           quotas: {
+            imageGenerations: parseInt(formData.get('pro_images_quota') as string, 10),
+            socialPosts: parseInt(formData.get('pro_social_quota') as string, 10),
+            blogPosts: parseInt(formData.get('pro_blogs_quota') as string, 10),
+          }
+        },
+         free: {
+          ...currentConfig.INR.free,
+           quotas: {
+            imageGenerations: parseInt(formData.get('free_images_quota') as string, 10),
+            socialPosts: parseInt(formData.get('free_social_quota') as string, 10),
+            blogPosts: parseInt(formData.get('free_blogs_quota') as string, 10),
+          }
+        }
+      }
+    };
+    
+    const configDocRef = doc(db, 'configuration', 'plans');
+    await setDoc(configDocRef, updatedConfig, { merge: true });
+
+    return { data: updatedConfig, message: "Plans configuration updated successfully." };
+  } catch (e: any) {
+    console.error("Error in handleUpdatePlansConfigAction:", e);
+    return { error: `Failed to update plans configuration: ${e.message || "Unknown error."}` };
   }
 }

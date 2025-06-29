@@ -90,10 +90,16 @@ export interface ModelConfig {
   freepikEnabled?: boolean;
 }
 
-// Types for pricing plans
+// --- START: New Types for Dynamic Plan Configuration ---
 export interface PlanFeature {
   name: string;
   included: boolean;
+}
+
+export interface PlanQuotas {
+  imageGenerations: number;
+  socialPosts: number;
+  blogPosts: number;
 }
 
 export interface PlanPrice {
@@ -102,11 +108,20 @@ export interface PlanPrice {
   unit: string;
 }
 
-export interface PricingPlan {
+export interface PlanDetails {
   id: string;
   name: string;
   description: string;
   price: PlanPrice;
   features: PlanFeature[];
+  quotas: PlanQuotas;
   cta: string;
 }
+
+export interface PlansConfig {
+  [currency: string]: {
+    free: PlanDetails;
+    pro: PlanDetails;
+  };
+}
+// --- END: New Types for Dynamic Plan Configuration ---

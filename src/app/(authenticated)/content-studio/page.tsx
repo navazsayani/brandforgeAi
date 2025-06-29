@@ -20,9 +20,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download, Library, Star, Lock, Sparkles as SparklesIcon, ChevronRight, Target, Users } from 'lucide-react';
-import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, handlePopulateImageFormAction, handlePopulateSocialFormAction, handlePopulateBlogFormAction, getPaymentMode, type FormState } from '@/lib/actions';
+import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, handlePopulateImageFormAction, handlePopulateSocialFormAction, handlePopulateBlogFormAction, getPaymentMode, getPlansConfigAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
-import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage } from '@/types';
+import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage, PlansConfig } from '@/types';
 import type { DescribeImageOutput } from "@/ai/flows/describe-image-flow";
 import type { GenerateBlogOutlineOutput } from "@/ai/flows/generate-blog-outline-flow";
 import type { GenerateImagesInput } from '@/ai/flows/generate-images';
@@ -33,6 +33,7 @@ import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; 
 import { industries, imageStylePresets, freepikImagen3EffectColors, freepikImagen3EffectLightnings, freepikImagen3EffectFramings, freepikImagen3AspectRatios, generalAspectRatios, blogTones, freepikValidStyles, socialPostGoals, socialTones, blogArticleStyles } from '@/lib/constants';
 import Link from 'next/link';
+import { DEFAULT_PLANS_CONFIG } from '@/lib/plans-config';
 
 // --- START: Image Grid Fix Components ---
 /**
@@ -209,6 +210,8 @@ const initialPopulateImageFormState: FormState<PopulateImageFormOutput> = { erro
 const initialPopulateSocialFormState: FormState<PopulateSocialFormOutput> = { error: undefined, data: undefined, message: undefined };
 const initialPopulateBlogFormState: FormState<PopulateBlogFormOutput> = { error: undefined, data: undefined, message: undefined };
 const initialFreepikTaskStatusState: FormState<{ status: string; images: string[] | null; taskId: string;}> = { error: undefined, data: undefined, message: undefined, taskId: "" };
+const initialPlansState: FormState<PlansConfig> = { data: null, error: undefined };
+
 
 type SocialImageChoice = 'generated' | 'profile' | 'library' | null;
 
@@ -250,6 +253,8 @@ export default function ContentStudioPage() {
   const [isSavingImages, setIsSavingImages] = useState(false);
 
   const [freepikTaskStatusState, freepikTaskStatusAction] = useActionState(handleCheckFreepikTaskStatusAction, initialFreepikTaskStatusState);
+  const [plansState, getPlans] = useActionState(getPlansConfigAction, initialPlansState);
+
 
   const [lastSuccessfulGeneratedImageUrls, setLastSuccessfulGeneratedImageUrls] = useState<string[]>([]);
   const [lastUsedImageGenPrompt, setLastUsedImageGenPrompt] = useState<string | null>(null);
@@ -335,7 +340,13 @@ export default function ContentStudioPage() {
     return endDate > new Date();
   }, [brandData]);
   
+  const currentPlansConfig = plansState.data || DEFAULT_PLANS_CONFIG;
+  const blogGenerationQuotaForFreePlan = currentPlansConfig.USD.free.quotas.blogPosts;
+  const isBlogFeatureEnabledForFreeUsers = blogGenerationQuotaForFreePlan > 0;
+  
   useEffect(() => {
+    getPlans(); // Fetch plans on component mount
+
     async function fetchConfig() {
       const result = await getPaymentMode(); // This action now fetches multiple config flags
       if (result.error) {
@@ -345,6 +356,7 @@ export default function ContentStudioPage() {
       }
     }
     fetchConfig();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toast]);
   
   const imageGenerationProviders = useMemo(() => [
@@ -2192,13 +2204,13 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                         disabled={
                             isGeneratingOutline || 
                             !generatedBlogOutline.trim() ||
-                            (!isAdmin && !isPremiumActive)
+                            (!isAdmin && !isPremiumActive && !isBlogFeatureEnabledForFreeUsers)
                         }
                     >
-                        {!isAdmin && !isPremiumActive ? <Lock className="mr-2 h-4 w-4" /> : null}
-                        Generate Blog Post {!isAdmin && !isPremiumActive ? '(Premium Feature)' : ''}
+                        {(!isAdmin && !isPremiumActive && !isBlogFeatureEnabledForFreeUsers) && <Lock className="mr-2 h-4 w-4" />}
+                        Generate Blog Post {(!isAdmin && !isPremiumActive && !isBlogFeatureEnabledForFreeUsers) ? '(Premium Feature)' : ''}
                     </SubmitButton>
-                    {!isAdmin && !isPremiumActive && (
+                    {(!isAdmin && !isPremiumActive && !isBlogFeatureEnabledForFreeUsers) && (
                         <p className="text-xs text-muted-foreground mt-2">
                             Full blog post generation is a premium feature. 
                             <Button variant="link" className="p-0 h-auto ml-1 text-xs" asChild>
