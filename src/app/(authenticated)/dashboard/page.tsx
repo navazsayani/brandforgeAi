@@ -174,7 +174,7 @@ function GreetingCard({ isLoading, brandData, paymentMode }: { isLoading: boolea
                         </div>
                     </div>
 
-                    {paymentMode === 'test' && (
+                    {paymentMode === 'test' && !isPremiumActive && (
                         <Alert className="mt-4 border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-300 shadow-md w-full">
                             <TestTube className="h-4 w-4 !text-amber-500" />
                             <AlertTitle className="font-bold text-amber-600 dark:text-amber-400">Developer Test Mode is Active</AlertTitle>
