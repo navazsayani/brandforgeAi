@@ -6,6 +6,7 @@ export interface PlanFeature {
 
 export interface PlanPrice {
   amount: string;
+  originalAmount?: string;
   unit: string;
 }
 
@@ -59,7 +60,7 @@ export const plans: PricingStructure = {
       id: 'pro_usd',
       name: 'Pro',
       description: 'For professionals and small businesses who need more power.',
-      price: { amount: '$12', unit: '/ month' },
+      price: { amount: '$12', originalAmount: '$29', unit: '/ month' },
       features: commonFeatures.pro,
       cta: 'Upgrade to Pro',
     },
@@ -77,7 +78,7 @@ export const plans: PricingStructure = {
       id: 'pro_inr',
       name: 'Pro',
       description: 'For professionals and small businesses who need more power.',
-      price: { amount: '₹399', unit: '/ month' },
+      price: { amount: '₹399', originalAmount: '₹999', unit: '/ month' },
       features: commonFeatures.pro,
       cta: 'Upgrade to Pro',
     },

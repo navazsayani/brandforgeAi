@@ -98,6 +98,7 @@ export interface PlanFeature {
 
 export interface PlanPrice {
   amount: string;
+  originalAmount?: string;
   unit: string;
 }
 

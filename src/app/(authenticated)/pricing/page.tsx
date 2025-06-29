@@ -17,6 +17,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 
 declare global {
     interface Window {
@@ -386,11 +387,23 @@ export default function PricingPage() {
                                     </div>
                                 )}
                                 <CardTitle className="text-3xl text-center font-bold">{plan.name}</CardTitle>
+                                {plan.price.originalAmount && (
+                                    <div className="text-center mt-2">
+                                        <Badge variant="destructive" className="animate-pulse text-base">Introductory Offer: 60% Off</Badge>
+                                    </div>
+                                )}
                                 <CardDescription className="text-center text-lg">{plan.description}</CardDescription>
                             </CardHeader>
                             <CardContent className="flex-grow">
                                 <div className="text-center my-6">
-                                    <span className="text-5xl font-bold">{plan.price.amount}</span>
+                                    {plan.price.originalAmount ? (
+                                        <div className="flex items-baseline justify-center gap-2">
+                                            <s className="text-3xl font-normal text-muted-foreground">{plan.price.originalAmount}</s>
+                                            <span className="text-5xl font-bold">{plan.price.amount}</span>
+                                        </div>
+                                    ) : (
+                                        <span className="text-5xl font-bold">{plan.price.amount}</span>
+                                    )}
                                     <span className="text-muted-foreground text-lg ml-1">{plan.price.unit}</span>
                                 </div>
                                 <ul className="space-y-4">
