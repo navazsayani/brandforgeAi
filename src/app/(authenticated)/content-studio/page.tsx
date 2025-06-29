@@ -20,7 +20,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download, Library, Star, Lock, Sparkles as SparklesIcon, ChevronRight, Target, Users } from 'lucide-react';
-import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, handlePopulateImageFormAction, handlePopulateSocialFormAction, handlePopulateBlogFormAction, type FormState } from '@/lib/actions';
+import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, handlePopulateImageFormAction, handlePopulateSocialFormAction, handlePopulateBlogFormAction, getPaymentMode, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage } from '@/types';
 import type { DescribeImageOutput } from "@/ai/flows/describe-image-flow";
@@ -210,13 +210,6 @@ const initialPopulateSocialFormState: FormState<PopulateSocialFormOutput> = { er
 const initialPopulateBlogFormState: FormState<PopulateBlogFormOutput> = { error: undefined, data: undefined, message: undefined };
 const initialFreepikTaskStatusState: FormState<{ status: string; images: string[] | null; taskId: string;}> = { error: undefined, data: undefined, message: undefined, taskId: "" };
 
-const imageGenerationProviders = [
-    { value: "GEMINI", label: "Gemini (Google AI)", disabled: false, premium: false },
-    { value: "FREEPIK", label: "Freepik API (imagen3)", premium: true },
-    { value: "LEONARDO_AI", label: "Leonardo.ai (Not Implemented)", disabled: true, premium: true },
-    { value: "IMAGEN", label: "Imagen (via Vertex - Not Implemented)", disabled: true, premium: true },
-];
-
 type SocialImageChoice = 'generated' | 'profile' | 'library' | null;
 
 const fetchSavedLibraryImages = async (userId: string | undefined): Promise<SavedGeneratedImage[]> => {
@@ -330,6 +323,9 @@ export default function ContentStudioPage() {
   // Blog form fields state
   const [blogArticleStyle, setBlogArticleStyle] = useState<string>(blogArticleStyles[0].value);
   const [blogTargetAudience, setBlogTargetAudience] = useState<string>("");
+  
+  // State for config fetched from server
+  const [freepikEnabled, setFreepikEnabled] = useState(false);
 
   const isPremiumActive = useMemo(() => {
     if (!brandData) return false;
@@ -338,6 +334,23 @@ export default function ContentStudioPage() {
     const endDate = subscriptionEndDate.toDate ? subscriptionEndDate.toDate() : new Date(subscriptionEndDate);
     return endDate > new Date();
   }, [brandData]);
+  
+  useEffect(() => {
+    async function fetchConfig() {
+      const result = await getPaymentMode(); // This action now fetches multiple config flags
+      if (result.error) {
+        toast({ title: "Config Error", description: result.error, variant: "destructive" });
+      } else {
+        setFreepikEnabled(result.freepikEnabled || false);
+      }
+    }
+    fetchConfig();
+  }, [toast]);
+  
+  const imageGenerationProviders = useMemo(() => [
+    { value: "GEMINI", label: "Gemini (Google AI)", disabled: false, premium: false },
+    { value: "FREEPIK", label: "Freepik API (imagen3)", premium: true, disabled: !freepikEnabled },
+  ], [freepikEnabled]);
 
   const { 
     data: savedLibraryImages = [], 
@@ -1343,6 +1356,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                               </SelectGroup>
                           </SelectContent>
                       </Select>
+                      {!freepikEnabled && <p className="text-xs text-muted-foreground mt-1">Freepik provider is currently disabled by admin in settings.</p>}
                     </div>
                   )}
 
@@ -2239,8 +2253,3 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     </div>
   );
 }
-
-
-    
-
-    

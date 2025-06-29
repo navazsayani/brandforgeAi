@@ -87,6 +87,7 @@ export interface ModelConfig {
   visionModel: string;
   powerfulModel: string;
   paymentMode?: 'live' | 'test';
+  freepikEnabled?: boolean;
 }
 
 // Types for pricing plans

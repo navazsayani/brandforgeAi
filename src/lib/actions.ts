@@ -913,6 +913,7 @@ export async function handleUpdateSettingsAction(
       visionModel: formData.get("visionModel") as string,
       powerfulModel: formData.get("powerfulModel") as string,
       paymentMode: formData.get("paymentMode") as 'live' | 'test' | undefined,
+      freepikEnabled: formData.get("freepikEnabled") === 'true',
     };
     
     // Basic validation
@@ -1050,12 +1051,12 @@ export async function handleVerifyPaymentAction(
   }
 }
 
-export async function getPaymentMode(): Promise<{ paymentMode: 'live' | 'test', error?: string }> {
+export async function getPaymentMode(): Promise<{ paymentMode: 'live' | 'test', freepikEnabled: boolean, error?: string }> {
   try {
-    const { paymentMode } = await getModelConfig();
-    return { paymentMode: paymentMode || 'test' };
+    const { paymentMode, freepikEnabled } = await getModelConfig();
+    return { paymentMode: paymentMode || 'test', freepikEnabled: freepikEnabled || false };
   } catch (e: any) {
     console.error("Error fetching payment mode:", e);
-    return { paymentMode: 'test', error: `Could not retrieve payment mode configuration.` };
+    return { paymentMode: 'test', freepikEnabled: false, error: `Could not retrieve payment mode configuration.` };
   }
 }

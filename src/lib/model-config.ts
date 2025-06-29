@@ -9,6 +9,7 @@ export const DEFAULT_MODEL_CONFIG: ModelConfig = {
   visionModel: 'googleai/gemini-1.5-flash-latest',
   powerfulModel: 'googleai/gemini-1.5-pro-latest',
   paymentMode: 'test',
+  freepikEnabled: true, // Default to true
 };
 
 // Simple in-memory cache

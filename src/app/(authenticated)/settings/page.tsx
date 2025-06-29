@@ -16,9 +16,10 @@ import { handleGetSettingsAction, handleUpdateSettingsAction, type FormState } f
 import { SubmitButton } from '@/components/SubmitButton';
 import { DEFAULT_MODEL_CONFIG } from '@/lib/model-config';
 import type { ModelConfig } from '@/types';
-import { Settings, Loader2, ExternalLink, TestTube, ShoppingCart } from 'lucide-react';
+import { Settings, Loader2, ExternalLink, TestTube, ShoppingCart, Power } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Switch } from '@/components/ui/switch';
 
 const settingsSchema = z.object({
   imageGenerationModel: z.string().min(1, "Image generation model name cannot be empty."),
@@ -26,6 +27,7 @@ const settingsSchema = z.object({
   visionModel: z.string().min(1, "Vision model name cannot be empty."),
   powerfulModel: z.string().min(1, "Powerful text model name cannot be empty."),
   paymentMode: z.enum(['live', 'test']).optional(),
+  freepikEnabled: z.boolean().optional(),
 });
 
 type SettingsFormData = z.infer<typeof settingsSchema>;
@@ -95,7 +97,12 @@ export default function SettingsPage() {
       formData.append('adminRequesterEmail', currentUser.email);
       Object.entries(data).forEach(([key, value]) => {
          if (value !== undefined && value !== null) {
-            formData.append(key, value);
+            // For boolean, ensure it's sent as 'true' or 'false' string
+            if (typeof value === 'boolean') {
+              formData.append(key, String(value));
+            } else {
+              formData.append(key, value);
+            }
         }
       });
       startTransition(() => {
@@ -127,51 +134,71 @@ export default function SettingsPage() {
             <div>
               <CardTitle className="text-3xl font-bold">Admin Settings</CardTitle>
               <CardDescription className="text-lg">
-                Manage the AI models and payment gateway settings for the application.
+                Manage AI models, payment gateways, and feature flags.
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <CardContent className="space-y-6">
-               <FormField
-                  control={form.control}
-                  name="paymentMode"
-                  render={({ field }) => (
-                    <FormItem className="space-y-3 p-4 border rounded-lg bg-secondary/30">
-                      <FormLabel className="text-base font-semibold">Payment Gateway Mode</FormLabel>
-                      <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          value={field.value || 'test'}
-                          className="flex flex-col space-y-2 pt-2"
-                        >
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value="test" id="mode-test" />
-                            </FormControl>
-                            <FormLabel htmlFor="mode-test" className="font-normal flex items-center gap-2">
-                              <TestTube className="w-4 h-4 text-amber-500"/> Test Mode (Uses Test API Keys)
-                            </FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value="live" id="mode-live" />
-                            </FormControl>
-                            <FormLabel htmlFor="mode-live" className="font-normal flex items-center gap-2">
-                              <ShoppingCart className="w-4 h-4 text-green-500"/> Live Mode (Uses Production API Keys)
-                            </FormLabel>
-                          </FormItem>
-                        </RadioGroup>
-                      </FormControl>
-                      <FormDescription>
-                        Select whether to use Razorpay's test or live environment for payments. Ensure the corresponding keys are in your .env file.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            <CardContent className="space-y-8">
+               <div className="space-y-4 p-4 border rounded-lg bg-secondary/30">
+                  <h3 className="text-base font-semibold">Feature Flags & Gateways</h3>
+                  <FormField
+                    control={form.control}
+                    name="paymentMode"
+                    render={({ field }) => (
+                      <FormItem className="space-y-3">
+                        <FormLabel className="text-sm">Payment Gateway Mode</FormLabel>
+                        <FormControl>
+                          <RadioGroup
+                            onValueChange={field.onChange}
+                            value={field.value || 'test'}
+                            className="flex flex-col space-y-2 pt-2"
+                          >
+                            <FormItem className="flex items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="test" id="mode-test" />
+                              </FormControl>
+                              <FormLabel htmlFor="mode-test" className="font-normal flex items-center gap-2">
+                                <TestTube className="w-4 h-4 text-amber-500"/> Test Mode (Uses Test API Keys)
+                              </FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="live" id="mode-live" />
+                              </FormControl>
+                              <FormLabel htmlFor="mode-live" className="font-normal flex items-center gap-2">
+                                <ShoppingCart className="w-4 h-4 text-green-500"/> Live Mode (Uses Production API Keys)
+                              </FormLabel>
+                            </FormItem>
+                          </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   <FormField
+                      control={form.control}
+                      name="freepikEnabled"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-background">
+                          <div className="space-y-0.5">
+                            <FormLabel className="flex items-center gap-2"><Power className="w-4 h-4 text-primary"/>Enable Freepik API</FormLabel>
+                            <FormDescription>
+                              Allow users to select Freepik as a premium image provider.
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+               </div>
 
                <Alert>
                   <AlertTitle>Important: AI Model Configuration</AlertTitle>
@@ -194,7 +221,7 @@ export default function SettingsPage() {
                     <FormControl>
                       <Input placeholder="e.g., googleai/gemini-2.0-flash-preview-image-generation" {...field} />
                     </FormControl>
-                    <FormDescription>Model for creating images.</FormDescription>
+                    <FormDescription>Model for creating images (Gemini).</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
