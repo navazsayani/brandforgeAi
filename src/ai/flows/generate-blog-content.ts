@@ -22,6 +22,8 @@ const GenerateBlogContentInputSchema = z.object({
   websiteUrl: z.string().url().optional().describe('Optional URL of the brand\'s website for additional context for SEO and content relevance.'),
   blogOutline: z.string().describe('A detailed, structured outline for the blog post. The AI should strictly follow this outline.'),
   blogTone: z.string().describe('The desired tone and style for the blog post (e.g., Informative, Witty, Professional, Conversational).'),
+  articleStyle: z.string().optional().describe("The format of the blog post, e.g., 'How-To Guide', 'Listicle'. This informs the content structure."),
+  targetAudience: z.string().optional().describe("The intended audience for the blog post, e.g., 'Beginners', 'Experts'. This sets the content's complexity and language."),
 });
 export type GenerateBlogContentInput = z.infer<typeof GenerateBlogContentInputSchema>;
 
@@ -31,10 +33,6 @@ const GenerateBlogContentOutputSchema = z.object({
   tags: z.string().describe('Relevant tags for the blog post, comma separated, optimized for SEO using keywords and website content if available, and relevant to the brand\'s industry.'),
 });
 export type GenerateBlogContentOutput = z.infer<typeof GenerateBlogContentOutputSchema>;
-
-export async function generateBlogContent(input: GenerateBlogContentInput): Promise<GenerateBlogContentOutput> {
-  return generateBlogContentFlow(input);
-}
 
 const generateBlogContentPrompt = ai.definePrompt({
   name: 'generateBlogContentPrompt',
@@ -47,47 +45,57 @@ const generateBlogContentPrompt = ai.definePrompt({
     websiteUrl: GenerateBlogContentInputSchema.shape.websiteUrl,
     blogOutline: GenerateBlogContentInputSchema.shape.blogOutline,
     blogTone: GenerateBlogContentInputSchema.shape.blogTone,
+    articleStyle: GenerateBlogContentInputSchema.shape.articleStyle,
+    targetAudience: GenerateBlogContentInputSchema.shape.targetAudience,
     websiteContent: z.string().optional().describe('The main text content extracted from the website, if URL was provided and fetching was successful.'),
     extractionError: z.string().optional().describe('Any error that occurred during website content extraction.')
   })},
   output: {schema: GenerateBlogContentOutputSchema},
-  prompt: `You are an expert blog content creator specializing in the {{{industry}}} industry. Your task is to write a complete blog post based *strictly* on the provided outline, brand information, desired tone, and keywords.
+  prompt: `You are an expert blog content creator specializing in writing for a '{{{targetAudience}}}' audience in the '{{{industry}}}' industry. Your task is to write a complete blog post based *strictly* on the provided outline and other parameters.
 
-Brand Name: {{{brandName}}}
-Brand Description: {{{brandDescription}}}
-{{#if industry}}
-Industry: {{{industry}}}
-{{/if}}
-Keywords for SEO: {{{keywords}}}
-Target Platform: {{{targetPlatform}}}
-Desired Tone/Style: {{{blogTone}}}
+**Primary Instructions:**
+- **Brand Name:** {{{brandName}}}
+- **Brand Description:** {{{brandDescription}}}
+- **Target Audience:** {{#if targetAudience}}"{{{targetAudience}}}"{{else}}General audience{{/if}}
+- **Desired Tone/Style:** {{{blogTone}}}
+- **Article Format:** {{#if articleStyle}}"{{{articleStyle}}}"{{else}}Standard blog post{{/if}}
+- **Keywords for SEO:** {{{keywords}}}
+- **Target Platform:** {{{targetPlatform}}}
 
+**Contextual Information:**
 {{#if websiteUrl}}
-Website URL for context: {{{websiteUrl}}}
+- **Website URL:** {{{websiteUrl}}}
   {{#if extractionError}}
-  Note: There was an error fetching content from the website: {{{extractionError}}}. Focus on other provided information for content and tags.
+  - Note: There was an error fetching content from the website: {{{extractionError}}}. Focus on other provided information.
   {{else}}
     {{#if websiteContent}}
-    Relevant Website Content Snippets (for thematic alignment and SEO tags):
-    {{{websiteContent}}}
+    - Relevant Website Content Snippets (for thematic alignment and SEO): {{{websiteContent}}}
     {{else}}
-    Note: No significant text content was extracted from the website.
+    - Note: No significant text content was extracted from the website.
     {{/if}}
   {{/if}}
 {{/if}}
 
-Blog Post Outline (Adhere to this structure closely):
+**Blog Post Outline (Adhere to this structure very closely):**
 {{{blogOutline}}}
 
-Instructions:
-1.  **Title**: Derive a compelling title from the blog outline, ensuring it is relevant to the {{{industry}}} industry.
-2.  **Content**: Write the full blog post, ensuring each section of the outline is well-developed. The content should be informative, engaging, align with the brand's values, and be tailored to the target audience within the {{{industry}}} industry. Maintain the specified 'Desired Tone/Style' throughout the post.
-3.  **SEO & Keywords**: Naturally integrate the 'Keywords for SEO'. If website content was provided, use insights from it to further optimize for SEO and to choose relevant tags.
-4.  **Tags**: Generate 3-5 relevant, comma-separated tags for the blog post. These tags should be SEO-friendly, reflect the main topics, keywords, insights from website content (if available), and be highly relevant to the {{{industry}}} industry.
+**Execution Plan:**
+1.  **Title**: Derive a compelling and SEO-friendly title directly from the blog outline's main heading.
+2.  **Content**: Write the full blog post.
+    - **Follow the Outline:** Ensure every section and bullet point from the outline is fully developed into a paragraph or a list as appropriate.
+    - **Match the Tone:** Maintain the specified 'Desired Tone/Style' throughout the entire article.
+    - **Audience-Centric:** Write in a way that is clear, engaging, and valuable for the specified 'Target Audience'.
+    - **Format Correctly:** Structure the content to match the 'Article Format' (e.g., use numbered lists for a listicle, clear steps for a how-to guide).
+3.  **SEO & Keywords**: Naturally integrate the 'Keywords for SEO' into the content. Use insights from website content (if provided) to improve relevance.
+4.  **Tags**: Generate 3-5 relevant, comma-separated tags. These tags should be SEO-friendly, reflect the main topics, keywords, and be highly relevant to the brand's industry.
 
-Output the generated title, content, and tags.
+Output only the generated title, content, and tags in the required format.
 `,
 });
+
+export async function generateBlogContent(input: GenerateBlogContentInput): Promise<GenerateBlogContentOutput> {
+  return generateBlogContentFlow(input);
+}
 
 const generateBlogContentFlow = ai.defineFlow(
   {
@@ -123,6 +131,8 @@ const generateBlogContentFlow = ai.defineFlow(
       websiteUrl: input.websiteUrl,
       blogOutline: input.blogOutline,
       blogTone: input.blogTone,
+      articleStyle: input.articleStyle,
+      targetAudience: input.targetAudience,
       websiteContent: websiteContent,
       extractionError: extractionError,
     }, { model: powerfulModel });

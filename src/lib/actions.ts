@@ -13,6 +13,8 @@ import { generateBrandLogo, type GenerateBrandLogoInput, type GenerateBrandLogoO
 import { enhanceBrandDescription, type EnhanceBrandDescriptionInput, type EnhanceBrandDescriptionOutput } from '@/ai/flows/enhance-brand-description-flow';
 import { generateBrandForgeAppLogo, type GenerateBrandForgeAppLogoOutput } from '@/ai/flows/generate-brandforge-app-logo-flow';
 import { populateImageForm, type PopulateImageFormInput, type PopulateImageFormOutput } from '@/ai/flows/populate-image-form-flow';
+import { populateSocialForm, type PopulateSocialFormInput, type PopulateSocialFormOutput } from '@/ai/flows/populate-social-form-flow';
+import { populateBlogForm, type PopulateBlogFormInput, type PopulateBlogFormOutput } from '@/ai/flows/populate-blog-form-flow';
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where, collectionGroup, deleteDoc } from 'firebase/firestore';
@@ -194,7 +196,7 @@ export async function handleGenerateSocialMediaCaptionAction(
     const presetTone = formData.get("tone") as string;
     const customNuances = formData.get("customSocialToneNuances") as string | null;
     const userId = formData.get('userId') as string; 
-    const userEmail = formData.get('userEmail') as string | undefined; // For ensuring profile exists with email
+    const userEmail = formData.get('userEmail') as string | undefined;
 
     let finalTone = presetTone;
     if (customNuances && customNuances.trim() !== "") {
@@ -206,6 +208,9 @@ export async function handleGenerateSocialMediaCaptionAction(
       industry: formData.get("industry") as string | undefined,
       imageDescription: imageSrc ? imageDescription : undefined,
       tone: finalTone,
+      postGoal: formData.get("postGoal") as string | undefined,
+      targetAudience: formData.get("targetAudience") as string | undefined,
+      callToAction: formData.get("callToAction") as string | undefined,
     };
 
     if (!input.brandDescription || !input.tone) {
@@ -215,6 +220,9 @@ export async function handleGenerateSocialMediaCaptionAction(
         return { error: "Image description is required if an image is selected for the post."}
     }
     if (input.industry === "" || input.industry === undefined) delete input.industry;
+    if (input.postGoal === "" || input.postGoal === undefined) delete input.postGoal;
+    if (input.targetAudience === "" || input.targetAudience === undefined) delete input.targetAudience;
+    if (input.callToAction === "" || input.callToAction === undefined) delete input.callToAction;
     if (!userId) {
         return { error: "User ID is missing. Cannot save social media post."};
     }
@@ -226,6 +234,10 @@ export async function handleGenerateSocialMediaCaptionAction(
       caption: result.caption || "",
       hashtags: result.hashtags || "",
       imageSrc: imageSrc,
+      postGoal: input.postGoal,
+      targetAudience: input.targetAudience,
+      callToAction: input.callToAction,
+      tone: input.tone,
     });
     return { data: { ...result, imageSrc: imageSrc }, message: "Social media content generated and saved successfully!" };
   } catch (e: any)
@@ -246,6 +258,8 @@ export async function handleGenerateBlogOutlineAction(
             industry: formData.get("industry") as string | undefined,
             keywords: formData.get("blogKeywords") as string,
             websiteUrl: (formData.get("blogWebsiteUrl") as string) || undefined,
+            articleStyle: formData.get("articleStyle") as string | undefined,
+            targetAudience: formData.get("targetAudience") as string | undefined,
         };
 
         if (!input.brandName || !input.brandDescription || !input.keywords) {
@@ -253,6 +267,8 @@ export async function handleGenerateBlogOutlineAction(
         }
         if (input.websiteUrl === "") delete input.websiteUrl;
         if (input.industry === "" || input.industry === undefined) delete input.industry;
+        if (input.articleStyle === "" || input.articleStyle === undefined) delete input.articleStyle;
+        if (input.targetAudience === "" || input.targetAudience === undefined) delete input.targetAudience;
 
         const result = await generateBlogOutline(input);
         return { data: result, message: "Blog outline generated successfully!" };
@@ -279,12 +295,16 @@ export async function handleGenerateBlogContentAction(
       websiteUrl: formData.get("blogWebsiteUrl") as string || undefined,
       blogOutline: formData.get("blogOutline") as string,
       blogTone: formData.get("blogTone") as string,
+      articleStyle: formData.get("articleStyle") as string | undefined,
+      targetAudience: formData.get("targetAudience") as string | undefined,
     };
      if (!input.brandName || !input.brandDescription || !input.keywords || !input.targetPlatform || !input.blogOutline || !input.blogTone) {
       return { error: "All fields (except optional website URL and industry) including outline and tone are required for blog content generation." };
     }
     if (input.websiteUrl === "") delete input.websiteUrl;
     if (input.industry === "" || input.industry === undefined) delete input.industry;
+    if (input.articleStyle === "" || input.articleStyle === undefined) delete input.articleStyle;
+    if (input.targetAudience === "" || input.targetAudience === undefined) delete input.targetAudience;
     if (!userId) {
         return { error: "User ID is missing. Cannot save blog post."};
     }
@@ -296,6 +316,10 @@ export async function handleGenerateBlogContentAction(
       title: result.title || "Untitled",
       content: result.content || "",
       tags: result.tags || "",
+      platform: input.targetPlatform,
+      articleStyle: input.articleStyle,
+      targetAudience: input.targetAudience,
+      blogTone: input.blogTone,
     });
     return { data: result, message: "Blog content generated and saved successfully!" };
   } catch (e: any) {
@@ -416,6 +440,45 @@ export async function handlePopulateImageFormAction(
     return { data: result, message: "Form fields populated by AI!" };
   } catch (e: any) {
     console.error("Error in handlePopulateImageFormAction:", e);
+    return { error: `Failed to populate form: ${e.message || "Unknown error."}` };
+  }
+}
+
+export async function handlePopulateSocialFormAction(
+  prevState: FormState<PopulateSocialFormOutput>,
+  formData: FormData
+): Promise<FormState<PopulateSocialFormOutput>> {
+  const userRequest = formData.get("userRequest") as string;
+  const currentBrandDescription = formData.get("currentBrandDescription") as string;
+  if (!userRequest) {
+    return { error: "Please describe your social post idea." };
+  }
+  try {
+    const input: PopulateSocialFormInput = { userRequest, currentBrandDescription };
+    const result = await populateSocialForm(input);
+    return { data: result, message: "Social media form populated by AI!" };
+  } catch (e: any) {
+    console.error("Error in handlePopulateSocialFormAction:", e);
+    return { error: `Failed to populate form: ${e.message || "Unknown error."}` };
+  }
+}
+
+export async function handlePopulateBlogFormAction(
+  prevState: FormState<PopulateBlogFormOutput>,
+  formData: FormData
+): Promise<FormState<PopulateBlogFormOutput>> {
+  const userRequest = formData.get("userRequest") as string;
+  const currentBrandDescription = formData.get("currentBrandDescription") as string;
+  const currentKeywords = formData.get("currentKeywords") as string;
+  if (!userRequest) {
+    return { error: "Please describe your blog post idea." };
+  }
+  try {
+    const input: PopulateBlogFormInput = { userRequest, currentBrandDescription, currentKeywords };
+    const result = await populateBlogForm(input);
+    return { data: result, message: "Blog form populated by AI!" };
+  } catch (e: any) {
+    console.error("Error in handlePopulateBlogFormAction:", e);
     return { error: `Failed to populate form: ${e.message || "Unknown error."}` };
   }
 }
@@ -996,4 +1059,3 @@ export async function getPaymentMode(): Promise<{ paymentMode: 'live' | 'test', 
     return { paymentMode: 'test', error: `Could not retrieve payment mode configuration.` };
   }
 }
-

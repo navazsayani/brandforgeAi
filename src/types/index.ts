@@ -31,12 +31,16 @@ export interface SavedGeneratedImage {
 
 export interface GeneratedSocialMediaPost {
   id: string;
-  platform: 'Instagram';
+  platform: 'Instagram'; // Hardcoded for now, can be expanded
   imageSrc: string | null;
   imageDescription: string;
   caption: string;
   hashtags: string;
   tone: string;
+  // --- New fields for better context ---
+  postGoal?: string;
+  targetAudience?: string;
+  callToAction?: string;
 }
 
 export interface GeneratedBlogPost {
@@ -45,6 +49,10 @@ export interface GeneratedBlogPost {
   content: string;
   tags: string;
   platform: 'Medium' | 'Other';
+  // --- New fields for better context ---
+  articleStyle?: string;
+  targetAudience?: string;
+  blogTone?: string;
 }
 
 export interface GeneratedAdCampaign {

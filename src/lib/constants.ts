@@ -150,3 +150,32 @@ export const generalAspectRatios = [
 // This list is used by backend generate-images flow to match Freepik structural styles
 // and now by client-side preview for better accuracy.
 export const freepikValidStyles = ["photo", "digital-art", "3d", "painting", "low-poly", "pixel-art", "anime", "cyberpunk", "comic", "vintage", "cartoon", "vector", "studio-shot", "dark", "sketch", "mockup", "2000s-pone", "70s-vibe", "watercolor", "art-nouveau", "origami", "surreal", "fantasy", "traditional-japan"];
+
+// New constants for Social Media and Blog content forms
+export const socialPostGoals = [
+  { value: "brand_awareness", label: "Brand Awareness" },
+  { value: "engagement", label: "Engagement (Likes, Comments)" },
+  { value: "promotion", label: "Promotion / Sale" },
+  { value: "informational", label: "Informational / Educational" },
+  { value: "community_building", label: "Community Building" },
+];
+
+export const socialTones = [
+  { value: "professional", label: "Professional" },
+  { value: "friendly", label: "Friendly & Approachable" },
+  { value: "funny", label: "Witty & Humorous" },
+  { value: "informative", label: "Informative & Direct" },
+  { value: "inspirational", label: "Inspirational & Uplifting" },
+  { value: "urgent", label: "Urgent & Action-Oriented" },
+];
+
+
+export const blogArticleStyles = [
+  { value: "how_to_guide", label: "How-To Guide / Tutorial" },
+  { value: "listicle", label: "Listicle (e.g., 'Top 5 Ways...')" },
+  { value: "case_study", label: "Case Study / Success Story" },
+  { value: "opinion_piece", label: "Opinion Piece / Thought Leadership" },
+  { value: "news_update", label: "News Update / Announcement" },
+  { value: "comparison", label: "Comparison (e.g., 'X vs. Y')" },
+  { value: "faq", label: "FAQ / Q&A" },
+];

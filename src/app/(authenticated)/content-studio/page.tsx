@@ -19,17 +19,19 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from '@/contexts/AuthContext'; 
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download, Library, Star, Lock, Sparkles as SparklesIcon } from 'lucide-react';
-import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, handlePopulateImageFormAction, type FormState } from '@/lib/actions';
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download, Library, Star, Lock, Sparkles as SparklesIcon, ChevronRight } from 'lucide-react';
+import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, handlePopulateImageFormAction, handlePopulateSocialFormAction, handlePopulateBlogFormAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage } from '@/types';
 import type { DescribeImageOutput } from "@/ai/flows/describe-image-flow";
 import type { GenerateBlogOutlineOutput } from "@/ai/flows/generate-blog-outline-flow";
 import type { GenerateImagesInput } from '@/ai/flows/generate-images';
 import type { PopulateImageFormOutput } from '@/ai/flows/populate-image-form-flow';
+import type { PopulateSocialFormOutput } from '@/ai/flows/populate-social-form-flow';
+import type { PopulateBlogFormOutput } from '@/ai/flows/populate-blog-form-flow';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; 
-import { industries, imageStylePresets, freepikImagen3EffectColors, freepikImagen3EffectLightnings, freepikImagen3EffectFramings, freepikImagen3AspectRatios, generalAspectRatios, blogTones, freepikValidStyles } from '@/lib/constants';
+import { industries, imageStylePresets, freepikImagen3EffectColors, freepikImagen3EffectLightnings, freepikImagen3EffectFramings, freepikImagen3AspectRatios, generalAspectRatios, blogTones, freepikValidStyles, socialPostGoals, socialTones, blogArticleStyles } from '@/lib/constants';
 import Link from 'next/link';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
@@ -204,7 +206,9 @@ const initialBlogFormState: FormState<{ title: string; content: string; tags: st
 const initialDescribeImageState: FormState<DescribeImageOutput> = { error: undefined, data: undefined, message: undefined };
 const initialBlogOutlineState: FormState<GenerateBlogOutlineOutput> = { error: undefined, data: undefined, message: undefined };
 const initialSaveImagesState: FormState<{savedCount: number}> = { error: undefined, data: undefined, message: undefined };
-const initialPopulateFormState: FormState<PopulateImageFormOutput> = { error: undefined, data: undefined, message: undefined };
+const initialPopulateImageFormState: FormState<PopulateImageFormOutput> = { error: undefined, data: undefined, message: undefined };
+const initialPopulateSocialFormState: FormState<PopulateSocialFormOutput> = { error: undefined, data: undefined, message: undefined };
+const initialPopulateBlogFormState: FormState<PopulateBlogFormOutput> = { error: undefined, data: undefined, message: undefined };
 const initialFreepikTaskStatusState: FormState<{ status: string; images: string[] | null; taskId: string;}> = { error: undefined, data: undefined, message: undefined, taskId: "" };
 
 const imageGenerationProviders = [
@@ -265,7 +269,7 @@ export default function ContentStudioPage() {
 
   const [useImageForSocialPost, setUseImageForSocialPost] = useState<boolean>(false);
   const [socialImageChoice, setSocialImageChoice] = useState<SocialImageChoice>(null);
-  const [socialToneValue, setSocialToneValue] = useState<string>("professional");
+  const [socialToneValue, setSocialToneValue] = useState<string>(socialTones[0].value);
   const [customSocialToneNuances, setCustomSocialToneNuances] = useState<string>("");
 
   const [blogPlatformValue, setBlogPlatformValue] = useState<"Medium" | "Other">("Medium");
@@ -305,10 +309,28 @@ export default function ContentStudioPage() {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [useExampleImageForGen, setUseExampleImageForGen] = useState<boolean>(true); 
 
-  // AI Quick Start State
-  const [populateFormState, populateFormAction] = useActionState(handlePopulateImageFormAction, initialPopulateFormState);
-  const [isPopulatingForm, setIsPopulatingForm] = useState(false);
-  const [quickStartRequest, setQuickStartRequest] = useState("");
+  // --- AI Quick Start State ---
+  const [populateImageFormState, populateImageFormAction] = useActionState(handlePopulateImageFormAction, initialPopulateImageFormState);
+  const [isPopulatingImageForm, setIsPopulatingImageForm] = useState(false);
+  const [quickStartImageRequest, setQuickStartImageRequest] = useState("");
+
+  const [populateSocialFormState, populateSocialFormAction] = useActionState(handlePopulateSocialFormAction, initialPopulateSocialFormState);
+  const [isPopulatingSocialForm, setIsPopulatingSocialForm] = useState(false);
+  const [quickStartSocialRequest, setQuickStartSocialRequest] = useState("");
+
+  const [populateBlogFormState, populateBlogFormAction] = useActionState(handlePopulateBlogFormAction, initialPopulateBlogFormState);
+  const [isPopulatingBlogForm, setIsPopulatingBlogForm] = useState(false);
+  const [quickStartBlogRequest, setQuickStartBlogRequest] = useState("");
+
+  // Social form fields state
+  const [socialPostGoal, setSocialPostGoal] = useState<string>(socialPostGoals[0].value);
+  const [socialTargetAudience, setSocialTargetAudience] = useState<string>("");
+  const [socialCallToAction, setSocialCallToAction] = useState<string>("");
+  const [socialImageDescription, setSocialImageDescription] = useState<string>("");
+
+  // Blog form fields state
+  const [blogArticleStyle, setBlogArticleStyle] = useState<string>(blogArticleStyles[0].value);
+  const [blogTargetAudience, setBlogTargetAudience] = useState<string>("");
 
   const isPremiumActive = useMemo(() => {
     if (!brandData) return false;
@@ -472,15 +494,19 @@ export default function ContentStudioPage() {
         id: new Date().toISOString(),
         platform: 'Instagram', 
         imageSrc: socialData.imageSrc || null,
-        imageDescription: (document.getElementById('socialImageDescription') as HTMLTextAreaElement)?.value || "",
+        imageDescription: socialImageDescription || "",
         caption: socialData.caption,
         hashtags: socialData.hashtags,
         tone: socialToneValue + (customSocialToneNuances ? ` ${customSocialToneNuances}` : ''),
+        postGoal: socialPostGoal,
+        targetAudience: socialTargetAudience,
+        callToAction: socialCallToAction,
       };
       addGeneratedSocialPost(newPost);
       toast({ title: "Success", description: socialState.message });
     }
     if (socialState.error) toast({ title: "Error generating social post", description: socialState.error, variant: "destructive" });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socialState, toast, addGeneratedSocialPost, socialToneValue, customSocialToneNuances]);
 
   useEffect(() => {
@@ -493,20 +519,21 @@ export default function ContentStudioPage() {
         content: blogData.content,
         tags: blogData.tags,
         platform: blogPlatformValue,
+        articleStyle: blogArticleStyle,
+        targetAudience: blogTargetAudience,
+        blogTone: selectedBlogTone,
       };
       addGeneratedBlogPost(newPost);
       toast({ title: "Success", description: blogState.message });
     }
     if (blogState.error) toast({ title: "Error generating blog post", description: blogState.error, variant: "destructive" });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [blogState, toast, addGeneratedBlogPost, blogPlatformValue]);
 
   useEffect(() => {
     setIsGeneratingDescription(false);
     if (describeImageState.data) {
-      const socialImageDescriptionTextarea = document.getElementById('socialImageDescription') as HTMLTextAreaElement | null;
-      if (socialImageDescriptionTextarea) {
-        socialImageDescriptionTextarea.value = describeImageState.data.description;
-      }
+      setSocialImageDescription(describeImageState.data.description);
       toast({ title: "Success", description: describeImageState.message || "Image description generated." });
     }
     if (describeImageState.error) {
@@ -571,9 +598,9 @@ export default function ContentStudioPage() {
   }, [freepikTaskStatusState, checkingTaskId]); // Added checkingTaskId dependency
 
     useEffect(() => {
-        setIsPopulatingForm(false);
-        if (populateFormState.data) {
-            const { data } = populateFormState;
+        setIsPopulatingImageForm(false);
+        if (populateImageFormState.data) {
+            const { data } = populateImageFormState;
             setImageGenBrandDescription(data.refinedBrandDescription);
             setSelectedImageStylePreset(data.imageStylePreset);
             setCustomStyleNotesInput(data.customStyleNotes || "");
@@ -581,10 +608,48 @@ export default function ContentStudioPage() {
             setSelectedAspectRatio(data.aspectRatio);
             toast({ title: "Form Populated!", description: "AI has filled out the fields for you. Feel free to adjust them." });
         }
-        if (populateFormState.error) {
-            toast({ title: "Population Error", description: populateFormState.error, variant: "destructive" });
+        if (populateImageFormState.error) {
+            toast({ title: "Population Error", description: populateImageFormState.error, variant: "destructive" });
         }
-    }, [populateFormState, toast]);
+    }, [populateImageFormState, toast]);
+
+    useEffect(() => {
+        setIsPopulatingSocialForm(false);
+        if (populateSocialFormState.data) {
+            const { data } = populateSocialFormState;
+            setSocialPostGoal(data.postGoal);
+            setSocialTargetAudience(data.targetAudience || "");
+            setSocialCallToAction(data.callToAction || "");
+            setSocialToneValue(data.tone);
+            setCustomSocialToneNuances(data.customToneNuances || "");
+            if (data.imageDescription) {
+              setUseImageForSocialPost(true);
+              setSocialImageDescription(data.imageDescription);
+            } else {
+              setUseImageForSocialPost(false);
+              setSocialImageDescription("");
+            }
+            toast({ title: "Form Populated!", description: "AI has filled out the social post fields for you." });
+        }
+        if (populateSocialFormState.error) {
+            toast({ title: "Population Error", description: populateSocialFormState.error, variant: "destructive" });
+        }
+    }, [populateSocialFormState, toast]);
+
+    useEffect(() => {
+        setIsPopulatingBlogForm(false);
+        if (populateBlogFormState.data) {
+            const { data } = populateBlogFormState;
+            setBlogTargetAudience(data.targetAudience || "");
+            setBlogArticleStyle(data.articleStyle);
+            setSelectedBlogTone(data.blogTone);
+            setGeneratedBlogOutline(data.generatedOutline || "");
+            toast({ title: "Form Populated!", description: "AI has filled out the blog post fields and generated an outline." });
+        }
+        if (populateBlogFormState.error) {
+            toast({ title: "Population Error", description: populateBlogFormState.error, variant: "destructive" });
+        }
+    }, [populateBlogFormState, toast]);
 
 
   const copyToClipboard = (text: string, type: string) => {
@@ -979,6 +1044,8 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     formData.append('industry', selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || "" );
     formData.append('blogKeywords', (document.getElementById('blogKeywords') as HTMLInputElement)?.value || brandData?.targetKeywords || "");
     formData.append('blogWebsiteUrl', (document.getElementById('blogWebsiteUrl') as HTMLInputElement)?.value || brandData?.websiteUrl || "");
+    formData.append('articleStyle', blogArticleStyle);
+    formData.append('targetAudience', blogTargetAudience);
 
     if (!formData.get('brandName') && !formData.get('blogBrandDescription') && !formData.get('blogKeywords')) {
         toast({title: "Missing Info", description: "Please provide Brand Name, Description, and Keywords for outline generation.", variant: "destructive"});
@@ -990,17 +1057,46 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     });
   };
 
-  const handleQuickStartSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleQuickStartImageSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        if (!quickStartRequest.trim()) {
+        if (!quickStartImageRequest.trim()) {
             toast({ title: "Empty Request", description: "Please describe what you want to create.", variant: "default" });
             return;
         }
-        setIsPopulatingForm(true);
+        setIsPopulatingImageForm(true);
         const formData = new FormData(event.currentTarget);
         formData.append("currentBrandDescription", imageGenBrandDescription);
         startTransition(() => {
-            populateFormAction(formData);
+            populateImageFormAction(formData);
+        });
+    };
+  
+    const handleQuickStartSocialSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!quickStartSocialRequest.trim()) {
+            toast({ title: "Empty Request", description: "Please describe your social post idea.", variant: "default" });
+            return;
+        }
+        setIsPopulatingSocialForm(true);
+        const formData = new FormData(event.currentTarget);
+        formData.append("currentBrandDescription", brandData?.brandDescription || "");
+        startTransition(() => {
+            populateSocialFormAction(formData);
+        });
+    };
+  
+    const handleQuickStartBlogSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!quickStartBlogRequest.trim()) {
+            toast({ title: "Empty Request", description: "Please describe your blog post idea.", variant: "default" });
+            return;
+        }
+        setIsPopulatingBlogForm(true);
+        const formData = new FormData(event.currentTarget);
+        formData.append("currentBrandDescription", (document.getElementById('blogBrandDescription') as HTMLTextAreaElement)?.value || brandData?.brandDescription || "");
+        formData.append("currentKeywords", (document.getElementById('blogKeywords') as HTMLInputElement)?.value || brandData?.targetKeywords || "");
+        startTransition(() => {
+            populateBlogFormAction(formData);
         });
     };
 
@@ -1160,16 +1256,16 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <form onSubmit={handleQuickStartSubmit} className="pt-4">
-                            <Label htmlFor="quickStartRequest" className="mb-2 block">Don't know where to start? Just describe what you want, and AI will fill out the form for you.</Label>
+                        <form onSubmit={handleQuickStartImageSubmit} className="pt-4">
+                            <Label htmlFor="quickStartImageRequest" className="mb-2 block">Don't know where to start? Just describe what you want, and AI will fill out the form for you.</Label>
                             <Textarea
-                                id="quickStartRequest"
+                                id="quickStartImageRequest"
                                 name="userRequest"
-                                value={quickStartRequest}
-                                onChange={(e) => setQuickStartRequest(e.target.value)}
+                                value={quickStartImageRequest}
+                                onChange={(e) => setQuickStartImageRequest(e.target.value)}
                                 placeholder="e.g., a professional photo of my new shoe for an instagram post"
                             />
-                            <SubmitButton className="mt-3" loadingText="Populating..." disabled={isPopulatingForm || !quickStartRequest}>
+                            <SubmitButton className="mt-3" loadingText="Populating..." disabled={isPopulatingImageForm || !quickStartImageRequest}>
                                 Populate Form Fields
                             </SubmitButton>
                         </form>
@@ -1573,6 +1669,31 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
               <CardTitle className="text-xl flex items-center"><MessageSquareText className="w-6 h-6 mr-2 text-primary"/>Create Social Media Post</CardTitle>
               <p className="text-sm text-muted-foreground">Generate engaging captions and hashtags. Uses brand description, image description (optional), and selected tone.</p>
             </CardHeader>
+             <Accordion type="single" collapsible className="w-full px-6">
+                <AccordionItem value="item-1">
+                    <AccordionTrigger className="hover:no-underline -mx-2 px-2 rounded-md hover:bg-accent">
+                        <div className="flex items-center gap-2">
+                           <SparklesIcon className="w-5 h-5 text-accent-foreground/80" />
+                            <span className="font-semibold text-md">AI Quick Start</span>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                        <form onSubmit={handleQuickStartSocialSubmit} className="pt-4">
+                            <Label htmlFor="quickStartSocialRequest" className="mb-2 block">Describe your social post idea, and AI will fill out the form.</Label>
+                            <Textarea
+                                id="quickStartSocialRequest"
+                                name="userRequest"
+                                value={quickStartSocialRequest}
+                                onChange={(e) => setQuickStartSocialRequest(e.target.value)}
+                                placeholder="e.g., a funny post about our new coffee flavor, with a picture of a cat."
+                            />
+                            <SubmitButton className="mt-3" loadingText="Populating..." disabled={isPopulatingSocialForm || !quickStartSocialRequest}>
+                                Populate Social Form
+                            </SubmitButton>
+                        </form>
+                    </AccordionContent>
+                </AccordionItem>
+            </Accordion>
             <form
                 onSubmit={(e) => {
                     e.preventDefault();
@@ -1758,37 +1879,69 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                   <Textarea
                     id="socialImageDescription"
                     name="socialImageDescription"
+                    value={socialImageDescription}
+                    onChange={(e) => setSocialImageDescription(e.target.value)}
                     placeholder={useImageForSocialPost && !!currentSocialImagePreviewUrl ? "Describe the image you're posting or use AI. Required if image used." : "Optionally describe the theme if not using an image."}
                     rows={3}
                     required={useImageForSocialPost && !!currentSocialImagePreviewUrl}
                   />
                 </div>
-
-                  <div>
-                  <Label htmlFor="socialToneSelect" className="flex items-center mb-1"><ThumbsUp className="w-4 h-4 mr-2 text-primary" />Tone</Label>
-                    <Select name="tone" required value={socialToneValue} onValueChange={setSocialToneValue}>
-                      <SelectTrigger id="socialToneSelect">
-                        <SelectValue placeholder="Select a tone" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="professional">Professional</SelectItem>
-                        <SelectItem value="friendly">Friendly</SelectItem>
-                        <SelectItem value="funny">Funny</SelectItem>
-                        <SelectItem value="informative">Informative</SelectItem>
-                        <SelectItem value="inspirational">Inspirational</SelectItem>
-                      </SelectContent>
-                    </Select>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <Label htmlFor="socialPostGoal" className="flex items-center mb-1"><Target className="w-4 h-4 mr-2 text-primary" />Post Goal</Label>
+                        <Select name="postGoal" value={socialPostGoal} onValueChange={setSocialPostGoal}>
+                            <SelectTrigger><SelectValue placeholder="Select a goal" /></SelectTrigger>
+                            <SelectContent>
+                                {socialPostGoals.map(goal => <SelectItem key={goal.value} value={goal.value}>{goal.label}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                     <div>
+                        <Label htmlFor="socialTargetAudience" className="flex items-center mb-1"><Users className="w-4 h-4 mr-2 text-primary" />Target Audience</Label>
+                        <Input
+                            id="socialTargetAudience"
+                            name="targetAudience"
+                            value={socialTargetAudience}
+                            onChange={(e) => setSocialTargetAudience(e.target.value)}
+                            placeholder="e.g., Young professionals, parents"
+                        />
+                    </div>
                 </div>
-                  <div>
-                  <Label htmlFor="customSocialToneNuances" className="flex items-center mb-1"><Edit className="w-4 h-4 mr-2 text-primary" />Custom Tone Nuances (Optional)</Label>
-                  <Input
-                    id="customSocialToneNuances"
-                    name="customSocialToneNuances"
-                    value={customSocialToneNuances}
-                    onChange={(e) => setCustomSocialToneNuances(e.target.value)}
-                    placeholder="e.g., 'but slightly urgent', 'with a touch of humor'"
-                  />
-                  <p className="text-xs text-muted-foreground">This will be appended to the selected tone.</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label htmlFor="socialToneSelect" className="flex items-center mb-1"><ThumbsUp className="w-4 h-4 mr-2 text-primary" />Tone</Label>
+                        <Select name="tone" required value={socialToneValue} onValueChange={setSocialToneValue}>
+                          <SelectTrigger id="socialToneSelect">
+                            <SelectValue placeholder="Select a tone" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {socialTones.map(tone => <SelectItem key={tone.value} value={tone.value}>{tone.label}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="customSocialToneNuances" className="flex items-center mb-1"><Edit className="w-4 h-4 mr-2 text-primary" />Custom Tone Nuances (Optional)</Label>
+                      <Input
+                        id="customSocialToneNuances"
+                        name="customSocialToneNuances"
+                        value={customSocialToneNuances}
+                        onChange={(e) => setCustomSocialToneNuances(e.target.value)}
+                        placeholder="e.g., 'but slightly urgent'"
+                      />
+                    </div>
+                </div>
+
+                <div>
+                    <Label htmlFor="socialCallToAction" className="flex items-center mb-1"><ChevronRight className="w-4 h-4 mr-2 text-primary" />Call to Action (Optional)</Label>
+                    <Input
+                        id="socialCallToAction"
+                        name="callToAction"
+                        value={socialCallToAction}
+                        onChange={(e) => setSocialCallToAction(e.target.value)}
+                        placeholder="e.g., Click the link in our bio!"
+                    />
                 </div>
               </CardContent>
               <CardFooter>
@@ -1855,21 +2008,45 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
         </TabsContent>
 
         <TabsContent value="blog">
-            <form 
-              action={(formData) => {
-                formData.append("industry", selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || "");
-                if (userId) formData.append("userId", userId);
-                if (currentUser?.email) formData.append("userEmail", currentUser.email); 
-                blogAction(formData);
-              }} 
-              className="w-full"
-            >
-              
-              <Card className="shadow-lg">
-                  <CardHeader>
-                      <CardTitle className="text-xl flex items-center"><Newspaper className="w-6 h-6 mr-2 text-primary"/>Create Blog Content</CardTitle>
-                      <p className="text-sm text-muted-foreground">Generate SEO-friendly blog posts. Define an outline, choose a tone, and let AI write the content.</p>
-                  </CardHeader>
+             <Card className="shadow-lg">
+                <CardHeader>
+                    <CardTitle className="text-xl flex items-center"><Newspaper className="w-6 h-6 mr-2 text-primary"/>Create Blog Content</CardTitle>
+                    <p className="text-sm text-muted-foreground">Generate SEO-friendly blog posts. Define an outline, choose a tone, and let AI write the content.</p>
+                </CardHeader>
+                <Accordion type="single" collapsible className="w-full px-6">
+                    <AccordionItem value="item-1">
+                        <AccordionTrigger className="hover:no-underline -mx-2 px-2 rounded-md hover:bg-accent">
+                            <div className="flex items-center gap-2">
+                            <SparklesIcon className="w-5 h-5 text-accent-foreground/80" />
+                                <span className="font-semibold text-md">AI Quick Start</span>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                            <form onSubmit={handleQuickStartBlogSubmit} className="pt-4">
+                                <Label htmlFor="quickStartBlogRequest" className="mb-2 block">Describe your blog post idea, and AI will populate the fields and generate an outline.</Label>
+                                <Textarea
+                                    id="quickStartBlogRequest"
+                                    name="userRequest"
+                                    value={quickStartBlogRequest}
+                                    onChange={(e) => setQuickStartBlogRequest(e.target.value)}
+                                    placeholder="e.g., a how-to guide for beginners on using our new coffee machine"
+                                />
+                                <SubmitButton className="mt-3" loadingText="Populating..." disabled={isPopulatingBlogForm || !quickStartBlogRequest}>
+                                    Populate Blog Form & Outline
+                                </SubmitButton>
+                            </form>
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+                <form 
+                  action={(formData) => {
+                    formData.append("industry", selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || "");
+                    if (userId) formData.append("userId", userId);
+                    if (currentUser?.email) formData.append("userEmail", currentUser.email); 
+                    blogAction(formData);
+                  }} 
+                  className="w-full"
+                >
                   <CardContent className="space-y-6">
                       <div>
                           <Label htmlFor="blogBrandName" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Brand Name (from Profile)</Label>
@@ -1900,6 +2077,16 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                           placeholder="Comma-separated keywords (e.g., AI, marketing, branding)"
                           />
                       </div>
+                       <div>
+                          <Label htmlFor="blogTargetAudience" className="flex items-center mb-1"><Users className="w-4 h-4 mr-2 text-primary" />Target Audience</Label>
+                          <Input
+                              id="blogTargetAudience"
+                              name="targetAudience"
+                              value={blogTargetAudience}
+                              onChange={(e) => setBlogTargetAudience(e.target.value)}
+                              placeholder="e.g., Beginners, marketing experts"
+                          />
+                      </div>
                       <div>
                           <Label htmlFor="blogWebsiteUrl" className="flex items-center mb-1"><Globe className="w-4 h-4 mr-2 text-primary" />Website URL (Optional, for SEO & Outline)</Label>
                           <Input
@@ -1910,21 +2097,32 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                           />
                       </div>
 
-                      <div className="space-y-2">
-                          <Label htmlFor="blogToneSelect" className="flex items-center mb-1"><Mic2 className="w-4 h-4 mr-2 text-primary" />Tone/Style for Blog</Label>
-                          <Select name="blogTone" value={selectedBlogTone} onValueChange={setSelectedBlogTone}>
-                              <SelectTrigger>
-                                  <SelectValue placeholder="Select a tone/style" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  <SelectGroup>
-                                      <SelectLabel>Blog Tones/Styles</SelectLabel>
-                                      {blogTones.map(tone => (
-                                          <SelectItem key={tone.value} value={tone.value}>{tone.label}</SelectItem>
-                                      ))}
-                                  </SelectGroup>
-                              </SelectContent>
-                          </Select>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                         <div>
+                            <Label htmlFor="blogArticleStyle" className="flex items-center mb-1"><ListOrdered className="w-4 h-4 mr-2 text-primary" />Article Style/Format</Label>
+                            <Select name="articleStyle" value={blogArticleStyle} onValueChange={setBlogArticleStyle}>
+                                <SelectTrigger><SelectValue placeholder="Select an article style" /></SelectTrigger>
+                                <SelectContent>
+                                    {blogArticleStyles.map(style => <SelectItem key={style.value} value={style.value}>{style.label}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label htmlFor="blogToneSelect" className="flex items-center mb-1"><Mic2 className="w-4 h-4 mr-2 text-primary" />Tone for Blog</Label>
+                            <Select name="blogTone" value={selectedBlogTone} onValueChange={setSelectedBlogTone}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a tone/style" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        <SelectLabel>Blog Tones/Styles</SelectLabel>
+                                        {blogTones.map(tone => (
+                                            <SelectItem key={tone.value} value={tone.value}>{tone.label}</SelectItem>
+                                        ))}
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
+                          </div>
                       </div>
 
                       <div className="space-y-2">
@@ -1987,6 +2185,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                         </p>
                     )}
                   </CardFooter>
+                  </form>
               </Card>
               {generatedBlogPost && (
                 <Card className="mt-6 shadow-sm"> 
@@ -2027,12 +2226,8 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                   </CardContent>
                 </Card>
             )}
-          </form>
         </TabsContent>
       </Tabs>
     </div>
   );
 }
-
-
-
