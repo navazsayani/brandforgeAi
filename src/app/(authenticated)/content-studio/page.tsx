@@ -252,7 +252,7 @@ export default function ContentStudioPage() {
   const [isSavingImages, setIsSavingImages] = useState(false);
 
   const [freepikTaskStatusState, freepikTaskStatusAction] = useActionState(handleCheckFreepikTaskStatusAction, initialFreepikTaskStatusState);
-  const [plansState, getPlans] = useActionState(handleGetPlansConfigAction, initialPlansState);
+  const [plansState, getPlansAction] = useActionState(handleGetPlansConfigAction, initialPlansState);
 
 
   const [lastSuccessfulGeneratedImageUrls, setLastSuccessfulGeneratedImageUrls] = useState<string[]>([]);
@@ -345,7 +345,7 @@ export default function ContentStudioPage() {
   
   useEffect(() => {
     startTransition(() => {
-      getPlans(); // Fetch plans on component mount
+      getPlansAction();
     });
 
     async function fetchConfig() {
@@ -959,7 +959,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
         if (seedValue !== undefined) {
             textPromptContent += `\n\nUse seed: ${seedValue}.`;
         }
-        textPromptContent +=`\n\n${compositionGuidance}`;
+        textPromptContent +=`\n\n${compositionGuidance}`; 
         if (numImages > 1 ) {
             textPromptContent += `\n\nImportant for batch generation: You are generating image 1 of a set of ${numImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (1/${numImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject.`;
         }
@@ -1041,20 +1041,32 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
 
         if (providerToUse === 'FREEPIK') {
             const fColorsInputStrToUse = (isAdmin || isPremiumActive) ? (formSnapshot?.freepikStylingColors?.map(c => c.color).join(',') || "") : freepikDominantColorsInput;
-            if (fColorsInputStrToUse) formData.set("freepikDominantColorsInput", fColorsInputStrToUse);
-            else formData.delete("freepikDominantColorsInput");
+            if (fColorsInputStrToUse) {
+                formData.set("freepikDominantColorsInput", fColorsInputStrToUse);
+            } else {
+                formData.delete("freepikDominantColorsInput");
+            }
 
             const fEffectColorToUse = (isAdmin || isPremiumActive) ? (formSnapshot?.freepikEffectColor || freepikEffectColor) : freepikEffectColor;
-            if (fEffectColorToUse && fEffectColorToUse !== "none") formData.set("freepikEffectColor", fEffectColorToUse);
-             else formData.delete("freepikEffectColor");
+            if (fEffectColorToUse && fEffectColorToUse !== "none") {
+                formData.set("freepikEffectColor", fEffectColorToUse);
+            } else {
+                formData.delete("freepikEffectColor");
+            }
 
             const fEffectLightningToUse = (isAdmin || isPremiumActive) ? (formSnapshot?.freepikEffectLightning || freepikEffectLightning) : freepikEffectLightning;
-            if (fEffectLightningToUse && fEffectLightningToUse !== "none") formData.set("freepikEffectLightning", fEffectLightningToUse);
-            else formData.delete("freepikEffectLightning");
+            if (fEffectLightningToUse && fEffectLightningToUse !== "none") {
+                formData.set("freepikEffectLightning", fEffectLightningToUse);
+            } else {
+                formData.delete("freepikEffectLightning");
+            }
 
             const fEffectFramingToUse = (isAdmin || isPremiumActive) ? (formSnapshot?.freepikEffectFraming || freepikEffectFraming) : freepikEffectFraming;
-            if (fEffectFramingToUse && fEffectFramingToUse !== "none") formData.set("freepikEffectFraming", fEffectFramingToUse);
-            else formData.delete("freepikEffectFraming");
+            if (fEffectFramingToUse && fEffectFramingToUse !== "none") {
+                formData.set("freepikEffectFraming", fEffectFramingToUse);
+            } else {
+                formData.delete("freepikEffectFraming");
+            }
         }
                 
         imageAction(formData);
@@ -1300,7 +1312,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                     </CardContent>
                 </Card>
             </div>
-            {isAdmin && isPreviewingPrompt ? (
+            {(isAdmin || isPremiumActive) && isPreviewingPrompt ? (
               <form onSubmit={handleImageGenerationSubmit}>
                 <CardContent className="space-y-6">
                   <div>
@@ -1338,7 +1350,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
               }}>
                 <input type="hidden" name="industry" value={selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || ""} />
                 <CardContent className="space-y-6">
-                  {isAdmin && (
+                  {(isAdmin || isPremiumActive) && (
                     <div>
                       <Label htmlFor="imageGenProviderSelect" className="flex items-center mb-1"><Server className="w-4 h-4 mr-2 text-primary" />Image Generation Provider</Label>
                       <Select name="provider" value={selectedImageProvider || 'GEMINI'} onValueChange={(value) => setSelectedImageProvider(value as GenerateImagesInput['provider'])}>
@@ -1446,7 +1458,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                             <button
                                                 type="button"
                                                 key={`gen-profile-${index}`}
-                                                onClick={() => setSelectedProfileImageIndexForGen(index)}
+                                                onClick={()={() => setSelectedProfileImageIndexForGen(index)}
                                                 className={cn(
                                                     "w-20 h-20 rounded border-2 p-0.5 flex-shrink-0 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring",
                                                     selectedProfileImageIndexForGen === index ? "border-primary ring-2 ring-primary" : "border-border"
@@ -1804,7 +1816,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                           <button
                                               type="button"
                                               key={`social-profile-${index}`}
-                                              onClick={() => setSelectedProfileImageIndexForSocial(index)}
+                                              onClick={()={() => setSelectedProfileImageIndexForSocial(index)}
                                               className={cn(
                                                   "w-16 h-16 rounded border-2 p-0.5 flex-shrink-0 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring",
                                                   selectedProfileImageIndexForSocial === index ? "border-primary ring-2 ring-primary" : "border-border"
@@ -1836,7 +1848,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                           <button
                                               type="button"
                                               key={`social-library-${index}`}
-                                              onClick={() => setSelectedLibraryImageIndexForSocial(index)}
+                                              onClick={()={() => setSelectedLibraryImageIndexForSocial(index)}
                                               className={cn(
                                                   "w-16 h-16 rounded border-2 p-0.5 flex-shrink-0 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring",
                                                   selectedLibraryImageIndexForSocial === index ? "border-primary ring-2 ring-primary" : "border-border"
@@ -2152,8 +2164,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                     <SelectGroup>
                                         <SelectLabel>Blog Tones/Styles</SelectLabel>
                                         {blogTones.map(tone => (
-                                            <SelectItem key={tone.value} value={tone.value}>{tone.label}</SelectItem>
-                                        ))}
+                                            <SelectItem key={tone.value} value={tone.value}>{tone.label}</SelectItem>)}
                                     </SelectGroup>
                                 </SelectContent>
                             </Select>
@@ -2236,7 +2247,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                           <div className="p-3 border rounded-md bg-muted/50">
                               <p id="generatedBlogTitle" className="text-lg font-medium">{generatedBlogPost.title}</p>
                           </div>
-                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedBlogPost.title, "Title")} className="mt-1 text-muted-foreground hover:text-primary">
+                          <Button variant="ghost" size="sm" onClick={()={() => copyToClipboard(generatedBlogPost.title, "Title")} className="mt-1 text-muted-foreground hover:text-primary">
                               <Copy className="w-3 h-3 mr-1" /> Copy Title
                           </Button>
                       </div>
@@ -2245,7 +2256,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                           <div className="p-3 prose border rounded-md bg-muted/50 max-w-none max-h-96 overflow-y-auto">
                               <p id="generatedBlogContent" className="whitespace-pre-wrap">{generatedBlogPost.content}</p>
                           </div>
-                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedBlogPost.content, "Content")} className="mt-1 text-muted-foreground hover:text-primary">
+                          <Button variant="ghost" size="sm" onClick={()={() => copyToClipboard(generatedBlogPost.content, "Content")} className="mt-1 text-muted-foreground hover:text-primary">
                               <Copy className="w-3 h-3 mr-1" /> Copy Content
                           </Button>
                       </div>
@@ -2254,7 +2265,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                           <div className="p-3 border rounded-md bg-muted/50">
                               <p id="generatedBlogTags" className="text-sm">{generatedBlogPost.tags}</p>
                           </div>
-                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedBlogPost.tags, "Tags")} className="mt-1 text-muted-foreground hover:text-primary">
+                          <Button variant="ghost" size="sm" onClick={()={() => copyToClipboard(generatedBlogPost.tags, "Tags")} className="mt-1 text-muted-foreground hover:text-primary">
                               <Copy className="w-3 h-3 mr-1" /> Copy Tags
                           </Button>
                       </div>
@@ -2266,3 +2277,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     </div>
   );
 }
+
+    
+
+    
