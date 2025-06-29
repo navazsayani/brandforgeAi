@@ -20,7 +20,8 @@ import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'f
 import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where, collectionGroup, deleteDoc } from 'firebase/firestore';
 import type { UserProfileSelectItem, BrandData, ModelConfig, PlansConfig } from '@/types';
 import { getModelConfig } from './model-config';
-import { getPlansConfig, DEFAULT_PLANS_CONFIG } from './plans-config';
+import { getPlansConfig } from './plans-config';
+import { DEFAULT_PLANS_CONFIG } from './constants';
 import Razorpay from 'razorpay';
 
 // Generic type for form state with error

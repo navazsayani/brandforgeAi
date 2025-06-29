@@ -31,9 +31,8 @@ import type { PopulateSocialFormOutput } from '@/ai/flows/populate-social-form-f
 import type { PopulateBlogFormOutput } from '@/ai/flows/populate-blog-form-flow';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; 
-import { industries, imageStylePresets, freepikImagen3EffectColors, freepikImagen3EffectLightnings, freepikImagen3EffectFramings, freepikImagen3AspectRatios, generalAspectRatios, blogTones, freepikValidStyles, socialPostGoals, socialTones, blogArticleStyles } from '@/lib/constants';
+import { industries, imageStylePresets, freepikImagen3EffectColors, freepikImagen3EffectLightnings, freepikImagen3EffectFramings, freepikImagen3AspectRatios, generalAspectRatios, blogTones, freepikValidStyles, socialPostGoals, socialTones, blogArticleStyles, DEFAULT_PLANS_CONFIG } from '@/lib/constants';
 import Link from 'next/link';
-import { DEFAULT_PLANS_CONFIG } from '@/lib/plans-config';
 
 // --- START: Image Grid Fix Components ---
 /**

@@ -15,7 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { handleGetSettingsAction, handleUpdateSettingsAction, handleGetPlansConfigAction, handleUpdatePlansConfigAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from '@/components/SubmitButton';
 import { DEFAULT_MODEL_CONFIG } from '@/lib/model-config';
-import { DEFAULT_PLANS_CONFIG } from '@/lib/plans-config';
+import { DEFAULT_PLANS_CONFIG } from '@/lib/constants';
 import type { ModelConfig, PlansConfig } from '@/types';
 import { Settings, Loader2, ExternalLink, TestTube, ShoppingCart, Power, CreditCard, BarChart } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
