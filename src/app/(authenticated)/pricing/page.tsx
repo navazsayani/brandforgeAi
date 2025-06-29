@@ -45,7 +45,7 @@ export default function PricingPage() {
     const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
     const [paymentMode, setPaymentMode] = useState<'live' | 'test' | 'loading'>('loading');
     
-    const [plansState, getPlans] = useActionState(handleGetPlansConfigAction, initialPlansState);
+    const [plansState, getPlansAction] = useActionState(handleGetPlansConfigAction, initialPlansState);
     
     // Admin-specific state for testing
     const isAdmin = currentUser?.email === 'admin@brandforge.ai';
@@ -53,17 +53,23 @@ export default function PricingPage() {
 
     useEffect(() => {
         startTransition(() => {
-            getPlans(); // Fetch plans on component mount
+            getPlansAction();
         });
 
-        fetch('https://ipapi.co/json/')
-            .then(res => res.json())
+        // Use a more reliable geolocation service (Cloudflare)
+        fetch('https://www.cloudflare.com/cdn-cgi/trace')
+            .then(res => res.text())
             .then(data => {
-                setGeo({ country: data.country_code });
-                setIsLoadingGeo(false);
+                const lines = data.split('\n');
+                const locLine = lines.find(line => line.startsWith('loc='));
+                const country = locLine ? locLine.split('=')[1] : 'US'; // Default to US if not found
+                setGeo({ country });
             })
             .catch(() => {
-                setGeo({ country: 'US' }); 
+                // Fallback to US if the fetch fails for any reason (e.g., network error)
+                setGeo({ country: 'US' });
+            })
+            .finally(() => {
                 setIsLoadingGeo(false);
             });
         

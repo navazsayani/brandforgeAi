@@ -1019,7 +1019,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
         if (typeof exampleImgToUse === 'string' && exampleImgToUse.trim() !== "") {
           formData.set("exampleImage", exampleImgToUse);
         } else {
-            formData.delete("exampleImage");
+          formData.delete("exampleImage");
         }
 
         formData.set("aspectRatio", formSnapshot?.aspectRatio || selectedAspectRatio); 
@@ -2164,7 +2164,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                     <SelectGroup>
                                         <SelectLabel>Blog Tones/Styles</SelectLabel>
                                         {blogTones.map(tone => (
-                                            <SelectItem key={tone.value} value={tone.value}>{tone.label}</SelectItem>)}
+                                            <SelectItem key={tone.value} value={tone.value}>{tone.label}</SelectItem>))}
                                     </SelectGroup>
                                 </SelectContent>
                             </Select>
