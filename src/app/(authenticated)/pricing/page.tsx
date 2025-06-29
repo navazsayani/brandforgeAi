@@ -12,7 +12,7 @@ import { Check, ArrowRight, Star, X, Loader2, Info, RefreshCcw, TestTube, Copy, 
 import { cn } from '@/lib/utils';
 import type { PlanDetails } from '@/types';
 import type { FormState } from '@/lib/actions';
-import { handleCreateSubscriptionAction, handleVerifyPaymentAction, getPaymentMode, getPlansConfigAction } from '@/lib/actions';
+import { handleCreateSubscriptionAction, handleVerifyPaymentAction, getPaymentMode, handleGetPlansConfigAction } from '@/lib/actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -45,7 +45,7 @@ export default function PricingPage() {
     const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
     const [paymentMode, setPaymentMode] = useState<'live' | 'test' | 'loading'>('loading');
     
-    const [plansState, getPlans] = useActionState(getPlansConfigAction, initialPlansState);
+    const [plansState, getPlans] = useActionState(handleGetPlansConfigAction, initialPlansState);
     
     // Admin-specific state for testing
     const isAdmin = currentUser?.email === 'admin@brandforge.ai';
