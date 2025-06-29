@@ -19,8 +19,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from '@/contexts/AuthContext'; 
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download, Library, Star, Lock, Sparkles as SparklesIcon, ChevronRight, Target, Users } from 'lucide-react';
-import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, handlePopulateImageFormAction, handlePopulateSocialFormAction, handlePopulateBlogFormAction, getPaymentMode, getPlansConfigAction, type FormState } from '@/lib/actions';
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download, Library, Star, Lock, Sparkles as SparklesIcon, ChevronRight } from 'lucide-react';
+import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, handlePopulateImageFormAction, handlePopulateSocialFormAction, handlePopulateBlogFormAction, getPaymentMode, handleGetPlansConfigAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage, PlansConfig } from '@/types';
 import type { DescribeImageOutput } from "@/ai/flows/describe-image-flow";
@@ -252,7 +252,7 @@ export default function ContentStudioPage() {
   const [isSavingImages, setIsSavingImages] = useState(false);
 
   const [freepikTaskStatusState, freepikTaskStatusAction] = useActionState(handleCheckFreepikTaskStatusAction, initialFreepikTaskStatusState);
-  const [plansState, getPlans] = useActionState(getPlansConfigAction, initialPlansState);
+  const [plansState, getPlans] = useActionState(handleGetPlansConfigAction, initialPlansState);
 
 
   const [lastSuccessfulGeneratedImageUrls, setLastSuccessfulGeneratedImageUrls] = useState<string[]>([]);
@@ -344,7 +344,9 @@ export default function ContentStudioPage() {
   const isBlogFeatureEnabledForFreeUsers = blogGenerationQuotaForFreePlan > 0;
   
   useEffect(() => {
-    getPlans(); // Fetch plans on component mount
+    startTransition(() => {
+      getPlans(); // Fetch plans on component mount
+    });
 
     async function fetchConfig() {
       const result = await getPaymentMode(); // This action now fetches multiple config flags
