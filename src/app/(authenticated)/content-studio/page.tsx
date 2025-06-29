@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/lib/firebaseConfig'; 
 import { collection, getDocs, query, orderBy } from 'firebase/firestore'; 
 
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -33,7 +33,6 @@ import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; 
 import { industries, imageStylePresets, freepikImagen3EffectColors, freepikImagen3EffectLightnings, freepikImagen3EffectFramings, freepikImagen3AspectRatios, generalAspectRatios, blogTones, freepikValidStyles, socialPostGoals, socialTones, blogArticleStyles } from '@/lib/constants';
 import Link from 'next/link';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 // --- START: Image Grid Fix Components ---
 /**
@@ -1244,34 +1243,37 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle>Generate Brand Images</CardTitle>
-              <p className="text-sm text-muted-foreground">Create unique images. Uses brand description and style. Optionally use an example image from your Brand Profile.</p>
+              <CardDescription>Create unique images. Uses brand description and style. Optionally use an example image from your Brand Profile.</CardDescription>
                 {lastUsedImageProvider && <p className="text-xs text-primary mt-1">Image(s) last generated using: {lastUsedImageProvider}</p>}
             </CardHeader>
-            <Accordion type="single" collapsible className="w-full px-6">
-                <AccordionItem value="item-1">
-                    <AccordionTrigger className="hover:no-underline -mx-2 px-2 rounded-md hover:bg-accent">
-                        <div className="flex items-center gap-2">
-                           <SparklesIcon className="w-5 h-5 text-accent-foreground/80" />
-                            <span className="font-semibold text-md">AI Quick Start</span>
-                        </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                        <form onSubmit={handleQuickStartImageSubmit} className="pt-4">
-                            <Label htmlFor="quickStartImageRequest" className="mb-2 block">Don't know where to start? Just describe what you want, and AI will fill out the form for you.</Label>
+            <div className="px-6 mb-6">
+                <Card className="bg-secondary/30 border-primary/20 shadow-inner">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                            <SparklesIcon className="w-6 h-6 text-primary" />
+                            AI Quick Start
+                        </CardTitle>
+                        <CardDescription>
+                            Don&apos;t know where to start? Just describe what you want, and AI will fill out the form for you.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handleQuickStartImageSubmit} className="space-y-3">
                             <Textarea
                                 id="quickStartImageRequest"
                                 name="userRequest"
                                 value={quickStartImageRequest}
                                 onChange={(e) => setQuickStartImageRequest(e.target.value)}
                                 placeholder="e.g., a professional photo of my new shoe for an instagram post"
+                                rows={2}
                             />
-                            <SubmitButton className="mt-3" loadingText="Populating..." disabled={isPopulatingImageForm || !quickStartImageRequest}>
+                            <SubmitButton className="w-full sm:w-auto" loadingText="Populating..." disabled={isPopulatingImageForm || !quickStartImageRequest}>
                                 Populate Form Fields
                             </SubmitButton>
                         </form>
-                    </AccordionContent>
-                </AccordionItem>
-            </Accordion>
+                    </CardContent>
+                </Card>
+            </div>
             {isAdmin && isPreviewingPrompt ? (
               <form onSubmit={handleImageGenerationSubmit}>
                 <CardContent className="space-y-6">
@@ -1286,7 +1288,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                       placeholder="The constructed prompt will appear here. You can edit it before generation."
                     />
                       <p className="text-xs text-muted-foreground">
-                      Note: For Freepik, structural parameters (aspect ratio, specific styles/effects) are set separately and won't be textually appended here by default if you edit this prompt. Editing this prompt gives most control to Gemini.
+                      Note: For Freepik, structural parameters (aspect ratio, specific styles/effects) are set separately and won&apos;t be textually appended here by default if you edit this prompt. Editing this prompt gives most control to Gemini.
                       </p>
                   </div>
                 </CardContent>
@@ -1667,33 +1669,36 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="text-xl flex items-center"><MessageSquareText className="w-6 h-6 mr-2 text-primary"/>Create Social Media Post</CardTitle>
-              <p className="text-sm text-muted-foreground">Generate engaging captions and hashtags. Uses brand description, image description (optional), and selected tone.</p>
+              <CardDescription>Generate engaging captions and hashtags. Uses brand description, image description (optional), and selected tone.</CardDescription>
             </CardHeader>
-             <Accordion type="single" collapsible className="w-full px-6">
-                <AccordionItem value="item-1">
-                    <AccordionTrigger className="hover:no-underline -mx-2 px-2 rounded-md hover:bg-accent">
-                        <div className="flex items-center gap-2">
-                           <SparklesIcon className="w-5 h-5 text-accent-foreground/80" />
-                            <span className="font-semibold text-md">AI Quick Start</span>
-                        </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                        <form onSubmit={handleQuickStartSocialSubmit} className="pt-4">
-                            <Label htmlFor="quickStartSocialRequest" className="mb-2 block">Describe your social post idea, and AI will fill out the form.</Label>
+            <div className="px-6 mb-6">
+                <Card className="bg-secondary/30 border-primary/20 shadow-inner">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                            <SparklesIcon className="w-6 h-6 text-primary" />
+                            AI Quick Start
+                        </CardTitle>
+                        <CardDescription>
+                            Describe your social post idea, and AI will fill out the form for you.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handleQuickStartSocialSubmit} className="space-y-3">
                             <Textarea
                                 id="quickStartSocialRequest"
                                 name="userRequest"
                                 value={quickStartSocialRequest}
                                 onChange={(e) => setQuickStartSocialRequest(e.target.value)}
                                 placeholder="e.g., a funny post about our new coffee flavor, with a picture of a cat."
+                                rows={2}
                             />
-                            <SubmitButton className="mt-3" loadingText="Populating..." disabled={isPopulatingSocialForm || !quickStartSocialRequest}>
+                            <SubmitButton className="w-full sm:w-auto" loadingText="Populating..." disabled={isPopulatingSocialForm || !quickStartSocialRequest}>
                                 Populate Social Form
                             </SubmitButton>
                         </form>
-                    </AccordionContent>
-                </AccordionItem>
-            </Accordion>
+                    </CardContent>
+                </Card>
+            </div>
             <form
                 onSubmit={(e) => {
                     e.preventDefault();
@@ -2011,33 +2016,36 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
              <Card className="shadow-lg">
                 <CardHeader>
                     <CardTitle className="text-xl flex items-center"><Newspaper className="w-6 h-6 mr-2 text-primary"/>Create Blog Content</CardTitle>
-                    <p className="text-sm text-muted-foreground">Generate SEO-friendly blog posts. Define an outline, choose a tone, and let AI write the content.</p>
+                    <CardDescription>Generate SEO-friendly blog posts. Define an outline, choose a tone, and let AI write the content.</CardDescription>
                 </CardHeader>
-                <Accordion type="single" collapsible className="w-full px-6">
-                    <AccordionItem value="item-1">
-                        <AccordionTrigger className="hover:no-underline -mx-2 px-2 rounded-md hover:bg-accent">
-                            <div className="flex items-center gap-2">
-                            <SparklesIcon className="w-5 h-5 text-accent-foreground/80" />
-                                <span className="font-semibold text-md">AI Quick Start</span>
-                            </div>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                            <form onSubmit={handleQuickStartBlogSubmit} className="pt-4">
-                                <Label htmlFor="quickStartBlogRequest" className="mb-2 block">Describe your blog post idea, and AI will populate the fields and generate an outline.</Label>
+                <div className="px-6 mb-6">
+                    <Card className="bg-secondary/30 border-primary/20 shadow-inner">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-lg">
+                                <SparklesIcon className="w-6 h-6 text-primary" />
+                                AI Quick Start
+                            </CardTitle>
+                            <CardDescription>
+                                Describe your blog post idea, and AI will populate the fields and generate an outline for you.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <form onSubmit={handleQuickStartBlogSubmit} className="space-y-3">
                                 <Textarea
                                     id="quickStartBlogRequest"
                                     name="userRequest"
                                     value={quickStartBlogRequest}
                                     onChange={(e) => setQuickStartBlogRequest(e.target.value)}
                                     placeholder="e.g., a how-to guide for beginners on using our new coffee machine"
+                                    rows={2}
                                 />
-                                <SubmitButton className="mt-3" loadingText="Populating..." disabled={isPopulatingBlogForm || !quickStartBlogRequest}>
+                                <SubmitButton className="w-full sm:w-auto" loadingText="Populating..." disabled={isPopulatingBlogForm || !quickStartBlogRequest}>
                                     Populate Blog Form & Outline
                                 </SubmitButton>
                             </form>
-                        </AccordionContent>
-                    </AccordionItem>
-                </Accordion>
+                        </CardContent>
+                    </Card>
+                </div>
                 <form 
                   action={(formData) => {
                     formData.append("industry", selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || "");
@@ -2232,5 +2240,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
   );
 }
 
+
+    
 
     
