@@ -52,7 +52,9 @@ export default function PricingPage() {
     const [adminGeoOverride, setAdminGeoOverride] = useState<string | null>(null);
 
     useEffect(() => {
-        getPlans(); // Fetch plans on component mount
+        startTransition(() => {
+            getPlans(); // Fetch plans on component mount
+        });
 
         fetch('https://ipapi.co/json/')
             .then(res => res.json())
