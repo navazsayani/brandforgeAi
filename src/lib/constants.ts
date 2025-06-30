@@ -1,3 +1,4 @@
+
 import type { PlansConfig } from '@/types';
 
 export const industries = [
@@ -180,6 +181,15 @@ export const blogArticleStyles = [
   { value: "comparison", label: "Comparison (e.g., 'X vs. Y')" },
   { value: "faq", label: "FAQ / Q&A" },
 ];
+
+export const adCampaignGoals = [
+  { value: "brand_awareness", label: "Brand Awareness" },
+  { value: "website_traffic", label: "Website Traffic" },
+  { value: "lead_generation", label: "Lead Generation" },
+  { value: "sales_conversion", label: "Sales Conversion" },
+  { value: "engagement", label: "Engagement" },
+];
+
 
 export const DEFAULT_PLANS_CONFIG: PlansConfig = {
   USD: {

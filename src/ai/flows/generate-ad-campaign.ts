@@ -21,6 +21,9 @@ const GenerateAdCampaignInputSchema = z.object({
   targetKeywords: z.string().describe('Comma-separated list of target keywords for the ad campaign.'),
   budget: z.number().describe('The total budget for the ad campaign (used for context, not direct execution).'),
   platforms: z.array(z.enum(['google_ads', 'meta'])).describe('The advertising platforms to run the campaign on.'),
+  campaignGoal: z.string().optional().describe("The primary objective of the campaign (e.g., 'Brand Awareness', 'Sales Conversion'). This guides the AI's tone and call to action."),
+  targetAudience: z.string().optional().describe("A specific description of the target audience for this campaign (e.g., 'Tech-savvy early adopters', 'Budget-conscious students')."),
+  callToAction: z.string().optional().describe("An explicit call to action for the ad (e.g., 'Shop Now', 'Learn More', 'Sign Up')."),
 });
 
 export type GenerateAdCampaignInput = z.infer<typeof GenerateAdCampaignInputSchema>;
@@ -42,25 +45,42 @@ const generateAdCampaignPrompt = ai.definePrompt({
   name: 'generateAdCampaignPrompt',
   input: {schema: GenerateAdCampaignInputSchema},
   output: {schema: GenerateAdCampaignOutputSchema},
-  prompt: `You are an expert digital advertising strategist specializing in the {{{industry}}} industry. Your task is to generate creative ad campaign assets based on the provided brand information, inspirational content, and target keywords.
+  prompt: `You are an expert digital advertising strategist specializing in the {{{industry}}} industry. Your task is to generate creative ad campaign assets based on the provided brand information, inspirational content, and strategic goals.
 
-Brand Name: {{{brandName}}}
-Brand Description: {{{brandDescription}}}
-{{#if industry}}
-Industry: {{{industry}}}
+**Strategic Context:**
+{{#if campaignGoal}}
+- **Primary Campaign Goal:** {{{campaignGoal}}}. All copy should be optimized to achieve this goal. (e.g., for 'Sales Conversion', use urgency; for 'Brand Awareness', be engaging and informative).
 {{/if}}
-Inspirational Content for Ad: {{{generatedContent}}}
-Target Keywords: {{{targetKeywords}}}
-Budget Context: {{{budget}}} (Use for general tone, e.g., a large budget might imply broader reach or more sophisticated messaging)
-Target Platforms: {{{platforms}}}
+{{#if targetAudience}}
+- **Specific Target Audience:** {{{targetAudience}}}. The tone and language must resonate with this group.
+{{/if}}
 
-Instructions:
-1.  **Develop a Campaign Concept**: Based on all inputs, especially the brand's industry, formulate a concise Campaign Concept (1-2 sentences) that will be the central theme for the ad variations.
-2.  **Generate Headlines**: Create exactly 3 distinct and compelling headline variations that align with the Campaign Concept and are tailored to the {{{industry}}} industry. Each headline should be optimized for engagement on platforms like Google Ads and Meta.
-3.  **Generate Body Texts**: Create exactly 2 distinct and persuasive body text (ad copy) variations. These should elaborate on the Campaign Concept and headlines, encouraging action, and be relevant to the {{{industry}}} industry.
+**Brand Information:**
+- **Brand Name:** {{{brandName}}}
+- **Brand Description:** {{{brandDescription}}}
+{{#if industry}}
+- **Industry:** {{{industry}}}
+{{/if}}
+- **Inspirational Content for Ad:** {{{generatedContent}}}
+- **Target Keywords:** {{{targetKeywords}}}
+- **Budget Context:** {{{budget}}} (Use for general tone, e.g., a large budget might imply broader reach or more sophisticated messaging)
+- **Target Platforms:** {{{platforms}}}
+
+**Call to Action (CTA):**
+{{#if callToAction}}
+- **Incorporate this specific CTA:** "{{{callToAction}}}"
+{{else}}
+- **Note:** No specific CTA was provided. Infer the most appropriate CTA based on the 'Primary Campaign Goal'.
+{{/if}}
+
+
+**Instructions:**
+1.  **Develop a Campaign Concept**: Based on all inputs, especially the brand's industry and campaign goal, formulate a concise Campaign Concept (1-2 sentences) that will be the central theme for the ad variations.
+2.  **Generate Headlines**: Create exactly 3 distinct and compelling headline variations that align with the Campaign Concept, campaign goal, and are tailored to the {{{industry}}} industry.
+3.  **Generate Body Texts**: Create exactly 2 distinct and persuasive body text (ad copy) variations. These should elaborate on the Campaign Concept, drive towards the CTA, and be relevant to the {{{industry}}} industry.
 4.  **Provide Platform Guidance**: Offer general advice on how these generated headlines and body texts can be effectively used or adapted for the specified platforms ({{{platforms}}}). For example, mention if certain headline types work better on Google Search vs. Meta display ads for the {{{industry}}} industry, or suggest A/B testing strategies. Do not provide technical setup instructions or campaign IDs.
 
-Ensure all generated text is professional, engaging, and directly relevant to the brand, its industry, and the inspirational content.
+Ensure all generated text is professional, engaging, and directly relevant to the brand, its industry, and the provided strategic direction.
 `,
 });
 

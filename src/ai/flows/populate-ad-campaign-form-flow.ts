@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview An AI agent that populates the ad campaign form from a single user request.
@@ -5,6 +6,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 import { getModelConfig } from '@/lib/model-config';
+import { adCampaignGoals } from '@/lib/constants';
 
 const PopulateAdCampaignFormInputSchema = z.object({
   userRequest: z.string().min(10, { message: "Please describe your ad campaign idea in at least 10 characters." }).describe('A user\'s natural language request for an ad campaign.'),
@@ -18,6 +20,9 @@ const PopulateAdCampaignFormOutputSchema = z.object({
   platforms: z.array(z.enum(['google_ads', 'meta'])).optional().describe('An array of platforms to target, inferred from the user request (e.g., "on Instagram" implies "meta").'),
   targetKeywords: z.string().optional().describe("A comma-separated list of 3-5 highly relevant keywords for the campaign, derived from the user request and existing keywords."),
   inspirationalContent: z.string().describe("A concise summary of the user's core request to be used as the inspirational content for the ad generation."),
+  campaignGoal: z.enum(adCampaignGoals.map(p => p.value) as [string, ...string[]]).optional().describe('The best-fitting campaign goal from the provided list, based on the user request.'),
+  targetAudience: z.string().optional().describe("A concise description of the target audience inferred from the request (e.g., 'young professionals')."),
+  callToAction: z.string().optional().describe("A specific call to action inferred from the request (e.g., 'Shop now', 'Learn more')."),
 });
 export type PopulateAdCampaignFormOutput = z.infer<typeof PopulateAdCampaignFormOutputSchema>;
 
@@ -43,6 +48,13 @@ Based on the user's request and the contextual information, fill out the followi
 3.  **targetKeywords**: Generate a comma-separated list of 3-5 highly relevant keywords based on the user's request and existing keywords.
 
 4.  **inspirationalContent**: Create a concise, one-sentence summary of the user's core ad idea or message to be used as the main inspirational content.
+
+5.  **campaignGoal**: Choose the single best goal from this list that matches the user's intent (e.g., a "sales campaign" implies 'sales_conversion').
+    Valid Goals: ${adCampaignGoals.map(p => `'${p.value}' (${p.label})`).join(', ')}.
+
+6.  **targetAudience**: Concisely describe the target audience if mentioned or implied (e.g., "targeting young adults").
+
+7.  **callToAction**: Extract a specific call to action if mentioned (e.g., "with a 'Shop Now' button").
 `
 });
 

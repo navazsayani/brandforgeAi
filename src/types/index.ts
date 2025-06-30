@@ -73,6 +73,9 @@ export interface GeneratedAdCampaign {
   inspirationalContent?: string;
   targetKeywords?: string;
   budget?: number;
+  campaignGoal?: string;
+  targetAudience?: string;
+  callToAction?: string;
   createdAt?: any;
   status: 'draft' | 'scheduled' | 'deployed';
 }

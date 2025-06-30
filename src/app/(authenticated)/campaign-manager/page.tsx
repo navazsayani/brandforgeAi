@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useActionState, startTransition } from 'react';
@@ -13,12 +14,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { Briefcase, Type, DollarSign, Target, CheckSquare, Copy, Info, Edit3, AlignLeft, MessageSquare, ListChecks, Megaphone, FileText, SparklesIcon } from 'lucide-react';
+import { Briefcase, Type, DollarSign, Target, CheckSquare, Copy, Info, Edit3, AlignLeft, MessageSquare, ListChecks, Megaphone, FileText, SparklesIcon, Goal, Users, MousePointerClick } from 'lucide-react';
 import { handleGenerateAdCampaignAction, handlePopulateAdCampaignFormAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedAdCampaign } from '@/types';
 import type { GenerateAdCampaignOutput } from '@/ai/flows/generate-ad-campaign';
 import type { PopulateAdCampaignFormOutput } from '@/ai/flows/populate-ad-campaign-form-flow';
+import { adCampaignGoals } from '@/lib/constants';
 
 
 const platforms = [
@@ -36,6 +38,10 @@ const adCampaignFormSchema = z.object({
   platforms: z.array(z.string()).refine((value) => value.some((item) => item), {
     message: "You have to select at least one platform.",
   }),
+  // New strategic fields
+  campaignGoal: z.string().optional(),
+  targetAudience: z.string().optional(),
+  callToAction: z.string().optional(),
 }).refine((data) => {
     if (data.generatedContent === "Custom content for ad campaign") {
         return !!data.customGeneratedContent && data.customGeneratedContent.trim() !== "";
@@ -73,6 +79,9 @@ export default function CampaignManagerPage() {
           targetKeywords: brandData?.targetKeywords || "",
           budget: 500,
           platforms: [],
+          campaignGoal: adCampaignGoals[0].value,
+          targetAudience: "",
+          callToAction: "",
       }
   });
 
@@ -106,6 +115,9 @@ export default function CampaignManagerPage() {
                                : formData.generatedContent,
         targetKeywords: formData.targetKeywords,
         budget: formData.budget,
+        campaignGoal: formData.campaignGoal,
+        targetAudience: formData.targetAudience,
+        callToAction: formData.callToAction,
       };
       addGeneratedAdCampaign(newCampaignData);
       toast({ title: "Success", description: generationState.message });
@@ -127,6 +139,9 @@ export default function CampaignManagerPage() {
             form.setValue("generatedContent", "Custom content for ad campaign");
             form.setValue("customGeneratedContent", data.inspirationalContent);
           }
+          if (data.campaignGoal) form.setValue("campaignGoal", data.campaignGoal);
+          if (data.targetAudience) form.setValue("targetAudience", data.targetAudience);
+          if (data.callToAction) form.setValue("callToAction", data.callToAction);
           toast({ title: "Form Populated!", description: populationState.message });
       }
       if (populationState.error) {
@@ -194,7 +209,7 @@ export default function CampaignManagerPage() {
                             name="userRequest"
                             value={quickStartRequest}
                             onChange={(e) => setQuickStartRequest(e.target.value)}
-                            placeholder="e.g., a campaign for our new shoe release targeting young adults on Instagram"
+                            placeholder="e.g., 'a sales campaign for our new shoe release targeting young adults on Instagram, with a 'Shop Now' button'"
                             rows={2}
                         />
                         <SubmitButton className="w-full sm:w-auto" loadingText="Populating..." disabled={isPopulating || !quickStartRequest}>
@@ -215,9 +230,25 @@ export default function CampaignManagerPage() {
               <FormField control={form.control} name="brandDescription" render={({ field }) => (
                 <FormItem><FormLabel className="flex items-center mb-2 text-base"><FileText className="w-5 h-5 mr-2 text-primary" />Brand Description</FormLabel><FormControl><Textarea {...field} placeholder="Detailed brand description, values, and target audience" rows={4} /></FormControl><FormMessage /></FormItem>
               )}/>
+               <FormField control={form.control} name="campaignGoal" render={({ field }) => (
+                <FormItem><FormLabel className="flex items-center mb-2 text-base"><Goal className="w-5 h-5 mr-2 text-primary" />Campaign Goal</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Select the main goal of the ad" /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      {adCampaignGoals.map(goal => (<SelectItem key={goal.value} value={goal.value}>{goal.label}</SelectItem>))}
+                    </SelectContent>
+                  </Select><FormMessage />
+                </FormItem>
+              )}/>
+               <FormField control={form.control} name="targetAudience" render={({ field }) => (
+                <FormItem><FormLabel className="flex items-center mb-2 text-base"><Users className="w-5 h-5 mr-2 text-primary" />Target Audience (Optional)</FormLabel><FormControl><Input {...field} placeholder="e.g., Tech-savvy early adopters, budget-conscious students" /></FormControl><FormMessage /></FormItem>
+              )}/>
+               <FormField control={form.control} name="callToAction" render={({ field }) => (
+                <FormItem><FormLabel className="flex items-center mb-2 text-base"><MousePointerClick className="w-5 h-5 mr-2 text-primary" />Call to Action (Optional)</FormLabel><FormControl><Input {...field} placeholder="e.g., Shop Now, Learn More, Sign Up" /></FormControl><FormMessage /></FormItem>
+              )}/>
               <FormField control={form.control} name="generatedContent" render={({ field }) => (
                 <FormItem><FormLabel className="flex items-center mb-2 text-base"><MessageSquare className="w-5 h-5 mr-2 text-primary" />Inspirational Content Source</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Select generated content or choose 'Custom'" /></SelectTrigger></FormControl>
                     <SelectContent>
                       {availableContent.length > 0 && availableContent.map(item => (<SelectItem key={item.id} value={item.content}>{item.label}</SelectItem>))}
