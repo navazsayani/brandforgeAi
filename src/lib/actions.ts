@@ -385,6 +385,9 @@ export async function handleGenerateAdCampaignAction(
       targetKeywords: formData.get("targetKeywords") as string,
       budget: budgetNum,
       platforms: platformsArray,
+      campaignGoal: formData.get("campaignGoal") as string | undefined,
+      targetAudience: formData.get("targetAudience") as string | undefined,
+      callToAction: formData.get("callToAction") as string | undefined,
     };
 
     if (!input.brandName || !input.brandDescription || !input.generatedContent || !input.targetKeywords || input.platforms.length === 0) {
@@ -409,6 +412,10 @@ export async function handleGenerateAdCampaignAction(
       targetKeywords: input.targetKeywords,
       budget: input.budget,
       platforms: input.platforms,
+      inspirationalContent: generatedContent,
+      campaignGoal: input.campaignGoal,
+      targetAudience: input.targetAudience,
+      callToAction: input.callToAction,
       createdAt: serverTimestamp(),
       status: 'draft',
     });
