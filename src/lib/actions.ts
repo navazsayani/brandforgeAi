@@ -1208,6 +1208,53 @@ export async function handleUpdateContentStatusAction(
   }
 }
 
+export async function handleUpdateContentAction(
+  prevState: FormState<{ success: boolean }>,
+  formData: FormData
+): Promise<FormState<{ success: boolean }>> {
+  const userId = formData.get('userId') as string;
+  const docPath = formData.get('docPath') as string;
+  const contentType = formData.get('contentType') as 'social' | 'blog' | 'ad';
+
+  if (!userId || !docPath || !contentType) {
+    return { error: 'Missing required information to update content.' };
+  }
+
+  if (!docPath.startsWith(`users/${userId}/`)) {
+    return { error: "Permission denied. You cannot modify this content." };
+  }
+  
+  try {
+    const docRef = doc(db, docPath);
+    const updateData: { [key: string]: any } = {};
+
+    switch (contentType) {
+        case 'social':
+            updateData.caption = formData.get('caption') as string;
+            updateData.hashtags = formData.get('hashtags') as string;
+            break;
+        case 'blog':
+            updateData.title = formData.get('title') as string;
+            updateData.content = formData.get('content') as string;
+            updateData.tags = formData.get('tags') as string;
+            break;
+        case 'ad':
+            updateData.campaignConcept = formData.get('campaignConcept') as string;
+            updateData.headlines = formData.getAll('headlines[]') as string[];
+            updateData.bodyTexts = formData.getAll('bodyTexts[]') as string[];
+            break;
+        default:
+            return { error: "Invalid content type for update." };
+    }
+
+    await setDoc(docRef, updateData, { merge: true });
+    return { data: { success: true }, message: `Content updated successfully.` };
+  } catch (e: any) {
+    console.error('Error in handleUpdateContentAction:', e);
+    return { error: `Failed to update content: ${e.message || "Unknown error."}` };
+  }
+}
+
 export async function handleSimulatedDeployAction(
   prevState: FormState<{ success: boolean }>,
   formData: FormData

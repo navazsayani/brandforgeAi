@@ -13,14 +13,18 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Send, Image as ImageIconLucide, MessageSquareText, Newspaper, Briefcase, AlertCircle, RefreshCw, Layers, CheckCircle, Loader2, Copy, Rocket, Facebook } from 'lucide-react';
+import { Send, Image as ImageIconLucide, MessageSquareText, Newspaper, Briefcase, AlertCircle, RefreshCw, Layers, CheckCircle, Loader2, Copy, Rocket, Facebook, Edit } from 'lucide-react';
 import type { GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign } from '@/types';
 import { cn } from '@/lib/utils';
-import { handleUpdateContentStatusAction, handleSimulatedDeployAction, type FormState } from '@/lib/actions';
+import { handleUpdateContentStatusAction, handleSimulatedDeployAction, handleUpdateContentAction, type FormState } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
+import { SubmitButton } from '@/components/SubmitButton';
 
 
 // Combined type for all deployable content
@@ -88,7 +92,7 @@ export default function DeploymentHubPage() {
     return combined.sort((a, b) => {
       const dateA = a.createdAt instanceof Timestamp ? a.createdAt.toDate() : new Date(0);
       const dateB = b.createdAt instanceof Timestamp ? b.createdAt.toDate() : new Date(0);
-      return dateB.getTime() - dateA.getTime();
+      return dateB.getTime() - a.getTime();
     });
   }, [socialPosts, blogPosts, adCampaigns]);
 
@@ -246,16 +250,19 @@ function ContentCard({ item }: { item: DeployableContent }) {
                 </div>
                 {renderContentPreview()}
             </CardContent>
-            <CardFooter className="pt-4 mt-auto border-t grid grid-cols-2 gap-2">
+            <CardFooter className={cn("pt-4 mt-auto border-t grid gap-2", isDeployed ? "grid-cols-2" : "grid-cols-3")}>
                 <ContentDetailsDialog item={item} />
                  {isDeployed ? (
-                    <form action={formAction}>
+                    <form action={formAction} className="col-span-1">
                         <input type="hidden" name="userId" value={currentUser?.uid || ''} />
                         <input type="hidden" name="docPath" value={item.docPath} />
-                        <StatusButton newStatus="draft" text="Revert to Draft" icon={<RefreshCw className="w-4 h-4 mr-2" />} variant="secondary" />
+                        <StatusButton newStatus="draft" text="Revert" icon={<RefreshCw className="w-4 h-4 mr-2" />} variant="secondary" />
                     </form>
                  ) : (
-                    <DeployDialog item={item} />
+                    <>
+                        <EditContentDialog item={item} />
+                        <DeployDialog item={item} />
+                    </>
                  )}
             </CardFooter>
         </Card>
@@ -342,6 +349,116 @@ function DeployDialog({ item }: { item: DeployableContent }) {
     );
 }
 
+function EditContentDialog({ item }: { item: DeployableContent }) {
+    const { currentUser } = useAuth();
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+    const [open, setOpen] = React.useState(false);
+    
+    const initialUpdateState: FormState<{ success: boolean }> = { data: undefined, error: undefined };
+    const [updateState, updateFormAction] = useActionState(handleUpdateContentAction, initialUpdateState);
+
+    useEffect(() => {
+        if (updateState.data?.success) {
+            toast({ title: "Content Updated", description: updateState.message });
+            setOpen(false);
+            // Invalidate queries to refetch data
+            queryClient.invalidateQueries({ queryKey: ['socialPosts', currentUser?.uid] });
+            queryClient.invalidateQueries({ queryKey: ['blogPosts', currentUser?.uid] });
+            queryClient.invalidateQueries({ queryKey: ['adCampaigns', currentUser?.uid] });
+        }
+        if (updateState.error) {
+            toast({ title: "Update Failed", description: updateState.error, variant: "destructive" });
+        }
+    }, [updateState, toast, setOpen, queryClient, currentUser]);
+
+    const renderEditForm = () => {
+        switch(item.type) {
+            case 'social':
+                return (
+                    <div className="space-y-4">
+                        <div>
+                            <Label htmlFor="edit-caption">Caption</Label>
+                            <Textarea id="edit-caption" name="caption" defaultValue={item.caption} rows={5} />
+                        </div>
+                        <div>
+                            <Label htmlFor="edit-hashtags">Hashtags</Label>
+                            <Textarea id="edit-hashtags" name="hashtags" defaultValue={item.hashtags} rows={2} />
+                        </div>
+                    </div>
+                );
+            case 'blog':
+                return (
+                    <div className="space-y-4">
+                         <div>
+                            <Label htmlFor="edit-title">Title</Label>
+                            <Input id="edit-title" name="title" defaultValue={item.title} />
+                        </div>
+                        <div>
+                            <Label htmlFor="edit-content">Content</Label>
+                            <Textarea id="edit-content" name="content" defaultValue={item.content} rows={10} />
+                        </div>
+                         <div>
+                            <Label htmlFor="edit-tags">Tags</Label>
+                            <Input id="edit-tags" name="tags" defaultValue={item.tags} />
+                        </div>
+                    </div>
+                );
+            case 'ad':
+                return (
+                    <div className="space-y-4">
+                        <div>
+                            <Label htmlFor="edit-concept">Campaign Concept</Label>
+                            <Textarea id="edit-concept" name="campaignConcept" defaultValue={item.campaignConcept} rows={3} />
+                        </div>
+                        <div>
+                            <Label>Headlines</Label>
+                            {item.headlines.map((headline, index) => (
+                                <Input key={index} name="headlines[]" defaultValue={headline} className="mb-2"/>
+                            ))}
+                        </div>
+                         <div>
+                            <Label>Body Texts</Label>
+                            {item.bodyTexts.map((body, index) => (
+                                <Textarea key={index} name="bodyTexts[]" defaultValue={body} rows={3} className="mb-2"/>
+                            ))}
+                        </div>
+                    </div>
+                );
+            default:
+                return <p>This content type cannot be edited.</p>;
+        }
+    }
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button variant="secondary" className="w-full h-auto whitespace-normal">
+                    <Edit className="w-4 h-4 mr-2" /> Edit
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+                 <form action={updateFormAction}>
+                    <DialogHeader>
+                        <DialogTitle>Edit Content</DialogTitle>
+                        <DialogDescription>Make changes to your generated content before deploying.</DialogDescription>
+                    </DialogHeader>
+                    <input type="hidden" name="userId" value={currentUser?.uid || ''} />
+                    <input type="hidden" name="docPath" value={item.docPath} />
+                    <input type="hidden" name="contentType" value={item.type} />
+                    <ScrollArea className="max-h-[60vh] my-4 pr-4 -mr-4">
+                        {renderEditForm()}
+                    </ScrollArea>
+                    <DialogFooter>
+                        <DialogClose asChild><Button type="button" variant="ghost">Cancel</Button></DialogClose>
+                        <SubmitButton loadingText="Saving...">Save Changes</SubmitButton>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 function DetailItem({ label, children, isBlock = false }: { label: string, children: React.ReactNode, isBlock?: boolean }) {
     if (!children) return null;
     return (
@@ -359,8 +476,9 @@ function CopyButton({ textToCopy }: { textToCopy: string }) {
         toast({ title: "Copied to clipboard!" });
     };
     return (
-        <Button variant="ghost" size="icon" onClick={handleCopy} className="h-6 w-6 text-muted-foreground hover:bg-accent/50">
+        <Button variant="ghost" size="icon" onClick={handleCopy} className="h-8 w-8 text-muted-foreground hover:bg-accent/50">
             <Copy className="h-4 w-4" />
+            <span className="sr-only">Copy content</span>
         </Button>
     );
 }
@@ -370,8 +488,11 @@ function ContentDetailsDialog({ item }: { item: DeployableContent }) {
     const typeName = item.type.charAt(0).toUpperCase() + item.type.slice(1);
     
     let details: React.ReactNode;
+    let copyText: string = '';
+
     switch (item.type) {
         case 'social':
+            copyText = `Caption:\n${item.caption}\n\nHashtags:\n${item.hashtags}`;
             details = (
                 <div className="space-y-4">
                     {item.imageSrc && (
@@ -387,6 +508,7 @@ function ContentDetailsDialog({ item }: { item: DeployableContent }) {
             );
             break;
         case 'blog':
+            copyText = `Title: ${item.title}\n\n${item.content}`;
             details = (
                 <div className="space-y-4">
                      <DetailItem label="Title">{item.title}</DetailItem>
@@ -396,6 +518,7 @@ function ContentDetailsDialog({ item }: { item: DeployableContent }) {
             );
             break;
         case 'ad':
+             copyText = `Concept:\n${item.campaignConcept}\n\nHeadlines:\n${item.headlines.join('\n')}\n\nBody Texts:\n${item.bodyTexts.join('\n\n')}`;
              details = (
                 <div className="space-y-4">
                     <DetailItem label="Concept" isBlock>{item.campaignConcept}</DetailItem>
@@ -426,10 +549,15 @@ function ContentDetailsDialog({ item }: { item: DeployableContent }) {
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                    <DialogTitle>{typeName} Details</DialogTitle>
-                    <DialogDescription>
-                        Full content view. Created on {item.createdAt ? new Date(item.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
-                    </DialogDescription>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <DialogTitle>{typeName} Details</DialogTitle>
+                            <DialogDescription>
+                                Created on {item.createdAt ? new Date(item.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+                            </DialogDescription>
+                        </div>
+                        <CopyButton textToCopy={copyText} />
+                    </div>
                 </DialogHeader>
                 <ScrollArea className="max-h-[60vh] pr-4 -mr-4">
                     <div className="space-y-4 py-4">{details}</div>
