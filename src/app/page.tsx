@@ -22,7 +22,7 @@ const FeatureCard = ({ icon: Icon, title, description }: { icon: React.ElementTy
 
 const HowItWorksStep = ({ number, title, description }: { number: string, title: string, description: string }) => (
     <div className="relative flex flex-col items-center text-center">
-         <div className="absolute top-6 left-1/2 w-full border-t-2 border-dashed border-border/70 -translate-x-full group-first:hidden group-last:w-1/2 group-last:-translate-x-0 hidden md:block"></div>
+         <div className="absolute top-6 left-1/2 w-full border-t-2 border-dashed border-border/70 -translate-x-full group-first:hidden group-last:w-1/2 hidden md:block"></div>
         <div className="relative z-10 flex items-center justify-center w-14 h-14 rounded-full bg-primary text-primary-foreground text-2xl font-bold border-4 border-background shadow-lg">
             {number}
         </div>
