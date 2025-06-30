@@ -16,7 +16,7 @@ export default function LegalLayout({
               className="flex items-center gap-3 text-foreground hover:text-primary transition-colors duration-200"
             >
               <Sparkles className="h-7 w-7 text-primary" />
-              <span className="text-xl font-bold">BrandForge AI</span>
+              <span className="text-xl font-bold text-gradient-brand">BrandForge AI</span>
             </Link>
         </div>
       </header>

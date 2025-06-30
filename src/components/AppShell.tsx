@@ -108,7 +108,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Sparkles className="w-7 h-7 text-sidebar-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-break">BrandForge AI</h1>
+            <h1 className="text-xl font-bold text-break text-gradient-brand">BrandForge AI</h1>
             <p className="text-sm text-sidebar-foreground/70 font-medium">AI-Powered Branding</p>
           </div>
         </Link>
@@ -178,7 +178,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                         <Sparkles className="w-7 h-7 text-sidebar-primary" />
                       </div>
                       <div>
-                        <h1 className="text-xl font-bold text-break">BrandForge AI</h1>
+                        <h1 className="text-xl font-bold text-break text-gradient-brand">BrandForge AI</h1>
                         <p className="text-sm text-sidebar-foreground/70 font-medium">AI-Powered Branding</p>
                       </div>
                     </Link>
