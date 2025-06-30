@@ -57,10 +57,6 @@
     --gradient-secondary: linear-gradient(135deg, hsl(45 85% 58%) 0%, hsl(45 75% 50%) 100%);
     --gradient-background: linear-gradient(135deg, hsl(40 30% 97%) 0%, hsl(210 25% 96%) 50%, hsl(180 15% 95%) 100%);
     --gradient-card: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(210 25% 98%) 100%);
-
-    /* Original Brand Colors */
-    --brand-blue: 197 78% 52%; /* #29ABE2 */
-    --brand-orange: 30 100% 60%; /* #FF9933 */
   }
 
   .dark {
@@ -114,10 +110,6 @@
     --gradient-secondary: linear-gradient(135deg, hsl(45 85% 70%) 0%, hsl(45 75% 60%) 100%);
     --gradient-background: linear-gradient(135deg, hsl(210 20% 8%) 0%, hsl(180 20% 10%) 50%, hsl(210 25% 12%) 100%);
     --gradient-card: linear-gradient(135deg, hsl(210 20% 12%) 0%, hsl(210 25% 15%) 100%);
-
-    /* Original Brand Colors (Dark Mode) */
-    --brand-blue: 197 78% 62%;
-    --brand-orange: 30 100% 70%;
   }
 }
 
@@ -332,7 +324,7 @@
 
 @layer utilities {
   .text-gradient-brand {
-    background-image: linear-gradient(to right, hsl(var(--brand-blue)), hsl(var(--brand-orange)));
+    background-image: linear-gradient(to right, hsl(var(--primary)), hsl(var(--accent)));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
