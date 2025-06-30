@@ -42,6 +42,7 @@ export interface GeneratedSocialMediaPost {
   targetAudience?: string;
   callToAction?: string;
   createdAt?: any;
+  status: 'draft' | 'scheduled' | 'deployed';
 }
 
 export interface GeneratedBlogPost {
@@ -55,6 +56,7 @@ export interface GeneratedBlogPost {
   targetAudience?: string;
   blogTone?: string;
   createdAt?: any;
+  status: 'draft' | 'scheduled' | 'deployed';
 }
 
 export interface GeneratedAdCampaign {
@@ -72,6 +74,7 @@ export interface GeneratedAdCampaign {
   targetKeywords?: string;
   budget?: number;
   createdAt?: any;
+  status: 'draft' | 'scheduled' | 'deployed';
 }
 
 // Type for the admin user selection dropdown

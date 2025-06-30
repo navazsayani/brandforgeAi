@@ -237,6 +237,7 @@ export async function handleGenerateSocialMediaCaptionAction(
       imageSrc: imageSrc,
       tone: input.tone,
       createdAt: serverTimestamp(),
+      status: 'draft',
     };
     if (input.postGoal) docData.postGoal = input.postGoal;
     if (input.targetAudience) docData.targetAudience = input.targetAudience;
@@ -340,6 +341,7 @@ export async function handleGenerateBlogContentAction(
       platform: input.targetPlatform,
       blogTone: input.blogTone,
       createdAt: serverTimestamp(),
+      status: 'draft',
     };
     if (input.articleStyle) docData.articleStyle = input.articleStyle;
     if (input.targetAudience) docData.targetAudience = input.targetAudience;
@@ -407,6 +409,7 @@ export async function handleGenerateAdCampaignAction(
       budget: input.budget,
       platforms: input.platforms,
       createdAt: serverTimestamp(),
+      status: 'draft',
     });
     return { data: result, message: "Ad campaign variations generated and saved successfully!" };
   } catch (e: any) {
@@ -1174,5 +1177,33 @@ export async function handleUpdatePlansConfigAction(
   } catch (e: any) {
     console.error("Error in handleUpdatePlansConfigAction:", e);
     return { error: `Failed to update plans configuration: ${e.message || "Unknown error."}` };
+  }
+}
+
+export async function handleUpdateContentStatusAction(
+  prevState: FormState<{ success: boolean }>,
+  formData: FormData
+): Promise<FormState<{ success: boolean }>> {
+  const userId = formData.get('userId') as string;
+  const docPath = formData.get('docPath') as string;
+  const newStatus = formData.get('newStatus') as 'draft' | 'scheduled' | 'deployed';
+
+  if (!userId || !docPath || !newStatus) {
+    return { error: 'Missing required information to update content status.' };
+  }
+
+  // Security check: This basic check ensures a user can't maliciously construct a path
+  // to another user's data. For production, Firestore Rules are the primary security layer.
+  if (!docPath.startsWith(`users/${userId}/`)) {
+    return { error: "Permission denied. You cannot modify this content." };
+  }
+
+  try {
+    const docRef = doc(db, docPath);
+    await setDoc(docRef, { status: newStatus }, { merge: true });
+    return { data: { success: true }, message: `Content status updated to ${newStatus}.` };
+  } catch (e: any) {
+    console.error('Error in handleUpdateContentStatusAction:', e);
+    return { error: `Failed to update status: ${e.message || "Unknown error."}` };
   }
 }
