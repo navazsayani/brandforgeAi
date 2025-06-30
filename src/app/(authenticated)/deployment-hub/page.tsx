@@ -161,7 +161,7 @@ export default function DeploymentHubPage() {
       )}
 
       {!isLoading && !fetchError && filteredContent.length > 0 && (
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
           {filteredContent.map(item => (
             <ContentCard key={item.docPath} item={item} />
           ))}
@@ -434,6 +434,8 @@ function EditContentDialog({ item }: { item: DeployableContent }) {
         }
     }
 
+    const formId = `edit-form-${item.id}`;
+
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -442,22 +444,24 @@ function EditContentDialog({ item }: { item: DeployableContent }) {
                 </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
-                 <form action={updateFormAction}>
-                    <DialogHeader>
-                        <DialogTitle>Edit Content</DialogTitle>
-                        <DialogDescription>Make changes to your generated content before deploying.</DialogDescription>
-                    </DialogHeader>
-                    <input type="hidden" name="userId" value={currentUser?.uid || ''} />
-                    <input type="hidden" name="docPath" value={item.docPath} />
-                    <input type="hidden" name="contentType" value={item.type} />
-                    <ScrollArea className="max-h-[60vh] my-4 pr-4 -mr-4">
+                 <DialogHeader>
+                    <DialogTitle>Edit Content</DialogTitle>
+                    <DialogDescription>Make changes to your generated content before deploying.</DialogDescription>
+                 </DialogHeader>
+                 
+                 <form id={formId} action={updateFormAction}>
+                     <input type="hidden" name="userId" value={currentUser?.uid || ''} />
+                     <input type="hidden" name="docPath" value={item.docPath} />
+                     <input type="hidden" name="contentType" value={item.type} />
+                     <ScrollArea className="max-h-[60vh] my-4 pr-4 -mr-4">
                         {renderEditForm()}
-                    </ScrollArea>
-                    <DialogFooter>
-                        <DialogClose asChild><Button type="button" variant="ghost">Cancel</Button></DialogClose>
-                        <SubmitButton loadingText="Saving...">Save Changes</SubmitButton>
-                    </DialogFooter>
-                </form>
+                     </ScrollArea>
+                 </form>
+
+                 <DialogFooter>
+                    <DialogClose asChild><Button type="button" variant="ghost">Cancel</Button></DialogClose>
+                    <SubmitButton form={formId} loadingText="Saving...">Save Changes</SubmitButton>
+                 </DialogFooter>
             </DialogContent>
         </Dialog>
     );
@@ -650,5 +654,3 @@ function ContentDetailsDialog({ item }: { item: DeployableContent }) {
         </Dialog>
     );
 }
-
-    
