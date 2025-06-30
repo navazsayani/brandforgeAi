@@ -236,9 +236,9 @@ function ContentCard({ item }: { item: DeployableContent }) {
                 </div>
                 {renderContentPreview()}
             </CardContent>
-            <CardFooter className="pt-4 mt-auto border-t space-x-2">
+            <CardFooter className="pt-4 mt-auto border-t grid grid-cols-2 gap-2">
                 <ContentDetailsDialog item={item} />
-                <form action={formAction} className="w-full">
+                <form action={formAction}>
                     <input type="hidden" name="userId" value={currentUser?.uid || ''} />
                     <input type="hidden" name="docPath" value={item.docPath} />
                     <StatusButton {...buttonProps} />
@@ -359,4 +359,3 @@ function ContentDetailsDialog({ item }: { item: DeployableContent }) {
         </Dialog>
     );
 }
-
