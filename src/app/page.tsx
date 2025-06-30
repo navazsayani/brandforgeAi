@@ -22,7 +22,7 @@ const FeatureCard = ({ icon: Icon, title, description }: { icon: React.ElementTy
 
 const HowItWorksStep = ({ number, title, description }: { number: string, title: string, description: string }) => (
     <div className="relative flex flex-col items-center text-center">
-         <div className="absolute top-6 left-1/2 w-full border-t-2 border-dashed border-border/70 -translate-x-full group-first:hidden group-last:hidden md:block"></div>
+         <div className="absolute top-6 left-1/2 w-full border-t-2 border-dashed border-border/70 -translate-x-full group-first:hidden md:block"></div>
         <div className="relative z-10 flex items-center justify-center w-14 h-14 rounded-full bg-primary text-primary-foreground text-2xl font-bold border-4 border-background shadow-lg">
             {number}
         </div>
@@ -116,7 +116,7 @@ export default function LandingPage() {
                 Everything you need to streamline your brand&apos;s content and marketing workflow.
               </p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 mt-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 mt-12 max-w-5xl mx-auto">
               <FeatureCard 
                 icon={UserCircle}
                 title="AI Brand Identity"
