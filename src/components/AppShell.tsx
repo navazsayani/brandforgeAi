@@ -29,8 +29,8 @@ const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/brand-profile', label: 'Brand Profile', icon: UserCircle },
   { href: '/content-studio', label: 'Content Studio', icon: ImageIcon },
-  { href: '/image-library', label: 'Image Library', icon: Images },
   { href: '/campaign-manager', label: 'Campaign Manager', icon: Briefcase },
+  { href: '/image-library', label: 'Image Library', icon: Images },
   { href: '/deployment-hub', label: 'Deployment Hub', icon: Send },
   { href: '/pricing', label: 'Pricing', icon: CreditCard },
 ];
