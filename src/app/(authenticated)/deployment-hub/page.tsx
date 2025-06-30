@@ -13,10 +13,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Send, Image as ImageIconLucide, MessageSquareText, Newspaper, Briefcase, AlertCircle, RefreshCw, Layers, CheckCircle, Loader2, Copy, Rocket, Facebook, Edit, Download } from 'lucide-react';
+import { Send, Image as ImageIconLucide, MessageSquareText, Newspaper, Briefcase, AlertCircle, RefreshCw, Layers, CheckCircle, Loader2, Copy, Rocket, Facebook, Edit, Download, Trash2 } from 'lucide-react';
 import type { GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign } from '@/types';
 import { cn } from '@/lib/utils';
-import { handleUpdateContentStatusAction, handleSimulatedDeployAction, handleUpdateContentAction, type FormState } from '@/lib/actions';
+import { handleDeleteContentAction, handleUpdateContentStatusAction, handleSimulatedDeployAction, handleUpdateContentAction, type FormState } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
 import { SubmitButton } from '@/components/SubmitButton';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 
 // Combined type for all deployable content
@@ -235,10 +236,13 @@ function ContentCard({ item }: { item: DeployableContent }) {
         <Card className="flex flex-col shadow-md hover:shadow-xl transition-shadow duration-200">
             <CardHeader>
                 <div className="flex justify-between items-start gap-2">
-                    <CardTitle className="text-lg line-clamp-2">{getTitle()}</CardTitle>
-                    <Badge variant={item.status === 'deployed' ? 'default' : 'secondary'} className="capitalize shrink-0">
-                      {item.status || 'draft'}
-                    </Badge>
+                    <CardTitle className="text-lg line-clamp-2 flex-grow">{getTitle()}</CardTitle>
+                     <div className="flex items-center gap-1 shrink-0">
+                        <Badge variant={item.status === 'deployed' ? 'default' : 'secondary'} className="capitalize">
+                          {item.status || 'draft'}
+                        </Badge>
+                        <DeleteContentDialog item={item} />
+                    </div>
                 </div>
             </CardHeader>
             <CardContent className="flex-grow space-y-3">
@@ -250,10 +254,10 @@ function ContentCard({ item }: { item: DeployableContent }) {
                 </div>
                 {renderContentPreview()}
             </CardContent>
-            <CardFooter className={cn("pt-4 mt-auto border-t grid gap-2 sm:grid-cols-1", isDeployed ? "sm:grid-cols-2" : "sm:grid-cols-3")}>
+            <CardFooter className={cn("pt-4 mt-auto border-t grid gap-2", isDeployed ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1 md:grid-cols-3")}>
                 <ContentDetailsDialog item={item} />
                  {isDeployed ? (
-                    <form action={formAction} className="sm:col-span-1">
+                    <form action={formAction} className="w-full">
                         <input type="hidden" name="userId" value={currentUser?.uid || ''} />
                         <input type="hidden" name="docPath" value={item.docPath} />
                         <StatusButton newStatus="draft" text="Revert" icon={<RefreshCw className="w-4 h-4 mr-2" />} variant="secondary" />
@@ -457,6 +461,58 @@ function EditContentDialog({ item }: { item: DeployableContent }) {
             </DialogContent>
         </Dialog>
     );
+}
+
+function DeleteContentDialog({ item }: { item: DeployableContent }) {
+  const { currentUser } = useAuth();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [open, setOpen] = React.useState(false);
+  
+  const initialDeleteState: FormState<{ success: boolean }> = { data: undefined, error: undefined };
+  const [deleteState, deleteAction] = useActionState(handleDeleteContentAction, initialDeleteState);
+
+  useEffect(() => {
+      if (deleteState.data?.success) {
+          toast({ title: "Content Deleted", description: deleteState.message });
+          setOpen(false);
+          // Invalidate queries to refetch data
+          queryClient.invalidateQueries({ queryKey: ['socialPosts', currentUser?.uid] });
+          queryClient.invalidateQueries({ queryKey: ['blogPosts', currentUser?.uid] });
+          queryClient.invalidateQueries({ queryKey: ['adCampaigns', currentUser?.uid] });
+      }
+      if (deleteState.error) {
+          toast({ title: "Deletion Failed", description: deleteState.error, variant: "destructive" });
+      }
+  }, [deleteState, toast, setOpen, queryClient, currentUser]);
+
+
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive">
+              <Trash2 className="h-4 w-4"/>
+              <span className="sr-only">Delete Content</span>
+          </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <form action={deleteAction}>
+            <input type="hidden" name="userId" value={currentUser?.uid || ''} />
+            <input type="hidden" name="docPath" value={item.docPath} />
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete this piece of content from your records.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <SubmitButton variant="destructive" loadingText="Deleting...">Delete</SubmitButton>
+            </AlertDialogFooter>
+        </form>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
 }
 
 function DetailItem({ label, children, isBlock = false }: { label: string, children: React.ReactNode, isBlock?: boolean }) {

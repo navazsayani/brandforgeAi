@@ -1318,6 +1318,31 @@ export async function handleSimulatedDeployAction(
   }
 }
 
+export async function handleDeleteContentAction(
+  prevState: FormState<{ success: boolean }>,
+  formData: FormData
+): Promise<FormState<{ success: boolean }>> {
+  const userId = formData.get('userId') as string;
+  const docPath = formData.get('docPath') as string;
+
+  if (!userId || !docPath) {
+    return { error: 'Missing required information to delete content.' };
+  }
+
+  // Security check
+  if (!docPath.startsWith(`users/${userId}/`)) {
+    return { error: "Permission denied. You cannot modify this content." };
+  }
+  
+  try {
+    const docRef = doc(db, docPath);
+    await deleteDoc(docRef);
+    return { data: { success: true }, message: `Content deleted successfully.` };
+  } catch (e: any) {
+    console.error('Error in handleDeleteContentAction:', e);
+    return { error: `Failed to delete content: ${e.message || "Unknown error."}` };
+  }
+}
 
 // Placeholder action for storing API tokens
 interface StoreTokenInput {
