@@ -99,7 +99,7 @@ export default function SettingsPage() {
 
   // Fetch admin settings on load if user is admin
   useEffect(() => {
-    if (isAdmin) {
+    if (isAdmin && currentUser?.email) {
       const formData = new FormData();
       formData.append('adminRequesterEmail', currentUser.email);
       startTransition(() => {
@@ -135,18 +135,29 @@ export default function SettingsPage() {
         if ((getModelState.data || getModelState.error) && (getPlansState.data || getPlansState.error)) {
             setIsPageLoading(false);
         }
-        if (getModelState.error) toast({ title: "Error Loading Model Settings", description: getModelState.error, variant: "destructive" });
-        if (getPlansState.error) toast({ title: "Error Loading Plan Settings", description: getPlansState.error, variant: "destructive" });
+        if (getModelState.error) {
+            toast({ title: "Error Loading Model Settings", description: getModelState.error, variant: "destructive" });
+        }
+        if (getPlansState.error) {
+            toast({ title: "Error Loading Plan Settings", description: getPlansState.error, variant: "destructive" });
+        }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getModelState, getPlansState, modelForm, plansForm, toast, isAdmin]);
+  }, [getModelState, getPlansState, isAdmin, modelForm, plansForm, toast]);
   
   // Handle settings update result
   useEffect(() => {
-    if (updateModelState.message && !updateModelState.error) toast({ title: "Success", description: updateModelState.message });
-    if (updateModelState.error) toast({ title: "Model Update Error", description: updateModelState.error, variant: "destructive" });
-    if (updatePlansState.message && !updatePlansState.error) toast({ title: "Success", description: updatePlansState.message });
-    if (updatePlansState.error) toast({ title: "Plans Update Error", description: updatePlansState.error, variant: "destructive" });
+    if (updateModelState.message && !updateModelState.error) {
+        toast({ title: "Success", description: updateModelState.message });
+    }
+    if (updateModelState.error) {
+        toast({ title: "Model Update Error", description: updateModelState.error, variant: "destructive" });
+    }
+    if (updatePlansState.message && !updatePlansState.error) {
+        toast({ title: "Success", description: updatePlansState.message });
+    }
+    if (updatePlansState.error) {
+        toast({ title: "Plans Update Error", description: updatePlansState.error, variant: "destructive" });
+    }
   }, [updateModelState, updatePlansState, toast]);
 
   const onModelSubmit: SubmitHandler<ModelSettingsFormData> = (data) => {
@@ -155,8 +166,11 @@ export default function SettingsPage() {
       formData.append('adminRequesterEmail', currentUser.email);
       Object.entries(data).forEach(([key, value]) => {
          if (value !== undefined && value !== null) {
-            if (typeof value === 'boolean') formData.append(key, String(value));
-            else formData.append(key, value);
+            if (typeof value === 'boolean') {
+              formData.append(key, String(value));
+            } else {
+              formData.append(key, value);
+            }
          }
       });
       startTransition(() => updateModelAction(formData));
@@ -331,8 +345,7 @@ export default function SettingsPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <FormField control={plansForm.control} name="free_images_quota" render={({ field }) => (<FormItem><FormLabel>Image Generations</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
                                     <FormField control={plansForm.control} name="free_social_quota" render={({ field }) => (<FormItem><FormLabel>Social Posts</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                    <FormField control={plansForm.control} name="free_blogs_quota" render={({ field }) => (<FormItem><FormLabel>Blog Posts</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormMessage>
-                                    </FormItem>)} />
+                                    <FormField control={plansForm.control} name="free_blogs_quota" render={({ field }) => (<FormItem><FormLabel>Blog Posts</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
                                 </div>
                             </TabsContent>
                         </Tabs>
