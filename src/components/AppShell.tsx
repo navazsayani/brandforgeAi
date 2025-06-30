@@ -105,7 +105,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           className="flex items-center gap-4 text-sidebar-foreground hover:text-sidebar-primary transition-colors duration-200"
         >
           <div>
-            <h1 className="text-xl font-bold text-break text-gradient-brand">BrandForge AI</h1>
+            <h1 className="text-2xl font-bold text-break text-gradient-brand">BrandForge AI</h1>
             <p className="text-sm text-sidebar-foreground/70 font-medium">AI-Powered Branding</p>
           </div>
         </Link>
@@ -172,7 +172,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                       className="flex items-center gap-4 text-sidebar-foreground hover:text-sidebar-primary transition-colors duration-200"
                     >
                       <div>
-                        <h1 className="text-xl font-bold text-break text-gradient-brand">BrandForge AI</h1>
+                        <h1 className="text-2xl font-bold text-break text-gradient-brand">BrandForge AI</h1>
                         <p className="text-sm text-sidebar-foreground/70 font-medium">AI-Powered Branding</p>
                       </div>
                     </Link>
