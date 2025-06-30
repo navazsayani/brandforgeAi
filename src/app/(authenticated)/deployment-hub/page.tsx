@@ -250,10 +250,10 @@ function ContentCard({ item }: { item: DeployableContent }) {
                 </div>
                 {renderContentPreview()}
             </CardContent>
-            <CardFooter className={cn("pt-4 mt-auto border-t grid gap-2", isDeployed ? "grid-cols-2" : "grid-cols-3")}>
+            <CardFooter className={cn("pt-4 mt-auto border-t grid gap-2", isDeployed ? "sm:grid-cols-2" : "sm:grid-cols-3")}>
                 <ContentDetailsDialog item={item} />
                  {isDeployed ? (
-                    <form action={formAction} className="col-span-1">
+                    <form action={formAction} className="sm:col-span-1">
                         <input type="hidden" name="userId" value={currentUser?.uid || ''} />
                         <input type="hidden" name="docPath" value={item.docPath} />
                         <StatusButton newStatus="draft" text="Revert" icon={<RefreshCw className="w-4 h-4 mr-2" />} variant="secondary" />
@@ -282,9 +282,9 @@ function StatusButton({ newStatus, text, icon, variant = "default", ...props }: 
 function DeployPlatformButton({ platform, icon, children }: { platform: string; icon: React.ReactNode; children: React.ReactNode }) {
     const { pending } = useFormStatus();
     return (
-        <Button type="submit" name="platform" value={platform} className="w-full justify-start gap-3" variant="outline" disabled={pending}>
+        <Button type="submit" name="platform" value={platform} className="w-full justify-start gap-3 h-auto" variant="outline" disabled={pending}>
              {pending ? <Loader2 className="w-5 h-5 animate-spin" /> : icon}
-             {children}
+             <span className="whitespace-normal text-left">{children}</span>
         </Button>
     )
 }
