@@ -458,21 +458,10 @@ function RecentItemCard({ item }: { item: RecentItem }) {
     };
     const Icon = iconMap[item.type];
 
-    return (
-        <Card className="overflow-hidden group hover:shadow-xl transition-shadow duration-300 flex flex-col">
-            {item.imageUrl && (
-                <div className="relative w-full bg-muted aspect-video overflow-hidden">
-                    <NextImage 
-                        src={item.imageUrl} 
-                        alt={`Recent ${item.type}`} 
-                        fill 
-                        style={{objectFit: 'cover'}} 
-                        className="transition-transform duration-300 group-hover:scale-105"
-                        data-ai-hint="recent creation"
-                    />
-                </div>
-            )}
-            <CardHeader>
+    const cardTextContent = (
+      <>
+        <div className="flex flex-col flex-grow p-4">
+            <CardHeader className="p-0">
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">
                     <Icon className="w-5 h-5" />
                     <span className="font-semibold">{item.type}</span>
@@ -485,20 +474,47 @@ function RecentItemCard({ item }: { item: RecentItem }) {
                         </>
                     )}
                 </div>
-                <CardTitle className="text-lg line-clamp-2 mt-2 break-words">{item.title}</CardTitle>
+                <CardTitle className="text-lg mt-2 break-words h-auto line-clamp-2">{item.title}</CardTitle>
             </CardHeader>
-            <CardContent className="flex-grow">
+            <CardContent className="p-0 pt-3 flex-grow">
                  <p className="text-sm text-muted-foreground line-clamp-3 text-balance">
                     {item.description}
                 </p>
             </CardContent>
-            <CardFooter>
-                 <Link href={item.href} passHref className="w-full">
-                    <Button variant="secondary" className="w-full">
-                        View Details <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                </Link>
-            </CardFooter>
+        </div>
+        <CardFooter className="p-4 pt-0">
+             <Link href={item.href} passHref className="w-full">
+                <Button variant="secondary" className="w-full">
+                    View Details <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+            </Link>
+        </CardFooter>
+      </>
+    );
+
+    if (item.imageUrl) {
+        return (
+            <Card className="overflow-hidden group hover:shadow-xl transition-shadow duration-300 flex flex-col">
+                <div className="relative w-full bg-muted aspect-video overflow-hidden">
+                    <NextImage 
+                        src={item.imageUrl} 
+                        alt={`Recent ${item.type}`} 
+                        fill 
+                        style={{objectFit: 'cover'}} 
+                        className="transition-transform duration-300 group-hover:scale-105"
+                        data-ai-hint="recent creation"
+                    />
+                </div>
+                <div className="flex flex-col flex-grow">
+                    {cardTextContent}
+                </div>
+            </Card>
+        );
+    }
+
+    return (
+        <Card className="group hover:shadow-xl transition-shadow duration-300 flex flex-col">
+            {cardTextContent}
         </Card>
     );
 }
