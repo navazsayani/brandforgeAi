@@ -531,7 +531,7 @@ export default function BrandProfilePage() {
           <Card className="mb-6 bg-secondary/50 shadow-md">
             <CardHeader>
               <CardTitle className="text-xl flex items-center"><ShieldCheck className="w-6 h-6 mr-2 text-primary" />Admin Controls</CardTitle>
-              <CardDescription>Load and edit a specific user's brand profile.</CardDescription>
+              <CardDescription>Load and edit a specific user&apos;s brand profile.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center space-x-2 w-full">
@@ -603,7 +603,7 @@ export default function BrandProfilePage() {
                     <FormItem>
                       <FormLabel className="flex items-center text-base"><Users className="w-5 h-5 mr-2 text-primary"/>User Email</FormLabel>
                       <FormControl><Input type="email" placeholder="user@example.com" {...field} disabled={true} /></FormControl>
-                      <FormDescription>User's email address (read-only).</FormDescription>
+                      <FormDescription>User&apos;s email address (read-only).</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -734,7 +734,7 @@ export default function BrandProfilePage() {
                       </div>
                     </div>
                     {isUploadingLogo && logoUploadProgress > 0 && logoUploadProgress < 100 && <Progress value={logoUploadProgress} className="w-full h-2 mt-2" />}
-                    {generatedLogoPreview && <Alert variant="default" className="mt-2"><Sparkles className="h-4 w-4" /><AlertTitle>Logo Generated!</AlertTitle><AlertDescription>New logo generated. Click "Save Brand Profile" to upload and save.</AlertDescription></Alert>}
+                    {generatedLogoPreview && <Alert variant="default" className="mt-2"><Sparkles className="h-4 w-4" /><AlertTitle>Logo Generated!</AlertTitle><AlertDescription>New logo generated. Click &quot;Save Brand Profile&quot; to upload and save.</AlertDescription></Alert>}
                   </div>
                   <FormField control={form.control} name="brandLogoUrl" render={() => <FormMessage />} />
                 </FormItem>

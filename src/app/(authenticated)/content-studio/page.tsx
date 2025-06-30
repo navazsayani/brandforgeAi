@@ -520,7 +520,7 @@ export default function ContentStudioPage() {
       setGeneratedSocialPost({ caption: socialData.caption, hashtags: socialData.hashtags, imageSrc: socialData.imageSrc });
         const newPost: GeneratedSocialMediaPost = {
         id: new Date().toISOString(),
-        platform: 'Instagram', 
+        platform: 'Instagram',
         imageSrc: socialData.imageSrc || null,
         imageDescription: socialImageDescription || "",
         caption: socialData.caption,
@@ -529,6 +529,7 @@ export default function ContentStudioPage() {
         postGoal: socialPostGoal,
         targetAudience: socialTargetAudience,
         callToAction: socialCallToAction,
+        status: 'draft',
       };
       addGeneratedSocialPost(newPost);
       toast({ title: "Success", description: socialState.message });
@@ -550,6 +551,7 @@ export default function ContentStudioPage() {
         articleStyle: blogArticleStyle,
         targetAudience: blogTargetAudience,
         blogTone: selectedBlogTone,
+        status: 'draft',
       };
       addGeneratedBlogPost(newPost);
       toast({ title: "Success", description: blogState.message });

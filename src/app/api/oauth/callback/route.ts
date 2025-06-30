@@ -1,5 +1,6 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { randomBytes } from 'crypto';
 import { handleStoreUserApiTokenAction } from '@/lib/actions';
 import { auth } from '@/lib/firebaseConfig';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -56,8 +57,8 @@ export async function GET(request: NextRequest) {
   }
 
   // Simulate exchanging the code for a token
-  const simulatedAccessToken = `sim_access_token_${platform}_${crypto.randomBytes(16).toString('hex')}`;
-  const simulatedRefreshToken = `sim_refresh_token_${platform}_${crypto.randomBytes(16).toString('hex')}`;
+  const simulatedAccessToken = `sim_access_token_${platform}_${randomBytes(16).toString('hex')}`;
+  const simulatedRefreshToken = `sim_refresh_token_${platform}_${randomBytes(16).toString('hex')}`;
   
   console.log(`[OAuth Callback] Simulated access token obtained for user ${userId}.`);
 

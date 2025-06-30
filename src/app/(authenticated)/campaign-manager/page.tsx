@@ -186,8 +186,8 @@ export default function CampaignManagerPage() {
         targetPlatforms: formData.platforms as ('google_ads' | 'meta')[],
         brandName: formData.brandName,
         brandDescription: formData.brandDescription,
-        industry: brandData?.industry, 
-        inspirationalContent: formData.generatedContent === 'Custom content for ad campaign' 
+        industry: brandData?.industry,
+        inspirationalContent: formData.generatedContent === 'Custom content for ad campaign'
                                ? formData.customGeneratedContent || ""
                                : formData.generatedContent,
         targetKeywords: formData.targetKeywords,
@@ -195,6 +195,7 @@ export default function CampaignManagerPage() {
         campaignGoal: formData.campaignGoal,
         targetAudience: formData.targetAudience,
         callToAction: formData.callToAction,
+        status: 'draft',
       };
       addGeneratedAdCampaign(newCampaignData);
       toast({ title: "Success", description: generationState.message });

@@ -30,7 +30,7 @@ export default function PrivacyPolicyPage() {
 
         <h2>1. Introduction</h2>
         <p>
-            Welcome to BrandForge AI ("we," "our," "us"). We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our application.
+            Welcome to BrandForge AI (&quot;we,&quot; &quot;our,&quot; &quot;us&quot;). We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our application.
         </p>
 
         <h2>2. Information We Collect</h2>
@@ -54,7 +54,7 @@ export default function PrivacyPolicyPage() {
         <p>Having accurate information about you permits us to provide you with a smooth, efficient, and customized experience. Specifically, we may use information collected about you to:</p>
         <ul>
             <li>Create and manage your account.</li>
-            <li>Provide the core functionality of the app, including passing your brand data to third-party AI models (e.g., Google AI's Gemini) to generate content.</li>
+            <li>Provide the core functionality of the app, including passing your brand data to third-party AI models (e.g., Google AI&apos;s Gemini) to generate content.</li>
             <li>Improve our application and services.</li>
             <li>Monitor and analyze usage and trends to improve your experience.</li>
             <li>Notify you of updates to the application.</li>

@@ -320,7 +320,7 @@ export default function SettingsPage() {
                         <Alert>
                             <AlertTitle>Important: AI Model Configuration</AlertTitle>
                             <AlertDescription>
-                            Changing these values will directly affect the AI's performance. Ensure model names are valid and compatible.
+                            Changing these values will directly affect the AI&apos;s performance. Ensure model names are valid and compatible.
                             <a href="https://ai.google.dev/models/gemini" target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center font-medium text-primary underline-offset-4 hover:underline">
                                 View available Google AI models
                                 <ExternalLink className="ml-1.5 h-4 w-4" />

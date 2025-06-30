@@ -162,7 +162,7 @@ function EditUserSubscriptionForm({ user, onUpdate }: { user: UserProfileSelectI
             <PopoverContent className="w-80" align="end">
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid gap-2">
-                        <h4 className="font-medium leading-none">Edit {user.brandName}'s Plan</h4>
+                        <h4 className="font-medium leading-none">Edit {user.brandName}&apos;s Plan</h4>
                         <p className="text-sm text-muted-foreground">{user.userEmail}</p>
                     </div>
                      <div className="space-y-2">
