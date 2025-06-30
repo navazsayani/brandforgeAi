@@ -137,7 +137,7 @@ export default function DeploymentHubPage() {
       </div>
 
       {isLoading && (
-        <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
           {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-64 rounded-lg" />)}
         </div>
       )}
@@ -160,7 +160,7 @@ export default function DeploymentHubPage() {
       )}
 
       {!isLoading && !fetchError && filteredContent.length > 0 && (
-        <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
           {filteredContent.map(item => (
             <ContentCard key={item.docPath} item={item} />
           ))}
@@ -250,7 +250,7 @@ function ContentCard({ item }: { item: DeployableContent }) {
                 </div>
                 {renderContentPreview()}
             </CardContent>
-            <CardFooter className={cn("pt-4 mt-auto border-t grid gap-2", isDeployed ? "sm:grid-cols-2" : "sm:grid-cols-3")}>
+            <CardFooter className={cn("pt-4 mt-auto border-t grid gap-2 grid-cols-1", isDeployed ? "sm:grid-cols-2" : "sm:grid-cols-3")}>
                 <ContentDetailsDialog item={item} />
                  {isDeployed ? (
                     <form action={formAction} className="sm:col-span-1">
