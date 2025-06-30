@@ -15,3 +15,4 @@ import '@/ai/flows/enhance-brand-description-flow.ts';
 import '@/ai/flows/populate-image-form-flow.ts';
 import '@/ai/flows/populate-social-form-flow.ts';
 import '@/ai/flows/populate-blog-form-flow.ts';
+import '@/ai/flows/populate-ad-campaign-form-flow.ts';

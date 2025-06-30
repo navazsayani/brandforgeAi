@@ -15,6 +15,7 @@ import { generateBrandForgeAppLogo, type GenerateBrandForgeAppLogoOutput } from 
 import { populateImageForm, type PopulateImageFormInput, type PopulateImageFormOutput } from '@/ai/flows/populate-image-form-flow';
 import { populateSocialForm, type PopulateSocialFormInput, type PopulateSocialFormOutput } from '@/ai/flows/populate-social-form-flow';
 import { populateBlogForm, type PopulateBlogFormInput, type PopulateBlogFormOutput } from '@/ai/flows/populate-blog-form-flow';
+import { populateAdCampaignForm, type PopulateAdCampaignFormInput, type PopulateAdCampaignFormOutput } from '@/ai/flows/populate-ad-campaign-form-flow';
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where, collectionGroup, deleteDoc } from 'firebase/firestore';
@@ -511,6 +512,28 @@ export async function handlePopulateBlogFormAction(
     return { error: `Failed to populate form: ${e.message || "Unknown error."}` };
   }
 }
+
+export async function handlePopulateAdCampaignFormAction(
+  prevState: FormState<PopulateAdCampaignFormOutput>,
+  formData: FormData
+): Promise<FormState<PopulateAdCampaignFormOutput>> {
+  const userRequest = formData.get("userRequest") as string;
+  const currentBrandDescription = formData.get("currentBrandDescription") as string;
+  const currentKeywords = formData.get("currentKeywords") as string;
+
+  if (!userRequest) {
+    return { error: "Please describe your ad campaign idea." };
+  }
+  try {
+    const input: PopulateAdCampaignFormInput = { userRequest, currentBrandDescription, currentKeywords };
+    const result = await populateAdCampaignForm(input);
+    return { data: result, message: "Ad campaign form populated by AI!" };
+  } catch (e: any) {
+    console.error("Error in handlePopulateAdCampaignFormAction:", e);
+    return { error: `Failed to populate form: ${e.message || "Unknown error."}` };
+  }
+}
+
 
 const generateFilenamePart = () => Math.random().toString(36).substring(2, 10);
 
