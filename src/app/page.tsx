@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogIn, UserPlus, LayoutDashboard, Loader2, Sparkles, UserCircle, Rocket, Paintbrush, Send, CheckCircle, ArrowRight } from 'lucide-react';
+import { LogIn, UserPlus, LayoutDashboard, Loader2, UserCircle, Rocket, Paintbrush, Send, CheckCircle, ArrowRight } from 'lucide-react';
 
 const FeatureCard = ({ icon: Icon, title, description }: { icon: React.ElementType, title: string, description: string }) => (
     <div className="card-compact text-center p-6 md:p-8">
@@ -51,14 +51,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b">
-          <div className="container-responsive flex items-center justify-between h-18">
-            <Link
-              href="/"
-              className="flex items-center gap-3 text-foreground hover:text-primary transition-colors duration-200"
-            >
-              <Sparkles className="h-7 w-7 text-primary" />
-              <span className="text-xl font-bold hidden sm:inline text-gradient-brand">BrandForge AI</span>
-            </Link>
+          <div className="container-responsive flex items-center justify-end h-18">
             <div className="flex items-center gap-2">
                  {user ? (
                     <Button asChild className="touch-target focus-enhanced">
@@ -92,12 +85,13 @@ export default function LandingPage() {
         <section className="pt-32 pb-20 text-center animate-fade-in">
           <div className="container-responsive">
             <div className="max-w-4xl mx-auto">
+                 <h1 className="text-5xl md:text-6xl font-extrabold text-gradient-brand mb-4">BrandForge AI</h1>
                  <div className="inline-block bg-primary/10 text-primary font-semibold px-4 py-1.5 rounded-full text-sm mb-6">
                     Your Complete AI Branding & Marketing Suite
                  </div>
-                <h1 className="text-4xl md:text-6xl font-extrabold text-balance">
+                <h2 className="text-4xl md:text-5xl font-bold text-balance">
                     Forge a Stronger Brand, Faster Than Ever
-                </h1>
+                </h2>
                 <p className="max-w-2xl mx-auto mt-6 text-lg md:text-xl text-muted-foreground text-balance">
                     Stop juggling tools. From logo ideas to deployed ad campaigns, BrandForge AI is your all-in-one platform to build, create, and grow your brand with the power of AI.
                 </p>

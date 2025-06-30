@@ -104,9 +104,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           href={user ? "/dashboard" : "/"}
           className="flex items-center gap-4 text-sidebar-foreground hover:text-sidebar-primary transition-colors duration-200"
         >
-          <div className="p-3 bg-sidebar-primary/10 rounded-xl">
-            <Sparkles className="w-7 h-7 text-sidebar-primary" />
-          </div>
           <div>
             <h1 className="text-xl font-bold text-break text-gradient-brand">BrandForge AI</h1>
             <p className="text-sm text-sidebar-foreground/70 font-medium">AI-Powered Branding</p>
@@ -174,9 +171,6 @@ export function AppShell({ children }: { children: ReactNode }) {
                       href={user ? "/dashboard" : "/"}
                       className="flex items-center gap-4 text-sidebar-foreground hover:text-sidebar-primary transition-colors duration-200"
                     >
-                      <div className="p-3 bg-sidebar-primary/10 rounded-xl">
-                        <Sparkles className="w-7 h-7 text-sidebar-primary" />
-                      </div>
                       <div>
                         <h1 className="text-xl font-bold text-break text-gradient-brand">BrandForge AI</h1>
                         <p className="text-sm text-sidebar-foreground/70 font-medium">AI-Powered Branding</p>
