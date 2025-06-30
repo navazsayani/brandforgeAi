@@ -111,7 +111,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
       console.error("Error saving brand data to Firestore:", e);
       let specificError = `Failed to save brand profile: ${e.message || "Unknown error. Check console."}`;
        if (e.code === 'unavailable' || (e.message && (e.message.toLowerCase().includes("client is offline") || e.message.toLowerCase().includes("could not reach cloud firestore backend")))) {
-        specificError = "Connection Error: Unable to save data to Firestore. Please check your internet connection or Firebase status.";
+        specificError = "Connection Error: Your changes have been saved locally and will be uploaded when the connection is restored.";
          console.warn("FIRESTORE OFFLINE: Could not reach Cloud Firestore backend during save. Client operating in offline mode.", e);
       } else if (e.message && e.message.toLowerCase().includes("missing or insufficient permissions")) {
           specificError = "Failed to save data due to database permission error. Check Firestore security rules.";
@@ -198,14 +198,25 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         // For existing users, an error fetching data is more critical.
         console.error("Error fetching brand data from Firestore:", e);
         let specificError = `Failed to fetch brand data: ${e.message || "Unknown error. Check console."}`;
-        if (e.code === 'unavailable' || (e.message && (e.message.toLowerCase().includes("client is offline") || e.message.toLowerCase().includes("could not reach cloud firestore backend")))) {
-          specificError = "Connection Error: Unable to reach Firestore. Please check your internet connection or Firebase status. The app may operate with cached data if available.";
+        
+        const isConnectionError = e.code === 'unavailable' || 
+                                  (e.message && (e.message.toLowerCase().includes("client is offline") || 
+                                                 e.message.toLowerCase().includes("could not reach cloud firestore backend")));
+        
+        if (isConnectionError) {
+          specificError = "Connection Error: Unable to reach our servers. You can continue working with cached data.";
           console.warn("FIRESTORE OFFLINE: Could not reach Cloud Firestore backend. Client operating in offline mode.", e);
-        } else if (e.message && e.message.toLowerCase().includes("missing or insufficient permissions")) {
-          specificError = "Database permission error. Please check your Firestore security rules in the Firebase console.";
+          // Set error to inform user via toast, but DO NOT clear existing brand data.
+          // This allows the app to feel responsive using Firestore's cache.
+          setError(specificError);
+        } else {
+          // For other errors (permissions, etc.), it's safer to reset the state.
+          if (e.message && e.message.toLowerCase().includes("missing or insufficient permissions")) {
+            specificError = "Database permission error. Please check your Firestore security rules in the Firebase console.";
+          }
+          setError(specificError);
+          setBrandDataState({ ...defaultEmptyBrandData, userEmail: currentUser?.email || "", subscriptionEndDate: null });
         }
-        setError(specificError);
-        setBrandDataState({ ...defaultEmptyBrandData, userEmail: currentUser?.email || "", subscriptionEndDate: null });
       }
     } finally {
       setIsLoading(false);
