@@ -13,11 +13,116 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Edit3, Send, Sparkles, Star, ShieldCheck, Paintbrush, FileText, Image as ImageIconLucide, Eye, AlertCircle, RefreshCcw, TestTube, Rocket } from 'lucide-react';
+import { ArrowRight, Edit3, Send, Sparkles, Star, ShieldCheck, Paintbrush, FileText, Image as ImageIconLucide, Eye, AlertCircle, RefreshCcw, TestTube, Rocket, MessageSquare, Newspaper, Briefcase } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { BrandData, SavedGeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
+import type { BrandData, SavedGeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { getPaymentMode } from '@/lib/actions';
+
+type RecentItem = {
+  id: string;
+  type: 'Image' | 'Social Post' | 'Blog Post' | 'Ad Campaign';
+  title: string;
+  description: string;
+  imageUrl?: string | null;
+  createdAt: any; // Firestore Timestamp
+  href: string;
+};
+
+const fetchLatestCreations = async (userId: string): Promise<RecentItem[]> => {
+  if (!userId) return [];
+
+  const imageQuery = query(
+    collection(db, `users/${userId}/brandProfiles/${userId}/savedLibraryImages`),
+    orderBy("createdAt", "desc"),
+    limit(3)
+  );
+  const socialQuery = query(
+    collection(db, `users/${userId}/brandProfiles/${userId}/socialMediaPosts`),
+    orderBy("createdAt", "desc"),
+    limit(3)
+  );
+  const blogQuery = query(
+    collection(db, `users/${userId}/brandProfiles/${userId}/blogPosts`),
+    orderBy("createdAt", "desc"),
+    limit(3)
+  );
+  const adQuery = query(
+    collection(db, `users/${userId}/brandProfiles/${userId}/adCampaigns`),
+    orderBy("createdAt", "desc"),
+    limit(3)
+  );
+
+  const [imageSnap, socialSnap, blogSnap, adSnap] = await Promise.all([
+    getDocs(imageQuery),
+    getDocs(socialQuery),
+    getDocs(blogQuery),
+    getDocs(adQuery),
+  ]);
+
+  const images: RecentItem[] = imageSnap.docs.map(doc => {
+    const data = doc.data() as SavedGeneratedImage;
+    return {
+      id: doc.id,
+      type: 'Image',
+      title: 'Image Saved to Library',
+      description: data.prompt || "No prompt available",
+      imageUrl: data.storageUrl,
+      createdAt: data.createdAt,
+      href: '/image-library',
+    };
+  });
+
+  const socialPosts: RecentItem[] = socialSnap.docs.map(doc => {
+    const data = doc.data() as GeneratedSocialMediaPost;
+    return {
+      id: doc.id,
+      type: 'Social Post',
+      title: data.caption.substring(0, 50) + (data.caption.length > 50 ? '...' : ''),
+      description: `For ${data.platform || 'social media'} with a ${data.tone || 'neutral'} tone.`,
+      imageUrl: data.imageSrc,
+      createdAt: data.createdAt,
+      href: '/deployment-hub',
+    };
+  });
+
+  const blogPosts: RecentItem[] = blogSnap.docs.map(doc => {
+    const data = doc.data() as GeneratedBlogPost;
+    return {
+      id: doc.id,
+      type: 'Blog Post',
+      title: data.title,
+      description: `An article for ${data.platform || 'your blog'} in a ${data.blogTone || 'standard'} tone.`,
+      imageUrl: null,
+      createdAt: data.createdAt,
+      href: '/deployment-hub',
+    };
+  });
+  
+  const adCampaigns: RecentItem[] = adSnap.docs.map(doc => {
+    const data = doc.data() as GeneratedAdCampaign;
+    return {
+        id: doc.id,
+        type: 'Ad Campaign',
+        title: data.campaignConcept || "Ad Campaign Concept",
+        description: `For ${data.targetPlatforms.join(', ')}`,
+        imageUrl: null,
+        createdAt: data.createdAt,
+        href: '/deployment-hub',
+    };
+  });
+
+  const allCreations = [...images, ...socialPosts, ...blogPosts, ...adCampaigns];
+
+  allCreations.sort((a, b) => {
+    const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0);
+    const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0);
+    return dateB.getTime() - dateA.getTime();
+  });
+
+  return allCreations.slice(0, 6);
+};
+
 
 export default function DashboardPage() {
     const { brandData, isLoading: isBrandLoading } = useBrand();
@@ -264,56 +369,15 @@ function ActionCard({ href, icon, title, description, isLoading }: { href: strin
     );
 }
 
-const fetchLatestImage = async (userId: string): Promise<SavedGeneratedImage | null> => {
-    if (!userId) return null;
-    const path = `users/${userId}/brandProfiles/${userId}/savedLibraryImages`;
-    const q = query(collection(db, path), orderBy("createdAt", "desc"), limit(1));
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) return null;
-    return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as SavedGeneratedImage;
-};
-
-const fetchLatestSocialPost = async (userId: string): Promise<GeneratedSocialMediaPost | null> => {
-    if (!userId) return null;
-    const path = `users/${userId}/brandProfiles/${userId}/socialMediaPosts`;
-    const q = query(collection(db, path), orderBy("createdAt", "desc"), limit(1));
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) return null;
-    return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as GeneratedSocialMediaPost;
-};
-
-const fetchLatestBlogPost = async (userId: string): Promise<GeneratedBlogPost | null> => {
-    if (!userId) return null;
-    const path = `users/${userId}/brandProfiles/${userId}/blogPosts`;
-    const q = query(collection(db, path), orderBy("createdAt", "desc"), limit(1));
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) return null;
-    return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as GeneratedBlogPost;
-};
-
 function RecentCreations() {
     const { currentUser } = useAuth();
 
-    const { data: latestImage, isLoading: isLoadingImage } = useQuery({
-        queryKey: ['latestImage', currentUser?.uid],
-        queryFn: () => fetchLatestImage(currentUser!.uid),
-        enabled: !!currentUser,
-    });
-
-    const { data: latestSocial, isLoading: isLoadingSocial } = useQuery({
-        queryKey: ['latestSocialPost', currentUser?.uid],
-        queryFn: () => fetchLatestSocialPost(currentUser!.uid),
-        enabled: !!currentUser,
-    });
-
-    const { data: latestBlog, isLoading: isLoadingBlog } = useQuery({
-        queryKey: ['latestBlogPost', currentUser?.uid],
-        queryFn: () => fetchLatestBlogPost(currentUser!.uid),
+    const { data: recentCreations, isLoading } = useQuery({
+        queryKey: ['latestCreations', currentUser?.uid],
+        queryFn: () => fetchLatestCreations(currentUser!.uid),
         enabled: !!currentUser,
     });
     
-    const isLoading = isLoadingImage || isLoadingSocial || isLoadingBlog;
-
     if (isLoading) {
         return (
              <Card>
@@ -322,15 +386,15 @@ function RecentCreations() {
                     <Skeleton className="h-4 w-64 mt-2" />
                 </CardHeader>
                 <CardContent className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    <Skeleton className="h-48 rounded-lg" />
-                    <Skeleton className="h-48 rounded-lg" />
-                    <Skeleton className="h-48 rounded-lg" />
+                    <Skeleton className="h-80 rounded-lg" />
+                    <Skeleton className="h-80 rounded-lg" />
+                    <Skeleton className="h-80 rounded-lg" />
                 </CardContent>
             </Card>
         )
     }
 
-    const hasRecentItems = latestImage || latestSocial || latestBlog;
+    const hasRecentItems = recentCreations && recentCreations.length > 0;
 
     return (
         <Card>
@@ -346,9 +410,9 @@ function RecentCreations() {
             <CardContent>
                 {hasRecentItems ? (
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                        {latestImage && <RecentItemCard type="Image" content={latestImage.style} imageUrl={latestImage.storageUrl} />}
-                        {latestSocial && <RecentItemCard type="Social Post" content={latestSocial.caption} imageUrl={latestSocial.imageSrc} />}
-                        {latestBlog && <RecentItemCard type="Blog Post" content={latestBlog.title} />}
+                        {recentCreations.map((item) => (
+                          <RecentItemCard key={item.id + item.type} item={item} />
+                        ))}
                     </div>
                 ) : (
                     <div className="text-center py-10 px-6 bg-muted rounded-lg">
@@ -363,29 +427,56 @@ function RecentCreations() {
     );
 }
 
-function RecentItemCard({ type, content, imageUrl }: { type: 'Image' | 'Social Post' | 'Blog Post', content: string, imageUrl?: string | null }) {
-    const iconMap = {
-        'Image': <ImageIconLucide className="w-5 h-5 text-muted-foreground" />,
-        'Social Post': <FileText className="w-5 h-5 text-muted-foreground" />,
-        'Blog Post': <FileText className="w-5 h-5 text-muted-foreground" />,
+function RecentItemCard({ item }: { item: RecentItem }) {
+    const iconMap: { [key: string]: React.ElementType } = {
+        'Image': ImageIconLucide,
+        'Social Post': MessageSquare,
+        'Blog Post': Newspaper,
+        'Ad Campaign': Briefcase
     };
+    const Icon = iconMap[item.type];
 
     return (
-        <Card className="overflow-hidden group hover:shadow-lg transition-shadow">
-            {imageUrl && (
-                 <div className="relative w-full bg-muted aspect-video overflow-hidden">
-                    <NextImage src={imageUrl} alt={`Recent ${type}`} fill style={{objectFit: 'cover'}} className="transition-transform duration-300 group-hover:scale-105" data-ai-hint="recent creation" />
-                 </div>
-            )}
-            <div className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                    {iconMap[type]}
-                    <h4 className="font-semibold text-foreground">{type}</h4>
+        <Card className="overflow-hidden group hover:shadow-xl transition-shadow duration-300 flex flex-col">
+            {item.imageUrl && (
+                <div className="relative w-full bg-muted aspect-video overflow-hidden">
+                    <NextImage 
+                        src={item.imageUrl} 
+                        alt={`Recent ${item.type}`} 
+                        fill 
+                        style={{objectFit: 'cover'}} 
+                        className="transition-transform duration-300 group-hover:scale-105"
+                        data-ai-hint="recent creation"
+                    />
                 </div>
-                <p className="text-sm text-muted-foreground line-clamp-2 text-balance">
-                    {content}
+            )}
+            <CardHeader>
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <Icon className="w-5 h-5" />
+                    <span className="font-semibold">{item.type}</span>
+                    {item.createdAt?.toDate && (
+                        <>
+                            <span className="text-muted-foreground/50">|</span>
+                            <span className="text-xs">
+                                {item.createdAt.toDate().toLocaleDateString()}
+                            </span>
+                        </>
+                    )}
+                </div>
+                <CardTitle className="text-lg line-clamp-2 mt-2 h-[2.5em]">{item.title}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex-grow">
+                 <p className="text-sm text-muted-foreground line-clamp-3 text-balance">
+                    {item.description}
                 </p>
-            </div>
+            </CardContent>
+            <CardFooter>
+                 <Link href={item.href} passHref className="w-full">
+                    <Button variant="secondary" className="w-full">
+                        View Details <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                </Link>
+            </CardFooter>
         </Card>
     );
 }
