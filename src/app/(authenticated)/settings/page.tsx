@@ -187,6 +187,23 @@ export default function SettingsPage() {
       startTransition(() => updatePlansAction(formData));
     }
   };
+
+  const handleConnectClick = (platform: 'Meta' | 'X') => {
+    const platformUrl = platform === 'Meta' ? 'https://www.facebook.com' : 'https://x.com';
+    toast({
+      title: "Simulating Connection...",
+      description: `In a real application, you would be redirected to ${platform} to authorize BrandForge AI.`,
+      duration: 5000,
+    });
+    
+    // Simulate a redirect to our callback after a delay
+    setTimeout(() => {
+        const fakeCode = `simulated_code_${Math.random().toString(36).substring(2, 15)}`;
+        const fakeState = `simulated_state_${Math.random().toString(36).substring(2, 15)}`;
+        window.location.href = `/api/oauth/callback?code=${fakeCode}&state=${fakeState}&platform=${platform}`;
+    }, 1500);
+  };
+
   
   if (isAuthLoading || isPageLoading) {
     return (
@@ -223,7 +240,7 @@ export default function SettingsPage() {
                             <p className="text-sm text-muted-foreground">Not Connected</p>
                         </div>
                     </div>
-                    <Button variant="outline" disabled>Connect</Button>
+                    <Button variant="outline" onClick={() => handleConnectClick('Meta')}>Connect</Button>
                 </div>
                 <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/30">
                     <div className="flex items-center gap-4">
@@ -233,12 +250,12 @@ export default function SettingsPage() {
                             <p className="text-sm text-muted-foreground">Not Connected</p>
                         </div>
                     </div>
-                    <Button variant="outline" disabled>Connect</Button>
+                    <Button variant="outline" onClick={() => handleConnectClick('X')}>Connect</Button>
                 </div>
             </CardContent>
              <CardFooter>
                 <p className="text-xs text-muted-foreground">
-                Connection functionality is coming soon. This will require you to authorize BrandForge AI to post on your behalf.
+                Connection functionality is a simulation. In a real app, this would redirect you to the social platform to grant permissions.
                 </p>
             </CardFooter>
         </Card>
