@@ -248,6 +248,34 @@ export default function CampaignManagerPage() {
 
   const watchedGeneratedContent = form.watch("generatedContent");
 
+  const onFormSubmit: SubmitHandler<AdCampaignFormData> = (data) => {
+    const formData = new FormData();
+
+    formData.append('brandName', data.brandName);
+    formData.append('brandDescription', data.brandDescription);
+    formData.append('targetKeywords', data.targetKeywords);
+    formData.append('budget', String(data.budget));
+    formData.append('platforms', data.platforms.join(','));
+    
+    if (data.generatedContent === "Custom content for ad campaign") {
+        formData.append('generatedContent', data.customGeneratedContent || "");
+    } else {
+        formData.append('generatedContent', data.generatedContent);
+    }
+
+    if (data.campaignGoal) formData.append('campaignGoal', data.campaignGoal);
+    if (data.targetAudience) formData.append('targetAudience', data.targetAudience);
+    if (data.callToAction) formData.append('callToAction', data.callToAction);
+
+    if (currentUser?.uid) formData.append('userId', currentUser.uid);
+    if (brandData?.industry) formData.append('industry', brandData.industry);
+    
+    startTransition(() => {
+        generationAction(formData);
+    });
+  };
+
+
   return (
     <div className="max-w-3xl mx-auto">
       <Card className="shadow-lg">
@@ -293,12 +321,7 @@ export default function CampaignManagerPage() {
         </div>
 
         <Form {...form}>
-          <form action={(formData) => {
-              if (currentUser?.uid) formData.append('userId', currentUser.uid);
-              generationAction(formData);
-            }}>
-            <input type="hidden" {...form.register("platforms")} />
-            <input type="hidden" name="industry" value={brandData?.industry || ""} />
+          <form onSubmit={form.handleSubmit(onFormSubmit)}>
             <CardContent className="space-y-8">
               <FormField control={form.control} name="brandName" render={({ field }) => (
                 <FormItem><FormLabel className="flex items-center mb-2 text-base"><Edit3 className="w-5 h-5 mr-2 text-primary" />Brand Name</FormLabel><FormControl><Input {...field} placeholder="Your brand's name" /></FormControl><FormMessage /></FormItem>
@@ -364,30 +387,39 @@ export default function CampaignManagerPage() {
               <FormField
                 control={form.control}
                 name="platforms"
-                render={({ field }) => (
+                render={() => (
                   <FormItem>
                     <FormLabel className="flex items-center mb-3 text-base"><CheckSquare className="w-5 h-5 mr-2 text-primary" />Platforms</FormLabel>
                       {platforms.map((item) => (
-                        <FormItem key={item.id} className="flex items-center space-x-3 p-3 border rounded-md hover:bg-secondary/50 transition-colors">
-                            <FormControl>
-                                <Checkbox
-                                    checked={field.value?.includes(item.id)}
-                                    onCheckedChange={(checked) => {
-                                      const currentValues = field.value || [];
-                                      const newValues = checked
-                                          ? [...currentValues, item.id]
-                                          : currentValues.filter((value) => value !== item.id);
-                                      field.onChange(newValues);
-                                    }}
-                                    className="h-5 w-5"
-                                />
-                            </FormControl>
-                            <FormLabel className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1">
-                                {item.label}
-                            </FormLabel>
-                        </FormItem>
+                        <FormField
+                            key={item.id}
+                            control={form.control}
+                            name="platforms"
+                            render={({ field }) => (
+                                <FormItem key={item.id} className="flex items-center space-x-3 p-3 border rounded-md hover:bg-secondary/50 transition-colors">
+                                    <FormControl>
+                                        <Checkbox
+                                            checked={field.value?.includes(item.id)}
+                                            onCheckedChange={(checked) => {
+                                              return checked
+                                                ? field.onChange([...(field.value || []), item.id])
+                                                : field.onChange(
+                                                    field.value?.filter(
+                                                      (value) => value !== item.id
+                                                    )
+                                                  )
+                                            }}
+                                            className="h-5 w-5"
+                                        />
+                                    </FormControl>
+                                    <FormLabel className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1">
+                                        {item.label}
+                                    </FormLabel>
+                                </FormItem>
+                            )}
+                        />
                       ))}
-                    <FormMessage />
+                    <FormMessage>{form.formState.errors.platforms?.message}</FormMessage>
                   </FormItem>
                 )}
               />
@@ -449,3 +481,5 @@ export default function CampaignManagerPage() {
     </div>
   );
 }
+
+    
