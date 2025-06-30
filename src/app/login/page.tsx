@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -70,8 +69,11 @@ export default function LoginPage() {
       <div className="animate-fade-in w-full max-w-md">
         <Card className="card-enhanced">
           <CardHeader className="text-center pb-6">
-            <div className="mx-auto mb-6 p-4 bg-primary/10 rounded-2xl w-fit">
+            <div className="mx-auto mb-4 p-4 bg-primary/10 rounded-2xl w-fit">
               <Sparkles className="h-12 w-12 text-primary" />
+            </div>
+            <div className="mb-4">
+              <h1 className="text-3xl font-bold text-gradient-brand">BrandForge AI</h1>
             </div>
             <CardTitle className="text-break">Welcome Back!</CardTitle>
             <CardDescription className="text-responsive text-break mt-2">
