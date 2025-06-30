@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogIn, UserPlus, LayoutDashboard, Loader2, UserCircle, Rocket, Paintbrush, Send, CheckCircle, ArrowRight } from 'lucide-react';
+import { LogIn, UserPlus, LayoutDashboard, Loader2, UserCircle, Rocket, Paintbrush, Send, CheckCircle, ArrowRight, Sparkles } from 'lucide-react';
 
 const FeatureCard = ({ icon: Icon, title, description }: { icon: React.ElementType, title: string, description: string }) => (
     <div className="card-compact text-center p-6 md:p-8">
@@ -35,6 +35,14 @@ const HowItWorksStep = ({ number, title, description }: { number: string, title:
 
 export default function LandingPage() {
   const { user, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (user && !isLoading) {
+      router.push('/dashboard');
+    }
+  }, [user, isLoading, router]);
+
 
   if (isLoading) {
     return (
@@ -42,6 +50,17 @@ export default function LandingPage() {
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="h-16 w-16 animate-spin text-primary" />
           <p className="text-muted-foreground animate-pulse">Loading BrandForge AI...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (user) {
+    return (
+       <div className="flex h-screen w-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="h-16 w-16 animate-spin text-primary" />
+          <p className="text-muted-foreground">Redirecting to dashboard...</p>
         </div>
       </div>
     );
@@ -56,7 +75,8 @@ export default function LandingPage() {
               href="/"
               className="flex items-center gap-3 text-foreground hover:text-primary transition-colors duration-200"
             >
-              <h1 className="text-xl font-bold text-gradient-brand">BrandForge AI</h1>
+              <Sparkles className="h-7 w-7 text-primary" />
+              <span className="sr-only">BrandForge AI Home</span>
             </Link>
             <div className="flex items-center gap-2">
                  {user ? (
@@ -91,12 +111,15 @@ export default function LandingPage() {
         <section className="pt-32 pb-20 text-center animate-fade-in">
           <div className="container-responsive">
             <div className="max-w-4xl mx-auto">
-                 <div className="inline-block bg-primary/10 text-primary font-semibold px-4 py-1.5 rounded-full text-sm mb-6">
-                    Your Complete AI Branding & Marketing Suite
-                 </div>
-                <h1 className="text-4xl md:text-5xl font-bold text-balance">
-                    Forge a Stronger Brand, Faster Than Ever
+                <h1 className="text-5xl md:text-6xl font-extrabold text-gradient-brand mb-4 text-balance">
+                    BrandForge AI
                 </h1>
+                 <p className="text-lg md:text-xl text-primary font-semibold mb-6">
+                    Your Complete AI Branding & Marketing Suite
+                 </p>
+                <h2 className="text-4xl md:text-5xl font-bold text-balance">
+                    Forge a Stronger Brand, Faster Than Ever
+                </h2>
                 <p className="max-w-2xl mx-auto mt-6 text-lg md:text-xl text-muted-foreground text-balance">
                     Stop juggling tools. From logo ideas to deployed ad campaigns, BrandForge AI is your all-in-one platform to build, create, and grow your brand with the power of AI.
                 </p>
