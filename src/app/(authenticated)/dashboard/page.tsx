@@ -6,13 +6,16 @@ import Link from 'next/link';
 import NextImage from 'next/image';
 import { useBrand } from '@/contexts/BrandContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { db } from '@/lib/firebaseConfig';
+import { collection, query, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Edit3, TrendingUp, Send, Sparkles, Star, ShieldCheck, Paintbrush, FileText, Image as ImageIconLucide, Eye, AlertCircle, RefreshCcw, TestTube } from 'lucide-react';
+import { ArrowRight, Edit3, Send, Sparkles, Star, ShieldCheck, Paintbrush, FileText, Image as ImageIconLucide, Eye, AlertCircle, RefreshCcw, TestTube, Rocket } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { BrandData, GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
+import type { BrandData, SavedGeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { getPaymentMode } from '@/lib/actions';
 
@@ -40,7 +43,7 @@ export default function DashboardPage() {
         <div className="space-y-8 animate-fade-in">
             <GreetingCard isLoading={isLoading} brandData={brandData} paymentMode={paymentMode} />
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 <ActionCard
                     href="/brand-profile"
                     icon={<Edit3 className="w-8 h-8 text-primary" />}
@@ -60,6 +63,13 @@ export default function DashboardPage() {
                     icon={<Send className="w-8 h-8 text-primary" />}
                     title="Campaign Manager"
                     description="Create and manage ad campaigns for Google and Meta."
+                    isLoading={isLoading}
+                />
+                 <ActionCard
+                    href="/deployment-hub"
+                    icon={<Rocket className="w-8 h-8 text-primary" />}
+                    title="Deployment Hub"
+                    description="Review, manage status, and deploy your generated content."
                     isLoading={isLoading}
                 />
             </div>
@@ -254,8 +264,55 @@ function ActionCard({ href, icon, title, description, isLoading }: { href: strin
     );
 }
 
+const fetchLatestImage = async (userId: string): Promise<SavedGeneratedImage | null> => {
+    if (!userId) return null;
+    const path = `users/${userId}/brandProfiles/${userId}/savedLibraryImages`;
+    const q = query(collection(db, path), orderBy("createdAt", "desc"), limit(1));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return null;
+    return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as SavedGeneratedImage;
+};
+
+const fetchLatestSocialPost = async (userId: string): Promise<GeneratedSocialMediaPost | null> => {
+    if (!userId) return null;
+    const path = `users/${userId}/brandProfiles/${userId}/socialMediaPosts`;
+    const q = query(collection(db, path), orderBy("createdAt", "desc"), limit(1));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return null;
+    return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as GeneratedSocialMediaPost;
+};
+
+const fetchLatestBlogPost = async (userId: string): Promise<GeneratedBlogPost | null> => {
+    if (!userId) return null;
+    const path = `users/${userId}/brandProfiles/${userId}/blogPosts`;
+    const q = query(collection(db, path), orderBy("createdAt", "desc"), limit(1));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return null;
+    return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as GeneratedBlogPost;
+};
+
 function RecentCreations() {
-    const { generatedImages, generatedSocialPosts, generatedBlogPosts, isLoading } = useBrand();
+    const { currentUser } = useAuth();
+
+    const { data: latestImage, isLoading: isLoadingImage } = useQuery({
+        queryKey: ['latestImage', currentUser?.uid],
+        queryFn: () => fetchLatestImage(currentUser!.uid),
+        enabled: !!currentUser,
+    });
+
+    const { data: latestSocial, isLoading: isLoadingSocial } = useQuery({
+        queryKey: ['latestSocialPost', currentUser?.uid],
+        queryFn: () => fetchLatestSocialPost(currentUser!.uid),
+        enabled: !!currentUser,
+    });
+
+    const { data: latestBlog, isLoading: isLoadingBlog } = useQuery({
+        queryKey: ['latestBlogPost', currentUser?.uid],
+        queryFn: () => fetchLatestBlogPost(currentUser!.uid),
+        enabled: !!currentUser,
+    });
+    
+    const isLoading = isLoadingImage || isLoadingSocial || isLoadingBlog;
 
     if (isLoading) {
         return (
@@ -273,9 +330,6 @@ function RecentCreations() {
         )
     }
 
-    const latestImage = generatedImages.length > 0 ? generatedImages[0] : null;
-    const latestSocial = generatedSocialPosts.length > 0 ? generatedSocialPosts[0] : null;
-    const latestBlog = generatedBlogPosts.length > 0 ? generatedBlogPosts[0] : null;
     const hasRecentItems = latestImage || latestSocial || latestBlog;
 
     return (
@@ -286,13 +340,13 @@ function RecentCreations() {
                     Recent Creations
                 </CardTitle>
                 <CardDescription>
-                    A quick look at the latest content you've generated.
+                    A quick look at your most recently saved content.
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 {hasRecentItems ? (
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                        {latestImage && <RecentItemCard type="Image" content={latestImage.style} imageUrl={latestImage.src} />}
+                        {latestImage && <RecentItemCard type="Image" content={latestImage.style} imageUrl={latestImage.storageUrl} />}
                         {latestSocial && <RecentItemCard type="Social Post" content={latestSocial.caption} imageUrl={latestSocial.imageSrc} />}
                         {latestBlog && <RecentItemCard type="Blog Post" content={latestBlog.title} />}
                     </div>
@@ -300,7 +354,7 @@ function RecentCreations() {
                     <div className="text-center py-10 px-6 bg-muted rounded-lg">
                         <h3 className="text-lg font-semibold text-foreground">No creations yet!</h3>
                         <p className="text-muted-foreground mt-1">
-                            Head over to the <Link href="/content-studio" className="text-primary font-medium hover:underline">Content Studio</Link> to generate your first asset.
+                            Head over to the <Link href="/content-studio" className="text-primary font-medium hover:underline">Content Studio</Link> to generate and save your first asset.
                         </p>
                     </div>
                 )}
@@ -335,7 +389,3 @@ function RecentItemCard({ type, content, imageUrl }: { type: 'Image' | 'Social P
         </Card>
     );
 }
-
-    
-
-    
