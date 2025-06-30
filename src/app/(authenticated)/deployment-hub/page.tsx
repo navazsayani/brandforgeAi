@@ -251,7 +251,7 @@ function ContentCard({ item }: { item: DeployableContent }) {
 function StatusButton({ newStatus, text, icon, variant = "default" }: { newStatus: string, text: string, icon: React.ReactNode, variant?: "default" | "secondary" }) {
     const { pending } = useFormStatus();
     return (
-        <Button type="submit" name="newStatus" value={newStatus} className="w-full" variant={variant} disabled={pending}>
+        <Button type="submit" name="newStatus" value={newStatus} className="w-full h-auto whitespace-normal" variant={variant} disabled={pending}>
             {pending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : icon}
             {pending ? `Updating...` : text}
         </Button>

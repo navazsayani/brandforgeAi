@@ -307,14 +307,14 @@ export default function PricingPage() {
 
                     let ctaButton: React.ReactNode;
                     if (plan.id === 'free') {
-                        ctaButton = <Button size="lg" className="w-full" disabled>Your Plan</Button>;
+                        ctaButton = <Button size="lg" className="w-full h-auto whitespace-normal" disabled>Your Plan</Button>;
                     } else if (isCurrentActivePlan) {
-                         ctaButton = <Button size="lg" className="w-full" disabled><Check className="mr-2 w-5 h-5" />Current Plan</Button>;
+                         ctaButton = <Button size="lg" className="w-full h-auto whitespace-normal" disabled><Check className="mr-2 w-5 h-5" />Current Plan</Button>;
                     } else if (isExpiredProPlan) {
-                        ctaButton = <Button size="lg" className={cn("w-full btn-gradient-secondary")} onClick={() => handleSubscribe(plan.id)} disabled={isProcessing}>{isProcessing && selectedPlanId === plan.id ? <Loader2 className="mr-2 w-5 h-5 animate-spin"/> : <RefreshCcw className="mr-2 w-5 h-5" />}{isProcessing && selectedPlanId === plan.id ? 'Processing...' : 'Renew Subscription'}</Button>;
+                        ctaButton = <Button size="lg" className={cn("w-full btn-gradient-secondary", "h-auto whitespace-normal")} onClick={() => handleSubscribe(plan.id)} disabled={isProcessing}>{isProcessing && selectedPlanId === plan.id ? <Loader2 className="mr-2 w-5 h-5 animate-spin"/> : <RefreshCcw className="mr-2 w-5 h-5" />}{isProcessing && selectedPlanId === plan.id ? 'Processing...' : 'Renew Subscription'}</Button>;
                     }
                     else {
-                        ctaButton = <Button size="lg" className={cn("w-full", plan.id.startsWith('pro') && 'btn-gradient-primary')} variant={plan.id.startsWith('pro') ? 'default' : 'outline'} onClick={() => handleSubscribe(plan.id)} disabled={isProcessing || plan.id === 'free'}>{isProcessing && selectedPlanId === plan.id ? <Loader2 className="mr-2 w-5 h-5 animate-spin"/> : plan.id.startsWith('pro') ? <Star className="mr-2 w-5 h-5" /> : <ArrowRight className="mr-2 w-5 h-5" />}{isProcessing && selectedPlanId === plan.id ? 'Processing...' : plan.cta}</Button>;
+                        ctaButton = <Button size="lg" className={cn("w-full", plan.id.startsWith('pro') && 'btn-gradient-primary', "h-auto whitespace-normal")} variant={plan.id.startsWith('pro') ? 'default' : 'outline'} onClick={() => handleSubscribe(plan.id)} disabled={isProcessing || plan.id === 'free'}>{isProcessing && selectedPlanId === plan.id ? <Loader2 className="mr-2 w-5 h-5 animate-spin"/> : plan.id.startsWith('pro') ? <Star className="mr-2 w-5 h-5" /> : <ArrowRight className="mr-2 w-5 h-5" />}{isProcessing && selectedPlanId === plan.id ? 'Processing...' : plan.cta}</Button>;
                     }
 
                     return (

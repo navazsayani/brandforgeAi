@@ -200,7 +200,7 @@ function EditUserSubscriptionForm({ user, onUpdate }: { user: UserProfileSelectI
                         </div>
                     )}
                      <div className="flex justify-end">
-                       <SubmitButton size="sm" loadingText="Saving...">Save Changes</SubmitButton>
+                       <SubmitButton size="sm" loadingText="Saving..." className="h-auto whitespace-normal">Save Changes</SubmitButton>
                     </div>
                 </form>
             </PopoverContent>
