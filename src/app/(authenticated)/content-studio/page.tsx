@@ -679,7 +679,13 @@ export default function ContentStudioPage() {
             setBlogTargetAudience(data.targetAudience || "");
             setBlogArticleStyle(data.articleStyle);
             setSelectedBlogTone(data.blogTone);
-            setGeneratedBlogOutline(data.generatedOutline || "");
+            if (data.generatedOutline && data.generatedOutline.trim() !== "") {
+                setGeneratedBlogOutline(data.generatedOutline);
+                setIsEditingOutline(false);
+            } else {
+                setGeneratedBlogOutline("");
+                setIsEditingOutline(true);
+            }
             toast({ title: "Form Populated!", description: "AI has filled out the blog post fields and generated an outline." });
         }
         if (populateBlogFormState.error) {
@@ -2320,4 +2326,5 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     </div>
   );
 }
+
 
