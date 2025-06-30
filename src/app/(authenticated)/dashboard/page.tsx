@@ -148,7 +148,7 @@ export default function DashboardPage() {
         <div className="space-y-8 animate-fade-in">
             <GreetingCard isLoading={isLoading} brandData={brandData} paymentMode={paymentMode} />
 
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-6 sm:grid-cols-2">
                 <ActionCard
                     href="/brand-profile"
                     icon={<Edit3 className="w-8 h-8 text-primary" />}
@@ -307,9 +307,9 @@ function GreetingCard({ isLoading, brandData, paymentMode }: { isLoading: boolea
                      {isFreeUser && paymentMode !== 'test' && (
                         <Alert className="mt-4 border-accent/50 bg-accent/5 text-accent-foreground shadow-md w-full">
                             <Star className="h-4 w-4 text-accent" />
-                            <AlertTitle className="font-bold text-accent">Unlock Your Brand&apos;s Full Potential</AlertTitle>
+                            <AlertTitle className="font-bold text-accent">Unlock Your Brand's Full Potential</AlertTitle>
                             <AlertDescription>
-                                You&apos;re on the Free plan. Upgrade to Pro to unlock powerful features like full blog generation, premium image models, and more generation credits.
+                                You're on the Free plan. Upgrade to Pro to unlock powerful features like full blog generation, premium image models, and more generation credits.
                                 <Button variant="link" asChild className="p-0 h-auto ml-1 font-bold text-accent hover:text-accent/80">
                                     <Link href="/pricing">
                                         Upgrade Now <ArrowRight className="w-4 h-4 ml-1" />
@@ -408,7 +408,7 @@ function RecentCreations() {
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>Error Loading Recent Creations</AlertTitle>
                         <AlertDescription>
-                          There was a problem fetching your recent work. This can happen if there&apos;s a temporary connection issue. Please try refreshing the page.
+                          There was a problem fetching your recent work. This can happen if there's a temporary connection issue. Please try refreshing the page.
                         </AlertDescription>
                     </Alert>
                 </CardContent>
@@ -502,3 +502,5 @@ function RecentItemCard({ item }: { item: RecentItem }) {
         </Card>
     );
 }
+
+    
