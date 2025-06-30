@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useActionState, startTransition } from 'react';
+import React, { useState, useEffect, useActionState, startTransition, useMemo } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -14,13 +14,34 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { Briefcase, Type, DollarSign, Target, CheckSquare, Copy, Info, Edit3, AlignLeft, MessageSquare, ListChecks, Megaphone, FileText, SparklesIcon, Goal, Users, MousePointerClick } from 'lucide-react';
+import { Briefcase, Type, DollarSign, Target, CheckSquare, Copy, Info, Edit3, AlignLeft, MessageSquare, ListChecks, Megaphone, FileText, SparklesIcon, Goal, Users, MousePointerClick, Loader2 } from 'lucide-react';
 import { handleGenerateAdCampaignAction, handlePopulateAdCampaignFormAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
-import type { GeneratedAdCampaign } from '@/types';
+import type { GeneratedAdCampaign, GeneratedSocialMediaPost, GeneratedBlogPost } from '@/types';
 import type { GenerateAdCampaignOutput } from '@/ai/flows/generate-ad-campaign';
 import type { PopulateAdCampaignFormOutput } from '@/ai/flows/populate-ad-campaign-form-flow';
 import { adCampaignGoals } from '@/lib/constants';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
+import { db } from '@/lib/firebaseConfig';
+import { collection, query, orderBy, getDocs } from 'firebase/firestore';
+
+// --- Data Fetching Functions ---
+const fetchSocialPostsForInspiration = async (userId: string): Promise<GeneratedSocialMediaPost[]> => {
+  if (!userId) return [];
+  const path = `users/${userId}/brandProfiles/${userId}/socialMediaPosts`;
+  const q = query(collection(db, path), orderBy("createdAt", "desc"));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GeneratedSocialMediaPost));
+};
+
+const fetchBlogPostsForInspiration = async (userId: string): Promise<GeneratedBlogPost[]> => {
+  if (!userId) return [];
+  const path = `users/${userId}/brandProfiles/${userId}/blogPosts`;
+  const q = query(collection(db, path), orderBy("createdAt", "desc"));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GeneratedBlogPost));
+};
 
 
 const platforms = [
@@ -59,7 +80,8 @@ const initialPopulationState: FormState<PopulateAdCampaignFormOutput> = { error:
 
 
 export default function CampaignManagerPage() {
-  const { brandData, addGeneratedAdCampaign, generatedBlogPosts, generatedSocialPosts } = useBrand();
+  const { brandData, addGeneratedAdCampaign } = useBrand();
+  const { currentUser } = useAuth();
   const { toast } = useToast();
   
   const [generationState, generationAction] = useActionState(handleGenerateAdCampaignAction, initialGenerationState);
@@ -85,6 +107,29 @@ export default function CampaignManagerPage() {
       }
   });
 
+  // --- Start: Fetch persisted content for inspiration dropdown ---
+  const { data: socialPosts, isLoading: isLoadingSocial } = useQuery({
+    queryKey: ['socialPostsForInspiration', currentUser?.uid],
+    queryFn: () => fetchSocialPostsForInspiration(currentUser!.uid),
+    enabled: !!currentUser,
+  });
+  
+  const { data: blogPosts, isLoading: isLoadingBlog } = useQuery({
+    queryKey: ['blogPostsForInspiration', currentUser?.uid],
+    queryFn: () => fetchBlogPostsForInspiration(currentUser!.uid),
+    enabled: !!currentUser,
+  });
+  
+  const availableContent = useMemo(() => {
+    const socialContent = socialPosts || [];
+    const blogContent = blogPosts || [];
+    return [
+      ...socialContent.map(p => ({ id: `social-${p.id}`, label: `Social: ${p.caption.substring(0, 30)}...`, content: p.caption })),
+      ...blogContent.map(p => ({ id: `blog-${p.id}`, label: `Blog: ${p.title}`, content: `${p.title}\n\n${p.content}` })),
+    ].filter(item => item.content && item.content.trim() !== "");
+  }, [socialPosts, blogPosts]);
+  // --- End: Fetch persisted content ---
+  
   // Effect to sync brand data from context to form
   useEffect(() => {
       if (brandData) {
@@ -154,11 +199,6 @@ export default function CampaignManagerPage() {
     toast({ title: `${type} Copied!`, description: "Content copied to clipboard." });
   };
 
-  const availableContent = [
-    ...generatedSocialPosts.map(p => ({ id: `social-${p.id}`, label: `Social: ${p.caption.substring(0,30)}...`, content: p.caption })),
-    ...generatedBlogPosts.map(p => ({ id: `blog-${p.id}`, label: `Blog: ${p.title}`, content: `${p.title}\n\n${p.content}`})),
-  ].filter(item => item.content && item.content.trim() !== "");
-
   const handleQuickStartSubmit = (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       if (!quickStartRequest.trim()) {
@@ -221,7 +261,10 @@ export default function CampaignManagerPage() {
         </div>
 
         <Form {...form}>
-          <form action={generationAction}>
+          <form action={(formData) => {
+              if (currentUser?.uid) formData.append('userId', currentUser.uid);
+              generationAction(formData);
+            }}>
             <input type="hidden" name="industry" value={brandData?.industry || ""} />
             <CardContent className="space-y-8">
               <FormField control={form.control} name="brandName" render={({ field }) => (
@@ -249,8 +292,11 @@ export default function CampaignManagerPage() {
               <FormField control={form.control} name="generatedContent" render={({ field }) => (
                 <FormItem><FormLabel className="flex items-center mb-2 text-base"><MessageSquare className="w-5 h-5 mr-2 text-primary" />Inspirational Content Source</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Select generated content or choose 'Custom'" /></SelectTrigger></FormControl>
+                    <FormControl><SelectTrigger>
+                        <SelectValue placeholder={isLoadingSocial || isLoadingBlog ? "Loading content..." : "Select generated content or choose 'Custom'" } />
+                    </SelectTrigger></FormControl>
                     <SelectContent>
+                      {(isLoadingSocial || isLoadingBlog) && <div className="flex items-center justify-center p-2"><Loader2 className="w-4 h-4 animate-spin" /></div>}
                       {availableContent.length > 0 && availableContent.map(item => (<SelectItem key={item.id} value={item.content}>{item.label}</SelectItem>))}
                       {availableContent.length > 0 && <SelectSeparator />}
                       <SelectItem value="Custom content for ad campaign">Custom (type below)</SelectItem>
