@@ -57,6 +57,7 @@ export interface GeneratedBlogPost {
   blogTone?: string;
   createdAt?: any;
   status: 'draft' | 'scheduled' | 'deployed';
+  outline?: string;
 }
 
 export interface GeneratedAdCampaign {

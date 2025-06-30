@@ -262,7 +262,7 @@ export default function ContentStudioPage() {
   const [lastUsedImageProvider, setLastUsedImageProvider] = useState<string | null>(null);
   
   const [generatedSocialPost, setGeneratedSocialPost] = useState<{caption: string, hashtags: string, imageSrc: string | null} | null>(null);
-  const [generatedBlogPost, setGeneratedBlogPost] = useState<{title: string, content: string, tags: string} | null>(null);
+  const [generatedBlogPost, setGeneratedBlogPost] = useState<{title: string, content: string, tags: string, outline: string} | null>(null);
   const [generatedBlogOutline, setGeneratedBlogOutline] = useState<string>("");
 
   const [useImageForSocialPost, setUseImageForSocialPost] = useState<boolean>(false);
@@ -276,6 +276,7 @@ export default function ContentStudioPage() {
   const [numberOfImagesToGenerate, setNumberOfImagesToGenerate] = useState<string>("1");
   const [isGeneratingDescription, setIsGeneratingDescription] = useState<boolean>(false);
   const [isGeneratingOutline, setIsGeneratingOutline] = useState<boolean>(false);
+  const [isEditingOutline, setIsEditingOutline] = useState(true);
 
   const [selectedProfileImageIndexForGen, setSelectedProfileImageIndexForGen] = useState<number | null>(null);
   const [selectedProfileImageIndexForSocial, setSelectedProfileImageIndexForSocial] = useState<number | null>(null);
@@ -539,7 +540,7 @@ export default function ContentStudioPage() {
   useEffect(() => {
     if (blogState.data) {
       const blogData = blogState.data;
-      setGeneratedBlogPost(blogData);
+      setGeneratedBlogPost({...blogData, outline: generatedBlogOutline });
       const newPost: GeneratedBlogPost = {
         id: new Date().toISOString(),
         title: blogData.title,
@@ -555,7 +556,7 @@ export default function ContentStudioPage() {
     }
     if (blogState.error) toast({ title: "Error generating blog post", description: blogState.error, variant: "destructive" });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blogState, toast, addGeneratedBlogPost, blogPlatformValue]);
+  }, [blogState, toast, addGeneratedBlogPost, blogPlatformValue, generatedBlogOutline]);
 
   useEffect(() => {
     setIsGeneratingDescription(false);
@@ -572,12 +573,20 @@ export default function ContentStudioPage() {
     setIsGeneratingOutline(false);
     if (blogOutlineState.data) {
         setGeneratedBlogOutline(blogOutlineState.data.outline);
+        setIsEditingOutline(false); // Switch to preview mode after generation
         toast({ title: "Success", description: blogOutlineState.message || "Blog outline generated." });
     }
     if (blogOutlineState.error) {
         toast({ title: "Outline Error", description: blogOutlineState.error, variant: "destructive" });
     }
   }, [blogOutlineState, toast]);
+
+  // Auto-switch to edit mode if outline is cleared
+  useEffect(() => {
+    if (!generatedBlogOutline.trim()) {
+      setIsEditingOutline(true);
+    }
+  }, [generatedBlogOutline]);
 
   useEffect(() => {
     setIsSavingImages(false); 
@@ -2174,28 +2183,48 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                       </div>
 
                       <div className="space-y-2">
-                          <div className="flex justify-between items-center mb-1">
-                              <Label htmlFor="blogOutline" className="flex items-center"><ListOrdered className="w-4 h-4 mr-2 text-primary" />Blog Outline</Label>
-                              <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={handleGenerateBlogOutline}
-                                  disabled={isGeneratingOutline}
-                              >
-                                  {isGeneratingOutline ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-                                  Generate Outline with AI
-                              </Button>
-                          </div>
-                          <Textarea
-                          id="blogOutline"
-                          name="blogOutline"
-                          placeholder="Enter your blog outline here, or generate one with AI. Markdown is supported."
-                          rows={8}
-                          value={generatedBlogOutline}
-                          onChange={(e) => setGeneratedBlogOutline(e.target.value)}
-                          />
-                            <p className="text-sm text-muted-foreground">AI will strictly follow this outline to generate the blog post.</p>
+                        <div className="flex justify-between items-center mb-1">
+                            <Label htmlFor="blogOutline" className="flex items-center"><ListOrdered className="w-4 h-4 mr-2 text-primary" />Blog Outline</Label>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setIsEditingOutline(prev => !prev)}
+                                    disabled={!generatedBlogOutline.trim()}
+                                >
+                                    {isEditingOutline ? <Eye className="mr-2 h-4 w-4" /> : <Edit className="mr-2 h-4 w-4" />}
+                                    {isEditingOutline ? 'Preview' : 'Edit'}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleGenerateBlogOutline}
+                                    disabled={isGeneratingOutline}
+                                >
+                                    {isGeneratingOutline ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+                                    AI Generate
+                                </Button>
+                            </div>
+                        </div>
+                        {isEditingOutline ? (
+                            <Textarea
+                                id="blogOutline"
+                                name="blogOutline"
+                                placeholder="Enter your blog outline here, or generate one with AI. Markdown is supported."
+                                rows={8}
+                                value={generatedBlogOutline}
+                                onChange={(e) => setGeneratedBlogOutline(e.target.value)}
+                            />
+                        ) : (
+                            <div className="p-4 border rounded-md bg-muted/50 max-w-none min-h-[168px] max-h-[40rem] overflow-y-auto">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]} className="prose prose-sm dark:prose-invert max-w-none">
+                                    {generatedBlogOutline || "No outline generated yet. Click 'AI Generate' or switch to Edit mode to write one."}
+                                </ReactMarkdown>
+                            </div>
+                        )}
+                        <p className="text-sm text-muted-foreground">AI will strictly follow this outline to generate the blog post.</p>
                       </div>
 
                       <div>
@@ -2206,7 +2235,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                           </SelectTrigger>
                           <SelectContent>
                               <SelectItem value="Medium">Medium</SelectItem>
-                              <SelectItem value="Other">Other (Generic Blog)</SelectItem>
+                              <SelectItem value="Other">Generic Blog</SelectItem>
                           </SelectContent>
                           </Select>
                       </div>
@@ -2242,6 +2271,16 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                           <Newspaper className="w-5 h-5 mr-2 text-primary" />
                           Generated Blog Post
                       </CardTitle>
+                      {generatedBlogPost.outline && (
+                           <details className="mt-2 text-sm text-muted-foreground cursor-pointer">
+                              <summary className="hover:text-primary">View Outline Used</summary>
+                              <div className="mt-2 p-3 border rounded-md bg-muted/20">
+                                  <ReactMarkdown remarkPlugins={[remarkGfm]} className="prose prose-sm dark:prose-invert max-w-none">
+                                      {generatedBlogPost.outline}
+                                  </ReactMarkdown>
+                              </div>
+                           </details>
+                      )}
                   </CardHeader>
                   <CardContent className="space-y-4">
                       <div>
@@ -2281,3 +2320,4 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     </div>
   );
 }
+
