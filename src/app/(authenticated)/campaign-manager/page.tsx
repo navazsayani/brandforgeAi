@@ -118,14 +118,25 @@ export default function CampaignManagerPage() {
             const lines = data.split('\n');
             const locLine = lines.find(line => line.startsWith('loc='));
             const country = locLine ? locLine.split('=')[1] : 'US'; // Default to US
-            setCurrencySymbol(country === 'IN' ? '₹' : '$');
+            
+            const newSymbol = country === 'IN' ? '₹' : '$';
+            setCurrencySymbol(newSymbol);
+
+            // If the budget is still the initial default, update it.
+            if (form.getValues("budget") === 500) {
+                 form.setValue("budget", newSymbol === '₹' ? 40000 : 500);
+            }
         })
         .catch(() => {
             setCurrencySymbol('$'); // Fallback to $ on any error
+            if (form.getValues("budget") === 500) {
+                 form.setValue("budget", 500);
+            }
         })
         .finally(() => {
             setIsLoadingGeo(false);
         });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // --- Start: Fetch persisted content for inspiration dropdown ---
