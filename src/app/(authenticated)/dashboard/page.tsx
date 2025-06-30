@@ -485,7 +485,7 @@ function RecentItemCard({ item }: { item: RecentItem }) {
                         </>
                     )}
                 </div>
-                <CardTitle className="text-lg line-clamp-2 mt-2 h-[2.5em]">{item.title}</CardTitle>
+                <CardTitle className="text-lg line-clamp-2 mt-2 h-[2.5em] break-words">{item.title}</CardTitle>
             </CardHeader>
             <CardContent className="flex-grow">
                  <p className="text-sm text-muted-foreground line-clamp-3 text-balance">
