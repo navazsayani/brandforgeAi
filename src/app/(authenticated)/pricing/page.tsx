@@ -300,42 +300,48 @@ export default function PricingPage() {
                 <Alert className="mb-8 border-primary/50 bg-primary/5 text-primary-foreground shadow-md"><Info className="h-4 w-4 text-primary" /><AlertTitle className="text-primary font-bold">You are on the Pro Plan!</AlertTitle><AlertDescription className="text-primary/90">{isPremiumActive && expiryDate ? `Your premium access is active until ${expiryDate.toLocaleDateString()}.` : 'Welcome to the club!'} {!isPremiumActive && expiryDate && `Your premium access expired on ${expiryDate.toLocaleDateString()}. Renew below to continue using pro features.`}</AlertDescription></Alert>
             )}
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch mt-8">
                 {plansToRender.map((plan) => {
                     const isCurrentActivePlan = plan.id.startsWith('pro') && isPremiumActive;
                     const isExpiredProPlan = plan.id.startsWith('pro') && needsRenewal;
 
                     let ctaButton: React.ReactNode;
                     if (plan.id === 'free') {
-                        ctaButton = <Button size="lg" className="w-full h-auto whitespace-normal" disabled>Your Plan</Button>;
+                        ctaButton = <Button className="w-full text-base py-3 px-8" disabled>Your Plan</Button>;
                     } else if (isCurrentActivePlan) {
-                         ctaButton = <Button size="lg" className="w-full h-auto whitespace-normal" disabled><Check className="mr-2 w-5 h-5" />Current Plan</Button>;
+                         ctaButton = <Button className="w-full text-base py-3 px-8" disabled><Check className="mr-2 w-5 h-5" />Current Plan</Button>;
                     } else if (isExpiredProPlan) {
-                        ctaButton = <Button size="lg" className={cn("w-full btn-gradient-secondary", "h-auto whitespace-normal")} onClick={() => handleSubscribe(plan.id)} disabled={isProcessing}>{isProcessing && selectedPlanId === plan.id ? <Loader2 className="mr-2 w-5 h-5 animate-spin"/> : <RefreshCcw className="mr-2 w-5 h-5" />}{isProcessing && selectedPlanId === plan.id ? 'Processing...' : 'Renew Subscription'}</Button>;
+                        ctaButton = <Button className={cn("w-full text-base py-3 px-8", "btn-gradient-secondary")} onClick={() => handleSubscribe(plan.id)} disabled={isProcessing}>{isProcessing && selectedPlanId === plan.id ? <Loader2 className="mr-2 w-5 h-5 animate-spin"/> : <RefreshCcw className="mr-2 w-5 h-5" />}{isProcessing && selectedPlanId === plan.id ? 'Processing...' : 'Renew Subscription'}</Button>;
                     }
                     else {
-                        ctaButton = <Button size="lg" className={cn("w-full", plan.id.startsWith('pro') && 'btn-gradient-primary', "h-auto whitespace-normal")} variant={plan.id.startsWith('pro') ? 'default' : 'outline'} onClick={() => handleSubscribe(plan.id)} disabled={isProcessing || plan.id === 'free'}>{isProcessing && selectedPlanId === plan.id ? <Loader2 className="mr-2 w-5 h-5 animate-spin"/> : plan.id.startsWith('pro') ? <Star className="mr-2 w-5 h-5" /> : <ArrowRight className="mr-2 w-5 h-5" />}{isProcessing && selectedPlanId === plan.id ? 'Processing...' : plan.cta}</Button>;
+                        ctaButton = <Button className={cn("w-full text-base py-3 px-8", plan.id.startsWith('pro') && 'btn-gradient-primary')} variant={plan.id.startsWith('pro') ? 'default' : 'outline'} onClick={() => handleSubscribe(plan.id)} disabled={isProcessing || plan.id === 'free'}>{isProcessing && selectedPlanId === plan.id ? <Loader2 className="mr-2 w-5 h-5 animate-spin"/> : plan.id.startsWith('pro') ? <Star className="mr-2 w-5 h-5" /> : <ArrowRight className="mr-2 w-5 h-5" />}{isProcessing && selectedPlanId === plan.id ? 'Processing...' : plan.cta}</Button>;
                     }
 
                     return (
-                        <Card key={plan.id} className={cn("flex flex-col shadow-lg transition-all duration-300", plan.id.startsWith('pro') ? 'border-primary border-2 scale-105 shadow-xl' : 'hover:shadow-xl')}>
-                            {plan.id.startsWith('pro') && <div className="flex justify-center -mt-10 mb-4"><span className="inline-block bg-primary text-primary-foreground text-xs font-semibold px-4 py-1 rounded-full">Most Popular</span></div>}
-                            <CardHeader className="pb-4">
-                                <CardTitle className="text-3xl text-center font-bold">{plan.name}</CardTitle>
-                                {plan.price.originalAmount && <div className="text-center mt-2"><Badge variant="destructive" className="animate-pulse text-base">Introductory Offer</Badge></div>}
-                                <CardDescription className="text-center text-lg">{plan.description}</CardDescription>
-                            </CardHeader>
-                            <CardContent className="flex-grow">
-                                <div className="text-center my-6">
-                                    {plan.price.originalAmount ? <div className="flex items-baseline justify-center gap-2"><s className="text-3xl font-normal text-muted-foreground">{plan.price.originalAmount}</s><span className="text-5xl font-bold">{plan.price.amount}</span></div> : <span className="text-5xl font-bold">{plan.price.amount}</span>}
-                                    <span className="text-muted-foreground text-lg ml-1">{plan.price.unit}</span>
+                        <div key={plan.id} className="relative pt-6">
+                            {plan.id.startsWith('pro') && (
+                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-full flex justify-center">
+                                    <Badge variant="default" className="text-sm shadow-lg px-4 py-1">Most Popular</Badge>
                                 </div>
-                                <ul className="space-y-4">
-                                    {renderPlanFeatures(plan)}
-                                </ul>
-                            </CardContent>
-                            <CardFooter>{ctaButton}</CardFooter>
-                        </Card>
+                            )}
+                            <Card className={cn("flex flex-col shadow-lg transition-all duration-300 h-full", plan.id.startsWith('pro') ? 'border-primary border-2 shadow-xl' : 'hover:shadow-xl')}>
+                                <CardHeader className="pb-4">
+                                    <CardTitle className="text-3xl text-center font-bold">{plan.name}</CardTitle>
+                                    {plan.price.originalAmount && <div className="text-center mt-2"><Badge variant="destructive" className="animate-pulse text-base">Introductory Offer</Badge></div>}
+                                    <CardDescription className="text-center text-lg">{plan.description}</CardDescription>
+                                </CardHeader>
+                                <CardContent className="flex-grow">
+                                    <div className="text-center my-6">
+                                        {plan.price.originalAmount ? <div className="flex items-baseline justify-center gap-2"><s className="text-3xl font-normal text-muted-foreground">{plan.price.originalAmount}</s><span className="text-5xl font-bold">{plan.price.amount}</span></div> : <span className="text-5xl font-bold">{plan.price.amount}</span>}
+                                        <span className="text-muted-foreground text-lg ml-1">{plan.price.unit}</span>
+                                    </div>
+                                    <ul className="space-y-4">
+                                        {renderPlanFeatures(plan)}
+                                    </ul>
+                                </CardContent>
+                                <CardFooter className="mt-auto">{ctaButton}</CardFooter>
+                            </Card>
+                        </div>
                     );
                 })}
             </div>
