@@ -6,6 +6,8 @@ import NextImage from 'next/image';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/lib/firebaseConfig'; 
 import { collection, getDocs, query, orderBy } from 'firebase/firestore'; 
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -2234,7 +2236,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                   </form>
               </Card>
               {generatedBlogPost && (
-                <Card className="mt-6 shadow-sm"> 
+                <Card className="mt-6 shadow-sm">
                   <CardHeader>
                       <CardTitle className="text-xl flex items-center">
                           <Newspaper className="w-5 h-5 mr-2 text-primary" />
@@ -2253,8 +2255,10 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                       </div>
                       <div>
                           <Label htmlFor="generatedBlogContent" className="text-sm font-medium mb-1 text-muted-foreground">Generated Content:</Label>
-                          <div className="p-3 prose border rounded-md bg-muted/50 max-w-none max-h-96 overflow-y-auto">
-                              <p id="generatedBlogContent" className="whitespace-pre-wrap">{generatedBlogPost?.content}</p>
+                          <div className="p-4 border rounded-md bg-muted/50 max-w-none max-h-[40rem] overflow-y-auto">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]} className="prose prose-sm dark:prose-invert max-w-none">
+                                  {generatedBlogPost?.content || ""}
+                              </ReactMarkdown>
                           </div>
                           <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedBlogPost?.content || "", "Content")} className="mt-1 text-muted-foreground hover:text-primary">
                               <Copy className="w-3 h-3 mr-1" /> Copy Content
@@ -2277,7 +2281,3 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     </div>
   );
 }
-
-    
-
-    

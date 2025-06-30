@@ -26,6 +26,8 @@ import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
 import { SubmitButton } from '@/components/SubmitButton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 
 // Combined type for all deployable content
@@ -448,16 +450,14 @@ function EditContentDialog({ item }: { item: DeployableContent }) {
                     <DialogTitle>Edit Content</DialogTitle>
                     <DialogDescription>Make changes to your generated content before deploying.</DialogDescription>
                 </DialogHeader>
-                
-                <ScrollArea className="max-h-[60vh] pr-4">
-                    <form id={formId} action={updateFormAction} className="py-4 space-y-4">
-                        <input type="hidden" name="userId" value={currentUser?.uid || ''} />
-                        <input type="hidden" name="docPath" value={item.docPath} />
-                        <input type="hidden" name="contentType" value={item.type} />
-                        {renderEditForm()}
-                    </form>
-                </ScrollArea>
-
+                <form id={formId} action={updateFormAction} className="py-4 space-y-4">
+                  <ScrollArea className="max-h-[60vh] pr-4 -mr-4">
+                      <input type="hidden" name="userId" value={currentUser?.uid || ''} />
+                      <input type="hidden" name="docPath" value={item.docPath} />
+                      <input type="hidden" name="contentType" value={item.type} />
+                      {renderEditForm()}
+                  </ScrollArea>
+                </form>
                 <DialogFooter>
                     <DialogClose asChild><Button type="button" variant="ghost">Cancel</Button></DialogClose>
                     <SubmitButton form={formId} loadingText="Saving...">Save Changes</SubmitButton>
@@ -524,7 +524,7 @@ function DetailItem({ label, children, isBlock = false }: { label: string, child
     return (
         <div className={cn("space-y-1", isBlock ? "py-2" : "grid grid-cols-3 gap-2 items-start")}>
             <dt className={cn("font-semibold text-muted-foreground", !isBlock && "col-span-1")}>{label}</dt>
-            <dd className={cn("text-sm", isBlock ? "prose prose-sm max-w-none p-3 border rounded-md bg-muted/50 whitespace-pre-wrap" : "col-span-2")}>{children}</dd>
+            <dd className={cn("text-sm", isBlock ? "p-3 border rounded-md bg-muted/50" : "col-span-2")}>{children}</dd>
         </div>
     );
 }
@@ -596,7 +596,11 @@ function ContentDetailsDialog({ item }: { item: DeployableContent }) {
                 <div className="space-y-4">
                      <DetailItem label="Title">{item.title}</DetailItem>
                      <DetailItem label="Tags">{item.tags}</DetailItem>
-                     <DetailItem label="Content" isBlock><p>{item.content}</p></DetailItem>
+                     <DetailItem label="Content" isBlock>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} className="prose prose-sm dark:prose-invert max-w-none">
+                            {item.content}
+                        </ReactMarkdown>
+                     </DetailItem>
                 </div>
             );
             break;
