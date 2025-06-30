@@ -235,9 +235,14 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/30">
                     <div className="flex items-center gap-4">
                         <Facebook className="w-6 h-6 text-[#1877F2] shrink-0" />
-                        <div>
+                        <div className="space-y-1">
                             <p className="font-semibold">Meta (Facebook & Instagram)</p>
-                            <p className="text-sm text-muted-foreground">Not Connected</p>
+                            <p className="text-sm text-muted-foreground">
+                                Status: Not Connected. 
+                                <a href="https://developers.facebook.com/" target="_blank" rel="noopener noreferrer" className="text-xs underline hover:text-primary ml-1">
+                                    Get API Keys <ExternalLink className="inline-block h-3 w-3 ml-0.5" />
+                                </a>
+                            </p>
                         </div>
                     </div>
                     <Button variant="outline" onClick={() => handleConnectClick('Meta')}>Connect</Button>
@@ -245,9 +250,14 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/30">
                     <div className="flex items-center gap-4">
                         <XIcon className="w-5 h-5 shrink-0" />
-                        <div>
+                        <div className="space-y-1">
                             <p className="font-semibold">X (Twitter)</p>
-                            <p className="text-sm text-muted-foreground">Not Connected</p>
+                            <p className="text-sm text-muted-foreground">
+                                Status: Not Connected. 
+                                <a href="https://developer.x.com/" target="_blank" rel="noopener noreferrer" className="text-xs underline hover:text-primary ml-1">
+                                    Get API Keys <ExternalLink className="inline-block h-3 w-3 ml-0.5" />
+                                </a>
+                            </p>
                         </div>
                     </div>
                     <Button variant="outline" onClick={() => handleConnectClick('X')}>Connect</Button>
