@@ -444,24 +444,24 @@ function EditContentDialog({ item }: { item: DeployableContent }) {
                 </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
-                 <DialogHeader>
+                <DialogHeader>
                     <DialogTitle>Edit Content</DialogTitle>
                     <DialogDescription>Make changes to your generated content before deploying.</DialogDescription>
-                 </DialogHeader>
-                 
-                 <form id={formId} action={updateFormAction}>
-                     <input type="hidden" name="userId" value={currentUser?.uid || ''} />
-                     <input type="hidden" name="docPath" value={item.docPath} />
-                     <input type="hidden" name="contentType" value={item.type} />
-                     <ScrollArea className="max-h-[60vh] my-4 pr-4 -mr-4">
+                </DialogHeader>
+                
+                <ScrollArea className="max-h-[60vh] pr-4">
+                    <form id={formId} action={updateFormAction} className="py-4 space-y-4">
+                        <input type="hidden" name="userId" value={currentUser?.uid || ''} />
+                        <input type="hidden" name="docPath" value={item.docPath} />
+                        <input type="hidden" name="contentType" value={item.type} />
                         {renderEditForm()}
-                     </ScrollArea>
-                 </form>
+                    </form>
+                </ScrollArea>
 
-                 <DialogFooter>
+                <DialogFooter>
                     <DialogClose asChild><Button type="button" variant="ghost">Cancel</Button></DialogClose>
                     <SubmitButton form={formId} loadingText="Saving...">Save Changes</SubmitButton>
-                 </DialogFooter>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );
