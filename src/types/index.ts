@@ -41,6 +41,7 @@ export interface GeneratedSocialMediaPost {
   postGoal?: string;
   targetAudience?: string;
   callToAction?: string;
+  createdAt?: any;
 }
 
 export interface GeneratedBlogPost {
@@ -53,6 +54,7 @@ export interface GeneratedBlogPost {
   articleStyle?: string;
   targetAudience?: string;
   blogTone?: string;
+  createdAt?: any;
 }
 
 export interface GeneratedAdCampaign {
@@ -69,6 +71,7 @@ export interface GeneratedAdCampaign {
   inspirationalContent?: string;
   targetKeywords?: string;
   budget?: number;
+  createdAt?: any;
 }
 
 // Type for the admin user selection dropdown

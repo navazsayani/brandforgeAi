@@ -105,7 +105,7 @@ export default function SettingsPage() {
       formData.append('adminRequesterEmail', currentUser.email);
       startTransition(() => {
         getModelAction(formData);
-        getPlansAction(formData);
+        getPlansAction();
       });
     }
   }, [currentUser, getModelAction, getPlansAction]);

@@ -230,15 +230,20 @@ export async function handleGenerateSocialMediaCaptionAction(
 
     const result = await generateSocialMediaCaption(input);
     const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/socialMediaPosts`);
-    await addDoc(firestoreCollectionRef, {
+    
+    const docData: { [key: string]: any } = {
       caption: result.caption || "",
       hashtags: result.hashtags || "",
       imageSrc: imageSrc,
-      postGoal: input.postGoal,
-      targetAudience: input.targetAudience,
-      callToAction: input.callToAction,
       tone: input.tone,
-    });
+      createdAt: serverTimestamp(),
+    };
+    if (input.postGoal) docData.postGoal = input.postGoal;
+    if (input.targetAudience) docData.targetAudience = input.targetAudience;
+    if (input.callToAction) docData.callToAction = input.callToAction;
+
+    await addDoc(firestoreCollectionRef, docData);
+
     return { data: { ...result, imageSrc: imageSrc }, message: "Social media content generated and saved successfully!" };
   } catch (e: any)
    {
@@ -295,7 +300,8 @@ export async function handleGenerateBlogContentAction(
     const brandData = userDocSnap.data() as BrandData;
     
     const plansConfig = await getPlansConfig();
-    const planDetails = plansConfig.USD[brandData.plan || 'free']; // Assume USD for quota logic
+    const planKey = (brandData.plan === 'premium') ? 'pro' : 'free';
+    const planDetails = plansConfig.USD[planKey]; // Assume USD for quota logic
 
     if ((brandData.plan || 'free') === 'free' && planDetails.quotas.blogPosts <= 0) {
       return { error: "Full blog post generation is a premium feature. Please upgrade your plan." };
@@ -326,15 +332,20 @@ export async function handleGenerateBlogContentAction(
 
     const result = await generateBlogContent(input);
     const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/blogPosts`);
-    await addDoc(firestoreCollectionRef, {
+    
+    const docData: { [key: string]: any } = {
       title: result.title || "Untitled",
       content: result.content || "",
       tags: result.tags || "",
       platform: input.targetPlatform,
-      articleStyle: input.articleStyle,
-      targetAudience: input.targetAudience,
       blogTone: input.blogTone,
-    });
+      createdAt: serverTimestamp(),
+    };
+    if (input.articleStyle) docData.articleStyle = input.articleStyle;
+    if (input.targetAudience) docData.targetAudience = input.targetAudience;
+
+    await addDoc(firestoreCollectionRef, docData);
+
     return { data: result, message: "Blog content generated and saved successfully!" };
   } catch (e: any) {
     console.error("Error in handleGenerateBlogContentAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
@@ -395,6 +406,7 @@ export async function handleGenerateAdCampaignAction(
       targetKeywords: input.targetKeywords,
       budget: input.budget,
       platforms: input.platforms,
+      createdAt: serverTimestamp(),
     });
     return { data: result, message: "Ad campaign variations generated and saved successfully!" };
   } catch (e: any) {
@@ -590,7 +602,7 @@ export async function handleSaveGeneratedImagesAction(
             storageUrl: imageUrlToSave,
             prompt: image.prompt || "N/A",
             style: image.style || "N/A",
-            createdAt: new Date(),
+            createdAt: serverTimestamp(),
         };
         console.log(`[Save Images Action] -> Document to write:`, docToWrite);
         await addDoc(firestoreCollectionRef, docToWrite);
@@ -766,6 +778,7 @@ export async function handleGenerateBrandLogoAction(
     await addDoc(firestoreCollectionRef, {
       logoData: result.logoDataUri || "", 
       brandName: input.brandName,
+      createdAt: serverTimestamp(),
     });
     return { data: result, message: "Brand logo generated and saved successfully!" };
   } catch (e: any) {

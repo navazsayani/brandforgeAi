@@ -209,7 +209,7 @@ const initialPopulateImageFormState: FormState<PopulateImageFormOutput> = { erro
 const initialPopulateSocialFormState: FormState<PopulateSocialFormOutput> = { error: undefined, data: undefined, message: undefined };
 const initialPopulateBlogFormState: FormState<PopulateBlogFormOutput> = { error: undefined, data: undefined, message: undefined };
 const initialFreepikTaskStatusState: FormState<{ status: string; images: string[] | null; taskId: string;}> = { error: undefined, data: undefined, message: undefined, taskId: "" };
-const initialPlansState: FormState<PlansConfig> = { data: null, error: undefined };
+const initialPlansState: FormState<PlansConfig> = { data: undefined, error: undefined, message: undefined };
 
 
 type SocialImageChoice = 'generated' | 'profile' | 'library' | null;
@@ -1458,7 +1458,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                             <button
                                                 type="button"
                                                 key={`gen-profile-${index}`}
-                                                onClick={()={() => setSelectedProfileImageIndexForGen(index)}
+                                                onClick={() => setSelectedProfileImageIndexForGen(index)}
                                                 className={cn(
                                                     "w-20 h-20 rounded border-2 p-0.5 flex-shrink-0 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring",
                                                     selectedProfileImageIndexForGen === index ? "border-primary ring-2 ring-primary" : "border-border"
@@ -1816,7 +1816,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                           <button
                                               type="button"
                                               key={`social-profile-${index}`}
-                                              onClick={()={() => setSelectedProfileImageIndexForSocial(index)}
+                                              onClick={() => setSelectedProfileImageIndexForSocial(index)}
                                               className={cn(
                                                   "w-16 h-16 rounded border-2 p-0.5 flex-shrink-0 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring",
                                                   selectedProfileImageIndexForSocial === index ? "border-primary ring-2 ring-primary" : "border-border"
@@ -1848,7 +1848,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                           <button
                                               type="button"
                                               key={`social-library-${index}`}
-                                              onClick={()={() => setSelectedLibraryImageIndexForSocial(index)}
+                                              onClick={() => setSelectedLibraryImageIndexForSocial(index)}
                                               className={cn(
                                                   "w-16 h-16 rounded border-2 p-0.5 flex-shrink-0 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring",
                                                   selectedLibraryImageIndexForSocial === index ? "border-primary ring-2 ring-primary" : "border-border"
@@ -2245,27 +2245,27 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                       <div>
                           <Label htmlFor="generatedBlogTitle" className="text-sm font-medium mb-1 text-muted-foreground">Generated Title:</Label>
                           <div className="p-3 border rounded-md bg-muted/50">
-                              <p id="generatedBlogTitle" className="text-lg font-medium">{generatedBlogPost.title}</p>
+                              <p id="generatedBlogTitle" className="text-lg font-medium">{generatedBlogPost?.title}</p>
                           </div>
-                          <Button variant="ghost" size="sm" onClick={()={() => copyToClipboard(generatedBlogPost.title, "Title")} className="mt-1 text-muted-foreground hover:text-primary">
+                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedBlogPost?.title || "", "Title")} className="mt-1 text-muted-foreground hover:text-primary">
                               <Copy className="w-3 h-3 mr-1" /> Copy Title
                           </Button>
                       </div>
                       <div>
                           <Label htmlFor="generatedBlogContent" className="text-sm font-medium mb-1 text-muted-foreground">Generated Content:</Label>
                           <div className="p-3 prose border rounded-md bg-muted/50 max-w-none max-h-96 overflow-y-auto">
-                              <p id="generatedBlogContent" className="whitespace-pre-wrap">{generatedBlogPost.content}</p>
+                              <p id="generatedBlogContent" className="whitespace-pre-wrap">{generatedBlogPost?.content}</p>
                           </div>
-                          <Button variant="ghost" size="sm" onClick={()={() => copyToClipboard(generatedBlogPost.content, "Content")} className="mt-1 text-muted-foreground hover:text-primary">
+                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedBlogPost?.content || "", "Content")} className="mt-1 text-muted-foreground hover:text-primary">
                               <Copy className="w-3 h-3 mr-1" /> Copy Content
                           </Button>
                       </div>
                       <div>
                           <Label htmlFor="generatedBlogTags" className="text-sm font-medium mb-1 text-muted-foreground">Generated Tags:</Label>
                           <div className="p-3 border rounded-md bg-muted/50">
-                              <p id="generatedBlogTags" className="text-sm">{generatedBlogPost.tags}</p>
+                              <p id="generatedBlogTags" className="text-sm">{generatedBlogPost?.tags}</p>
                           </div>
-                          <Button variant="ghost" size="sm" onClick={()={() => copyToClipboard(generatedBlogPost.tags, "Tags")} className="mt-1 text-muted-foreground hover:text-primary">
+                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedBlogPost?.tags || "", "Tags")} className="mt-1 text-muted-foreground hover:text-primary">
                               <Copy className="w-3 h-3 mr-1" /> Copy Tags
                           </Button>
                       </div>

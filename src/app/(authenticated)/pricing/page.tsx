@@ -268,7 +268,7 @@ export default function PricingPage() {
         );
     }
     
-    const plansToRender = Object.values(displayedPlans);
+    const plansToRender = displayedPlans ? Object.values(displayedPlans) as PlanDetails[] : [];
 
     return (
         <div className="max-w-5xl mx-auto">
@@ -301,7 +301,7 @@ export default function PricingPage() {
             )}
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
-                {plansToRender.map((plan: PlanDetails) => {
+                {plansToRender.map((plan) => {
                     const isCurrentActivePlan = plan.id.startsWith('pro') && isPremiumActive;
                     const isExpiredProPlan = plan.id.startsWith('pro') && needsRenewal;
 
