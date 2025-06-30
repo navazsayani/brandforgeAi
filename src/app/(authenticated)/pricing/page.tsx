@@ -319,8 +319,8 @@ export default function PricingPage() {
 
                     return (
                         <Card key={plan.id} className={cn("flex flex-col shadow-lg transition-all duration-300", plan.id.startsWith('pro') ? 'border-primary border-2 scale-105 shadow-xl' : 'hover:shadow-xl')}>
+                            {plan.id.startsWith('pro') && <div className="flex justify-center -mt-10 mb-4"><span className="inline-block bg-primary text-primary-foreground text-xs font-semibold px-4 py-1 rounded-full">Most Popular</span></div>}
                             <CardHeader className="pb-4">
-                                {plan.id.startsWith('pro') && <div className="flex justify-center -mt-10 mb-4"><span className="inline-block bg-primary text-primary-foreground text-xs font-semibold px-4 py-1 rounded-full">Most Popular</span></div>}
                                 <CardTitle className="text-3xl text-center font-bold">{plan.name}</CardTitle>
                                 {plan.price.originalAmount && <div className="text-center mt-2"><Badge variant="destructive" className="animate-pulse text-base">Introductory Offer</Badge></div>}
                                 <CardDescription className="text-center text-lg">{plan.description}</CardDescription>
