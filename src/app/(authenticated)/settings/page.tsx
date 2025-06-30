@@ -232,9 +232,9 @@ export default function SettingsPage() {
                 <CardDescription>Connect your social media accounts to enable direct deployment from the Deployment Hub.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/30">
-                    <div className="flex items-center gap-4">
-                        <Facebook className="w-6 h-6 text-[#1877F2] shrink-0" />
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg bg-secondary/30 gap-4">
+                    <div className="flex items-start sm:items-center gap-4">
+                        <Facebook className="w-6 h-6 text-[#1877F2] shrink-0 mt-1 sm:mt-0" />
                         <div className="space-y-1">
                             <p className="font-semibold">Meta (Facebook & Instagram)</p>
                             <p className="text-sm text-muted-foreground">
@@ -245,11 +245,11 @@ export default function SettingsPage() {
                             </p>
                         </div>
                     </div>
-                    <Button variant="outline" onClick={() => handleConnectClick('Meta')}>Connect</Button>
+                    <Button variant="outline" onClick={() => handleConnectClick('Meta')} className="w-full sm:w-auto shrink-0">Connect</Button>
                 </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/30">
-                    <div className="flex items-center gap-4">
-                        <XIcon className="w-5 h-5 shrink-0" />
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg bg-secondary/30 gap-4">
+                    <div className="flex items-start sm:items-center gap-4">
+                        <XIcon className="w-5 h-5 shrink-0 mt-1 sm:mt-0" />
                         <div className="space-y-1">
                             <p className="font-semibold">X (Twitter)</p>
                             <p className="text-sm text-muted-foreground">
@@ -260,7 +260,7 @@ export default function SettingsPage() {
                             </p>
                         </div>
                     </div>
-                    <Button variant="outline" onClick={() => handleConnectClick('X')}>Connect</Button>
+                    <Button variant="outline" onClick={() => handleConnectClick('X')} className="w-full sm:w-auto shrink-0">Connect</Button>
                 </div>
             </CardContent>
              <CardFooter>
