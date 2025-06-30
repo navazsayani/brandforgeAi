@@ -67,7 +67,7 @@ const fetchLatestCreations = async (userId: string): Promise<RecentItem[]> => {
       type: 'Image',
       title: 'Image Saved to Library',
       description: data.prompt || "No prompt available",
-      imageUrl: data.storageUrl,
+      imageUrl: data.storageUrl || null,
       createdAt: data.createdAt,
       href: '/image-library',
     };
@@ -78,9 +78,9 @@ const fetchLatestCreations = async (userId: string): Promise<RecentItem[]> => {
     return {
       id: doc.id,
       type: 'Social Post',
-      title: data.caption.substring(0, 50) + (data.caption.length > 50 ? '...' : ''),
+      title: data.caption ? data.caption.substring(0, 50) + (data.caption.length > 50 ? '...' : '') : "Untitled Social Post",
       description: `For ${data.platform || 'social media'} with a ${data.tone || 'neutral'} tone.`,
-      imageUrl: data.imageSrc,
+      imageUrl: data.imageSrc || null,
       createdAt: data.createdAt,
       href: '/deployment-hub',
     };
@@ -91,7 +91,7 @@ const fetchLatestCreations = async (userId: string): Promise<RecentItem[]> => {
     return {
       id: doc.id,
       type: 'Blog Post',
-      title: data.title,
+      title: data.title || "Untitled Blog Post",
       description: `An article for ${data.platform || 'your blog'} in a ${data.blogTone || 'standard'} tone.`,
       imageUrl: null,
       createdAt: data.createdAt,
@@ -105,7 +105,7 @@ const fetchLatestCreations = async (userId: string): Promise<RecentItem[]> => {
         id: doc.id,
         type: 'Ad Campaign',
         title: data.campaignConcept || "Ad Campaign Concept",
-        description: `For ${data.targetPlatforms.join(', ')}`,
+        description: `For ${Array.isArray(data.targetPlatforms) && data.targetPlatforms.length > 0 ? data.targetPlatforms.join(', ') : 'multiple platforms'}`,
         imageUrl: null,
         createdAt: data.createdAt,
         href: '/deployment-hub',
@@ -372,7 +372,7 @@ function ActionCard({ href, icon, title, description, isLoading }: { href: strin
 function RecentCreations() {
     const { currentUser } = useAuth();
 
-    const { data: recentCreations, isLoading } = useQuery({
+    const { data: recentCreations, isLoading, error } = useQuery({
         queryKey: ['latestCreations', currentUser?.uid],
         queryFn: () => fetchLatestCreations(currentUser!.uid),
         enabled: !!currentUser,
@@ -392,6 +392,28 @@ function RecentCreations() {
                 </CardContent>
             </Card>
         )
+    }
+
+    if (error) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-2xl flex items-center">
+                        <Eye className="w-6 h-6 mr-3 text-primary" />
+                        Recent Creations
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Error Loading Recent Creations</AlertTitle>
+                        <AlertDescription>
+                          There was a problem fetching your recent work. This can happen if there's a temporary connection issue. Please try refreshing the page.
+                        </AlertDescription>
+                    </Alert>
+                </CardContent>
+            </Card>
+        );
     }
 
     const hasRecentItems = recentCreations && recentCreations.length > 0;
