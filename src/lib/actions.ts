@@ -1207,3 +1207,36 @@ export async function handleUpdateContentStatusAction(
     return { error: `Failed to update status: ${e.message || "Unknown error."}` };
   }
 }
+
+export async function handleSimulatedDeployAction(
+  prevState: FormState<{ success: boolean }>,
+  formData: FormData
+): Promise<FormState<{ success: boolean }>> {
+  const userId = formData.get('userId') as string;
+  const docPath = formData.get('docPath') as string;
+  const platform = formData.get('platform') as string;
+
+  if (!userId || !docPath || !platform) {
+    return { error: 'Missing required information to deploy content.' };
+  }
+
+  // Security check
+  if (!docPath.startsWith(`users/${userId}/`)) {
+    return { error: "Permission denied. You cannot modify this content." };
+  }
+
+  try {
+    // In a real scenario, you would retrieve the user's API token for 'platform'
+    // and make the API call here.
+    console.log(`[SIMULATED DEPLOY] Deploying content from path '${docPath}' to platform '${platform}' for user '${userId}'.`);
+    
+    // For now, we just update the status to 'deployed'.
+    const docRef = doc(db, docPath);
+    await setDoc(docRef, { status: 'deployed' }, { merge: true });
+
+    return { data: { success: true }, message: `Simulated deployment to ${platform} was successful.` };
+  } catch (e: any) {
+    console.error('Error in handleSimulatedDeployAction:', e);
+    return { error: `Failed to simulate deployment: ${e.message || "Unknown error."}` };
+  }
+}

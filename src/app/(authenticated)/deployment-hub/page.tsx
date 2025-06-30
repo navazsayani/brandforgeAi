@@ -16,7 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Send, Image as ImageIconLucide, MessageSquareText, Newspaper, Briefcase, AlertCircle, RefreshCw, Layers, CheckCircle, Loader2, Copy, Rocket, Facebook } from 'lucide-react';
 import type { GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign } from '@/types';
 import { cn } from '@/lib/utils';
-import { handleUpdateContentStatusAction, type FormState } from '@/lib/actions';
+import { handleUpdateContentStatusAction, handleSimulatedDeployAction, type FormState } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -170,6 +170,7 @@ export default function DeploymentHubPage() {
 function ContentCard({ item }: { item: DeployableContent }) {
     const { currentUser } = useAuth();
     const queryClient = useQueryClient();
+    const { toast } = useToast();
     const initialFormState: FormState<{ success: boolean }> = { data: undefined, error: undefined, message: undefined };
     const [state, formAction] = useActionState(handleUpdateContentStatusAction, initialFormState);
 
@@ -214,11 +215,15 @@ function ContentCard({ item }: { item: DeployableContent }) {
 
     useEffect(() => {
         if(state.data?.success) {
+            toast({ title: "Status Updated", description: state.message });
             queryClient.invalidateQueries({ queryKey: ['socialPosts', currentUser?.uid] });
             queryClient.invalidateQueries({ queryKey: ['blogPosts', currentUser?.uid] });
             queryClient.invalidateQueries({ queryKey: ['adCampaigns', currentUser?.uid] });
         }
-    }, [state.data?.success, queryClient, currentUser]);
+        if (state.error) {
+            toast({ title: "Update Failed", description: state.error, variant: "destructive" });
+        }
+    }, [state, queryClient, currentUser, toast]);
     
     const isDeployed = item.status === 'deployed';
 
@@ -257,32 +262,47 @@ function ContentCard({ item }: { item: DeployableContent }) {
     );
 }
 
-function StatusButton({ newStatus, text, icon, variant = "default" }: { newStatus: string, text: string, icon: React.ReactNode, variant?: "default" | "secondary" }) {
+function StatusButton({ newStatus, text, icon, variant = "default", ...props }: { newStatus: string, text: string, icon: React.ReactNode, variant?: "default" | "secondary", [key: string]: any }) {
     const { pending } = useFormStatus();
     return (
-        <Button type="submit" name="newStatus" value={newStatus} className="w-full h-auto whitespace-normal" variant={variant} disabled={pending}>
+        <Button type="submit" name="newStatus" value={newStatus} className="w-full h-auto whitespace-normal" variant={variant} disabled={pending} {...props}>
             {pending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : icon}
             {pending ? `Updating...` : text}
         </Button>
     );
 }
 
+function DeployPlatformButton({ platform, icon, children }: { platform: string; icon: React.ReactNode; children: React.ReactNode }) {
+    const { pending } = useFormStatus();
+    return (
+        <Button type="submit" name="platform" value={platform} className="w-full justify-start gap-3" variant="outline" disabled={pending}>
+             {pending ? <Loader2 className="w-5 h-5 animate-spin" /> : icon}
+             {children}
+        </Button>
+    )
+}
+
 
 function DeployDialog({ item }: { item: DeployableContent }) {
     const { currentUser } = useAuth();
     const queryClient = useQueryClient();
+    const { toast } = useToast();
     const [open, setOpen] = React.useState(false);
     const initialFormState: FormState<{ success: boolean }> = { data: undefined, error: undefined, message: undefined };
-    const [state, formAction] = useActionState(handleUpdateContentStatusAction, initialFormState);
+    const [state, formAction] = useActionState(handleSimulatedDeployAction, initialFormState);
 
     useEffect(() => {
         if (state.data?.success) {
             setOpen(false); // Close dialog on success
+            toast({ title: "Deployment Submitted", description: state.message });
             queryClient.invalidateQueries({ queryKey: ['socialPosts', currentUser?.uid] });
             queryClient.invalidateQueries({ queryKey: ['blogPosts', currentUser?.uid] });
             queryClient.invalidateQueries({ queryKey: ['adCampaigns', currentUser?.uid] });
         }
-    }, [state.data, setOpen, queryClient, currentUser]);
+        if (state.error) {
+            toast({ title: "Deployment Error", description: state.error, variant: "destructive" });
+        }
+    }, [state, setOpen, queryClient, currentUser, toast]);
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -299,28 +319,20 @@ function DeployDialog({ item }: { item: DeployableContent }) {
                         Choose where to deploy this content. This is a simulation and will not post to a live account yet.
                     </DialogDescription>
                 </DialogHeader>
-                 <div className="space-y-4 py-4">
-                    <p className="text-sm font-semibold">Automated Deployment (Coming Soon)</p>
+                 <form action={formAction} className="space-y-4 py-4">
+                    <input type="hidden" name="userId" value={currentUser?.uid || ''} />
+                    <input type="hidden" name="docPath" value={item.docPath} />
+                    <p className="text-sm font-semibold">Automated Deployment (Simulation)</p>
                     <div className="p-4 border rounded-lg bg-secondary/50 space-y-3">
-                        <Button className="w-full justify-start gap-3" variant="outline" disabled>
-                            <Facebook className="w-5 h-5 text-[#1877F2]" />
-                            Deploy to Meta (Facebook/Instagram)
-                        </Button>
-                        <Button className="w-full justify-start gap-3" variant="outline" disabled>
-                            <XIcon className="w-5 h-5" />
-                            Deploy to X (Twitter)
-                        </Button>
-                        <p className="text-xs text-muted-foreground">
-                            Please <Link href="/settings" className="underline hover:text-primary">connect your accounts in Settings</Link> to enable automated deployment.
-                        </p>
+                       <DeployPlatformButton platform="Meta" icon={<Facebook className="w-5 h-5 text-[#1877F2]" />}>
+                           Deploy to Meta (Facebook/Instagram)
+                       </DeployPlatformButton>
+                       <DeployPlatformButton platform="X" icon={<XIcon className="w-5 h-5" />}>
+                           Deploy to X (Twitter)
+                       </DeployPlatformButton>
                     </div>
-                 </div>
-                <DialogFooter className="flex-col sm:flex-col sm:space-x-0 gap-2">
-                    <form action={formAction}>
-                        <input type="hidden" name="userId" value={currentUser?.uid || ''} />
-                        <input type="hidden" name="docPath" value={item.docPath} />
-                        <StatusButton newStatus="deployed" text="Manually Mark as Deployed" icon={<CheckCircle className="w-4 h-4 mr-2" />} variant="outline" />
-                    </form>
+                 </form>
+                <DialogFooter>
                     <DialogClose asChild>
                         <Button type="button" variant="ghost">Cancel</Button>
                     </DialogClose>
