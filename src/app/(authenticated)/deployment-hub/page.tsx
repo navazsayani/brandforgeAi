@@ -13,13 +13,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Send, Image as ImageIconLucide, MessageSquareText, Newspaper, Briefcase, AlertCircle, RefreshCw, Layers, CheckCircle, Loader2, Copy } from 'lucide-react';
+import { Send, Image as ImageIconLucide, MessageSquareText, Newspaper, Briefcase, AlertCircle, RefreshCw, Layers, CheckCircle, Loader2, Copy, Rocket, Facebook } from 'lucide-react';
 import type { GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign } from '@/types';
 import { cn } from '@/lib/utils';
 import { handleUpdateContentStatusAction, type FormState } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import Link from 'next/link';
+
 
 // Combined type for all deployable content
 type DeployableContent =
@@ -48,6 +50,12 @@ const fetchAdCampaigns = async (userId: string): Promise<DeployableContent[]> =>
   const snapshot = await getDocs(q);
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), type: 'ad', docPath: doc.ref.path } as DeployableContent));
 };
+
+const XIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 16 16" fill="currentColor" {...props}>
+      <path d="M12.6.75h2.454l-5.36 6.142L16 15.25h-4.937l-3.867-5.07-4.425 5.07H.316l5.733-6.57L0 .75h5.063l3.495 4.633L12.601.75Zm-1.148 13.5h1.22l-6.5-8.875H6.05l6.4 8.875Z" />
+    </svg>
+);
 
 // Main page component
 export default function DeploymentHubPage() {
@@ -104,7 +112,7 @@ export default function DeploymentHubPage() {
           <div>
             <CardTitle className="text-3xl font-bold">Deployment Hub</CardTitle>
             <CardDescription className="text-lg">
-              Review, manage status, and (mock) deploy your persistent AI-generated content.
+              Review, manage status, and deploy your AI-generated content.
             </CardDescription>
           </div>
         </div>
@@ -116,7 +124,7 @@ export default function DeploymentHubPage() {
             key={opt.id}
             variant={activeFilter === opt.id ? 'default' : 'outline'}
             onClick={() => setActiveFilter(opt.id as any)}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 h-auto whitespace-normal"
           >
             <opt.icon className="w-4 h-4" />
             {opt.label}
@@ -213,9 +221,6 @@ function ContentCard({ item }: { item: DeployableContent }) {
     }, [state.data?.success, queryClient, currentUser]);
     
     const isDeployed = item.status === 'deployed';
-    const buttonProps = isDeployed 
-        ? { newStatus: 'draft', text: 'Revert to Draft', icon: <RefreshCw className="w-4 h-4 mr-2" />, variant: 'secondary' as const } 
-        : { newStatus: 'deployed', text: 'Mock Deploy', icon: <CheckCircle className="w-4 h-4 mr-2" />, variant: 'default' as const };
 
     return (
         <Card className="flex flex-col shadow-md hover:shadow-xl transition-shadow duration-200">
@@ -238,11 +243,15 @@ function ContentCard({ item }: { item: DeployableContent }) {
             </CardContent>
             <CardFooter className="pt-4 mt-auto border-t grid grid-cols-2 gap-2">
                 <ContentDetailsDialog item={item} />
-                <form action={formAction}>
-                    <input type="hidden" name="userId" value={currentUser?.uid || ''} />
-                    <input type="hidden" name="docPath" value={item.docPath} />
-                    <StatusButton {...buttonProps} />
-                </form>
+                 {isDeployed ? (
+                    <form action={formAction}>
+                        <input type="hidden" name="userId" value={currentUser?.uid || ''} />
+                        <input type="hidden" name="docPath" value={item.docPath} />
+                        <StatusButton newStatus="draft" text="Revert to Draft" icon={<RefreshCw className="w-4 h-4 mr-2" />} variant="secondary" />
+                    </form>
+                 ) : (
+                    <DeployDialog item={item} />
+                 )}
             </CardFooter>
         </Card>
     );
@@ -255,6 +264,69 @@ function StatusButton({ newStatus, text, icon, variant = "default" }: { newStatu
             {pending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : icon}
             {pending ? `Updating...` : text}
         </Button>
+    );
+}
+
+
+function DeployDialog({ item }: { item: DeployableContent }) {
+    const { currentUser } = useAuth();
+    const queryClient = useQueryClient();
+    const [open, setOpen] = React.useState(false);
+    const initialFormState: FormState<{ success: boolean }> = { data: undefined, error: undefined, message: undefined };
+    const [state, formAction] = useActionState(handleUpdateContentStatusAction, initialFormState);
+
+    useEffect(() => {
+        if (state.data?.success) {
+            setOpen(false); // Close dialog on success
+            queryClient.invalidateQueries({ queryKey: ['socialPosts', currentUser?.uid] });
+            queryClient.invalidateQueries({ queryKey: ['blogPosts', currentUser?.uid] });
+            queryClient.invalidateQueries({ queryKey: ['adCampaigns', currentUser?.uid] });
+        }
+    }, [state.data, setOpen, queryClient, currentUser]);
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button variant="default" className="w-full h-auto whitespace-normal">
+                    <Rocket className="w-4 h-4 mr-2"/>
+                    Deploy
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Deploy Content</DialogTitle>
+                    <DialogDescription>
+                        Choose where to deploy this content. This is a simulation and will not post to a live account yet.
+                    </DialogDescription>
+                </DialogHeader>
+                 <div className="space-y-4 py-4">
+                    <p className="text-sm font-semibold">Automated Deployment (Coming Soon)</p>
+                    <div className="p-4 border rounded-lg bg-secondary/50 space-y-3">
+                        <Button className="w-full justify-start gap-3" variant="outline" disabled>
+                            <Facebook className="w-5 h-5 text-[#1877F2]" />
+                            Deploy to Meta (Facebook/Instagram)
+                        </Button>
+                        <Button className="w-full justify-start gap-3" variant="outline" disabled>
+                            <XIcon className="w-5 h-5" />
+                            Deploy to X (Twitter)
+                        </Button>
+                        <p className="text-xs text-muted-foreground">
+                            Please <Link href="/settings" className="underline hover:text-primary">connect your accounts in Settings</Link> to enable automated deployment.
+                        </p>
+                    </div>
+                 </div>
+                <DialogFooter className="flex-col sm:flex-col sm:space-x-0 gap-2">
+                    <form action={formAction}>
+                        <input type="hidden" name="userId" value={currentUser?.uid || ''} />
+                        <input type="hidden" name="docPath" value={item.docPath} />
+                        <StatusButton newStatus="deployed" text="Manually Mark as Deployed" icon={<CheckCircle className="w-4 h-4 mr-2" />} variant="outline" />
+                    </form>
+                    <DialogClose asChild>
+                        <Button type="button" variant="ghost">Cancel</Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }
 
@@ -338,7 +410,7 @@ function ContentDetailsDialog({ item }: { item: DeployableContent }) {
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant="outline" className="w-full">View Details</Button>
+                <Button variant="outline" className="w-full h-auto whitespace-normal">View Details</Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
                 <DialogHeader>
