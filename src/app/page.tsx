@@ -22,7 +22,7 @@ const FeatureCard = ({ icon: Icon, title, description }: { icon: React.ElementTy
 
 const HowItWorksStep = ({ number, title, description }: { number: string, title: string, description: string }) => (
     <div className="relative flex flex-col items-center text-center group">
-         <div className="absolute top-6 left-1/2 w-full border-t-2 border-dashed border-border/70 -translate-x-full group-first:hidden md:block group-last:w-0"></div>
+         <div className="absolute top-6 left-1/2 w-full border-t-2 border-dashed border-border/70 -translate-x-full group-first:hidden md:block"></div>
         <div className="relative z-10 flex items-center justify-center w-14 h-14 rounded-full bg-primary text-primary-foreground text-2xl font-bold border-4 border-background shadow-lg">
             {number}
         </div>
@@ -51,7 +51,13 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b">
-          <div className="container-responsive flex items-center justify-end h-18">
+          <div className="container-responsive flex items-center justify-between h-18">
+             <Link
+              href="/"
+              className="flex items-center gap-3 text-foreground hover:text-primary transition-colors duration-200"
+            >
+              <h1 className="text-xl font-bold text-gradient-brand">BrandForge AI</h1>
+            </Link>
             <div className="flex items-center gap-2">
                  {user ? (
                     <Button asChild className="touch-target focus-enhanced">
@@ -85,13 +91,12 @@ export default function LandingPage() {
         <section className="pt-32 pb-20 text-center animate-fade-in">
           <div className="container-responsive">
             <div className="max-w-4xl mx-auto">
-                 <h1 className="text-5xl md:text-6xl font-extrabold text-gradient-brand mb-4">BrandForge AI</h1>
                  <div className="inline-block bg-primary/10 text-primary font-semibold px-4 py-1.5 rounded-full text-sm mb-6">
                     Your Complete AI Branding & Marketing Suite
                  </div>
-                <h2 className="text-4xl md:text-5xl font-bold text-balance">
+                <h1 className="text-4xl md:text-5xl font-bold text-balance">
                     Forge a Stronger Brand, Faster Than Ever
-                </h2>
+                </h1>
                 <p className="max-w-2xl mx-auto mt-6 text-lg md:text-xl text-muted-foreground text-balance">
                     Stop juggling tools. From logo ideas to deployed ad campaigns, BrandForge AI is your all-in-one platform to build, create, and grow your brand with the power of AI.
                 </p>
@@ -113,10 +118,10 @@ export default function LandingPage() {
             <div className="text-center max-w-2xl mx-auto">
               <h2 className="text-3xl md:text-4xl font-bold text-balance">One Platform, Infinite Possibilities</h2>
               <p className="mt-4 text-lg text-muted-foreground text-balance">
-                Everything you need to streamline your brand&apos;s content and marketing workflow.
+                Everything you need to streamline your brand's content and marketing workflow.
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 mt-12 max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 sm:gap-8 mt-12 max-w-5xl mx-auto">
               <FeatureCard 
                 icon={UserCircle}
                 title="AI Brand Identity"
@@ -161,7 +166,7 @@ export default function LandingPage() {
         {/* Final CTA Section */}
         <section className="section-spacing bg-gradient-to-tr from-primary/90 to-accent/90 text-primary-foreground">
              <div className="container-responsive text-center">
-                 <h2 className="text-3xl md:text-4xl font-bold text-balance">Ready to Forge Your Brand&apos;s Future?</h2>
+                 <h2 className="text-3xl md:text-4xl font-bold text-balance">Ready to Forge Your Brand's Future?</h2>
                  <p className="max-w-2xl mx-auto mt-4 text-lg text-primary-foreground/80 text-balance">
                      Join hundreds of creators and businesses building stronger brands with less effort.
                  </p>
