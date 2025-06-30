@@ -63,7 +63,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Button>
       ))}
        {isAdmin && (
-        <>
          <Button
             asChild
             variant={pathname.startsWith('/admin') ? 'secondary' : 'ghost'}
@@ -79,23 +78,22 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <span className="text-break font-medium">Admin Dashboard</span>
             </Link>
          </Button>
-         <Button
-            asChild
-            variant={pathname === '/settings' ? 'secondary' : 'ghost'}
-            className={cn(
-              "sidebar-nav-item",
-              "justify-start",
-              "gap-0",
-              pathname === '/settings' && "active shadow-md"
-            )}
-          >
-            <Link href="/settings">
-                <Settings className="w-5 h-5 mr-4 flex-shrink-0" />
-                <span className="text-break font-medium">Settings</span>
-            </Link>
-         </Button>
-        </>
        )}
+       <Button
+          asChild
+          variant={pathname === '/settings' ? 'secondary' : 'ghost'}
+          className={cn(
+            "sidebar-nav-item",
+            "justify-start",
+            "gap-0",
+            pathname === '/settings' && "active shadow-md"
+          )}
+        >
+          <Link href="/settings">
+              <Settings className="w-5 h-5 mr-4 flex-shrink-0" />
+              <span className="text-break font-medium">Settings</span>
+          </Link>
+       </Button>
     </nav>
   );
 
@@ -208,7 +206,6 @@ export function AppShell({ children }: { children: ReactNode }) {
                         </Button>
                       ))}
                       {isAdmin && (
-                        <>
                          <Button
                             asChild
                             variant={pathname.startsWith('/admin') ? 'secondary' : 'ghost'}
@@ -222,21 +219,20 @@ export function AppShell({ children }: { children: ReactNode }) {
                               <span className="text-break font-medium">Admin</span>
                             </Link>
                           </Button>
-                          <Button
-                            asChild
-                            variant={pathname === '/settings' ? 'secondary' : 'ghost'}
-                            className={cn(
-                              "sidebar-nav-item", "justify-start", "gap-0",
-                              pathname === '/settings' && "active shadow-md"
-                            )}
-                          >
-                            <Link href="/settings">
-                              <Settings className="w-5 h-5 mr-4 flex-shrink-0" />
-                              <span className="text-break font-medium">Settings</span>
-                            </Link>
-                          </Button>
-                        </>
                       )}
+                      <Button
+                        asChild
+                        variant={pathname === '/settings' ? 'secondary' : 'ghost'}
+                        className={cn(
+                          "sidebar-nav-item", "justify-start", "gap-0",
+                          pathname === '/settings' && "active shadow-md"
+                        )}
+                      >
+                        <Link href="/settings">
+                          <Settings className="w-5 h-5 mr-4 flex-shrink-0" />
+                          <span className="text-break font-medium">Settings</span>
+                        </Link>
+                      </Button>
                     </nav>
                   )}
                   <div className={cn("flex-shrink-0 p-6 border-t border-sidebar-border", !user && "mt-auto")}>
