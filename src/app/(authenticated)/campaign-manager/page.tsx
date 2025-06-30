@@ -90,6 +90,9 @@ export default function CampaignManagerPage() {
   const [generatedCampaign, setGeneratedCampaign] = useState<GenerateAdCampaignOutput | null>(null);
   const [isPopulating, setIsPopulating] = useState(false);
   const [quickStartRequest, setQuickStartRequest] = useState("");
+
+  const [currencySymbol, setCurrencySymbol] = useState('$');
+  const [isLoadingGeo, setIsLoadingGeo] = useState(true);
   
   const form = useForm<AdCampaignFormData>({
       resolver: zodResolver(adCampaignFormSchema),
@@ -106,6 +109,24 @@ export default function CampaignManagerPage() {
           callToAction: "",
       }
   });
+
+  useEffect(() => {
+    setIsLoadingGeo(true);
+    fetch('https://www.cloudflare.com/cdn-cgi/trace')
+        .then(res => res.text())
+        .then(data => {
+            const lines = data.split('\n');
+            const locLine = lines.find(line => line.startsWith('loc='));
+            const country = locLine ? locLine.split('=')[1] : 'US'; // Default to US
+            setCurrencySymbol(country === 'IN' ? '₹' : '$');
+        })
+        .catch(() => {
+            setCurrencySymbol('$'); // Fallback to $ on any error
+        })
+        .finally(() => {
+            setIsLoadingGeo(false);
+        });
+  }, []);
 
   // --- Start: Fetch persisted content for inspiration dropdown ---
   const { data: socialPosts, isLoading: isLoadingSocial } = useQuery({
@@ -313,7 +334,20 @@ export default function CampaignManagerPage() {
                 <FormItem><FormLabel className="flex items-center mb-2 text-base"><Target className="w-5 h-5 mr-2 text-primary" />Target Keywords</FormLabel><FormControl><Input {...field} placeholder="Comma-separated keywords (e.g., digital marketing, AI tools)" /></FormControl><FormMessage /></FormItem>
               )}/>
               <FormField control={form.control} name="budget" render={({ field }) => (
-                <FormItem><FormLabel className="flex items-center mb-2 text-base"><DollarSign className="w-5 h-5 mr-2 text-primary" />Budget Context ($)</FormLabel><FormControl><Input type="number" {...field} placeholder="E.g., 500 (used for AI context)" /></FormControl><FormMessage /></FormItem>
+                <FormItem>
+                    <FormLabel className="flex items-center mb-2 text-base">
+                        <DollarSign className="w-5 h-5 mr-2 text-primary" />
+                        Budget Context ({isLoadingGeo ? <Loader2 className="h-4 w-4 animate-spin" /> : currencySymbol})
+                    </FormLabel>
+                    <FormControl>
+                        <Input 
+                            type="number" 
+                            {...field} 
+                            placeholder={`E.g., ${currencySymbol === '₹' ? '40000' : '500'} (used for AI context)`} 
+                        />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
               )}/>
               <FormField control={form.control} name="platforms" render={() => (
                 <FormItem><FormLabel className="flex items-center mb-3 text-base"><CheckSquare className="w-5 h-5 mr-2 text-primary" />Platforms</FormLabel>
