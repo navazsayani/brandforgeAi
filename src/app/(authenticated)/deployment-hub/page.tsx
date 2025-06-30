@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Send, Image as ImageIconLucide, MessageSquareText, Newspaper, Briefcase, AlertCircle, RefreshCw, Layers, CheckCircle, Loader2, Copy, Rocket, Facebook, Edit } from 'lucide-react';
+import { Send, Image as ImageIconLucide, MessageSquareText, Newspaper, Briefcase, AlertCircle, RefreshCw, Layers, CheckCircle, Loader2, Copy, Rocket, Facebook, Edit, Download } from 'lucide-react';
 import type { GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign } from '@/types';
 import { cn } from '@/lib/utils';
 import { handleUpdateContentStatusAction, handleSimulatedDeployAction, handleUpdateContentAction, type FormState } from '@/lib/actions';
@@ -92,7 +92,7 @@ export default function DeploymentHubPage() {
     return combined.sort((a, b) => {
       const dateA = a.createdAt instanceof Timestamp ? a.createdAt.toDate() : new Date(0);
       const dateB = b.createdAt instanceof Timestamp ? b.createdAt.toDate() : new Date(0);
-      return dateB.getTime() - a.getTime();
+      return dateB.getTime() - dateA.getTime();
     });
   }, [socialPosts, blogPosts, adCampaigns]);
 
@@ -137,7 +137,7 @@ export default function DeploymentHubPage() {
       </div>
 
       {isLoading && (
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-64 rounded-lg" />)}
         </div>
       )}
@@ -160,7 +160,7 @@ export default function DeploymentHubPage() {
       )}
 
       {!isLoading && !fetchError && filteredContent.length > 0 && (
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {filteredContent.map(item => (
             <ContentCard key={item.docPath} item={item} />
           ))}
@@ -250,7 +250,7 @@ function ContentCard({ item }: { item: DeployableContent }) {
                 </div>
                 {renderContentPreview()}
             </CardContent>
-            <CardFooter className={cn("pt-4 mt-auto border-t grid gap-2 grid-cols-1", isDeployed ? "sm:grid-cols-2" : "sm:grid-cols-3")}>
+            <CardFooter className={cn("pt-4 mt-auto border-t grid gap-2 sm:grid-cols-1", isDeployed ? "sm:grid-cols-2" : "sm:grid-cols-3")}>
                 <ContentDetailsDialog item={item} />
                  {isDeployed ? (
                     <form action={formAction} className="sm:col-span-1">
@@ -490,14 +490,37 @@ function ContentDetailsDialog({ item }: { item: DeployableContent }) {
     let details: React.ReactNode;
     let copyText: string = '';
 
+    const downloadImage = (imageUrl: string, filename = "brandforge-image.png") => {
+        const link = document.createElement('a');
+        link.href = imageUrl;
+        link.download = filename;
+        if (!imageUrl.startsWith('data:')) {
+            link.target = '_blank';
+        }
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     switch (item.type) {
         case 'social':
             copyText = `Caption:\n${item.caption}\n\nHashtags:\n${item.hashtags}`;
             details = (
                 <div className="space-y-4">
                     {item.imageSrc && (
-                        <div className="relative w-full aspect-video border rounded-md bg-muted overflow-hidden">
-                            <NextImage src={item.imageSrc} alt="Social post image" fill style={{objectFit:'contain'}} data-ai-hint="social media"/>
+                        <div>
+                             <div className="relative w-full aspect-video border rounded-md bg-muted overflow-hidden">
+                                <NextImage src={item.imageSrc} alt="Social post image" fill style={{objectFit:'contain'}} data-ai-hint="social media"/>
+                            </div>
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="mt-2"
+                                onClick={() => downloadImage(item.imageSrc!, `social-post-${item.id}.png`)}
+                            >
+                                <Download className="w-4 h-4 mr-2" />
+                                Download Image
+                            </Button>
                         </div>
                     )}
                     <DetailItem label="Caption" isBlock>{item.caption}</DetailItem>
