@@ -344,7 +344,7 @@ export default function BrandProfilePage() {
         reject(new Error("User context unclear"));
         return;
       }
-      const filePath = `brand_example_images/${effectiveUserIdForStorage}/${Date.now()}_${file.name}`;
+      const filePath = `users/${effectiveUserIdForStorage}/brand_example_images/${Date.now()}_${file.name}`;
       const imageStorageRef = storageRef(storage, filePath);
       const uploadTask = uploadBytesResumable(imageStorageRef, file);
 
@@ -476,7 +476,7 @@ export default function BrandProfilePage() {
 
     if (generatedLogoPreview) {
       try {
-        const logoFilePath = `brand_logos/${userIdToSaveFor}/logo_${Date.now()}.png`;
+        const logoFilePath = `users/${userIdToSaveFor}/brand_logos/logo_${Date.now()}.png`;
         const logoStorageRef = storageRef(storage, logoFilePath);
         progressInterval = setInterval(() => setLogoUploadProgress(prev => Math.min(prev + 10, 90)), 100);
         const snapshot = await uploadString(logoStorageRef, generatedLogoPreview, 'data_url');
