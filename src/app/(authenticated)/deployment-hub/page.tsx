@@ -28,6 +28,7 @@ import { SubmitButton } from '@/components/SubmitButton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { format } from 'date-fns';
 
 
 // Combined type for all deployable content
@@ -257,11 +258,11 @@ function ContentCard({ item }: { item: DeployableContent }) {
                         {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
                     </Badge>
                     <span className="text-muted-foreground/50">|</span>
-                    <span>{item.createdAt ? new Date(item.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</span>
+                    <span>{item.createdAt ? format(new Date(item.createdAt.seconds * 1000), 'dd/MM/yyyy') : 'N/A'}</span>
                 </div>
                 {renderContentPreview()}
             </CardContent>
-            <CardFooter className={cn("pt-4 mt-auto border-t grid gap-2 md:grid-cols-3", isDeployed && "md:grid-cols-2")}>
+            <CardFooter className={cn("pt-4 mt-auto border-t grid gap-2 grid-cols-1 sm:grid-cols-3", isDeployed && "sm:grid-cols-2")}>
                 <ContentDetailsDialog item={item} />
                  {isDeployed ? (
                     <form action={formAction} className="w-full">
@@ -643,7 +644,7 @@ function ContentDetailsDialog({ item }: { item: DeployableContent }) {
                         <div>
                             <DialogTitle>{typeName} Details</DialogTitle>
                             <DialogDescription>
-                                Created on {item.createdAt ? new Date(item.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+                                Created on {item.createdAt ? format(new Date(item.createdAt.seconds * 1000), 'dd/MM/yyyy') : 'N/A'}
                             </DialogDescription>
                         </div>
                         <CopyButton textToCopy={copyText} />

@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import type { BrandData, SavedGeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { getPaymentMode } from '@/lib/actions';
+import { format } from 'date-fns';
 
 type RecentItem = {
   id: string;
@@ -469,7 +470,7 @@ function RecentItemCard({ item }: { item: RecentItem }) {
                         <>
                             <span className="text-muted-foreground/50">|</span>
                             <span className="text-xs">
-                                {item.createdAt.toDate().toLocaleDateString()}
+                                {format(item.createdAt.toDate(), 'dd/MM/yyyy')}
                             </span>
                         </>
                     )}
@@ -518,5 +519,3 @@ function RecentItemCard({ item }: { item: RecentItem }) {
         </Card>
     );
 }
-
-    
