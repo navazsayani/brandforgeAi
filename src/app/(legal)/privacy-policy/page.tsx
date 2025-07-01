@@ -1,7 +1,5 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Shield } from 'lucide-react';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -20,14 +18,7 @@ export default function PrivacyPolicyPage() {
         <CardDescription>Last Updated: {new Date().toLocaleDateString()}</CardDescription>
       </CardHeader>
       <CardContent className="prose prose-lg max-w-none prose-headings:font-bold prose-a:text-primary hover:prose-a:underline">
-        <Alert variant="destructive" className="mb-8">
-            <Shield className="h-4 w-4" />
-            <AlertTitle>Legal Disclaimer</AlertTitle>
-            <AlertDescription>
-                This is a template and not legal advice. You must consult with a qualified legal professional to customize this policy for your specific needs and jurisdiction.
-            </AlertDescription>
-        </Alert>
-
+        
         <h2>1. Introduction</h2>
         <p>
             Welcome to BrandForge AI (&quot;we,&quot; &quot;our,&quot; &quot;us&quot;). We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our application.

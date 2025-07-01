@@ -1,7 +1,5 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { FileText } from 'lucide-react';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -21,14 +19,7 @@ export default function TermsOfServicePage() {
         <CardDescription>Last Updated: {new Date().toLocaleDateString()}</CardDescription>
       </CardHeader>
       <CardContent className="prose prose-lg max-w-none prose-headings:font-bold prose-a:text-primary hover:prose-a:underline">
-        <Alert variant="destructive" className="mb-8">
-            <FileText className="h-4 w-4" />
-            <AlertTitle>Legal Disclaimer</AlertTitle>
-            <AlertDescription>
-                This is a template and not legal advice. You must consult with a qualified legal professional to customize these terms for your specific needs and jurisdiction.
-            </AlertDescription>
-        </Alert>
-
+        
         <h2>1. Agreement to Terms</h2>
         <p>
             By using BrandForge AI (the &quot;Application&quot;), you agree to be bound by these Terms of Service. If you do not agree to these terms, you may not use the Application.
