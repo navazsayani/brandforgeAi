@@ -86,6 +86,7 @@ const generateBlogContentPrompt = ai.definePrompt({
     - **Match the Tone:** Maintain the specified 'Desired Tone/Style' throughout the entire article.
     - **Audience-Centric:** Write in a way that is clear, engaging, and valuable for the specified 'Target Audience'.
     - **Format Correctly:** Structure the content to match the 'Article Format' (e.g., use numbered lists for a listicle, clear steps for a how-to guide).
+    - **Use Markdown:** The entire output for the 'content' field **MUST** be in GitHub-flavored Markdown. Use headings (\`##\`, \`###\`), bold (\`**text**\`), italics (\`*text*\`), and lists (\`- item\`) for formatting. **DO NOT use HTML tags (e.g., \`<h2>\`, \`<p>\`).**
 3.  **SEO & Keywords**: Naturally integrate the 'Keywords for SEO' into the content. Use insights from website content (if provided) to improve relevance.
 4.  **Tags**: Generate 3-5 relevant, comma-separated tags. These tags should be SEO-friendly, reflect the main topics, keywords, and be highly relevant to the brand's industry.
 
