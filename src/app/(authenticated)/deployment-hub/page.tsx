@@ -129,7 +129,7 @@ export default function DeploymentHubPage() {
         {filterOptions.map(opt => (
           <Button
             key={opt.id}
-            variant={activeFilter === opt.id ? 'default' : 'outline'}
+            variant={activeFilter === opt.id ? 'default' : 'secondary'}
             onClick={() => setActiveFilter(opt.id as any)}
             className="flex items-center gap-2 h-auto whitespace-normal"
           >
@@ -256,7 +256,7 @@ function ContentCard({ item }: { item: DeployableContent }) {
                 </div>
                 {renderContentPreview()}
             </CardContent>
-            <CardFooter className={cn("pt-4 mt-auto border-t grid gap-2", isDeployed ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-3")}>
+            <CardFooter className={cn("pt-4 mt-auto border-t grid gap-2", isDeployed ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1 md:grid-cols-3")}>
                 <ContentDetailsDialog item={item} />
                  {isDeployed ? (
                     <form action={formAction} className="w-full">
@@ -445,20 +445,18 @@ function EditContentDialog({ item }: { item: DeployableContent }) {
                     <Edit className="w-4 h-4 mr-2" /> Edit
                 </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-                <DialogHeader>
+            <DialogContent className="max-w-2xl flex flex-col max-h-[90vh]">
+                <DialogHeader className="flex-shrink-0">
                     <DialogTitle>Edit Content</DialogTitle>
                     <DialogDescription>Make changes to your generated content before deploying.</DialogDescription>
                 </DialogHeader>
-                <form id={formId} action={updateFormAction} className="py-4 space-y-4">
-                  <ScrollArea className="max-h-[60vh] pr-4 -mr-4">
+                <form id={formId} action={updateFormAction} className="py-4 space-y-4 flex-1 overflow-y-auto">
                       <input type="hidden" name="userId" value={currentUser?.uid || ''} />
                       <input type="hidden" name="docPath" value={item.docPath} />
                       <input type="hidden" name="contentType" value={item.type} />
                       {renderEditForm()}
-                  </ScrollArea>
                 </form>
-                <DialogFooter>
+                <DialogFooter className="flex-shrink-0">
                     <DialogClose asChild><Button type="button" variant="ghost">Cancel</Button></DialogClose>
                     <SubmitButton form={formId} loadingText="Saving...">Save Changes</SubmitButton>
                 </DialogFooter>
