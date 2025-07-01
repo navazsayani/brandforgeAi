@@ -35,6 +35,7 @@ import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; 
 import { industries, imageStylePresets, freepikImagen3EffectColors, freepikImagen3EffectLightnings, freepikImagen3EffectFramings, freepikImagen3AspectRatios, generalAspectRatios, blogTones, freepikValidStyles, socialPostGoals, socialTones, blogArticleStyles, DEFAULT_PLANS_CONFIG } from '@/lib/constants';
 import Link from 'next/link';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // --- START: Image Grid Fix Components ---
 /**
@@ -2228,17 +2229,26 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                             </>
                         )}
                         <div className="flex flex-col sm:flex-row-reverse gap-2 pt-2 sm:pt-1">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={handleGenerateBlogOutline}
-                                disabled={isGeneratingOutline}
-                                className="w-full sm:w-auto"
-                            >
-                                {isGeneratingOutline ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-                                AI Generate
-                            </Button>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={handleGenerateBlogOutline}
+                                      disabled={isGeneratingOutline}
+                                      className="w-full sm:w-auto"
+                                  >
+                                      {isGeneratingOutline ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+                                      Generate New Outline
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Generates a new outline based on the fields above. This will overwrite existing content.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                             <Button
                                 type="button"
                                 variant="ghost"
@@ -2347,4 +2357,5 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     </div>
   );
 }
+
 
