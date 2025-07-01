@@ -278,7 +278,7 @@ function ContentCard({ item }: { item: DeployableContent }) {
 function StatusButton({ newStatus, text, icon, variant = "default", ...props }: { newStatus: string, text: string, icon: React.ReactNode, variant?: "default" | "secondary", [key: string]: any }) {
     const { pending } = useFormStatus();
     return (
-        <Button type="submit" name="newStatus" value={newStatus} className="w-full h-auto whitespace-normal" variant={variant} disabled={pending} {...props}>
+        <Button type="submit" name="newStatus" value={newStatus} className="w-full h-full" variant={variant} disabled={pending} {...props}>
             {pending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : icon}
             {pending ? `Updating...` : text}
         </Button>
@@ -320,7 +320,7 @@ function DeployDialog({ item }: { item: DeployableContent }) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="default" className="w-full h-auto whitespace-normal">
+                <Button variant="default" className="w-full h-full">
                     <Rocket className="w-4 h-4 mr-2"/>
                     Deploy
                 </Button>
@@ -441,7 +441,7 @@ function EditContentDialog({ item }: { item: DeployableContent }) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="secondary" className="w-full h-auto whitespace-normal">
+                <Button variant="secondary" className="w-full h-full">
                     <Edit className="w-4 h-4 mr-2" /> Edit
                 </Button>
             </DialogTrigger>
@@ -632,7 +632,7 @@ function ContentDetailsDialog({ item }: { item: DeployableContent }) {
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant="outline" className="w-full h-auto whitespace-normal">View Details</Button>
+                <Button variant="outline" className="w-full h-full">View Details</Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
                 <DialogHeader>
