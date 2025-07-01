@@ -2242,11 +2242,14 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                 onChange={(e) => setGeneratedBlogOutline(e.target.value)}
                             />
                         ) : (
-                            <div className="p-4 border rounded-md bg-muted/50 max-w-none min-h-[168px] max-h-[40rem] overflow-y-auto">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]} className="prose prose-sm dark:prose-invert max-w-none">
-                                    {generatedBlogOutline || "No outline generated yet. Click 'AI Generate' or switch to Edit mode to write one."}
-                                </ReactMarkdown>
-                            </div>
+                            <>
+                              <input type="hidden" name="blogOutline" value={generatedBlogOutline} />
+                              <div className="p-4 border rounded-md bg-muted/50 max-w-none min-h-[168px] max-h-[40rem] overflow-y-auto">
+                                  <ReactMarkdown remarkPlugins={[remarkGfm]} className="prose prose-sm dark:prose-invert max-w-none">
+                                      {generatedBlogOutline || "No outline generated yet. Click 'AI Generate' or switch to Edit mode to write one."}
+                                  </ReactMarkdown>
+                              </div>
+                            </>
                         )}
                         <p className="text-sm text-muted-foreground">AI will strictly follow this outline to generate the blog post.</p>
                       </div>
