@@ -252,10 +252,12 @@ function ContentCard({ item }: { item: DeployableContent }) {
             </CardHeader>
             <CardContent className="flex-grow space-y-3">
                 <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                    <Icon className="w-4 h-4" />
-                    <span>{item.type.charAt(0).toUpperCase() + item.type.slice(1)}</span>
+                    <Badge variant="outline">
+                        <Icon className="w-3 h-3 mr-1" />
+                        {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
+                    </Badge>
                     <span className="text-muted-foreground/50">|</span>
-                    <span>{item.createdAt ? new Date(item.createdAt.seconds * 1000).toLocaleDateString() : 'No date'}</span>
+                    <span>{item.createdAt ? new Date(item.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</span>
                 </div>
                 {renderContentPreview()}
             </CardContent>
