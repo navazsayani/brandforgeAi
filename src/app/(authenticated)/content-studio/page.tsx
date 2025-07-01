@@ -2109,7 +2109,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                     placeholder="e.g., a how-to guide for beginners on using our new coffee machine"
                                     rows={2}
                                 />
-                                <SubmitButton className="w-full sm:w-auto" loadingText="Populating..." disabled={isPopulatingBlogForm || !quickStartBlogRequest}>
+                                <SubmitButton className="w-full sm:w-auto h-auto whitespace-normal" loadingText="Populating..." disabled={isPopulatingBlogForm || !quickStartBlogRequest}>
                                     Populate Blog Form & Outline
                                 </SubmitButton>
                             </form>
@@ -2207,31 +2207,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                       </div>
 
                       <div className="space-y-2">
-                        <div className="flex justify-between items-center mb-1">
-                            <Label htmlFor="blogOutline" className="flex items-center"><ListOrdered className="w-4 h-4 mr-2 text-primary" />Blog Outline</Label>
-                            <div className="flex items-center gap-2">
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setIsEditingOutline(prev => !prev)}
-                                    disabled={!generatedBlogOutline.trim()}
-                                >
-                                    {isEditingOutline ? <Eye className="mr-2 h-4 w-4" /> : <Edit className="mr-2 h-4 w-4" />}
-                                    {isEditingOutline ? 'Preview' : 'Edit'}
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={handleGenerateBlogOutline}
-                                    disabled={isGeneratingOutline}
-                                >
-                                    {isGeneratingOutline ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-                                    AI Generate
-                                </Button>
-                            </div>
-                        </div>
+                        <Label htmlFor="blogOutline" className="flex items-center"><ListOrdered className="w-4 h-4 mr-2 text-primary" />Blog Outline</Label>
                         {isEditingOutline ? (
                             <Textarea
                                 id="blogOutline"
@@ -2251,6 +2227,30 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                               </div>
                             </>
                         )}
+                        <div className="flex flex-col sm:flex-row-reverse gap-2 pt-2 sm:pt-1">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={handleGenerateBlogOutline}
+                                disabled={isGeneratingOutline}
+                                className="w-full sm:w-auto"
+                            >
+                                {isGeneratingOutline ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+                                AI Generate
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setIsEditingOutline(prev => !prev)}
+                                disabled={!generatedBlogOutline.trim()}
+                                className="w-full sm:w-auto"
+                            >
+                                {isEditingOutline ? <Eye className="mr-2 h-4 w-4" /> : <Edit className="mr-2 h-4 w-4" />}
+                                {isEditingOutline ? 'Preview' : 'Edit'}
+                            </Button>
+                        </div>
                         <p className="text-sm text-muted-foreground">AI will strictly follow this outline to generate the blog post.</p>
                       </div>
 
@@ -2347,3 +2347,4 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     </div>
   );
 }
+
