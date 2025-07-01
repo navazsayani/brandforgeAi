@@ -207,9 +207,12 @@ function ContentCard({ item }: { item: DeployableContent }) {
 
     const getTitle = () => {
         switch(item.type) {
-            case 'social': return `Social: ${item.tone}`;
-            case 'blog': return item.title;
-            case 'ad': return `Ad: ${item.brandName || "Campaign"}`;
+            case 'social':
+                return item.caption ? item.caption.substring(0, 50) + (item.caption.length > 50 ? '...' : '') : "Untitled Social Post";
+            case 'blog':
+                return item.title || "Untitled Blog Post";
+            case 'ad':
+                return item.campaignConcept || "Ad Campaign Concept";
         }
     }
 
@@ -256,7 +259,7 @@ function ContentCard({ item }: { item: DeployableContent }) {
                 </div>
                 {renderContentPreview()}
             </CardContent>
-            <CardFooter className={cn("pt-4 mt-auto border-t grid gap-2", isDeployed ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1 md:grid-cols-3")}>
+            <CardFooter className={cn("pt-4 mt-auto border-t grid gap-2 md:grid-cols-3", isDeployed && "md:grid-cols-2")}>
                 <ContentDetailsDialog item={item} />
                  {isDeployed ? (
                     <form action={formAction} className="w-full">
