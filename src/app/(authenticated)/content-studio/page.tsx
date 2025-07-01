@@ -330,6 +330,10 @@ export default function ContentStudioPage() {
   // Blog form fields state
   const [blogArticleStyle, setBlogArticleStyle] = useState<string>(blogArticleStyles[0].value);
   const [blogTargetAudience, setBlogTargetAudience] = useState<string>("");
+  const [blogBrandName, setBlogBrandName] = useState<string>("");
+  const [blogBrandDescription, setBlogBrandDescription] = useState<string>("");
+  const [blogKeywords, setBlogKeywords] = useState<string>("");
+  const [blogWebsiteUrl, setBlogWebsiteUrl] = useState<string>("");
   
   // State for config fetched from server
   const [freepikEnabled, setFreepikEnabled] = useState(false);
@@ -391,16 +395,24 @@ export default function ContentStudioPage() {
 
   useEffect(() => {
     if (brandData) {
+        // Sync Image Tab fields
         setImageGenBrandDescription(brandData.brandDescription || "");
-        const industryValue = brandData.industry && brandData.industry.trim() !== "" ? brandData.industry : "_none_";
-        setSelectedBlogIndustry(industryValue); 
         setCustomStyleNotesInput(brandData.imageStyleNotes || "");
-
         if (brandData.exampleImages && brandData.exampleImages.length > 0) {
             if (selectedProfileImageIndexForGen === null) setSelectedProfileImageIndexForGen(0);
         } else {
             setSelectedProfileImageIndexForGen(null);
         }
+        
+        // Sync Blog Tab fields
+        setBlogBrandName(brandData.brandName || "");
+        setBlogBrandDescription(brandData.brandDescription || "");
+        setBlogKeywords(brandData.targetKeywords || "");
+        setBlogWebsiteUrl(brandData.websiteUrl || "");
+        const industryValue = brandData.industry && brandData.industry.trim() !== "" ? brandData.industry : "_none_";
+        setSelectedBlogIndustry(industryValue);
+
+        // Logic for social post image selection
         if (useImageForSocialPost && socialImageChoice === null) {
             if (sessionLastImageGenerationResult?.generatedImages?.some(url => url?.startsWith('data:') || url?.startsWith('image_url:'))) {
                 setSocialImageChoice('generated');
@@ -1095,11 +1107,11 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
   const handleGenerateBlogOutline = () => {
     setIsGeneratingOutline(true);
     const formData = new FormData();
-    formData.append('brandName', (document.getElementById('blogBrandName') as HTMLInputElement)?.value || brandData?.brandName || "");
-    formData.append('blogBrandDescription', (document.getElementById('blogBrandDescription') as HTMLTextAreaElement)?.value || brandData?.brandDescription || "");
+    formData.append('brandName', blogBrandName);
+    formData.append('blogBrandDescription', blogBrandDescription);
     formData.append('industry', selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || "" );
-    formData.append('blogKeywords', (document.getElementById('blogKeywords') as HTMLInputElement)?.value || brandData?.targetKeywords || "");
-    formData.append('blogWebsiteUrl', (document.getElementById('blogWebsiteUrl') as HTMLInputElement)?.value || brandData?.websiteUrl || "");
+    formData.append('blogKeywords', blogKeywords);
+    formData.append('blogWebsiteUrl', blogWebsiteUrl);
     formData.append('articleStyle', blogArticleStyle);
     formData.append('targetAudience', blogTargetAudience);
 
@@ -1149,8 +1161,8 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
         }
         setIsPopulatingBlogForm(true);
         const formData = new FormData(event.currentTarget);
-        formData.append("currentBrandDescription", (document.getElementById('blogBrandDescription') as HTMLTextAreaElement)?.value || brandData?.brandDescription || "");
-        formData.append("currentKeywords", (document.getElementById('blogKeywords') as HTMLInputElement)?.value || brandData?.targetKeywords || "");
+        formData.append("currentBrandDescription", blogBrandDescription);
+        formData.append("currentKeywords", blogKeywords);
         startTransition(() => {
             populateBlogFormAction(formData);
         });
@@ -2119,7 +2131,8 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                           <Input
                           id="blogBrandName"
                           name="brandName"
-                          defaultValue={brandData?.brandName || ""}
+                          value={blogBrandName}
+                          onChange={(e) => setBlogBrandName(e.target.value)}
                           placeholder="Your brand's name"
                           />
                       </div>
@@ -2128,7 +2141,8 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                           <Textarea
                           id="blogBrandDescription"
                           name="blogBrandDescription"
-                          defaultValue={brandData?.brandDescription || ""}
+                          value={blogBrandDescription}
+                          onChange={(e) => setBlogBrandDescription(e.target.value)}
                           placeholder="Detailed brand description"
                           rows={3}
                           />
@@ -2139,7 +2153,8 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                           <Input
                           id="blogKeywords"
                           name="blogKeywords"
-                          defaultValue={brandData?.targetKeywords || ""}
+                          value={blogKeywords}
+                          onChange={(e) => setBlogKeywords(e.target.value)}
                           placeholder="Comma-separated keywords (e.g., AI, marketing, branding)"
                           />
                       </div>
@@ -2158,7 +2173,8 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                           <Input
                               id="blogWebsiteUrl"
                               name="blogWebsiteUrl"
-                              defaultValue={brandData?.websiteUrl || ""}
+                              value={blogWebsiteUrl}
+                              onChange={(e) => setBlogWebsiteUrl(e.target.value)}
                               placeholder="https://www.example.com"
                           />
                       </div>
@@ -2328,5 +2344,3 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     </div>
   );
 }
-
-
