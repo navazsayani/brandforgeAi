@@ -70,9 +70,30 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        name: 'BrandForge AI',
+        url: siteUrl,
+        logo: 'https://placehold.co/250x250.png',
+      },
+      {
+        '@type': 'WebSite',
+        name: 'BrandForge AI',
+        url: siteUrl,
+      },
+    ],
+  };
+
   return (
     <html lang="en">
       <body className={`${sora.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
         <Providers>
           {children}
         </Providers>
