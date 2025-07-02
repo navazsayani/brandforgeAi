@@ -279,7 +279,12 @@ export default function ContentStudioPage() {
   const [isGeneratingOutline, setIsGeneratingOutline] = useState<boolean>(false);
   const [isEditingOutline, setIsEditingOutline] = useState(true);
 
+  // --- START: Refactored Image Selection State ---
+  const [useExampleImageForGen, setUseExampleImageForGen] = useState<boolean>(true);
   const [selectedProfileImageIndexForGen, setSelectedProfileImageIndexForGen] = useState<number | null>(null);
+  const [selectedExampleImageUrl, setSelectedExampleImageUrl] = useState<string>("");
+  // --- END: Refactored Image Selection State ---
+  
   const [selectedProfileImageIndexForSocial, setSelectedProfileImageIndexForSocial] = useState<number | null>(null);
   const [selectedLibraryImageIndexForSocial, setSelectedLibraryImageIndexForSocial] = useState<number | null>(null);
 
@@ -307,7 +312,6 @@ export default function ContentStudioPage() {
   const [selectedBlogIndustry, setSelectedBlogIndustry] = useState<string>("_none_"); 
 
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
-  const [useExampleImageForGen, setUseExampleImageForGen] = useState<boolean>(true); 
 
   // --- AI Quick Start State ---
   const [populateImageFormState, populateImageFormAction] = useActionState(handlePopulateImageFormAction, initialPopulateImageFormState);
@@ -394,16 +398,12 @@ export default function ContentStudioPage() {
   }, [errorSavedLibraryFetch, toast]);
 
 
+  // Effect to sync Brand Data from context to the local form state
   useEffect(() => {
     if (brandData) {
         // Sync Image Tab fields
         setImageGenBrandDescription(brandData.brandDescription || "");
         setCustomStyleNotesInput(brandData.imageStyleNotes || "");
-        if (brandData.exampleImages && brandData.exampleImages.length > 0) {
-            if (selectedProfileImageIndexForGen === null) setSelectedProfileImageIndexForGen(0);
-        } else {
-            setSelectedProfileImageIndexForGen(null);
-        }
         
         // Sync Blog Tab fields
         setBlogBrandName(brandData.brandName || "");
@@ -443,12 +443,38 @@ export default function ContentStudioPage() {
         setImageGenBrandDescription("");
         setSelectedBlogIndustry("_none_");
         setCustomStyleNotesInput("");
-        setSelectedProfileImageIndexForGen(null);
         setNumberOfImagesToGenerate("1"); 
         if (!isAdmin) setSelectedImageProvider('GEMINI'); 
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brandData, useImageForSocialPost, socialImageChoice, sessionLastImageGenerationResult, savedLibraryImages, numberOfImagesToGenerate, isPremiumActive, isAdmin]);
+  }, [brandData, useImageForSocialPost, socialImageChoice, sessionLastImageGenerationResult, savedLibraryImages]);
+
+  // --- START: NEW Robust Image Selection Effect ---
+  useEffect(() => {
+      const hasImages = brandData?.exampleImages && brandData.exampleImages.length > 0;
+
+      if (useExampleImageForGen && hasImages) {
+          const currentIndex = selectedProfileImageIndexForGen ?? 0;
+          if (selectedProfileImageIndexForGen === null) {
+              setSelectedProfileImageIndexForGen(currentIndex);
+          }
+          setSelectedExampleImageUrl(brandData.exampleImages[currentIndex]);
+      } else {
+          // If checkbox is off or no images exist, clear the URL state.
+          setSelectedExampleImageUrl("");
+      }
+  // This effect runs when brand data loads or when the user toggles the checkbox.
+  // We don't need selectedProfileImageIndexForGen in deps, because its change is handled by a direct click handler.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brandData?.exampleImages, useExampleImageForGen]);
+  // --- END: NEW Robust Image Selection Effect ---
+  
+  const handleSelectProfileImageForGen = (index: number) => {
+    setSelectedProfileImageIndexForGen(index);
+    if (brandData?.exampleImages) {
+      setSelectedExampleImageUrl(brandData.exampleImages[index]);
+    }
+  };
 
 
   useEffect(() => {
@@ -829,8 +855,6 @@ export default function ContentStudioPage() {
     }
   };
 
-  const currentExampleImageForGen = (useExampleImageForGen && brandData?.exampleImages && selectedProfileImageIndexForGen !== null && brandData.exampleImages[selectedProfileImageIndexForGen]) || "";
-
   const currentSocialImagePreviewUrl = useImageForSocialPost
     ? (socialImageChoice === 'generated'
         ? (sessionLastImageGenerationResult?.generatedImages.find(url => url?.startsWith('data:') || url?.startsWith('image_url:'))?.replace(/^image_url:/, '') || null)
@@ -864,7 +888,7 @@ export default function ContentStudioPage() {
     const industryLabelForPreview = industries.find(i => i.value === currentIndustryValue)?.label || currentIndustryValue;
 
     const industryCtx = (industryLabelForPreview && industryLabelForPreview !== "None / Not Applicable" && industryLabelForPreview !== "_none_") ? ` The brand operates in the ${industryLabelForPreview} industry.` : "";
-    const exampleImg = useExampleImageForGen ? currentExampleImageForGen : ""; 
+    const exampleImg = useExampleImageForGen ? selectedExampleImageUrl : ""; 
     const combinedStyle = selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "");
     const negPrompt = imageGenNegativePrompt;
     const aspect = selectedAspectRatio;
@@ -1047,7 +1071,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
         
         formData.set("imageStyle", imageStyle);
         
-        const exampleImgToUse = (isAdmin || isPremiumActive) ? formSnapshot?.exampleImage : (useExampleImageForGen && currentExampleImageForGen ? currentExampleImageForGen : undefined);
+        const exampleImgToUse = (isAdmin || isPremiumActive) ? formSnapshot?.exampleImage : (useExampleImageForGen && selectedExampleImageUrl ? selectedExampleImageUrl : undefined);
         if (typeof exampleImgToUse === 'string' && exampleImgToUse.trim() !== "") {
           formData.set("exampleImage", exampleImgToUse);
         } else {
@@ -1490,7 +1514,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                             <button
                                                 type="button"
                                                 key={`gen-profile-${index}`}
-                                                onClick={() => setSelectedProfileImageIndexForGen(index)}
+                                                onClick={() => handleSelectProfileImageForGen(index)}
                                                 className={cn(
                                                     "w-20 h-20 rounded border-2 p-0.5 flex-shrink-0 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring",
                                                     selectedProfileImageIndexForGen === index ? "border-primary ring-2 ring-primary" : "border-border"
@@ -1506,7 +1530,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                                           <NextImage src={brandData.exampleImages[0]} alt={`Example 1}`} width={76} height={76} className="object-contain w-full h-full rounded-sm" data-ai-hint="style example"/>
                                       </div>
                                   )}
-                                { currentExampleImageForGen && ( 
+                                { selectedExampleImageUrl && ( 
                                     <p className="text-xs text-muted-foreground">
                                         Using image {selectedProfileImageIndexForGen !== null && brandData.exampleImages && brandData.exampleImages.length > 1 ? selectedProfileImageIndexForGen + 1 : "1"} as reference.
                                         {selectedImageProvider === 'FREEPIK' && (isAdmin || isPremiumActive) && " (Freepik/Imagen3 uses AI description of this image, not the image directly for text-to-image.)"}
@@ -2357,5 +2381,3 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     </div>
   );
 }
-
-
