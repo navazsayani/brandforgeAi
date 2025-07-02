@@ -451,20 +451,29 @@ export default function ContentStudioPage() {
 
   // --- START: NEW Robust Image Selection Effect ---
   useEffect(() => {
-      const hasImages = brandData?.exampleImages && brandData.exampleImages.length > 0;
+    const hasImages = brandData?.exampleImages && brandData.exampleImages.length > 0;
 
-      if (useExampleImageForGen && hasImages) {
-          const currentIndex = selectedProfileImageIndexForGen ?? 0;
-          if (selectedProfileImageIndexForGen === null) {
-              setSelectedProfileImageIndexForGen(currentIndex);
-          }
-          setSelectedExampleImageUrl(brandData.exampleImages[currentIndex]);
-      } else {
-          // If checkbox is off or no images exist, clear the URL state.
-          setSelectedExampleImageUrl("");
-      }
-  // This effect runs when brand data loads or when the user toggles the checkbox.
-  // We don't need selectedProfileImageIndexForGen in deps, because its change is handled by a direct click handler.
+    if (useExampleImageForGen && hasImages) {
+        // Ensure index is valid and not out of bounds
+        let currentIndex = selectedProfileImageIndexForGen ?? 0;
+        if (currentIndex >= brandData.exampleImages.length) {
+            currentIndex = 0; // Reset to first image if index is invalid
+            setSelectedProfileImageIndexForGen(0); // Also reset the index state
+        }
+        
+        if (selectedProfileImageIndexForGen === null) {
+            setSelectedProfileImageIndexForGen(currentIndex);
+        }
+        // Safely get the URL
+        const url = brandData.exampleImages[currentIndex];
+        setSelectedExampleImageUrl(url || ""); // Fallback to empty string if URL is unexpectedly undefined
+    } else {
+        // If checkbox is off or no images exist, clear the URL state.
+        setSelectedExampleImageUrl("");
+        if (!hasImages) {
+          setSelectedProfileImageIndexForGen(null);
+        }
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brandData?.exampleImages, useExampleImageForGen]);
   // --- END: NEW Robust Image Selection Effect ---
@@ -472,7 +481,7 @@ export default function ContentStudioPage() {
   const handleSelectProfileImageForGen = (index: number) => {
     setSelectedProfileImageIndexForGen(index);
     if (brandData?.exampleImages) {
-      setSelectedExampleImageUrl(brandData.exampleImages[index]);
+      setSelectedExampleImageUrl(brandData.exampleImages[index] || "");
     }
   };
 
@@ -2381,3 +2390,5 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     </div>
   );
 }
+
+    
