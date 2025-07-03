@@ -77,6 +77,9 @@ export default function SettingsPage() {
   const [getPlansState, getPlansAction] = useActionState(handleGetPlansConfigAction, initialGetPlansState);
   const [updatePlansState, updatePlansAction] = useActionState(handleUpdatePlansConfigAction, initialUpdatePlansState);
 
+  const [isSavingModels, setIsSavingModels] = useState(false);
+  const [isSavingPlans, setIsSavingPlans] = useState(false);
+
   const modelForm = useForm<ModelSettingsFormData>({
     resolver: zodResolver(modelSettingsSchema),
     defaultValues: DEFAULT_MODEL_CONFIG,
@@ -149,20 +152,38 @@ export default function SettingsPage() {
   useEffect(() => {
     if (updateModelState.message && !updateModelState.error) {
         toast({ title: "Success", description: updateModelState.message });
+        if (currentUser?.email) {
+            const formData = new FormData();
+            formData.append('adminRequesterEmail', currentUser.email);
+            startTransition(() => getModelAction(formData));
+        }
     }
     if (updateModelState.error) {
         toast({ title: "Model Update Error", description: updateModelState.error, variant: "destructive" });
     }
+    if (updateModelState.data || updateModelState.error) {
+        setIsSavingModels(false);
+    }
+  }, [updateModelState, toast, currentUser, getModelAction]);
+
+  useEffect(() => {
     if (updatePlansState.message && !updatePlansState.error) {
         toast({ title: "Success", description: updatePlansState.message });
+        if (currentUser?.email) {
+            startTransition(() => getPlansAction());
+        }
     }
     if (updatePlansState.error) {
         toast({ title: "Plans Update Error", description: updatePlansState.error, variant: "destructive" });
     }
-  }, [updateModelState, updatePlansState, toast]);
+    if (updatePlansState.data || updatePlansState.error) {
+        setIsSavingPlans(false);
+    }
+  }, [updatePlansState, toast, currentUser, getPlansAction]);
 
   const onModelSubmit: SubmitHandler<ModelSettingsFormData> = (data) => {
     if (currentUser?.email) {
+      setIsSavingModels(true);
       const formData = new FormData();
       formData.append('adminRequesterEmail', currentUser.email);
       Object.entries(data).forEach(([key, value]) => {
@@ -180,6 +201,7 @@ export default function SettingsPage() {
   
   const onPlansSubmit: SubmitHandler<PlansSettingsFormData> = (data) => {
     if (currentUser?.email) {
+      setIsSavingPlans(true);
       const formData = new FormData();
       formData.append('adminRequesterEmail', currentUser.email);
       Object.entries(data).forEach(([key, value]) => {
@@ -225,10 +247,12 @@ export default function SettingsPage() {
                             <p className="text-sm text-muted-foreground">
                                 Directly deploy posts to your Facebook and Instagram accounts.
                             </p>
-                            <Badge variant="outline">Under Development</Badge>
                         </div>
                     </div>
-                    <Button variant="outline" disabled className="w-full sm:w-auto shrink-0">Coming Soon</Button>
+                    <div className="flex flex-col items-start sm:items-end gap-2">
+                        <Button variant="outline" disabled className="w-full sm:w-auto shrink-0">Connect</Button>
+                        <Badge variant="outline">Under Development</Badge>
+                    </div>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg bg-secondary/30 gap-4 opacity-70">
                     <div className="flex items-start sm:items-center gap-4">
@@ -238,10 +262,12 @@ export default function SettingsPage() {
                             <p className="text-sm text-muted-foreground">
                                 Directly deploy posts and threads to your X account.
                             </p>
-                            <Badge variant="outline">Under Development</Badge>
                         </div>
                     </div>
-                    <Button variant="outline" disabled className="w-full sm:w-auto shrink-0">Coming Soon</Button>
+                     <div className="flex flex-col items-start sm:items-end gap-2">
+                        <Button variant="outline" disabled className="w-full sm:w-auto shrink-0">Connect</Button>
+                        <Badge variant="outline">Under Development</Badge>
+                    </div>
                 </div>
             </CardContent>
              <CardFooter>
@@ -314,7 +340,7 @@ export default function SettingsPage() {
                         <FormField control={modelForm.control} name="fastModel" render={({ field }) => (<FormItem><FormLabel>Fast Text Model</FormLabel><FormControl><Input placeholder="e.g., googleai/gemini-1.5-flash-latest" {...field} /></FormControl><FormDescription>For quick tasks like social captions and blog outlines.</FormDescription><FormMessage /></FormItem>)} />
                         <FormField control={modelForm.control} name="powerfulModel" render={({ field }) => (<FormItem><FormLabel>Powerful Text Model</FormLabel><FormControl><Input placeholder="e.g., googleai/gemini-1.5-pro-latest" {...field} /></FormControl><FormDescription>For complex tasks like full blog generation and ad campaigns.</FormDescription><FormMessage /></FormItem>)} />
                         </CardContent>
-                        <CardFooter><SubmitButton className="w-full" size="sm" loadingText="Saving Model Settings...">Save Model & Gateway Config</SubmitButton></CardFooter>
+                        <CardFooter><SubmitButton className="w-full" size="sm" loading={isSavingModels} loadingText="Saving Model Settings...">Save Model & Gateway Config</SubmitButton></CardFooter>
                     </form>
                 </Form>
                 
@@ -359,7 +385,7 @@ export default function SettingsPage() {
                         </Tabs>
                     </div>
                     </CardContent>
-                    <CardFooter><SubmitButton className="w-full" size="sm" loadingText="Saving Plan Settings...">Save Plan & Quota Config</SubmitButton></CardFooter>
+                    <CardFooter><SubmitButton className="w-full" size="sm" loading={isSavingPlans} loadingText="Saving Plan Settings...">Save Plan & Quota Config</SubmitButton></CardFooter>
                 </form>
                 </Form>
             </Card>
