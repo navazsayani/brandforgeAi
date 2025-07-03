@@ -9,45 +9,35 @@ export const DEFAULT_MODEL_CONFIG: ModelConfig = {
   visionModel: 'googleai/gemini-1.5-flash-latest',
   powerfulModel: 'googleai/gemini-1.5-pro-latest',
   paymentMode: 'test',
-  freepikEnabled: true, // Default to true
+  freepikEnabled: true,
 };
 
-// Simple in-memory cache
-let cachedConfig: ModelConfig | null = null;
-let lastFetchTime: number = 0;
-const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+// Removed in-memory cache to ensure consistency in serverless environments.
+// Firestore's client-side SDK provides its own caching.
 
 export async function getModelConfig(forceRefresh = false): Promise<ModelConfig> {
-  const now = Date.now();
-  if (!forceRefresh && cachedConfig && now - lastFetchTime < CACHE_DURATION_MS) {
-    return cachedConfig;
-  }
-
   try {
     const configDocRef = doc(db, 'configuration', 'models');
+    // Using getDoc will use Firestore's cache by default, forceRefresh is now just a signal
+    // for intent, but the underlying behavior is handled by Firestore SDK.
     const docSnap = await getDoc(configDocRef);
 
     if (docSnap.exists()) {
       const config = docSnap.data() as ModelConfig;
-      // Merge with defaults to ensure all keys are present even if new ones are added to the code
-      cachedConfig = { ...DEFAULT_MODEL_CONFIG, ...config };
-      lastFetchTime = now;
-      console.log(`Fetched and cached model configuration from Firestore (Forced: ${forceRefresh}).`);
-      return cachedConfig;
+      // Merge with defaults to ensure all keys are present
+      return { ...DEFAULT_MODEL_CONFIG, ...config };
     } else {
-      // If no config in DB, use defaults and don't cache to allow it to be created and fetched soon after
       console.log("No model configuration in Firestore, using default models.");
       return DEFAULT_MODEL_CONFIG;
     }
   } catch (error) {
     console.error("Error fetching model configuration, returning defaults:", error);
-    // In case of error, return defaults but don't cache to allow retry
     return DEFAULT_MODEL_CONFIG;
   }
 }
 
 export function clearModelConfigCache() {
-  cachedConfig = null;
-  lastFetchTime = 0;
-  console.log("Model configuration cache cleared.");
+  // This function is now a no-op since we are not using a manual in-memory cache.
+  // It's kept for compatibility with existing calls in actions.ts.
+  console.log("In-memory model configuration cache is no longer used; relying on Firestore SDK cache.");
 }
