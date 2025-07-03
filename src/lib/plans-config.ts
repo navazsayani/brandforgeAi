@@ -1,3 +1,4 @@
+
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebaseConfig';
 import type { PlansConfig, PlanDetails } from '@/types';
@@ -8,9 +9,9 @@ let cachedPlansConfig: PlansConfig | null = null;
 let lastPlansFetchTime: number = 0;
 const PLANS_CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 
-export async function getPlansConfig(): Promise<PlansConfig> {
+export async function getPlansConfig(forceRefresh = false): Promise<PlansConfig> {
   const now = Date.now();
-  if (cachedPlansConfig && now - lastPlansFetchTime < PLANS_CACHE_DURATION_MS) {
+  if (!forceRefresh && cachedPlansConfig && now - lastPlansFetchTime < PLANS_CACHE_DURATION_MS) {
     return cachedPlansConfig;
   }
 
@@ -29,7 +30,7 @@ export async function getPlansConfig(): Promise<PlansConfig> {
         INR: { ...DEFAULT_PLANS_CONFIG.INR, ...(config.INR || {}) },
       };
       lastPlansFetchTime = now;
-      console.log("Fetched and cached plans configuration from Firestore.");
+      console.log(`Fetched and cached plans configuration from Firestore (Forced: ${forceRefresh}).`);
       return cachedPlansConfig;
     } else {
       console.log("No plans configuration in Firestore, using default plans. A new one can be saved from the admin panel.");

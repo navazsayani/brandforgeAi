@@ -945,7 +945,8 @@ export async function handleGetSettingsAction(
     return { error: "Unauthorized: You do not have permission to perform this action." };
   }
   try {
-    const modelConfig = await getModelConfig();
+    // Force a refresh from the database to bypass the server-side cache.
+    const modelConfig = await getModelConfig(true); 
     return { data: modelConfig, message: "Model configuration loaded." };
   } catch (e: any) {
     console.error("Error in handleGetSettingsAction:", e);
@@ -1125,10 +1126,10 @@ export async function handleGetPlansConfigAction(
   formData?: FormData
 ): Promise<FormState<PlansConfig>> {
    const adminRequesterEmail = formData?.get('adminRequesterEmail') as string | undefined;
-   // Allow non-admins to fetch read-only plan data, but check for admin for updates.
-   // This action is safe as it's read-only.
+   // If an admin is requesting (which they do after an update), force a refresh.
+   const forceRefresh = !!adminRequesterEmail; 
   try {
-    const plansConfig = await getPlansConfig();
+    const plansConfig = await getPlansConfig(forceRefresh);
     return { data: plansConfig, message: "Plans configuration loaded." };
   } catch (e: any) {
     console.error("Error in handleGetPlansConfigAction:", e);

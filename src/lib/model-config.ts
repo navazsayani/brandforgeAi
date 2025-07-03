@@ -17,9 +17,9 @@ let cachedConfig: ModelConfig | null = null;
 let lastFetchTime: number = 0;
 const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 
-export async function getModelConfig(): Promise<ModelConfig> {
+export async function getModelConfig(forceRefresh = false): Promise<ModelConfig> {
   const now = Date.now();
-  if (cachedConfig && now - lastFetchTime < CACHE_DURATION_MS) {
+  if (!forceRefresh && cachedConfig && now - lastFetchTime < CACHE_DURATION_MS) {
     return cachedConfig;
   }
 
@@ -32,7 +32,7 @@ export async function getModelConfig(): Promise<ModelConfig> {
       // Merge with defaults to ensure all keys are present even if new ones are added to the code
       cachedConfig = { ...DEFAULT_MODEL_CONFIG, ...config };
       lastFetchTime = now;
-      console.log("Fetched and cached model configuration from Firestore.");
+      console.log(`Fetched and cached model configuration from Firestore (Forced: ${forceRefresh}).`);
       return cachedConfig;
     } else {
       // If no config in DB, use defaults and don't cache to allow it to be created and fetched soon after
