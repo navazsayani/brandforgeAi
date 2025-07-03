@@ -56,15 +56,15 @@ export default function PricingPage() {
             getPlansAction();
         });
 
-        // Use a reliable JSON IP-based geolocation service
-        fetch('http://ip-api.com/json/?fields=countryCode')
-            .then(res => res.json())
+        fetch('https://www.cloudflare.com/cdn-cgi/trace')
+            .then(res => res.text())
             .then(data => {
-                const country = data.countryCode || 'US'; // Default to US if not found
+                const lines = data.split('\n');
+                const locLine = lines.find(line => line.startsWith('loc='));
+                const country = locLine ? locLine.split('=')[1] : 'US';
                 setGeo({ country });
             })
             .catch(() => {
-                // Fallback to US if the fetch fails for any reason (e.g., network error)
                 setGeo({ country: 'US' });
             })
             .finally(() => {
@@ -351,3 +351,4 @@ export default function PricingPage() {
         </div>
     );
 }
+
