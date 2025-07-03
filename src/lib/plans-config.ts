@@ -41,3 +41,9 @@ export async function getPlansConfig(forceRefresh = false): Promise<PlansConfig>
     return DEFAULT_PLANS_CONFIG;
   }
 }
+
+export function clearPlansConfigCache() {
+  cachedPlansConfig = null;
+  lastPlansFetchTime = 0;
+  console.log("Plans configuration cache cleared.");
+}

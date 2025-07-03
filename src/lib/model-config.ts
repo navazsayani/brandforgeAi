@@ -45,3 +45,9 @@ export async function getModelConfig(forceRefresh = false): Promise<ModelConfig>
     return DEFAULT_MODEL_CONFIG;
   }
 }
+
+export function clearModelConfigCache() {
+  cachedConfig = null;
+  lastFetchTime = 0;
+  console.log("Model configuration cache cleared.");
+}

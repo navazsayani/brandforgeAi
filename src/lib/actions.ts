@@ -20,8 +20,8 @@ import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where, collectionGroup, deleteDoc } from 'firebase/firestore';
 import type { UserProfileSelectItem, BrandData, ModelConfig, PlansConfig } from '@/types';
-import { getModelConfig } from './model-config';
-import { getPlansConfig } from './plans-config';
+import { getModelConfig, clearModelConfigCache } from './model-config';
+import { getPlansConfig, clearPlansConfigCache } from './plans-config';
 import { DEFAULT_PLANS_CONFIG } from './constants';
 import Razorpay from 'razorpay';
 
@@ -979,6 +979,7 @@ export async function handleUpdateSettingsAction(
 
     const configDocRef = doc(db, 'configuration', 'models');
     await setDoc(configDocRef, modelConfig, { merge: true });
+    clearModelConfigCache(); // Invalidate the cache
 
     return { data: modelConfig, message: "Model configuration updated successfully." };
   } catch (e: any) {
@@ -1203,6 +1204,7 @@ export async function handleUpdatePlansConfigAction(
     
     const configDocRef = doc(db, 'configuration', 'plans');
     await setDoc(configDocRef, updatedConfig, { merge: true });
+    clearPlansConfigCache(); // Invalidate the cache
 
     return { data: updatedConfig, message: "Plans configuration updated successfully." };
   } catch (e: any) {
