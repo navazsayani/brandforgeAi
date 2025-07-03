@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ReactNode } from 'react';
@@ -314,9 +315,10 @@ function AuthUserMenu() {
       <DropdownMenuTrigger asChild>
         <Button 
           variant="ghost" 
-          className="relative h-10 w-10 rounded-full p-0 touch-target focus-enhanced"
+          size="icon"
+          className="rounded-full touch-target focus-enhanced"
         >
-          <Avatar className="h-9 w-9 ring-2 ring-primary/20 hover:ring-primary/40 transition-all duration-200">
+          <Avatar className="h-9 w-9">
             {user.photoURL ? (
               <AvatarImage src={user.photoURL} alt={user.displayName || user.email || "User"} />
             ) : null}
