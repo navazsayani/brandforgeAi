@@ -221,13 +221,11 @@ export default function SettingsPage() {
                     <div className="flex items-start sm:items-center gap-4">
                         <Facebook className="w-6 h-6 text-[#1877F2] shrink-0 mt-1 sm:mt-0" />
                         <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                                <p className="font-semibold">Meta (Facebook & Instagram)</p>
-                                <Badge variant="outline">Under Development</Badge>
-                            </div>
+                            <p className="font-semibold">Meta (Facebook & Instagram)</p>
                             <p className="text-sm text-muted-foreground">
                                 Directly deploy posts to your Facebook and Instagram accounts.
                             </p>
+                            <Badge variant="outline">Under Development</Badge>
                         </div>
                     </div>
                     <Button variant="outline" disabled className="w-full sm:w-auto shrink-0">Coming Soon</Button>
@@ -236,13 +234,11 @@ export default function SettingsPage() {
                     <div className="flex items-start sm:items-center gap-4">
                         <XIcon className="w-5 h-5 shrink-0 mt-1 sm:mt-0" />
                         <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                                <p className="font-semibold">X (Twitter)</p>
-                                <Badge variant="outline">Under Development</Badge>
-                            </div>
+                            <p className="font-semibold">X (Twitter)</p>
                             <p className="text-sm text-muted-foreground">
                                 Directly deploy posts and threads to your X account.
                             </p>
+                            <Badge variant="outline">Under Development</Badge>
                         </div>
                     </div>
                     <Button variant="outline" disabled className="w-full sm:w-auto shrink-0">Coming Soon</Button>
@@ -371,5 +367,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
-    
