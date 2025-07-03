@@ -340,6 +340,12 @@ function AuthUserMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild className="cursor-pointer">
+            <Link href="/settings">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+            </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem 
           onClick={() => logOut()}
           className="focus:bg-destructive/10 focus:text-destructive cursor-pointer"
