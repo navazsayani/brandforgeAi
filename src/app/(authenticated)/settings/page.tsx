@@ -22,6 +22,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 
 
 const modelSettingsSchema = z.object({
@@ -188,22 +189,6 @@ export default function SettingsPage() {
     }
   };
 
-  const handleConnectClick = (platform: 'Meta' | 'X') => {
-    const platformUrl = platform === 'Meta' ? 'https://www.facebook.com' : 'https://x.com';
-    toast({
-      title: "Simulating Connection...",
-      description: `In a real application, you would be redirected to ${platform} to authorize BrandForge AI.`,
-      duration: 5000,
-    });
-    
-    // Simulate a redirect to our callback after a delay
-    setTimeout(() => {
-        const fakeCode = `simulated_code_${Math.random().toString(36).substring(2, 15)}`;
-        const fakeState = `simulated_state_${Math.random().toString(36).substring(2, 15)}`;
-        window.location.href = `/api/oauth/callback?code=${fakeCode}&state=${fakeState}&platform=${platform}`;
-    }, 1500);
-  };
-
   
   if (isAuthLoading || isPageLoading) {
     return (
@@ -232,40 +217,40 @@ export default function SettingsPage() {
                 <CardDescription>Connect your social media accounts to enable direct deployment from the Deployment Hub.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg bg-secondary/30 gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg bg-secondary/30 gap-4 opacity-70">
                     <div className="flex items-start sm:items-center gap-4">
                         <Facebook className="w-6 h-6 text-[#1877F2] shrink-0 mt-1 sm:mt-0" />
                         <div className="space-y-1">
-                            <p className="font-semibold">Meta (Facebook & Instagram)</p>
+                            <div className="flex items-center gap-2">
+                                <p className="font-semibold">Meta (Facebook & Instagram)</p>
+                                <Badge variant="outline">Under Development</Badge>
+                            </div>
                             <p className="text-sm text-muted-foreground">
-                                Status: Not Connected. 
-                                <a href="https://developers.facebook.com/" target="_blank" rel="noopener noreferrer" className="text-xs underline hover:text-primary ml-1">
-                                    Get API Keys <ExternalLink className="inline-block h-3 w-3 ml-0.5" />
-                                </a>
+                                Directly deploy posts to your Facebook and Instagram accounts.
                             </p>
                         </div>
                     </div>
-                    <Button variant="outline" onClick={() => handleConnectClick('Meta')} className="w-full sm:w-auto shrink-0">Connect</Button>
+                    <Button variant="outline" disabled className="w-full sm:w-auto shrink-0">Coming Soon</Button>
                 </div>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg bg-secondary/30 gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg bg-secondary/30 gap-4 opacity-70">
                     <div className="flex items-start sm:items-center gap-4">
                         <XIcon className="w-5 h-5 shrink-0 mt-1 sm:mt-0" />
                         <div className="space-y-1">
-                            <p className="font-semibold">X (Twitter)</p>
+                            <div className="flex items-center gap-2">
+                                <p className="font-semibold">X (Twitter)</p>
+                                <Badge variant="outline">Under Development</Badge>
+                            </div>
                             <p className="text-sm text-muted-foreground">
-                                Status: Not Connected. 
-                                <a href="https://developer.x.com/" target="_blank" rel="noopener noreferrer" className="text-xs underline hover:text-primary ml-1">
-                                    Get API Keys <ExternalLink className="inline-block h-3 w-3 ml-0.5" />
-                                </a>
+                                Directly deploy posts and threads to your X account.
                             </p>
                         </div>
                     </div>
-                    <Button variant="outline" onClick={() => handleConnectClick('X')} className="w-full sm:w-auto shrink-0">Connect</Button>
+                    <Button variant="outline" disabled className="w-full sm:w-auto shrink-0">Coming Soon</Button>
                 </div>
             </CardContent>
              <CardFooter>
                 <p className="text-xs text-muted-foreground">
-                Connection functionality is a simulation. In a real app, this would redirect you to the social platform to grant permissions.
+                Connection functionality is under development and will be available soon.
                 </p>
             </CardFooter>
         </Card>
@@ -386,3 +371,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    
