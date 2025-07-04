@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState, useActionState, startTransition } from 'react';
@@ -116,7 +117,7 @@ export default function AdminUsageDashboardPage() {
                                                     <AlertDialogTrigger asChild>
                                                         <Button variant="outline" size="sm">
                                                             <RefreshCcw className="w-4 h-4 mr-2" />
-                                                            Reset Quota
+                                                            Reset
                                                         </Button>
                                                     </AlertDialogTrigger>
                                                     <AlertDialogContent>
@@ -132,7 +133,7 @@ export default function AdminUsageDashboardPage() {
                                                             <AlertDialogFooter>
                                                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                                                 <SubmitButton variant="destructive" loadingText="Resetting...">
-                                                                    Yes, Reset Usage
+                                                                    Yes, Reset
                                                                 </SubmitButton>
                                                             </AlertDialogFooter>
                                                         </form>
