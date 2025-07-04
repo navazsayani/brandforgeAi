@@ -6,11 +6,15 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { handleGetUsageForAllUsersAction, type FormState } from '@/lib/actions';
-import { Loader2, BarChart } from 'lucide-react';
+import { handleGetUsageForAllUsersAction, handleResetUserUsageByAdminAction, type FormState } from '@/lib/actions';
+import { Loader2, BarChart, RefreshCcw } from 'lucide-react';
 import type { AdminUserUsage } from '@/types';
+import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { SubmitButton } from '@/components/SubmitButton';
 
 const initialFetchState: FormState<AdminUserUsage[]> = { error: undefined, data: undefined, message: undefined };
+const initialResetState: FormState<{ success: boolean }> = { error: undefined, data: undefined, message: undefined };
 
 export default function AdminUsageDashboardPage() {
     const { currentUser } = useAuth();
@@ -19,6 +23,7 @@ export default function AdminUsageDashboardPage() {
     const [usageData, setUsageData] = useState<AdminUserUsage[]>([]);
 
     const [fetchState, fetchAction] = useActionState(handleGetUsageForAllUsersAction, initialFetchState);
+    const [resetState, resetAction] = useActionState(handleResetUserUsageByAdminAction, initialResetState);
 
     useEffect(() => {
         if (currentUser?.email === 'admin@brandforge.ai') {
@@ -41,6 +46,24 @@ export default function AdminUsageDashboardPage() {
         }
     }, [fetchState, toast]);
 
+    useEffect(() => {
+        if (resetState.data?.success) {
+            toast({ title: "Success", description: resetState.message });
+            // Re-fetch usage data to show updated state
+            if (currentUser?.email === 'admin@brandforge.ai') {
+                const formData = new FormData();
+                formData.append('adminRequesterEmail', currentUser.email);
+                startTransition(() => {
+                    fetchAction(formData);
+                });
+            }
+        }
+        if (resetState.error) {
+            toast({ title: "Reset Failed", description: resetState.error, variant: "destructive" });
+        }
+    }, [resetState, toast, currentUser, fetchAction]);
+
+
     return (
         <div className="max-w-7xl mx-auto">
             <Card className="shadow-lg">
@@ -50,7 +73,7 @@ export default function AdminUsageDashboardPage() {
                         <div>
                             <CardTitle className="text-3xl font-bold">User Usage Dashboard</CardTitle>
                             <CardDescription className="text-lg">
-                                Track monthly content generation usage for all users.
+                                Track and manage monthly content generation usage for all users.
                             </CardDescription>
                         </div>
                     </div>
@@ -71,12 +94,13 @@ export default function AdminUsageDashboardPage() {
                                     <TableHead className="text-center">Image Generations</TableHead>
                                     <TableHead className="text-center">Social Posts</TableHead>
                                     <TableHead className="text-center">Blog Posts</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {usageData.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center text-muted-foreground">
+                                        <TableCell colSpan={6} className="text-center text-muted-foreground">
                                             No usage data found for the current month.
                                         </TableCell>
                                     </TableRow>
@@ -88,6 +112,34 @@ export default function AdminUsageDashboardPage() {
                                             <TableCell className="text-center">{user.imageGenerations}</TableCell>
                                             <TableCell className="text-center">{user.socialPosts}</TableCell>
                                             <TableCell className="text-center">{user.blogPosts}</TableCell>
+                                            <TableCell className="text-right">
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="outline" size="sm">
+                                                            <RefreshCcw className="w-4 h-4 mr-2" />
+                                                            Reset Quota
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <form action={resetAction}>
+                                                            <input type="hidden" name="adminRequesterEmail" value={currentUser?.email || ''} />
+                                                            <input type="hidden" name="userId" value={user.userId} />
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    This will reset the user&apos;s current monthly usage (images, social posts, blogs) to zero for {user.brandName}. This action cannot be undone.
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                <SubmitButton variant="destructive" loadingText="Resetting...">
+                                                                    Yes, Reset Usage
+                                                                </SubmitButton>
+                                                            </AlertDialogFooter>
+                                                        </form>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </TableCell>
                                         </TableRow>
                                     ))
                                 )}

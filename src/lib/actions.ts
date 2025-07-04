@@ -1081,6 +1081,41 @@ export async function handleGetUsageForAllUsersAction(
   }
 }
 
+export async function handleResetUserUsageByAdminAction(
+  prevState: FormState<{ success: boolean }>,
+  formData: FormData
+): Promise<FormState<{ success: boolean }>> {
+  const adminRequesterEmail = formData.get('adminRequesterEmail') as string;
+  const userId = formData.get('userId') as string;
+
+  if (adminRequesterEmail !== 'admin@brandforge.ai') {
+    return { error: "Unauthorized: You do not have permission to perform this action." };
+  }
+
+  if (!userId) {
+    return { error: "User ID is required to reset usage." };
+  }
+
+  try {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const usageDocId = `${year}-${month}`;
+    
+    const usageDocRef = doc(db, 'users', userId, 'usage', usageDocId);
+    
+    // Deleting the document effectively resets the quota for the month.
+    // If it doesn't exist, this operation is a no-op and doesn't throw an error.
+    await deleteDoc(usageDocRef);
+
+    return { data: { success: true }, message: `Successfully reset current month's usage quota for user.` };
+
+  } catch (e: any) {
+    console.error("Error resetting user usage by admin:", e);
+    return { error: `Failed to reset user usage: ${e.message || "Unknown error"}` };
+  }
+}
+
 
 export async function handleUpdateUserPlanByAdminAction(
   prevState: FormState<{ success: boolean }>,
