@@ -1220,7 +1220,21 @@ export async function handleVerifyPaymentAction(
       .digest('hex');
 
     if (expectedSignature === razorpay_signature) {
-      // Payment is legit. Update user's plan in Firestore.
+      // Payment is legit.
+      
+      // 1. Reset the user's current monthly usage quota upon successful renewal.
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const usageDocId = `${year}-${month}`;
+      const usageDocRef = doc(db, 'users', userId, 'usage', usageDocId);
+      
+      // Delete the current month's usage document to reset quotas.
+      // If it doesn't exist, this operation does nothing and doesn't throw an error.
+      await deleteDoc(usageDocRef);
+      console.log(`[Plan Renewal] Usage quota for ${usageDocId} has been reset for user ${userId}.`);
+      
+      // 2. Update user's plan in Firestore.
       const brandDocRef = doc(db, 'users', userId, 'brandProfiles', userId);
       const subscriptionEndDate = new Date();
       subscriptionEndDate.setDate(subscriptionEndDate.getDate() + 30); // Set expiry to 30 days from now
