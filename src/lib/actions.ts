@@ -90,8 +90,34 @@ export async function handleGenerateImagesAction(
   formData: FormData
 ): Promise<FormState<{ generatedImages: string[]; promptUsed: string; providerUsed: string; }>> {
   try {
+    const userId = formData.get("userId") as string;
+    if (!userId) {
+      return { error: "User not authenticated. Cannot generate images." };
+    }
+    
+    // --- START: Added server-side feature gating ---
+    const userDocRef = doc(db, 'users', userId, 'brandProfiles', userId);
+    const userDocSnap = await getDoc(userDocRef);
+    if (!userDocSnap.exists()) {
+      return { error: "User profile not found. Please set up your brand profile first." };
+    }
+    const brandData = userDocSnap.data() as BrandData;
+    const isPremiumActive = brandData.plan === 'premium' && brandData.subscriptionEndDate && (brandData.subscriptionEndDate.toDate ? brandData.subscriptionEndDate.toDate() : new Date(brandData.subscriptionEndDate)) > new Date();
+    const isAdmin = brandData.userEmail === 'admin@brandforge.ai';
+    
     const numberOfImagesStr = formData.get("numberOfImages") as string;
     const numberOfImages = parseInt(numberOfImagesStr, 10) || 1;
+    const chosenProvider = (formData.get("provider") as GenerateImagesInput['provider']) || process.env.IMAGE_GENERATION_PROVIDER || 'GEMINI';
+
+    if (!isAdmin && !isPremiumActive) {
+      if (numberOfImages > 1) {
+        return { error: "Generating multiple images at once is a premium feature. Please upgrade your plan." };
+      }
+      if (chosenProvider === 'FREEPIK') {
+        return { error: "The Freepik image generator is a premium feature. Please upgrade your plan." };
+      }
+    }
+    // --- END: Added server-side feature gating ---
     
     const negativePromptValue = formData.get("negativePrompt") as string | null;
     const seedStr = formData.get("seed") as string | undefined;
@@ -115,7 +141,6 @@ export async function handleGenerateImagesAction(
     }
     
     const exampleImageUrl = formData.get("exampleImage") as string | undefined;
-    const chosenProvider = (formData.get("provider") as GenerateImagesInput['provider']) || process.env.IMAGE_GENERATION_PROVIDER || 'GEMINI';
     let aiGeneratedDesc: string | undefined = undefined;
     const placeholderToReplace = "[An AI-generated description of your example image will be used here by the backend to guide content when Freepik/Imagen3 is selected.]";
 
@@ -132,12 +157,15 @@ export async function handleGenerateImagesAction(
         console.warn(`Could not generate description for example image (Freepik): ${descError.message}. Proceeding without it.`);
       }
     }
+    
+    const textToFeature = formData.get("textToFeature") as string | undefined;
 
     const input: GenerateImagesInput = {
       provider: formData.get("provider") as GenerateImagesInput['provider'] || undefined,
       brandDescription: formData.get("brandDescription") as string,
       industry: formData.get("industry") as string | undefined,
       imageStyle: formData.get("imageStyle") as string,
+      textToFeature: textToFeature && textToFeature.trim() !== "" ? textToFeature : undefined,
       exampleImage: exampleImageUrl && exampleImageUrl.trim() !== "" ? exampleImageUrl : undefined,
       exampleImageDescription: aiGeneratedDesc,
       aspectRatio: formData.get("aspectRatio") as string | undefined,
@@ -156,8 +184,7 @@ export async function handleGenerateImagesAction(
     if (input.industry === "" || input.industry === undefined) delete input.industry;
     if (!input.exampleImage) delete input.exampleImage;
     if (!input.exampleImageDescription) delete input.exampleImageDescription;
-    
-    
+    if (!input.textToFeature) delete input.textToFeature;
 
     const result = await generateImages(input);
     const message = `${result.generatedImages.length} image(s)/task(s) processed using ${result.providerUsed || 'default provider'}.`;

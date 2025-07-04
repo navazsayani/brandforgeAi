@@ -291,6 +291,7 @@ export default function ContentStudioPage() {
 
   const [selectedImageProvider, setSelectedImageProvider] = useState<GenerateImagesInput['provider']>('GEMINI');
   const [imageGenBrandDescription, setImageGenBrandDescription] = useState<string>("");
+  const [imageGenTextToFeature, setImageGenTextToFeature] = useState<string>("");
   const [selectedImageStylePreset, setSelectedImageStylePreset] = useState<string>(imageStylePresets[0].value);
   const [customStyleNotesInput, setCustomStyleNotesInput] = useState<string>("");
   const [imageGenNegativePrompt, setImageGenNegativePrompt] = useState<string>("");
@@ -900,6 +901,7 @@ export default function ContentStudioPage() {
     const exampleImg = useExampleImageForGen ? selectedExampleImageUrl : ""; 
     const combinedStyle = selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "");
     const negPrompt = imageGenNegativePrompt;
+    const textToFeature = imageGenTextToFeature;
     const aspect = selectedAspectRatio;
     const numImages = parseInt(numberOfImagesToGenerate, 10);
     const seedValueStr = imageGenSeed;
@@ -909,7 +911,24 @@ export default function ContentStudioPage() {
     let textPromptContent = "";
     let coreInstructions = "";
 
-    if (selectedImageProvider === 'FREEPIK') {
+    // Text-to-Feature prompt generation
+    if (textToFeature && textToFeature.trim() !== "") {
+        textPromptContent = `You are a professional graphic designer specializing in creating typography-focused social media graphics. Your task is to create a visually stunning image that features the following text prominently.
+
+**Text to Feature:**
+"${textToFeature}"
+
+**Design & Brand Context:**
+- **Brand Identity:** "${imageGenBrandDescription}"${industryCtx}
+  - Use this brand description to inform your choice of colors, fonts, and overall aesthetic. The visual style should match the brand's personality (e.g., if the brand is "tech-focused and modern", use clean, sans-serif fonts and a professional color palette).
+- **Visual Style Notes:** "${combinedStyle}"
+  - Apply these stylistic notes to the overall design. For example, 'minimalist' should result in a clean layout with lots of negative space; 'vibrant' should use bold, energetic colors.
+- **Legibility is Paramount:** The featured text must be the main focus and must be easily readable.
+- **No Photography:** Do not include any photographic elements unless the style explicitly calls for it. The focus is on a text-based graphic design.
+- **Composition:** Create a well-balanced and aesthetically pleasing composition.
+- **Format:** The final output should be a single, high-quality image of the graphic.
+`;
+    } else if (selectedImageProvider === 'FREEPIK') {
         if (exampleImg) {
             textPromptContent = `[An AI-generated description of your example image will be used here by the backend to guide content when Freepik/Imagen3 is selected.]\nUsing that description as primary inspiration for the subject and main visual elements, now generate an image based on the following concept: "${imageGenBrandDescription}".`;
         } else {
@@ -1035,7 +1054,8 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
         provider: selectedImageProvider,
         brandDescription: imageGenBrandDescription,
         industry: currentIndustryValue === "_none_" ? "" : currentIndustryValue,
-        imageStyle: combinedStyle, 
+        imageStyle: combinedStyle,
+        textToFeature: (textToFeature && textToFeature.trim() !== "") ? textToFeature : undefined, 
         exampleImage: (useExampleImageForGen && exampleImg && exampleImg.trim() !== "") ? exampleImg : undefined,
         aspectRatio: aspect,
         numberOfImages: numImages,
@@ -1068,6 +1088,11 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     startTransition(() => {
         const formData = new FormData();
 
+        // Add userId to the form data for server-side validation
+        if (userId) {
+            formData.append('userId', userId);
+        }
+
         formData.append("finalizedTextPrompt", currentTextPromptForEditing || ""); 
 
         const providerToUse = (isAdmin || isPremiumActive) ? (formSnapshot?.provider || selectedImageProvider) : 'GEMINI';
@@ -1079,6 +1104,11 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
         formData.set("industry", industryToSubmit);
         
         formData.set("imageStyle", imageStyle);
+        
+        const textToFeatureValue = (isAdmin || isPremiumActive) ? formSnapshot?.textToFeature : imageGenTextToFeature;
+        if (textToFeatureValue && textToFeatureValue.trim() !== "") {
+            formData.set("textToFeature", textToFeatureValue);
+        }
         
         const exampleImgToUse = (isAdmin || isPremiumActive) ? formSnapshot?.exampleImage : (useExampleImageForGen && selectedExampleImageUrl ? selectedExampleImageUrl : undefined);
         if (typeof exampleImgToUse === 'string' && exampleImgToUse.trim() !== "") {
@@ -1451,15 +1481,28 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                   )}
 
                   <div>
-                    <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description (from Profile)</Label>
+                    <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description (for context)</Label>
                     <Textarea
                       id="imageGenBrandDescription"
                       name="brandDescription"
                       value={imageGenBrandDescription}
                       onChange={(e) => setImageGenBrandDescription(e.target.value)}
-                      placeholder="Detailed description of the brand and its values."
+                      placeholder="Detailed description of the brand and its values. Used to influence style and content."
                       rows={3}
                     />
+                  </div>
+
+                   <div>
+                    <Label htmlFor="imageGenTextToFeature" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Text to Feature in Image (Optional)</Label>
+                    <Textarea
+                      id="imageGenTextToFeature"
+                      name="textToFeature"
+                      value={imageGenTextToFeature}
+                      onChange={(e) => setImageGenTextToFeature(e.target.value)}
+                      placeholder="e.g., '5 Ways to Improve Your SEO'. Leave blank for object/scene generation."
+                      rows={2}
+                    />
+                     <p className="text-xs text-muted-foreground mt-1">If you enter text here, AI will generate a text-based graphic (like a quote card) instead of a standard image.</p>
                   </div>
                   
                   <div>
