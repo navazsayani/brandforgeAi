@@ -95,7 +95,6 @@ export async function handleGenerateImagesAction(
       return { error: "User not authenticated. Cannot generate images." };
     }
     
-    // --- START: Added server-side feature gating ---
     const userDocRef = doc(db, 'users', userId, 'brandProfiles', userId);
     const userDocSnap = await getDoc(userDocRef);
     if (!userDocSnap.exists()) {
@@ -104,6 +103,16 @@ export async function handleGenerateImagesAction(
     const brandData = userDocSnap.data() as BrandData;
     const isPremiumActive = brandData.plan === 'premium' && brandData.subscriptionEndDate && (brandData.subscriptionEndDate.toDate ? brandData.subscriptionEndDate.toDate() : new Date(brandData.subscriptionEndDate)) > new Date();
     const isAdmin = brandData.userEmail === 'admin@brandforge.ai';
+    
+    // --- START: Quota Check ---
+    const plansConfig = await getPlansConfig();
+    const planKey = isPremiumActive ? 'pro' : 'free';
+    const planDetails = plansConfig.USD[planKey]; // Assuming USD for quota logic, as quotas are same across currencies
+
+    if (!isAdmin && planDetails.quotas.imageGenerations <= 0) {
+      return { error: "Image generation is not available on your current plan. Please upgrade." };
+    }
+    // --- END: Quota Check ---
     
     const numberOfImagesStr = formData.get("numberOfImages") as string;
     const numberOfImages = parseInt(numberOfImagesStr, 10) || 1;
@@ -117,7 +126,6 @@ export async function handleGenerateImagesAction(
         return { error: "The Freepik image generator is a premium feature. Please upgrade your plan." };
       }
     }
-    // --- END: Added server-side feature gating ---
     
     const negativePromptValue = formData.get("negativePrompt") as string | null;
     const seedStr = formData.get("seed") as string | undefined;
@@ -218,12 +226,35 @@ export async function handleGenerateSocialMediaCaptionAction(
   formData: FormData
 ): Promise<FormState<{ caption: string; hashtags: string; imageSrc: string | null }>> {
   try {
+    const userId = formData.get('userId') as string;
+    if (!userId) {
+      return { error: "User ID is missing. Cannot save social media post."};
+    }
+
+    // --- START: Quota Check ---
+    const userDocRef = doc(db, 'users', userId, 'brandProfiles', userId);
+    const userDocSnap = await getDoc(userDocRef);
+    if (!userDocSnap.exists()) {
+      return { error: "User profile not found. Please set up your brand profile first." };
+    }
+    const brandData = userDocSnap.data() as BrandData;
+    const isPremiumActive = brandData.plan === 'premium' && brandData.subscriptionEndDate && (brandData.subscriptionEndDate.toDate ? brandData.subscriptionEndDate.toDate() : new Date(brandData.subscriptionEndDate)) > new Date();
+    const isAdmin = brandData.userEmail === 'admin@brandforge.ai';
+
+    const plansConfig = await getPlansConfig();
+    const planKey = isPremiumActive ? 'pro' : 'free';
+    const planDetails = plansConfig.USD[planKey];
+
+    if (!isAdmin && planDetails.quotas.socialPosts <= 0) {
+      return { error: "Social post generation is not available on your current plan. Please upgrade." };
+    }
+    // --- END: Quota Check ---
+
     const selectedImageSrc = formData.get("selectedImageSrcForSocialPost") as string;
     const imageSrc = selectedImageSrc && selectedImageSrc.trim() !== "" ? selectedImageSrc : null;
     const imageDescription = formData.get("socialImageDescription") as string;
     const presetTone = formData.get("tone") as string;
     const customNuances = formData.get("customSocialToneNuances") as string | null;
-    const userId = formData.get('userId') as string; 
     const userEmail = formData.get('userEmail') as string | undefined;
 
     let finalTone = presetTone;
@@ -251,10 +282,6 @@ export async function handleGenerateSocialMediaCaptionAction(
     if (input.postGoal === "" || input.postGoal === undefined) delete input.postGoal;
     if (input.targetAudience === "" || input.targetAudience === undefined) delete input.targetAudience;
     if (input.callToAction === "" || input.callToAction === undefined) delete input.callToAction;
-    if (!userId) {
-        return { error: "User ID is missing. Cannot save social media post."};
-    }
-    await ensureUserBrandProfileDocExists(userId, userEmail);
 
     const result = await generateSocialMediaCaption(input);
     const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/socialMediaPosts`);
