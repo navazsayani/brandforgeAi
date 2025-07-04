@@ -50,6 +50,8 @@ export default function PricingPage() {
     // Admin-specific state for testing
     const isAdmin = currentUser?.email === 'admin@brandforge.ai';
     const [adminGeoOverride, setAdminGeoOverride] = useState<string | null>(null);
+    const [manualCurrency, setManualCurrency] = useState<'USD' | 'INR' | null>(null);
+
 
     useEffect(() => {
         startTransition(() => {
@@ -100,8 +102,11 @@ export default function PricingPage() {
     }, [brandData]);
 
     const detectedCountry = adminGeoOverride || geo.country;
-    const currency = detectedCountry === 'IN' ? 'INR' : 'USD';
-    const displayedPlans = plansState.data ? (plansState.data[currency] || plansState.data['USD']) : null;
+    const autoDetectedCurrency = detectedCountry === 'IN' ? 'INR' : 'USD';
+    const currency = manualCurrency || autoDetectedCurrency;
+    
+    const displayedPlans = (plansState.data && !isLoadingGeo) ? (plansState.data[currency] || plansState.data['USD']) : null;
+
 
     const loadRazorpayScript = () => {
         return new Promise((resolve) => {
@@ -298,6 +303,39 @@ export default function PricingPage() {
                 <Alert className="mb-8 border-primary/50 bg-primary/5 text-primary-foreground shadow-md"><Info className="h-4 w-4 text-primary" /><AlertTitle className="text-primary font-bold">You are on the Pro Plan!</AlertTitle><AlertDescription className="text-primary/90">{isPremiumActive && expiryDate ? `Your premium access is active until ${expiryDate.toLocaleDateString()}.` : 'Welcome to the club!'} {!isPremiumActive && expiryDate && `Your premium access expired on ${expiryDate.toLocaleDateString()}. Renew below to continue using pro features.`}</AlertDescription></Alert>
             )}
             
+            <Card className="mb-8 bg-secondary/30">
+                <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2"><Globe className="w-5 h-5 text-primary"/>Select Region/Currency</CardTitle>
+                    <CardDescription>If we detected your region incorrectly, you can select your currency manually.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <RadioGroup
+                        value={currency}
+                        onValueChange={(value) => setManualCurrency(value as 'USD' | 'INR')}
+                        className="flex flex-col sm:flex-row gap-4"
+                    >
+                        <Label htmlFor="currency-usd" className="flex-1 p-4 border rounded-md cursor-pointer has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:checked]:border-primary transition-all">
+                            <div className="flex items-center gap-3">
+                                <RadioGroupItem value="USD" id="currency-usd" />
+                                <div>
+                                    <p className="font-bold">USD ($)</p>
+                                    <p className="text-xs opacity-80">United States Dollar</p>
+                                </div>
+                            </div>
+                        </Label>
+                         <Label htmlFor="currency-inr" className="flex-1 p-4 border rounded-md cursor-pointer has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:checked]:border-primary transition-all">
+                            <div className="flex items-center gap-3">
+                                <RadioGroupItem value="INR" id="currency-inr" />
+                                <div>
+                                    <p className="font-bold">INR (₹)</p>
+                                    <p className="text-xs opacity-80">Indian Rupee</p>
+                                </div>
+                            </div>
+                        </Label>
+                    </RadioGroup>
+                </CardContent>
+            </Card>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch mt-8">
                 {plansToRender.map((plan) => {
                     const isCurrentActivePlan = plan.id.startsWith('pro') && isPremiumActive;
@@ -351,3 +389,5 @@ export default function PricingPage() {
         </div>
     );
 }
+
+    
