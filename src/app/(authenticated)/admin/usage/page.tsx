@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState, useActionState, startTransition } from 'react';
@@ -85,7 +84,7 @@ export default function AdminUsageDashboardPage() {
                             <p className="ml-4">Loading usage data...</p>
                         </div>
                     ) : (
-                        <div className="border rounded-lg overflow-hidden">
+                        <div className="border rounded-lg">
                         <Table>
                             <TableHeader>
                                 <TableRow>
