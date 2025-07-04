@@ -135,3 +135,9 @@ export interface PlansConfig {
   };
 }
 // --- END: New Types for Dynamic Plan Configuration ---
+
+export interface MonthlyUsage {
+  imageGenerations: number;
+  socialPosts: number;
+  blogPosts: number;
+}

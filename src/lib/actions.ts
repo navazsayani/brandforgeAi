@@ -18,8 +18,8 @@ import { populateBlogForm, type PopulateBlogFormInput, type PopulateBlogFormOutp
 import { populateAdCampaignForm, type PopulateAdCampaignFormInput, type PopulateAdCampaignFormOutput } from '@/ai/flows/populate-ad-campaign-form-flow';
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
-import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where, collectionGroup, deleteDoc } from 'firebase/firestore';
-import type { UserProfileSelectItem, BrandData, ModelConfig, PlansConfig } from '@/types';
+import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where, collectionGroup, deleteDoc, runTransaction } from 'firebase/firestore';
+import type { UserProfileSelectItem, BrandData, ModelConfig, PlansConfig, MonthlyUsage } from '@/types';
 import { getModelConfig, clearModelConfigCache } from './model-config';
 import { getPlansConfig, clearPlansConfigCache } from './plans-config';
 import { DEFAULT_PLANS_CONFIG } from './constants';
@@ -84,6 +84,73 @@ async function ensureUserBrandProfileDocExists(userId: string, userEmail?: strin
   console.log(`[ensureUserBrandProfileDocExists] Finished for userId: ${userId}`);
 }
 
+async function checkAndIncrementUsage(userId: string, contentType: 'imageGenerations' | 'socialPosts' | 'blogPosts'): Promise<void> {
+  const plansConfig = await getPlansConfig();
+  const userProfileDocRef = doc(db, 'users', userId, 'brandProfiles', userId);
+  const userProfileSnap = await getDoc(userProfileDocRef);
+
+  if (!userProfileSnap.exists()) {
+    throw new Error("User profile not found.");
+  }
+
+  const brandData = userProfileSnap.data() as BrandData;
+  const isAdmin = brandData.userEmail === 'admin@brandforge.ai';
+  if (isAdmin) {
+    console.log(`[Usage Check] Admin user ${userId}. Skipping quota check.`);
+    return; // Admins have unlimited usage
+  }
+
+  const isPremiumActive = brandData.plan === 'premium' && brandData.subscriptionEndDate && (brandData.subscriptionEndDate.toDate ? brandData.subscriptionEndDate.toDate() : new Date(brandData.subscriptionEndDate)) > new Date();
+  const planKey = isPremiumActive ? 'pro' : 'free';
+  // Assuming quotas are same across currencies, using USD as reference
+  const planDetails = plansConfig.USD[planKey];
+  const quotaLimit = planDetails.quotas[contentType];
+
+  if (quotaLimit <= 0) {
+    throw new Error(`Your current plan does not allow for more ${contentType.replace(/([A-Z])/g, ' $1').toLowerCase()}. Please upgrade.`);
+  }
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const usageDocId = `${year}-${month}`;
+  
+  const usageDocRef = doc(db, `users/${userId}/usage`, usageDocId);
+
+  try {
+    await runTransaction(db, async (transaction) => {
+      const usageDoc = await transaction.get(usageDocRef);
+      
+      let currentUsage: MonthlyUsage = {
+        imageGenerations: 0,
+        socialPosts: 0,
+        blogPosts: 0,
+      };
+
+      if (usageDoc.exists()) {
+        currentUsage = usageDoc.data() as MonthlyUsage;
+      }
+      
+      const currentCount = currentUsage[contentType] || 0;
+
+      if (currentCount >= quotaLimit) {
+        throw new Error(`You have reached your monthly quota of ${quotaLimit} for ${contentType.replace(/([A-Z])/g, ' $1').toLowerCase()}. Your quota will reset next month.`);
+      }
+
+      // Increment the usage count
+      const newCount = currentCount + 1;
+      const updateData = { ...currentUsage, [contentType]: newCount };
+
+      transaction.set(usageDocRef, updateData, { merge: true });
+    });
+    console.log(`[Usage Check] Usage for ${contentType} incremented for user ${userId}.`);
+  } catch (error: any) {
+    // Re-throw the error to be caught by the calling action
+    console.error(`[Usage Check] Transaction failed for user ${userId}:`, error.message);
+    throw error;
+  }
+}
+
 
 export async function handleGenerateImagesAction(
   prevState: FormState<{ generatedImages: string[]; promptUsed: string; providerUsed: string; }>,
@@ -94,6 +161,8 @@ export async function handleGenerateImagesAction(
     if (!userId) {
       return { error: "User not authenticated. Cannot generate images." };
     }
+
+    await checkAndIncrementUsage(userId, 'imageGenerations');
     
     const userDocRef = doc(db, 'users', userId, 'brandProfiles', userId);
     const userDocSnap = await getDoc(userDocRef);
@@ -231,6 +300,8 @@ export async function handleGenerateSocialMediaCaptionAction(
       return { error: "User ID is missing. Cannot save social media post."};
     }
 
+    await checkAndIncrementUsage(userId, 'socialPosts');
+
     // --- START: Quota Check ---
     const userDocRef = doc(db, 'users', userId, 'brandProfiles', userId);
     const userDocSnap = await getDoc(userDocRef);
@@ -348,6 +419,8 @@ export async function handleGenerateBlogContentAction(
     const userEmail = formData.get('userEmail') as string | undefined;
 
     if (!userId) return { error: "User ID is missing. Cannot generate blog post." };
+
+    await checkAndIncrementUsage(userId, 'blogPosts');
 
     // --- START: Quota Check ---
     const userDocRef = doc(db, 'users', userId, 'brandProfiles', userId);
