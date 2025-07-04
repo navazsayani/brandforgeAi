@@ -80,9 +80,9 @@ export default function AdminDashboardPage() {
                     <div className="flex items-center space-x-3">
                         <ShieldCheck className="w-10 h-10 text-primary" />
                         <div>
-                            <CardTitle className="text-3xl font-bold">Admin Dashboard</CardTitle>
+                            <CardTitle className="text-3xl font-bold">User Management Dashboard</CardTitle>
                             <CardDescription className="text-lg">
-                                Manage users and their subscriptions.
+                                Manage user plans and subscriptions.
                             </CardDescription>
                         </div>
                     </div>

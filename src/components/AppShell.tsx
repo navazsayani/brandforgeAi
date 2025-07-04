@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, UserCircle, ImageIcon, MessageSquare, Send, Settings, Briefcase, Images, Menu, LogOut, LogIn as LogInIcon, Sparkles, CreditCard, ShieldCheck } from 'lucide-react';
+import { Home, UserCircle, ImageIcon, MessageSquare, Send, Settings, Briefcase, Images, Menu, LogOut, LogIn as LogInIcon, Sparkles, CreditCard, ShieldCheck, BarChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
@@ -63,21 +63,37 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Button>
       ))}
        {isAdmin && (
-         <Button
-            asChild
-            variant={pathname.startsWith('/admin') ? 'secondary' : 'ghost'}
-            className={cn(
-              "sidebar-nav-item",
-              "justify-start",
-              "gap-0",
-              pathname.startsWith('/admin') && "active shadow-md"
-            )}
-          >
-            <Link href="/admin/dashboard">
-                <ShieldCheck className="w-5 h-5 mr-4 flex-shrink-0" />
-                <span className="text-break font-medium">Admin Dashboard</span>
-            </Link>
-         </Button>
+         <>
+            <div className="px-3 pt-4 pb-2">
+                <h2 className="text-xs font-semibold uppercase text-sidebar-foreground/50 tracking-wider">Admin</h2>
+            </div>
+            <Button
+                asChild
+                variant={pathname === '/admin/dashboard' ? 'secondary' : 'ghost'}
+                className={cn(
+                  "sidebar-nav-item", "justify-start", "gap-0",
+                  pathname === '/admin/dashboard' && "active shadow-md"
+                )}
+              >
+                <Link href="/admin/dashboard">
+                    <ShieldCheck className="w-5 h-5 mr-4 flex-shrink-0" />
+                    <span className="text-break font-medium">User Management</span>
+                </Link>
+             </Button>
+             <Button
+                asChild
+                variant={pathname === '/admin/usage' ? 'secondary' : 'ghost'}
+                className={cn(
+                  "sidebar-nav-item", "justify-start", "gap-0",
+                  pathname === '/admin/usage' && "active shadow-md"
+                )}
+              >
+                <Link href="/admin/usage">
+                    <BarChart className="w-5 h-5 mr-4 flex-shrink-0" />
+                    <span className="text-break font-medium">Usage Dashboard</span>
+                </Link>
+             </Button>
+         </>
        )}
        <Button
           asChild
@@ -200,19 +216,31 @@ export function AppShell({ children }: { children: ReactNode }) {
                         </Button>
                       ))}
                       {isAdmin && (
-                         <Button
-                            asChild
-                            variant={pathname.startsWith('/admin') ? 'secondary' : 'ghost'}
-                            className={cn(
-                              "sidebar-nav-item", "justify-start", "gap-0",
-                              pathname.startsWith('/admin') && "active shadow-md"
-                            )}
-                          >
-                            <Link href="/admin/dashboard">
-                              <ShieldCheck className="w-5 h-5 mr-4 flex-shrink-0" />
-                              <span className="text-break font-medium">Admin</span>
-                            </Link>
-                          </Button>
+                        <>
+                            <div className="px-3 pt-4 pb-2">
+                                <h2 className="text-xs font-semibold uppercase text-sidebar-foreground/50 tracking-wider">Admin</h2>
+                            </div>
+                            <Button
+                                asChild
+                                variant={pathname === '/admin/dashboard' ? 'secondary' : 'ghost'}
+                                className={cn("sidebar-nav-item", "justify-start", "gap-0", pathname === '/admin/dashboard' && "active shadow-md")}
+                            >
+                                <Link href="/admin/dashboard">
+                                    <ShieldCheck className="w-5 h-5 mr-4 flex-shrink-0" />
+                                    <span className="text-break font-medium">User Management</span>
+                                </Link>
+                            </Button>
+                            <Button
+                                asChild
+                                variant={pathname === '/admin/usage' ? 'secondary' : 'ghost'}
+                                className={cn("sidebar-nav-item", "justify-start", "gap-0", pathname === '/admin/usage' && "active shadow-md")}
+                            >
+                                <Link href="/admin/usage">
+                                    <BarChart className="w-5 h-5 mr-4 flex-shrink-0" />
+                                    <span className="text-break font-medium">Usage Dashboard</span>
+                                </Link>
+                            </Button>
+                        </>
                       )}
                       <Button
                         asChild

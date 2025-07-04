@@ -141,3 +141,9 @@ export interface MonthlyUsage {
   socialPosts: number;
   blogPosts: number;
 }
+
+export interface AdminUserUsage extends MonthlyUsage {
+  userId: string;
+  brandName: string;
+  userEmail: string;
+}

@@ -19,7 +19,7 @@ import { populateAdCampaignForm, type PopulateAdCampaignFormInput, type Populate
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where, collectionGroup, deleteDoc, runTransaction } from 'firebase/firestore';
-import type { UserProfileSelectItem, BrandData, ModelConfig, PlansConfig, MonthlyUsage } from '@/types';
+import type { UserProfileSelectItem, BrandData, ModelConfig, PlansConfig, MonthlyUsage, AdminUserUsage } from '@/types';
 import { getModelConfig, clearModelConfigCache } from './model-config';
 import { getPlansConfig, clearPlansConfigCache } from './plans-config';
 import { DEFAULT_PLANS_CONFIG } from './constants';
@@ -1012,6 +1012,75 @@ export async function handleGetAllUserProfilesForAdminAction(
     return { error: `Failed to fetch user profiles: ${e.message || "Unknown error"}` };
   }
 }
+
+export async function handleGetUsageForAllUsersAction(
+  prevState: FormState<AdminUserUsage[]>,
+  formData: FormData
+): Promise<FormState<AdminUserUsage[]>> {
+  const adminRequesterEmail = formData.get('adminRequesterEmail') as string;
+
+  if (adminRequesterEmail !== 'admin@brandforge.ai') {
+    return { error: "Unauthorized: You do not have permission to perform this action." };
+  }
+
+  try {
+    const userIndexRef = doc(db, 'userIndex', 'profiles');
+    const userIndexSnap = await getDoc(userIndexRef);
+
+    if (!userIndexSnap.exists()) {
+      return { data: [], message: "No user index found." };
+    }
+    
+    const userIndex = userIndexSnap.data();
+    const userIds = Object.keys(userIndex);
+
+    if (userIds.length === 0) {
+      return { data: [], message: "No users found." };
+    }
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const usageDocId = `${year}-${month}`;
+
+    const usageDataPromises = userIds.map(async (userId) => {
+      const usageDocRef = doc(db, `users/${userId}/usage`, usageDocId);
+      const usageDocSnap = await getDoc(usageDocRef);
+      
+      const userData = userIndex[userId];
+      
+      if (usageDocSnap.exists()) {
+        const usage = usageDocSnap.data() as MonthlyUsage;
+        return {
+          userId,
+          brandName: userData.brandName || "Unnamed Brand",
+          userEmail: userData.userEmail || "No Email",
+          ...usage
+        };
+      } else {
+        return {
+          userId,
+          brandName: userData.brandName || "Unnamed Brand",
+          userEmail: userData.userEmail || "No Email",
+          imageGenerations: 0,
+          socialPosts: 0,
+          blogPosts: 0,
+        };
+      }
+    });
+
+    const allUsageData = await Promise.all(usageDataPromises);
+
+    return { data: allUsageData, message: "User usage data fetched successfully." };
+
+  } catch (e: any) {
+    if (e.code === 'permission-denied') {
+      return { error: "Database permission error. Check Firestore rules." };
+    }
+    return { error: `Failed to fetch usage data: ${e.message || "Unknown error"}` };
+  }
+}
+
 
 export async function handleUpdateUserPlanByAdminAction(
   prevState: FormState<{ success: boolean }>,
