@@ -349,20 +349,25 @@ export async function handleGenerateBlogContentAction(
 
     if (!userId) return { error: "User ID is missing. Cannot generate blog post." };
 
-    // Feature Gating Check
+    // --- START: Quota Check ---
     const userDocRef = doc(db, 'users', userId, 'brandProfiles', userId);
     const userDocSnap = await getDoc(userDocRef);
-    if (!userDocSnap.exists()) return { error: "User profile not found." };
+    if (!userDocSnap.exists()) {
+      return { error: "User profile not found. Please set up your brand profile first." };
+    }
     const brandData = userDocSnap.data() as BrandData;
-    
+    const isAdmin = brandData.userEmail === 'admin@brandforge.ai';
+
     const plansConfig = await getPlansConfig();
     const planKey = (brandData.plan === 'premium') ? 'pro' : 'free';
-    const planDetails = plansConfig.USD[planKey]; // Assume USD for quota logic
+    const planDetails = plansConfig.USD[planKey]; // Quotas are consistent across currencies
 
-    if ((brandData.plan || 'free') === 'free' && planDetails.quotas.blogPosts <= 0) {
-      return { error: "Full blog post generation is a premium feature. Please upgrade your plan." };
+    if (!isAdmin && planDetails.quotas.blogPosts <= 0) {
+      return { error: "Blog post generation is not available on your current plan. Please upgrade or check plan details." };
     }
-
+    // --- END: Quota Check ---
+    
+    await ensureUserBrandProfileDocExists(userId, userEmail);
 
     const input: GenerateBlogContentInput = {
       brandName: formData.get("brandName") as string,
@@ -384,8 +389,6 @@ export async function handleGenerateBlogContentAction(
     if (input.articleStyle === "" || input.articleStyle === undefined) delete input.articleStyle;
     if (input.targetAudience === "" || input.targetAudience === undefined) delete input.targetAudience;
     
-    await ensureUserBrandProfileDocExists(userId, userEmail);
-
     const result = await generateBlogContent(input);
     const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/blogPosts`);
     

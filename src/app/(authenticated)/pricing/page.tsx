@@ -238,7 +238,7 @@ export default function PricingPage() {
         const quotaFeatures = [
             { name: `${plan.quotas.imageGenerations} Image Generations / mo`, included: plan.quotas.imageGenerations > 0 },
             { name: `${plan.quotas.socialPosts} Social Posts / mo`, included: plan.quotas.socialPosts > 0 },
-            { name: `Blog Post Generation`, included: plan.quotas.blogPosts > 0 }
+            { name: `${plan.quotas.blogPosts} Blog Posts / mo`, included: plan.quotas.blogPosts > 0 }
         ];
 
         return [...quotaFeatures, ...plan.features].map((feature, idx) => (
