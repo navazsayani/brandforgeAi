@@ -912,7 +912,7 @@ export default function ContentStudioPage() {
     let textPromptContent = "";
     let coreInstructions = "";
 
-    // Text-to-Feature prompt generation
+    // Text-to-Feature prompt generation - this should take priority
     if (textToFeature && textToFeature.trim() !== "") {
         textPromptContent = `You are an expert brand marketing designer specializing in creating contextual, engaging visual content that transforms text concepts into compelling brand-aligned graphics. Your mission is to understand the meaning and context behind the text and create a strategic visual representation that drives engagement and brand recognition.
 
@@ -1546,12 +1546,23 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                       id="imageGenTextToFeature"
                       name="textToFeature"
                       value={imageGenTextToFeature}
-                      onChange={(e) => setImageGenTextToFeature(e.target.value)}
+                      disabled={useExampleImageForGen && selectedExampleImageUrl.trim() !== ""}
+                      onChange={(e) => {
+                        const newValue = e.target.value;
+                        setImageGenTextToFeature(newValue);
+                        // If user starts typing text-to-feature, disable example image
+                        if (newValue.trim() !== "" && useExampleImageForGen) {
+                          setUseExampleImageForGen(false);
+                        }
+                      }}
                       placeholder="e.g., '5 Ways to Improve Your SEO', 'Why Choose Our Product?', 'Transform Your Business Today'. Leave blank for object/scene generation."
                       rows={2}
                     />
-                     <p className="text-xs text-muted-foreground mt-1">AI will create a contextual, brand-aligned visual that represents your text content - not just typography, but strategic graphics that communicate your message effectively for social media.</p>
-                  </div>
+                     <p className="text-xs text-muted-foreground mt-1">
+                       AI will create a contextual, brand-aligned visual that represents your text content - not just typography, but strategic graphics that communicate your message effectively for social media.
+                       {useExampleImageForGen && selectedExampleImageUrl.trim() !== "" && <span className="block mt-1 text-amber-600">Text-to-feature is disabled when using example images as they serve different generation purposes.</span>}
+                     </p>
+                   </div>
                   
                   <div>
                     <Label htmlFor="imageGenImageStylePresetSelect" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Image Style Preset</Label>
@@ -1590,12 +1601,20 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="useExampleImageForGen"
-                      name="useExampleImage" 
+                      name="useExampleImage"
                       checked={useExampleImageForGen}
-                      onCheckedChange={(checked) => setUseExampleImageForGen(checked as boolean)}
+                      disabled={imageGenTextToFeature.trim() !== ""}
+                      onCheckedChange={(checked) => {
+                        setUseExampleImageForGen(checked as boolean);
+                        // If enabling example image, clear text-to-feature
+                        if (checked && imageGenTextToFeature.trim() !== "") {
+                          setImageGenTextToFeature("");
+                        }
+                      }}
                     />
-                    <Label htmlFor="useExampleImageForGen" className="text-sm font-medium">
+                    <Label htmlFor="useExampleImageForGen" className={cn("text-sm font-medium", imageGenTextToFeature.trim() !== "" ? "text-muted-foreground" : "")}>
                       Use Example Image from Profile as Reference?
+                      {imageGenTextToFeature.trim() !== "" && <span className="text-xs ml-2">(Disabled when using text-to-feature)</span>}
                     </Label>
                   </div>
 

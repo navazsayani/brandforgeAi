@@ -19,6 +19,10 @@ const GenerateImagesInputSchema = z.object({
     .describe(
       'A description of the desired artistic style for the generated images, e.g., "photorealistic", "minimalist", "vibrant", "professional", "impressionistic". This heavily influences the final look.'
     ),
+  textToFeature: z
+    .string()
+    .optional()
+    .describe('Text content to be transformed into contextual visual content. When provided, this takes priority over other prompt generation methods.'),
   exampleImage: z
     .string()
     .url()
@@ -260,8 +264,9 @@ const generateImagesFlow = ai.defineFlow(
   async (input) => {
     const {
       brandDescription,
-      industry, 
+      industry,
       imageStyle, // This is the combined string (preset.value + custom_notes_if_any)
+      textToFeature,
       exampleImage,
       exampleImageDescription,
       aspectRatio,
@@ -317,7 +322,51 @@ const generateImagesFlow = ai.defineFlow(
             }
             
             let baseContentPrompt = "";
-            if (exampleImageDescription) {
+            if (textToFeature && textToFeature.trim() !== "") {
+                console.log(`Freepik prompt using text-to-feature content: "${textToFeature.substring(0,100)}..."`);
+                baseContentPrompt = `You are an expert brand marketing designer specializing in creating contextual, engaging visual content that transforms text concepts into compelling brand-aligned graphics. Your mission is to understand the meaning and context behind the text and create a strategic visual representation that drives engagement and brand recognition.
+
+**Text Content to Transform:**
+"${textToFeature}"
+
+**STRATEGIC CONTENT ANALYSIS:**
+First, analyze the text content to understand:
+- What is the core message or value proposition?
+- What type of content is this? (tips, benefits, questions, statements, calls-to-action, etc.)
+- What emotions or actions should this content inspire?
+- Who is the target audience for this message?
+- What visual metaphors or concepts would best represent this content?
+
+**BRAND STRATEGY CONTEXT:**
+- **Brand Identity:** "${brandDescription}"${industryContext}
+  - Extract the brand's personality, values, and visual identity cues
+  - Consider how this brand would communicate this specific message
+  - Think about the brand's target audience and their preferences
+  - Ensure the visual approach aligns with the brand's positioning
+
+**CONTEXTUAL DESIGN REQUIREMENTS:**
+- **Content-Driven Visuals:** Don't just display text - create visual representations of the concepts
+- **Strategic Messaging:** The image should work as standalone content that communicates the message even without reading every word
+- **Engagement Optimization:** Design for social media sharing, saving, and interaction
+- **Brand Consistency:** Maintain visual consistency with the brand's identity and values
+- **Audience Appeal:** Consider what would resonate with the brand's target demographic
+
+**ENHANCED CREATIVE GUIDELINES:**
+- **Conceptual Visualization:** If the text mentions "5 benefits," create visual elements that represent those benefits, not just list them
+- **Metaphorical Thinking:** Use visual metaphors that reinforce the message (e.g., growth charts for improvement tips, lightbulbs for ideas)
+- **Contextual Elements:** Include relevant icons, illustrations, or design elements that support the content theme
+- **Hierarchy & Flow:** Guide the viewer's eye through the content in a logical, engaging way
+- **Brand Storytelling:** Make the image tell a story that aligns with both the text content and brand narrative
+
+**MARKETING OPTIMIZATION:**
+- **Scroll-Stopping Power:** The image must immediately grab attention in social feeds
+- **Message Clarity:** The core message should be instantly understandable
+- **Shareability Factor:** Create content people want to save, share, and discuss
+- **Brand Recognition:** Ensure the image reinforces brand identity and recall
+- **Platform Optimization:** Consider where this will be posted and optimize accordingly
+
+**FINAL OUTPUT:** Create a single, high-quality marketing image that transforms the text content into a compelling visual experience that drives engagement, communicates value, and strengthens brand recognition.`;
+            } else if (exampleImageDescription) {
                 console.log(`Freepik prompt using example image description: "${exampleImageDescription.substring(0,100)}..."`);
                 baseContentPrompt = `An example image was provided, which is described as: "${exampleImageDescription}". Using that description as primary inspiration for the subject and main visual elements, now generate an image based on the following concept: "${brandDescription}".`;
             } else {
@@ -432,7 +481,71 @@ const generateImagesFlow = ai.defineFlow(
                 
                 let coreInstructions = "";
 
-                if (exampleImage && chosenProvider === 'GEMINI') { 
+                if (textToFeature && textToFeature.trim() !== "") {
+                    console.log(`Using text-to-feature content for image ${i+1}: "${textToFeature.substring(0,100)}..."`);
+                    coreInstructions = `You are an expert brand marketing designer specializing in creating contextual, engaging visual content that transforms text concepts into compelling brand-aligned graphics. Your mission is to understand the meaning and context behind the text and create a strategic visual representation that drives engagement and brand recognition.
+
+**Text Content to Transform:**
+"${textToFeature}"
+
+**STRATEGIC CONTENT ANALYSIS:**
+First, analyze the text content to understand:
+- What is the core message or value proposition?
+- What type of content is this? (tips, benefits, questions, statements, calls-to-action, etc.)
+- What emotions or actions should this content inspire?
+- Who is the target audience for this message?
+- What visual metaphors or concepts would best represent this content?
+
+**BRAND STRATEGY CONTEXT:**
+- **Brand Identity:** "${brandDescription}"${industryContext}
+  - Extract the brand's personality, values, and visual identity cues
+  - Consider how this brand would communicate this specific message
+  - Think about the brand's target audience and their preferences
+  - Ensure the visual approach aligns with the brand's positioning
+
+**VISUAL EXECUTION STRATEGY:** "${imageStyle}"
+- Apply this style to enhance the content's impact and brand alignment
+- For realistic styles: Create professional, market-ready visuals with authentic appeal
+- For artistic styles: Balance creative expression with clear message communication
+- Ensure the style reinforces both the text content and brand personality
+
+**CONTEXTUAL DESIGN REQUIREMENTS:**
+- **Content-Driven Visuals:** Don't just display text - create visual representations of the concepts
+- **Strategic Messaging:** The image should work as standalone content that communicates the message even without reading every word
+- **Engagement Optimization:** Design for social media sharing, saving, and interaction
+- **Brand Consistency:** Maintain visual consistency with the brand's identity and values
+- **Audience Appeal:** Consider what would resonate with the brand's target demographic
+
+**ENHANCED CREATIVE GUIDELINES:**
+- **Conceptual Visualization:** If the text mentions "5 benefits," create visual elements that represent those benefits, not just list them
+- **Metaphorical Thinking:** Use visual metaphors that reinforce the message (e.g., growth charts for improvement tips, lightbulbs for ideas)
+- **Contextual Elements:** Include relevant icons, illustrations, or design elements that support the content theme
+- **Hierarchy & Flow:** Guide the viewer's eye through the content in a logical, engaging way
+- **Brand Storytelling:** Make the image tell a story that aligns with both the text content and brand narrative
+
+**CONTENT-SPECIFIC ADAPTATIONS:**
+- For lists/tips: Create visually appealing infographic-style layouts with icons and visual separators
+- For questions: Design thought-provoking visuals that encourage engagement and responses
+- For benefits/features: Use visual metaphors and compelling graphics that illustrate value
+- For calls-to-action: Create urgency and appeal through strategic design and visual cues
+- For educational content: Design clear, informative layouts that enhance learning and retention
+
+**MARKETING OPTIMIZATION:**
+- **Scroll-Stopping Power:** The image must immediately grab attention in social feeds
+- **Message Clarity:** The core message should be instantly understandable
+- **Shareability Factor:** Create content people want to save, share, and discuss
+- **Brand Recognition:** Ensure the image reinforces brand identity and recall
+- **Platform Optimization:** Consider where this will be posted and optimize accordingly
+
+**QUALITY STANDARDS:**
+- Professional marketing-grade execution suitable for paid advertising
+- Optimized for maximum social media engagement and algorithmic performance
+- Culturally sensitive, inclusive, and globally appealing
+- Technically excellent: perfect typography, composition, color harmony, and visual balance
+- Brand-appropriate messaging that aligns with company values and positioning
+
+**FINAL OUTPUT:** Create a single, high-quality marketing image that transforms the text content into a compelling visual experience that drives engagement, communicates value, and strengthens brand recognition.`;
+                } else if (exampleImage && chosenProvider === 'GEMINI') {
                     coreInstructions = `You are creating a strategic brand marketing image designed to drive engagement, build brand awareness, and convert viewers into customers on social media platforms.
 
 **BRAND STRATEGY CONTEXT:**
