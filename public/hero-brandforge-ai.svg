@@ -1,0 +1,330 @@
+<svg width="1200" height="675" viewBox="0 0 1200 675" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Dynamic Background Gradient -->
+    <radialGradient id="bgGradient" cx="50%" cy="30%" r="80%">
+      <stop offset="0%" style="stop-color:hsl(180, 60%, 95%);stop-opacity:1" />
+      <stop offset="40%" style="stop-color:hsl(210, 40%, 96%);stop-opacity:1" />
+      <stop offset="100%" style="stop-color:hsl(240, 30%, 94%);stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Vibrant Primary Gradient -->
+    <linearGradient id="primaryGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:hsl(180, 65%, 45%);stop-opacity:1" />
+      <stop offset="50%" style="stop-color:hsl(180, 55%, 42%);stop-opacity:1" />
+      <stop offset="100%" style="stop-color:hsl(180, 45%, 35%);stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Electric Accent Gradient -->
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:hsl(45, 95%, 65%);stop-opacity:1" />
+      <stop offset="50%" style="stop-color:hsl(45, 85%, 58%);stop-opacity:1" />
+      <stop offset="100%" style="stop-color:hsl(45, 75%, 50%);stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Purple Accent for Variety -->
+    <linearGradient id="purpleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:hsl(270, 70%, 65%);stop-opacity:1" />
+      <stop offset="100%" style="stop-color:hsl(270, 60%, 55%);stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Success Green -->
+    <linearGradient id="successGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:hsl(120, 70%, 55%);stop-opacity:1" />
+      <stop offset="100%" style="stop-color:hsl(120, 60%, 45%);stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Card with Depth -->
+    <linearGradient id="cardGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:hsl(0, 0%, 100%);stop-opacity:0.95" />
+      <stop offset="100%" style="stop-color:hsl(210, 30%, 98%);stop-opacity:0.9" />
+    </linearGradient>
+    
+    <!-- Brand Text Gradient (high contrast for header) -->
+    <linearGradient id="brandTextGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:hsl(0, 0%, 100%);stop-opacity:1" />
+      <stop offset="50%" style="stop-color:hsl(45, 95%, 85%);stop-opacity:1" />
+      <stop offset="100%" style="stop-color:hsl(45, 85%, 70%);stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Text Shadow Filter -->
+    <filter id="textShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="hsl(180, 55%, 25%)" flood-opacity="0.4"/>
+    </filter>
+    
+    <!-- Enhanced Shadow -->
+    <filter id="dramaticShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="hsl(210, 30%, 20%)" flood-opacity="0.15"/>
+    </filter>
+    
+    <!-- Glow Effect -->
+    <filter id="strongGlow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Pulsing Animation -->
+    <filter id="pulse" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+      <animate attributeName="stdDeviation" values="2;6;2" dur="3s" repeatCount="indefinite"/>
+    </filter>
+  </defs>
+  
+  <!-- Dynamic Background -->
+  <rect width="1200" height="675" fill="url(#bgGradient)"/>
+  
+  <!-- Floating Orbs for Visual Interest -->
+  <circle cx="150" cy="120" r="80" fill="url(#primaryGradient)" opacity="0.1">
+    <animate attributeName="r" values="80;100;80" dur="4s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="1050" cy="180" r="120" fill="url(#accentGradient)" opacity="0.08">
+    <animate attributeName="r" values="120;140;120" dur="5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="100" cy="500" r="60" fill="url(#purpleGradient)" opacity="0.12">
+    <animate attributeName="r" values="60;80;60" dur="3.5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="1100" cy="550" r="90" fill="url(#successGradient)" opacity="0.1">
+    <animate attributeName="r" values="90;110;90" dur="4.5s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Main Dashboard with 3D Perspective -->
+  <g transform="translate(100, 50)">
+    <!-- 3D Base Shadow -->
+    <rect x="15" y="15" width="970" height="575" rx="20" fill="hsl(210, 30%, 20%)" opacity="0.1"/>
+    
+    <!-- Main Container with Glass Effect -->
+    <rect x="0" y="0" width="970" height="575" rx="20" fill="url(#cardGradient)" filter="url(#dramaticShadow)"/>
+    <rect x="0" y="0" width="970" height="575" rx="20" fill="none" stroke="hsl(180, 40%, 80%)" stroke-width="2" opacity="0.6"/>
+    
+    <!-- Dynamic Header with Gradient -->
+    <rect x="0" y="0" width="970" height="80" rx="20" fill="url(#primaryGradient)"/>
+    <rect x="0" y="60" width="970" height="20" fill="url(#primaryGradient)"/>
+    
+    <!-- BrandForge AI Logo with Glow -->
+    <g transform="translate(40, 25)">
+      <circle cx="15" cy="15" r="12" fill="url(#accentGradient)" filter="url(#strongGlow)"/>
+      <path d="M15 8L17 15L24 17L17 19L15 26L13 19L6 17L13 15Z" fill="white"/>
+      <text x="35" y="22" fill="url(#brandTextGradient)" font-family="system-ui, sans-serif" font-size="24" font-weight="700" filter="url(#textShadow)">BrandForge AI</text>
+    </g>
+    
+    <!-- User Avatar and Status -->
+    <g transform="translate(850, 25)">
+      <circle cx="15" cy="15" r="12" fill="url(#accentGradient)"/>
+      <text x="15" y="20" fill="white" font-family="system-ui, sans-serif" font-size="12" font-weight="600" text-anchor="middle">U</text>
+      <circle cx="25" cy="8" r="3" fill="url(#successGradient)"/>
+    </g>
+    
+    <!-- Main Content Grid -->
+    <g transform="translate(40, 110)">
+      
+      <!-- Brand Profile - Enhanced -->
+      <rect x="0" y="0" width="420" height="200" rx="16" fill="url(#cardGradient)" stroke="hsl(180, 30%, 85%)" stroke-width="1" filter="url(#dramaticShadow)"/>
+      
+      <!-- Section Header with Icon -->
+      <g transform="translate(20, 20)">
+        <circle cx="12" cy="12" r="10" fill="url(#primaryGradient)"/>
+        <path d="M12 6L14 12L20 14L14 16L12 22L10 16L4 14L10 12Z" fill="white" transform="scale(0.6) translate(8, 8)"/>
+        <text x="35" y="18" fill="hsl(210, 30%, 25%)" font-family="system-ui, sans-serif" font-size="18" font-weight="700">Brand Profile</text>
+      </g>
+      
+      <!-- Brand Logo with Animation -->
+      <g transform="translate(50, 90)">
+        <circle cx="0" cy="0" r="35" fill="url(#accentGradient)" filter="url(#pulse)"/>
+        <text x="0" y="8" fill="hsl(45, 85%, 12%)" font-family="system-ui, sans-serif" font-size="24" font-weight="800" text-anchor="middle">B</text>
+      </g>
+      
+      <!-- Brand Info with Progress -->
+      <g transform="translate(120, 70)">
+        <rect x="0" y="0" width="200" height="12" rx="6" fill="hsl(210, 25%, 90%)"/>
+        <rect x="0" y="0" width="160" height="12" rx="6" fill="url(#primaryGradient)">
+          <animate attributeName="width" values="0;160" dur="2s" fill="freeze"/>
+        </rect>
+        <text x="0" y="30" fill="hsl(210, 30%, 40%)" font-family="system-ui, sans-serif" font-size="12" font-weight="500">Brand Identity: 80% Complete</text>
+        
+        <rect x="0" y="45" width="180" height="8" rx="4" fill="hsl(210, 25%, 92%)"/>
+        <rect x="0" y="60" width="220" height="8" rx="4" fill="hsl(210, 25%, 92%)"/>
+      </g>
+      
+      <!-- AI Generate Button with Glow -->
+      <g transform="translate(120, 150)">
+        <rect x="0" y="0" width="120" height="40" rx="20" fill="url(#accentGradient)" filter="url(#strongGlow)"/>
+        <text x="60" y="26" fill="hsl(45, 85%, 12%)" font-family="system-ui, sans-serif" font-size="14" font-weight="700" text-anchor="middle">✨ Generate</text>
+      </g>
+      
+      <!-- Content Studio - More Dynamic -->
+      <rect x="460" y="0" width="420" height="200" rx="16" fill="url(#cardGradient)" stroke="hsl(180, 30%, 85%)" stroke-width="1" filter="url(#dramaticShadow)"/>
+      
+      <!-- Content Studio Header -->
+      <g transform="translate(480, 20)">
+        <circle cx="12" cy="12" r="10" fill="url(#purpleGradient)"/>
+        <path d="M8 8L16 8L16 16L8 16Z M10 10L14 10L14 14L10 14Z" fill="white"/>
+        <text x="35" y="18" fill="hsl(210, 30%, 25%)" font-family="system-ui, sans-serif" font-size="18" font-weight="700">Content Studio</text>
+      </g>
+      
+      <!-- Active Tabs with Glow -->
+      <g transform="translate(480, 45)">
+        <rect x="0" y="0" width="80" height="30" rx="15" fill="url(#primaryGradient)" filter="url(#strongGlow)"/>
+        <text x="40" y="20" fill="white" font-family="system-ui, sans-serif" font-size="12" font-weight="600" text-anchor="middle">Images</text>
+        <rect x="90" y="0" width="80" height="30" rx="15" fill="hsl(210, 25%, 94%)"/>
+        <text x="130" y="20" fill="hsl(210, 30%, 50%)" font-family="system-ui, sans-serif" font-size="12" font-weight="500" text-anchor="middle">Social</text>
+        <rect x="180" y="0" width="80" height="30" rx="15" fill="hsl(210, 25%, 94%)"/>
+        <text x="220" y="20" fill="hsl(210, 30%, 50%)" font-family="system-ui, sans-serif" font-size="12" font-weight="500" text-anchor="middle">Blog</text>
+      </g>
+      
+      <!-- Generated Content Grid with Animations -->
+      <g transform="translate(480, 90)">
+        <!-- Image 1 -->
+        <rect x="0" y="0" width="85" height="65" rx="8" fill="url(#primaryGradient)" opacity="0.8">
+          <animate attributeName="opacity" values="0.3;0.8;0.3" dur="3s" repeatCount="indefinite"/>
+        </rect>
+        <g transform="translate(35, 25)">
+          <path d="M7.5 0L9 7.5L16.5 9L9 10.5L7.5 18L6 10.5L-1.5 9L6 7.5Z" fill="white" filter="url(#strongGlow)"/>
+        </g>
+        
+        <!-- Image 2 -->
+        <rect x="95" y="0" width="85" height="65" rx="8" fill="url(#accentGradient)" opacity="0.8">
+          <animate attributeName="opacity" values="0.8;0.3;0.8" dur="3s" repeatCount="indefinite"/>
+        </rect>
+        <g transform="translate(130, 25)">
+          <path d="M7.5 0L9 7.5L16.5 9L9 10.5L7.5 18L6 10.5L-1.5 9L6 7.5Z" fill="white" filter="url(#strongGlow)"/>
+        </g>
+        
+        <!-- Image 3 -->
+        <rect x="190" y="0" width="85" height="65" rx="8" fill="url(#purpleGradient)" opacity="0.8">
+          <animate attributeName="opacity" values="0.3;0.8;0.3" dur="3s" begin="1s" repeatCount="indefinite"/>
+        </rect>
+        <g transform="translate(225, 25)">
+          <path d="M7.5 0L9 7.5L16.5 9L9 10.5L7.5 18L6 10.5L-1.5 9L6 7.5Z" fill="white" filter="url(#strongGlow)"/>
+        </g>
+        
+        <!-- Image 4 -->
+        <rect x="285" y="0" width="85" height="65" rx="8" fill="url(#successGradient)" opacity="0.8">
+          <animate attributeName="opacity" values="0.8;0.3;0.8" dur="3s" begin="1.5s" repeatCount="indefinite"/>
+        </rect>
+        <g transform="translate(320, 25)">
+          <path d="M7.5 0L9 7.5L16.5 9L9 10.5L7.5 18L6 10.5L-1.5 9L6 7.5Z" fill="white" filter="url(#strongGlow)"/>
+        </g>
+      </g>
+      
+      <!-- Campaign Manager - Enhanced -->
+      <rect x="0" y="230" width="420" height="180" rx="16" fill="url(#cardGradient)" stroke="hsl(180, 30%, 85%)" stroke-width="1" filter="url(#dramaticShadow)"/>
+      
+      <!-- Campaign Header -->
+      <g transform="translate(20, 250)">
+        <circle cx="12" cy="12" r="10" fill="url(#accentGradient)"/>
+        <path d="M6 10L10 6L18 14L14 18Z M10 14L14 10" stroke="white" stroke-width="2" fill="none"/>
+        <text x="35" y="18" fill="hsl(210, 30%, 25%)" font-family="system-ui, sans-serif" font-size="18" font-weight="700">Campaign Manager</text>
+      </g>
+      
+      <!-- Ad Previews with Metrics -->
+      <g transform="translate(20, 280)">
+        <rect x="0" y="0" width="180" height="100" rx="12" fill="hsl(210, 25%, 97%)" stroke="hsl(210, 25%, 88%)" stroke-width="1"/>
+        <rect x="200" y="0" width="180" height="100" rx="12" fill="hsl(210, 25%, 97%)" stroke="hsl(210, 25%, 88%)" stroke-width="1"/>
+        
+        <!-- Ad 1 Content -->
+        <text x="10" y="20" fill="hsl(210, 30%, 30%)" font-family="system-ui, sans-serif" font-size="12" font-weight="600">Google Ads Campaign</text>
+        <rect x="10" y="30" width="120" height="6" rx="3" fill="url(#primaryGradient)"/>
+        <rect x="10" y="42" width="140" height="4" rx="2" fill="hsl(210, 25%, 85%)"/>
+        <rect x="10" y="50" width="100" height="4" rx="2" fill="hsl(210, 25%, 85%)"/>
+        
+        <!-- Metrics -->
+        <g transform="translate(10, 65)">
+          <text x="0" y="0" fill="hsl(120, 60%, 45%)" font-family="system-ui, sans-serif" font-size="10" font-weight="600">CTR: 3.2%</text>
+          <text x="60" y="0" fill="hsl(180, 55%, 42%)" font-family="system-ui, sans-serif" font-size="10" font-weight="600">CPC: $0.45</text>
+        </g>
+        
+        <!-- Ad 2 Content -->
+        <text x="210" y="20" fill="hsl(210, 30%, 30%)" font-family="system-ui, sans-serif" font-size="12" font-weight="600">Meta Ads Campaign</text>
+        <rect x="210" y="30" width="130" height="6" rx="3" fill="url(#accentGradient)"/>
+        <rect x="210" y="42" width="110" height="4" rx="2" fill="hsl(210, 25%, 85%)"/>
+        <rect x="210" y="50" width="150" height="4" rx="2" fill="hsl(210, 25%, 85%)"/>
+        
+        <!-- Metrics -->
+        <g transform="translate(210, 65)">
+          <text x="0" y="0" fill="hsl(120, 60%, 45%)" font-family="system-ui, sans-serif" font-size="10" font-weight="600">Reach: 12.5K</text>
+          <text x="70" y="0" fill="hsl(270, 60%, 55%)" font-family="system-ui, sans-serif" font-size="10" font-weight="600">Eng: 8.3%</text>
+        </g>
+      </g>
+      
+      <!-- Deployment Hub - Most Dynamic -->
+      <rect x="460" y="230" width="420" height="180" rx="16" fill="url(#cardGradient)" stroke="hsl(180, 30%, 85%)" stroke-width="1" filter="url(#dramaticShadow)"/>
+      
+      <!-- Deployment Header -->
+      <g transform="translate(480, 250)">
+        <circle cx="12" cy="12" r="10" fill="url(#successGradient)"/>
+        <path d="M8 12L12 8L16 12M12 8L12 16" stroke="white" stroke-width="2" fill="none"/>
+        <text x="35" y="18" fill="hsl(210, 30%, 25%)" font-family="system-ui, sans-serif" font-size="18" font-weight="700">Deployment Hub</text>
+      </g>
+      
+      <!-- Live Status Dashboard -->
+      <g transform="translate(480, 280)">
+        <!-- Status Indicators with Animations -->
+        <g transform="translate(0, 0)">
+          <circle cx="8" cy="8" r="6" fill="url(#successGradient)">
+            <animate attributeName="r" values="6;8;6" dur="2s" repeatCount="indefinite"/>
+          </circle>
+          <text x="25" y="12" fill="hsl(210, 30%, 40%)" font-family="system-ui, sans-serif" font-size="12" font-weight="500">5 Posts Published</text>
+        </g>
+        
+        <g transform="translate(0, 25)">
+          <circle cx="8" cy="8" r="6" fill="url(#accentGradient)">
+            <animate attributeName="r" values="6;8;6" dur="2s" begin="0.5s" repeatCount="indefinite"/>
+          </circle>
+          <text x="25" y="12" fill="hsl(210, 30%, 40%)" font-family="system-ui, sans-serif" font-size="12" font-weight="500">3 Campaigns Scheduled</text>
+        </g>
+        
+        <g transform="translate(0, 50)">
+          <circle cx="8" cy="8" r="6" fill="url(#primaryGradient)">
+            <animate attributeName="r" values="6;8;6" dur="2s" begin="1s" repeatCount="indefinite"/>
+          </circle>
+          <text x="25" y="12" fill="hsl(210, 30%, 40%)" font-family="system-ui, sans-serif" font-size="12" font-weight="500">12 Drafts Ready</text>
+        </g>
+        
+        <!-- Deploy Button with Pulsing Effect -->
+        <g transform="translate(250, 20)">
+          <rect x="0" y="0" width="120" height="45" rx="22" fill="url(#successGradient)" filter="url(#pulse)"/>
+          <text x="60" y="28" fill="white" font-family="system-ui, sans-serif" font-size="14" font-weight="700" text-anchor="middle">🚀 Deploy All</text>
+        </g>
+      </g>
+    </g>
+  </g>
+  
+  <!-- Floating AI Magic Elements -->
+  <g transform="translate(50, 150)" opacity="0.8">
+    <circle cx="0" cy="0" r="25" fill="url(#primaryGradient)" opacity="0.2">
+      <animate attributeName="r" values="25;35;25" dur="4s" repeatCount="indefinite"/>
+    </circle>
+    <path d="M0 -12L3 0L15 3L3 6L0 18L-3 6L-15 3L-3 0Z" fill="url(#primaryGradient)" filter="url(#strongGlow)">
+      <animateTransform attributeName="transform" type="rotate" values="0;360" dur="8s" repeatCount="indefinite"/>
+    </path>
+  </g>
+  
+  <g transform="translate(1100, 200)" opacity="0.7">
+    <circle cx="0" cy="0" r="30" fill="url(#accentGradient)" opacity="0.2">
+      <animate attributeName="r" values="30;40;30" dur="5s" repeatCount="indefinite"/>
+    </circle>
+    <path d="M0 -10L2.5 0L12.5 2.5L2.5 5L0 15L-2.5 5L-12.5 2.5L-2.5 0Z" fill="url(#accentGradient)" filter="url(#strongGlow)">
+      <animateTransform attributeName="transform" type="rotate" values="360;0" dur="6s" repeatCount="indefinite"/>
+    </path>
+  </g>
+  
+  <g transform="translate(80, 500)" opacity="0.6">
+    <circle cx="0" cy="0" r="20" fill="url(#purpleGradient)" opacity="0.2">
+      <animate attributeName="r" values="20;28;20" dur="3.5s" repeatCount="indefinite"/>
+    </circle>
+    <path d="M0 -8L2 0L10 2L2 4L0 12L-2 4L-10 2L-2 0Z" fill="url(#purpleGradient)" filter="url(#strongGlow)">
+      <animateTransform attributeName="transform" type="rotate" values="0;360" dur="7s" repeatCount="indefinite"/>
+    </path>
+  </g>
+  
+  <!-- Dynamic Bottom Wave -->
+  <path d="M0 580 Q200 560 400 580 T800 580 Q1000 560 1200 580 L1200 675 L0 675 Z" fill="url(#primaryGradient)" opacity="0.1">
+    <animate attributeName="d" values="M0 580 Q200 560 400 580 T800 580 Q1000 560 1200 580 L1200 675 L0 675 Z;M0 590 Q200 570 400 590 T800 590 Q1000 570 1200 590 L1200 675 L0 675 Z;M0 580 Q200 560 400 580 T800 580 Q1000 560 1200 580 L1200 675 L0 675 Z" dur="6s" repeatCount="indefinite"/>
+  </path>
+</svg>

@@ -223,19 +223,19 @@ function GreetingCard({ isLoading, brandData, paymentMode }: { isLoading: boolea
         <Card className="card-enhanced w-full overflow-hidden">
             <CardContent className="p-6">
                 <div className="flex flex-col items-center gap-6">
-                    <div className="flex flex-col md:flex-row items-center gap-6 w-full">
-                        <div className="relative w-32 h-32 rounded-full flex-shrink-0 bg-primary/10 flex items-center justify-center border-2 border-primary/20">
+                    <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6 w-full">
+                        <div className="relative w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 lg:w-40 lg:h-40 rounded-full flex-shrink-0 bg-primary/10 flex items-center justify-center border-2 border-primary/20">
                             {brandData?.brandLogoUrl ? (
                                 <NextImage
                                     src={brandData.brandLogoUrl}
                                     alt={`${brandName || 'Brand'} Logo`}
                                     fill
                                     style={{ objectFit: "contain" }}
-                                    className="p-3 rounded-full"
+                                    className="p-3 sm:p-3.5 md:p-4 lg:p-4 rounded-full"
                                     data-ai-hint="brand logo"
                                 />
                             ) : (
-                                <Sparkles className="w-16 h-16 text-primary" />
+                                <Sparkles className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 text-primary" />
                             )}
                         </div>
                         <div className="flex-1 flex flex-col items-center md:items-start gap-4">

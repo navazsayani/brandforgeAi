@@ -1,0 +1,234 @@
+<svg width="1200" height="675" viewBox="0 0 1200 675" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Dynamic Background Gradient -->
+    <radialGradient id="bgGradient" cx="40%" cy="60%" r="90%">
+      <stop offset="0%" style="stop-color:hsl(45, 50%, 96%);stop-opacity:1" />
+      <stop offset="40%" style="stop-color:hsl(30, 40%, 95%);stop-opacity:1" />
+      <stop offset="100%" style="stop-color:hsl(180, 25%, 94%);stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Vibrant Primary Gradient -->
+    <linearGradient id="primaryGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:hsl(180, 65%, 45%);stop-opacity:1" />
+      <stop offset="50%" style="stop-color:hsl(180, 55%, 42%);stop-opacity:1" />
+      <stop offset="100%" style="stop-color:hsl(180, 45%, 35%);stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Electric Accent Gradient -->
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:hsl(45, 95%, 65%);stop-opacity:1" />
+      <stop offset="50%" style="stop-color:hsl(45, 85%, 58%);stop-opacity:1" />
+      <stop offset="100%" style="stop-color:hsl(45, 75%, 50%);stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Purple Accent -->
+    <linearGradient id="purpleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:hsl(270, 70%, 65%);stop-opacity:1" />
+      <stop offset="100%" style="stop-color:hsl(270, 60%, 55%);stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Card Gradient -->
+    <linearGradient id="cardGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:hsl(0, 0%, 100%);stop-opacity:0.95" />
+      <stop offset="100%" style="stop-color:hsl(210, 30%, 98%);stop-opacity:0.9" />
+    </linearGradient>
+    
+    <!-- Brand Text Gradient -->
+    <linearGradient id="brandTextGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:hsl(0, 0%, 100%);stop-opacity:1" />
+      <stop offset="50%" style="stop-color:hsl(45, 95%, 85%);stop-opacity:1" />
+      <stop offset="100%" style="stop-color:hsl(45, 85%, 70%);stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Enhanced Shadow -->
+    <filter id="dramaticShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="hsl(210, 30%, 20%)" flood-opacity="0.15"/>
+    </filter>
+    
+    <!-- Glow Effect -->
+    <filter id="strongGlow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Text Shadow Filter -->
+    <filter id="textShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="hsl(180, 55%, 25%)" flood-opacity="0.4"/>
+    </filter>
+    
+    <!-- Pulse Effect -->
+    <filter id="pulse" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+      <animate attributeName="stdDeviation" values="2;8;2" dur="3s" repeatCount="indefinite"/>
+    </filter>
+  </defs>
+  
+  <!-- Dynamic Background -->
+  <rect width="1200" height="675" fill="url(#bgGradient)"/>
+  
+  <!-- Floating Orbs -->
+  <circle cx="180" cy="100" r="70" fill="url(#accentGradient)" opacity="0.1">
+    <animate attributeName="r" values="70;90;70" dur="5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="1020" cy="500" r="85" fill="url(#primaryGradient)" opacity="0.08">
+    <animate attributeName="r" values="85;105;85" dur="4s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Main Brand Building Interface -->
+  <g transform="translate(80, 60)">
+    <!-- Main Container -->
+    <rect x="0" y="0" width="1040" height="555" rx="24" fill="url(#cardGradient)" filter="url(#dramaticShadow)"/>
+    <rect x="0" y="0" width="1040" height="555" rx="24" fill="none" stroke="hsl(180, 40%, 80%)" stroke-width="2" opacity="0.6"/>
+    
+    <!-- Header -->
+    <rect x="0" y="0" width="1040" height="80" rx="24" fill="url(#primaryGradient)"/>
+    <rect x="0" y="60" width="1040" height="20" fill="url(#primaryGradient)"/>
+    
+    <!-- BrandForge AI Logo -->
+    <g transform="translate(40, 25)">
+      <circle cx="15" cy="15" r="12" fill="url(#accentGradient)" filter="url(#strongGlow)"/>
+      <path d="M15 8L17 15L24 17L17 19L15 26L13 19L6 17L13 15Z" fill="white"/>
+      <text x="35" y="22" fill="url(#brandTextGradient)" font-family="system-ui, sans-serif" font-size="24" font-weight="700" filter="url(#textShadow)">BrandForge AI</text>
+    </g>
+    
+    <!-- Brand Building Workspace -->
+    <g transform="translate(50, 110)">
+      <!-- Main Brand Profile Section -->
+      <rect x="0" y="0" width="940" height="400" rx="20" fill="url(#cardGradient)" stroke="hsl(45, 30%, 85%)" stroke-width="2" filter="url(#dramaticShadow)"/>
+      
+      <!-- Section Header -->
+      <g transform="translate(40, 30)">
+        <circle cx="15" cy="15" r="12" fill="url(#accentGradient)"/>
+        <path d="M11 11L19 11L19 19L11 19Z M13 13L17 13L17 17L13 17Z" fill="white"/>
+        <text x="40" y="22" fill="hsl(210, 30%, 25%)" font-family="system-ui, sans-serif" font-size="22" font-weight="700">AI Brand Builder</text>
+      </g>
+      
+      <!-- Logo Generation Area -->
+      <g transform="translate(60, 80)">
+        <!-- Current Logo Display -->
+        <rect x="0" y="0" width="240" height="240" rx="16" fill="hsl(210, 25%, 98%)" stroke="hsl(210, 25%, 88%)" stroke-width="1"/>
+        <text x="120" y="25" fill="hsl(210, 30%, 40%)" font-family="system-ui, sans-serif" font-size="14" font-weight="600" text-anchor="middle">Generated Logo</text>
+        
+        <!-- Main Logo -->
+        <g transform="translate(120, 130)">
+          <circle cx="0" cy="0" r="60" fill="url(#accentGradient)" filter="url(#pulse)"/>
+          <text x="0" y="15" fill="hsl(45, 85%, 12%)" font-family="system-ui, sans-serif" font-size="48" font-weight="900" text-anchor="middle">B</text>
+        </g>
+        
+        <!-- Logo Controls -->
+        <g transform="translate(20, 200)">
+          <rect x="0" y="0" width="80" height="30" rx="15" fill="url(#primaryGradient)"/>
+          <text x="40" y="20" fill="white" font-family="system-ui, sans-serif" font-size="12" font-weight="600" text-anchor="middle">🎨 Style</text>
+          
+          <rect x="90" y="0" width="80" height="30" rx="15" fill="url(#purpleGradient)"/>
+          <text x="130" y="20" fill="white" font-family="system-ui, sans-serif" font-size="12" font-weight="600" text-anchor="middle">🎯 Size</text>
+        </g>
+      </g>
+      
+      <!-- Brand Information Panel -->
+      <g transform="translate(340, 80)">
+        <rect x="0" y="0" width="540" height="280" rx="16" fill="hsl(210, 25%, 98%)" stroke="hsl(210, 25%, 88%)" stroke-width="1"/>
+        
+        <!-- Brand Name Input -->
+        <g transform="translate(30, 30)">
+          <text x="0" y="0" fill="hsl(210, 30%, 40%)" font-family="system-ui, sans-serif" font-size="14" font-weight="600">Brand Name</text>
+          <rect x="0" y="10" width="240" height="35" rx="8" fill="white" stroke="hsl(210, 25%, 85%)" stroke-width="1"/>
+          <text x="15" y="30" fill="hsl(210, 30%, 30%)" font-family="system-ui, sans-serif" font-size="16" font-weight="600">BrandForge</text>
+        </g>
+        
+        <!-- Website URL -->
+        <g transform="translate(290, 30)">
+          <text x="0" y="0" fill="hsl(210, 30%, 40%)" font-family="system-ui, sans-serif" font-size="14" font-weight="600">Website URL</text>
+          <rect x="0" y="10" width="220" height="35" rx="8" fill="white" stroke="hsl(210, 25%, 85%)" stroke-width="1"/>
+          <text x="15" y="30" fill="hsl(210, 30%, 50%)" font-family="system-ui, sans-serif" font-size="14">brandforge.ai</text>
+          
+          <!-- AI Extract Button -->
+          <rect x="160" y="15" width="50" height="25" rx="12" fill="url(#primaryGradient)" filter="url(#strongGlow)"/>
+          <text x="185" y="30" fill="white" font-family="system-ui, sans-serif" font-size="10" font-weight="600" text-anchor="middle">🧠 AI</text>
+        </g>
+        
+        <!-- Brand Description -->
+        <g transform="translate(30, 90)">
+          <text x="0" y="0" fill="hsl(210, 30%, 40%)" font-family="system-ui, sans-serif" font-size="14" font-weight="600">Brand Description</text>
+          <rect x="0" y="10" width="480" height="80" rx="8" fill="white" stroke="hsl(210, 25%, 85%)" stroke-width="1"/>
+          <text x="15" y="30" fill="hsl(210, 30%, 30%)" font-family="system-ui, sans-serif" font-size="12">AI-powered branding and marketing platform that helps</text>
+          <text x="15" y="45" fill="hsl(210, 30%, 30%)" font-family="system-ui, sans-serif" font-size="12">businesses create compelling brand identities and content</text>
+          <text x="15" y="60" fill="hsl(210, 30%, 30%)" font-family="system-ui, sans-serif" font-size="12">with intelligent automation and creative assistance.</text>
+          
+          <!-- AI Enhance Button -->
+          <rect x="390" y="65" width="75" height="20" rx="10" fill="url(#accentGradient)"/>
+          <text x="427" y="77" fill="hsl(45, 85%, 12%)" font-family="system-ui, sans-serif" font-size="9" font-weight="600" text-anchor="middle">✨ Enhance</text>
+        </g>
+        
+        <!-- Keywords -->
+        <g transform="translate(30, 190)">
+          <text x="0" y="0" fill="hsl(210, 30%, 40%)" font-family="system-ui, sans-serif" font-size="14" font-weight="600">Target Keywords</text>
+          
+          <!-- Keyword Tags -->
+          <rect x="0" y="15" width="70" height="25" rx="12" fill="hsl(180, 55%, 95%)" stroke="hsl(180, 55%, 80%)" stroke-width="1"/>
+          <text x="35" y="30" fill="hsl(180, 55%, 40%)" font-family="system-ui, sans-serif" font-size="10" font-weight="500" text-anchor="middle">AI Tools</text>
+          
+          <rect x="80" y="15" width="80" height="25" rx="12" fill="hsl(45, 85%, 95%)" stroke="hsl(45, 85%, 80%)" stroke-width="1"/>
+          <text x="120" y="30" fill="hsl(45, 85%, 40%)" font-family="system-ui, sans-serif" font-size="10" font-weight="500" text-anchor="middle">Marketing</text>
+          
+          <rect x="170" y="15" width="75" height="25" rx="12" fill="hsl(270, 60%, 95%)" stroke="hsl(270, 60%, 80%)" stroke-width="1"/>
+          <text x="207" y="30" fill="hsl(270, 60%, 40%)" font-family="system-ui, sans-serif" font-size="10" font-weight="500" text-anchor="middle">Branding</text>
+          
+          <rect x="255" y="15" width="90" height="25" rx="12" fill="hsl(120, 60%, 95%)" stroke="hsl(120, 60%, 80%)" stroke-width="1"/>
+          <text x="300" y="30" fill="hsl(120, 60%, 40%)" font-family="system-ui, sans-serif" font-size="10" font-weight="500" text-anchor="middle">Automation</text>
+          
+          <rect x="355" y="15" width="85" height="25" rx="12" fill="hsl(300, 60%, 95%)" stroke="hsl(300, 60%, 80%)" stroke-width="1"/>
+          <text x="397" y="30" fill="hsl(300, 60%, 40%)" font-family="system-ui, sans-serif" font-size="10" font-weight="500" text-anchor="middle">Creative</text>
+        </g>
+        
+        <!-- Action Buttons -->
+        <g transform="translate(30, 235)">
+          <rect x="0" y="0" width="150" height="35" rx="17" fill="url(#accentGradient)" filter="url(#strongGlow)"/>
+          <text x="75" y="23" fill="hsl(45, 85%, 12%)" font-family="system-ui, sans-serif" font-size="14" font-weight="700" text-anchor="middle">🎨 Generate Logo</text>
+          
+          <rect x="170" y="0" width="130" height="35" rx="17" fill="url(#primaryGradient)"/>
+          <text x="235" y="23" fill="white" font-family="system-ui, sans-serif" font-size="14" font-weight="600" text-anchor="middle">💾 Save Profile</text>
+          
+          <rect x="320" y="0" width="110" height="35" rx="17" fill="url(#purpleGradient)"/>
+          <text x="375" y="23" fill="white" font-family="system-ui, sans-serif" font-size="14" font-weight="600" text-anchor="middle">🔄 Refresh</text>
+        </g>
+      </g>
+    </g>
+    
+    <!-- Brand Profile Summary -->
+    <g transform="translate(50, 520)">
+      <rect x="0" y="0" width="940" height="50" rx="16" fill="hsl(210, 25%, 98%)" stroke="hsl(210, 25%, 88%)" stroke-width="1"/>
+      <text x="20" y="20" fill="hsl(210, 30%, 40%)" font-family="system-ui, sans-serif" font-size="12" font-weight="600">Brand Profile Status:</text>
+      <text x="20" y="35" fill="hsl(120, 60%, 45%)" font-family="system-ui, sans-serif" font-size="12" font-weight="500">✓ Logo Generated • ✓ Description Complete • ✓ Keywords Added • Ready for Content Creation</text>
+      
+      <rect x="780" y="10" width="140" height="30" rx="15" fill="url(#primaryGradient)" filter="url(#strongGlow)"/>
+      <text x="850" y="28" fill="white" font-family="system-ui, sans-serif" font-size="12" font-weight="600" text-anchor="middle">🚀 Start Creating</text>
+    </g>
+  </g>
+  
+  <!-- Floating Brand Elements -->
+  <g transform="translate(40, 250)" opacity="0.7">
+    <circle cx="0" cy="0" r="25" fill="url(#accentGradient)" opacity="0.2">
+      <animate attributeName="r" values="25;35;25" dur="4s" repeatCount="indefinite"/>
+    </circle>
+    <path d="M0 -10L2.5 0L12.5 2.5L2.5 5L0 15L-2.5 5L-12.5 2.5L-2.5 0Z" fill="url(#accentGradient)" filter="url(#strongGlow)">
+      <animateTransform attributeName="transform" type="rotate" values="0;360" dur="8s" repeatCount="indefinite"/>
+    </path>
+  </g>
+  
+  <g transform="translate(1140, 180)" opacity="0.6">
+    <circle cx="0" cy="0" r="30" fill="url(#primaryGradient)" opacity="0.2">
+      <animate attributeName="r" values="30;40;30" dur="5s" repeatCount="indefinite"/>
+    </circle>
+    <path d="M0 -12L3 0L15 3L3 6L0 18L-3 6L-15 3L-3 0Z" fill="url(#primaryGradient)" filter="url(#strongGlow)">
+      <animateTransform attributeName="transform" type="rotate" values="360;0" dur="6s" repeatCount="indefinite"/>
+    </path>
+  </g>
+</svg>

@@ -264,9 +264,9 @@ export default function CampaignManagerPage() {
         formData.append('generatedContent', data.generatedContent);
     }
 
-    if (data.campaignGoal) formData.append('campaignGoal', data.campaignGoal);
-    if (data.targetAudience) formData.append('targetAudience', data.targetAudience);
-    if (data.callToAction) formData.append('callToAction', data.callToAction);
+    if (data.campaignGoal && data.campaignGoal.trim()) formData.append('campaignGoal', data.campaignGoal.trim());
+    if (data.targetAudience && data.targetAudience.trim()) formData.append('targetAudience', data.targetAudience.trim());
+    if (data.callToAction && data.callToAction.trim()) formData.append('callToAction', data.callToAction.trim());
 
     if (currentUser?.uid) formData.append('userId', currentUser.uid);
     if (brandData?.industry) formData.append('industry', brandData.industry);

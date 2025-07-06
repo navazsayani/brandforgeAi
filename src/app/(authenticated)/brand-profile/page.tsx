@@ -43,6 +43,8 @@ const brandProfileSchema = z.object({
   imageStyleNotes: z.string().optional(),
   exampleImages: z.array(z.string().url({ message: "Each image must be a valid URL." })).optional(),
   targetKeywords: z.string().optional(),
+  logoShape: z.enum(['circle', 'square', 'shield', 'hexagon', 'diamond', 'custom']).optional(),
+  logoStyle: z.enum(['minimalist', 'modern', 'classic', 'playful', 'bold', 'elegant']).optional(),
   brandLogoUrl: z.union([
     z.string().url({ message: "Please enter a valid URL." }),
     z.string().startsWith('data:').optional(),
@@ -63,6 +65,8 @@ const defaultFormValues: BrandProfileFormData = {
   imageStyleNotes: "",
   exampleImages: [],
   targetKeywords: "",
+  logoShape: "circle",
+  logoStyle: "modern",
   brandLogoUrl: "",
   plan: 'free',
   userEmail: "",
@@ -317,6 +321,8 @@ export default function BrandProfilePage() {
     const brandDescription = form.getValues("brandDescription");
     const industry = form.getValues("industry");
     const targetKeywords = form.getValues("targetKeywords");
+    const logoShape = form.getValues("logoShape");
+    const logoStyle = form.getValues("logoStyle");
 
     if (!brandName || !brandDescription) {
       toast({ title: "Missing Info", description: "Brand Name & Description required for logo.", variant: "default" });
@@ -328,6 +334,8 @@ export default function BrandProfilePage() {
     formData.append("brandDescription", brandDescription);
     if (industry) formData.append("industry", industry);
     if (targetKeywords) formData.append("targetKeywords", targetKeywords);
+    if (logoShape) formData.append("logoShape", logoShape);
+    if (logoStyle) formData.append("logoStyle", logoStyle);
     if (effectiveUserIdForStorage) formData.append("userId", effectiveUserIdForStorage);
     
     const emailForLogoAction = currentProfileBeingEdited?.userEmail || (currentUser?.uid === effectiveUserIdForStorage ? currentUser?.email : undefined);
@@ -721,9 +729,84 @@ export default function BrandProfilePage() {
                 <FormItem>
                   <FormLabel className="flex items-center text-base mb-2"><Sparkles className="w-5 h-5 mr-2 text-primary"/>Brand Logo</FormLabel>
                   <div className="p-4 border rounded-lg space-y-4">
+                    {/* Logo Shape and Style Selection */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="logoShape"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm font-medium">Logo Shape</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value ?? 'circle'}
+                              disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select shape" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectGroup>
+                                  <SelectLabel>Shapes</SelectLabel>
+                                  <SelectItem value="circle">Circle</SelectItem>
+                                  <SelectItem value="square">Square</SelectItem>
+                                  <SelectItem value="shield">Shield</SelectItem>
+                                  <SelectItem value="hexagon">Hexagon</SelectItem>
+                                  <SelectItem value="diamond">Diamond</SelectItem>
+                                  <SelectItem value="custom">Custom (Organic Shape)</SelectItem>
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
+                            <FormDescription className="text-xs">
+                              {field.value === 'custom'
+                                ? 'Custom: Creates a unique, organic shape that fits the brand identity perfectly - not constrained by geometric boundaries.'
+                                : 'Shape defines the outer boundary/frame for the logo design.'
+                              }
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="logoStyle"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm font-medium">Logo Style</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value ?? 'modern'}
+                              disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select style" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectGroup>
+                                  <SelectLabel>Styles</SelectLabel>
+                                  <SelectItem value="minimalist">Minimalist</SelectItem>
+                                  <SelectItem value="modern">Modern</SelectItem>
+                                  <SelectItem value="classic">Classic</SelectItem>
+                                  <SelectItem value="playful">Playful</SelectItem>
+                                  <SelectItem value="bold">Bold</SelectItem>
+                                  <SelectItem value="elegant">Elegant</SelectItem>
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    {/* Logo Preview and Generation */}
                     <div className="flex flex-col sm:flex-row items-center gap-4">
-                      <div className="w-32 h-32 border rounded-md flex items-center justify-center bg-muted overflow-hidden flex-shrink-0">
-                        {isGeneratingLogo ? <Loader2 className="w-12 h-12 text-primary animate-spin"/> : currentLogoToDisplay ? <NextImage src={currentLogoToDisplay} alt="Brand Logo Preview" width={128} height={128} className="object-contain" data-ai-hint="brand logo"/> : <ImageIconLucide className="w-12 h-12 text-muted-foreground"/>}
+                      <div className="w-32 h-32 sm:w-36 sm:h-36 md:w-40 md:h-40 lg:w-44 lg:h-44 border rounded-md flex items-center justify-center bg-muted overflow-hidden flex-shrink-0">
+                        {isGeneratingLogo ? <Loader2 className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 text-primary animate-spin"/> : currentLogoToDisplay ? <NextImage src={currentLogoToDisplay} alt="Brand Logo Preview" fill className="object-contain p-2 sm:p-2.5 md:p-3 lg:p-3" data-ai-hint="brand logo"/> : <ImageIconLucide className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 text-muted-foreground"/>}
                       </div>
                       <div className="flex-1 text-center sm:text-left">
                         <Button type="button" onClick={handleGenerateLogo} disabled={isGeneratingLogo || isUploadingLogo || !form.getValues("brandName") || !form.getValues("brandDescription")} className="w-full sm:w-auto">

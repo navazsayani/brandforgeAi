@@ -1,0 +1,224 @@
+<svg width="1200" height="675" viewBox="0 0 1200 675" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Dynamic Background Gradient -->
+    <radialGradient id="bgGradient" cx="70%" cy="20%" r="85%">
+      <stop offset="0%" style="stop-color:hsl(270, 40%, 96%);stop-opacity:1" />
+      <stop offset="40%" style="stop-color:hsl(300, 35%, 95%);stop-opacity:1" />
+      <stop offset="100%" style="stop-color:hsl(210, 30%, 94%);stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Vibrant Primary Gradient -->
+    <linearGradient id="primaryGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:hsl(180, 65%, 45%);stop-opacity:1" />
+      <stop offset="50%" style="stop-color:hsl(180, 55%, 42%);stop-opacity:1" />
+      <stop offset="100%" style="stop-color:hsl(180, 45%, 35%);stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Electric Accent Gradient -->
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:hsl(45, 95%, 65%);stop-opacity:1" />
+      <stop offset="50%" style="stop-color:hsl(45, 85%, 58%);stop-opacity:1" />
+      <stop offset="100%" style="stop-color:hsl(45, 75%, 50%);stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Purple Creative Gradient -->
+    <linearGradient id="creativeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:hsl(270, 70%, 65%);stop-opacity:1" />
+      <stop offset="100%" style="stop-color:hsl(270, 60%, 55%);stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Card Gradient -->
+    <linearGradient id="cardGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:hsl(0, 0%, 100%);stop-opacity:0.95" />
+      <stop offset="100%" style="stop-color:hsl(210, 30%, 98%);stop-opacity:0.9" />
+    </linearGradient>
+    
+    <!-- Brand Text Gradient -->
+    <linearGradient id="brandTextGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:hsl(0, 0%, 100%);stop-opacity:1" />
+      <stop offset="50%" style="stop-color:hsl(45, 95%, 85%);stop-opacity:1" />
+      <stop offset="100%" style="stop-color:hsl(45, 85%, 70%);stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Enhanced Shadow -->
+    <filter id="dramaticShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="hsl(210, 30%, 20%)" flood-opacity="0.15"/>
+    </filter>
+    
+    <!-- Glow Effect -->
+    <filter id="strongGlow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Text Shadow Filter -->
+    <filter id="textShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="hsl(180, 55%, 25%)" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+  
+  <!-- Dynamic Background -->
+  <rect width="1200" height="675" fill="url(#bgGradient)"/>
+  
+  <!-- Floating Creative Orbs -->
+  <circle cx="120" cy="180" r="60" fill="url(#creativeGradient)" opacity="0.1">
+    <animate attributeName="r" values="60;80;60" dur="4.5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="1080" cy="120" r="100" fill="url(#accentGradient)" opacity="0.08">
+    <animate attributeName="r" values="100;120;100" dur="6s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Main Content Studio Interface -->
+  <g transform="translate(100, 50)">
+    <!-- Main Container -->
+    <rect x="0" y="0" width="1000" height="575" rx="20" fill="url(#cardGradient)" filter="url(#dramaticShadow)"/>
+    <rect x="0" y="0" width="1000" height="575" rx="20" fill="none" stroke="hsl(180, 40%, 80%)" stroke-width="2" opacity="0.6"/>
+    
+    <!-- Header -->
+    <rect x="0" y="0" width="1000" height="80" rx="20" fill="url(#primaryGradient)"/>
+    <rect x="0" y="60" width="1000" height="20" fill="url(#primaryGradient)"/>
+    
+    <!-- BrandForge AI Logo -->
+    <g transform="translate(40, 25)">
+      <circle cx="15" cy="15" r="12" fill="url(#accentGradient)" filter="url(#strongGlow)"/>
+      <path d="M15 8L17 15L24 17L17 19L15 26L13 19L6 17L13 15Z" fill="white"/>
+      <text x="35" y="22" fill="url(#brandTextGradient)" font-family="system-ui, sans-serif" font-size="24" font-weight="700" filter="url(#textShadow)">BrandForge AI</text>
+    </g>
+    
+    <!-- Content Studio Dashboard -->
+    <g transform="translate(40, 110)">
+      <!-- Dashboard Header -->
+      <g transform="translate(0, 0)">
+        <circle cx="15" cy="15" r="12" fill="url(#creativeGradient)"/>
+        <path d="M9 9L21 9L21 12L9 12Z M9 15L21 15L21 18L9 18Z M9 21L15 21L15 24L9 24Z" fill="white"/>
+        <text x="40" y="22" fill="hsl(210, 30%, 25%)" font-family="system-ui, sans-serif" font-size="22" font-weight="700">Content Studio</text>
+      </g>
+      
+      <!-- Content Creation Tools -->
+      <g transform="translate(0, 50)">
+        <!-- AI Image Generator -->
+        <rect x="0" y="0" width="300" height="180" rx="16" fill="url(#cardGradient)" stroke="hsl(270, 30%, 85%)" stroke-width="1" filter="url(#dramaticShadow)"/>
+        <text x="20" y="25" fill="hsl(210, 30%, 25%)" font-family="system-ui, sans-serif" font-size="16" font-weight="700">🎨 AI Image Generator</text>
+        
+        <!-- Generated Image Preview -->
+        <rect x="20" y="35" width="260" height="100" rx="12" fill="hsl(270, 60%, 96%)" stroke="hsl(270, 60%, 85%)" stroke-width="1"/>
+        <text x="150" y="55" fill="hsl(270, 60%, 40%)" font-family="system-ui, sans-serif" font-size="12" text-anchor="middle">Generated Image</text>
+        
+        <!-- Sample Generated Content -->
+        <rect x="40" y="70" width="80" height="50" rx="8" fill="url(#creativeGradient)" opacity="0.8"/>
+        <text x="80" y="90" fill="white" font-family="system-ui, sans-serif" font-size="10" text-anchor="middle">Product</text>
+        <text x="80" y="105" fill="white" font-family="system-ui, sans-serif" font-size="10" text-anchor="middle">Shot</text>
+        
+        <rect x="140" y="70" width="80" height="50" rx="8" fill="url(#accentGradient)" opacity="0.8"/>
+        <text x="180" y="90" fill="hsl(45, 85%, 12%)" font-family="system-ui, sans-serif" font-size="10" text-anchor="middle">Social</text>
+        <text x="180" y="105" fill="hsl(45, 85%, 12%)" font-family="system-ui, sans-serif" font-size="10" text-anchor="middle">Media</text>
+        
+        <!-- Generate Button -->
+        <rect x="20" y="145" width="100" height="25" rx="12" fill="url(#creativeGradient)" filter="url(#strongGlow)"/>
+        <text x="70" y="160" fill="white" font-family="system-ui, sans-serif" font-size="12" font-weight="600" text-anchor="middle">✨ Generate</text>
+        
+        <!-- AI Blog Writer -->
+        <rect x="320" y="0" width="300" height="180" rx="16" fill="url(#cardGradient)" stroke="hsl(180, 30%, 85%)" stroke-width="1" filter="url(#dramaticShadow)"/>
+        <text x="340" y="25" fill="hsl(210, 30%, 25%)" font-family="system-ui, sans-serif" font-size="16" font-weight="700">📝 AI Blog Writer</text>
+        
+        <!-- Blog Content Preview -->
+        <rect x="340" y="35" width="260" height="100" rx="12" fill="hsl(180, 55%, 96%)" stroke="hsl(180, 55%, 85%)" stroke-width="1"/>
+        <text x="350" y="55" fill="hsl(180, 55%, 40%)" font-family="system-ui, sans-serif" font-size="12" font-weight="600">Blog Title: "10 AI Marketing Trends"</text>
+        <text x="350" y="75" fill="hsl(210, 30%, 50%)" font-family="system-ui, sans-serif" font-size="10">Artificial intelligence is revolutionizing the way</text>
+        <text x="350" y="90" fill="hsl(210, 30%, 50%)" font-family="system-ui, sans-serif" font-size="10">businesses approach marketing. From personalized</text>
+        <text x="350" y="105" fill="hsl(210, 30%, 50%)" font-family="system-ui, sans-serif" font-size="10">content to predictive analytics, AI tools are...</text>
+        <text x="350" y="120" fill="hsl(210, 30%, 60%)" font-family="system-ui, sans-serif" font-size="9">Word Count: 1,247 | Reading Time: 5 min</text>
+        
+        <!-- Write Button -->
+        <rect x="340" y="145" width="100" height="25" rx="12" fill="url(#primaryGradient)"/>
+        <text x="390" y="160" fill="white" font-family="system-ui, sans-serif" font-size="12" font-weight="600" text-anchor="middle">🖊️ Write Blog</text>
+        
+        <!-- Social Media Generator -->
+        <rect x="640" y="0" width="300" height="180" rx="16" fill="url(#cardGradient)" stroke="hsl(45, 30%, 85%)" stroke-width="1" filter="url(#dramaticShadow)"/>
+        <text x="660" y="25" fill="hsl(210, 30%, 25%)" font-family="system-ui, sans-serif" font-size="16" font-weight="700">📱 Social Media Posts</text>
+        
+        <!-- Social Post Previews -->
+        <rect x="660" y="35" width="120" height="80" rx="12" fill="hsl(45, 85%, 96%)" stroke="hsl(45, 85%, 85%)" stroke-width="1"/>
+        <text x="720" y="50" fill="hsl(45, 85%, 40%)" font-family="system-ui, sans-serif" font-size="10" text-anchor="middle">Instagram</text>
+        <text x="720" y="65" fill="hsl(210, 30%, 50%)" font-family="system-ui, sans-serif" font-size="8" text-anchor="middle">"Transform your brand</text>
+        <text x="720" y="75" fill="hsl(210, 30%, 50%)" font-family="system-ui, sans-serif" font-size="8" text-anchor="middle">with AI magic! ✨"</text>
+        <text x="720" y="90" fill="hsl(45, 85%, 40%)" font-family="system-ui, sans-serif" font-size="8" text-anchor="middle">#AIMarketing</text>
+        
+        <rect x="800" y="35" width="120" height="80" rx="12" fill="hsl(210, 55%, 96%)" stroke="hsl(210, 55%, 85%)" stroke-width="1"/>
+        <text x="860" y="50" fill="hsl(210, 55%, 40%)" font-family="system-ui, sans-serif" font-size="10" text-anchor="middle">LinkedIn</text>
+        <text x="860" y="65" fill="hsl(210, 30%, 50%)" font-family="system-ui, sans-serif" font-size="8" text-anchor="middle">"AI is reshaping how</text>
+        <text x="860" y="75" fill="hsl(210, 30%, 50%)" font-family="system-ui, sans-serif" font-size="8" text-anchor="middle">we build brands..."</text>
+        <text x="860" y="90" fill="hsl(210, 55%, 40%)" font-family="system-ui, sans-serif" font-size="8" text-anchor="middle">#BrandStrategy</text>
+        
+        <!-- Generate Social Button -->
+        <rect x="660" y="125" width="120" height="25" rx="12" fill="url(#accentGradient)"/>
+        <text x="720" y="140" fill="hsl(45, 85%, 12%)" font-family="system-ui, sans-serif" font-size="12" font-weight="600" text-anchor="middle">📲 Create Posts</text>
+        
+        <rect x="800" y="125" width="120" height="25" rx="12" fill="url(#creativeGradient)"/>
+        <text x="860" y="140" fill="white" font-family="system-ui, sans-serif" font-size="12" font-weight="600" text-anchor="middle">🎯 Schedule</text>
+      </g>
+      
+      <!-- Content Library -->
+      <g transform="translate(0, 250)">
+        <rect x="0" y="0" width="920" height="150" rx="16" fill="url(#cardGradient)" stroke="hsl(210, 25%, 88%)" stroke-width="1" filter="url(#dramaticShadow)"/>
+        <text x="20" y="30" fill="hsl(210, 30%, 25%)" font-family="system-ui, sans-serif" font-size="18" font-weight="600">📚 Content Library</text>
+        
+        <!-- Content Items -->
+        <g transform="translate(40, 50)">
+          <!-- Recent Images -->
+          <rect x="0" y="0" width="80" height="60" rx="8" fill="url(#creativeGradient)" opacity="0.8"/>
+          <text x="40" y="35" fill="white" font-family="system-ui, sans-serif" font-size="10" text-anchor="middle">Image 1</text>
+          
+          <rect x="100" y="0" width="80" height="60" rx="8" fill="url(#accentGradient)" opacity="0.8"/>
+          <text x="140" y="35" fill="hsl(45, 85%, 12%)" font-family="system-ui, sans-serif" font-size="10" text-anchor="middle">Image 2</text>
+          
+          <rect x="200" y="0" width="80" height="60" rx="8" fill="url(#primaryGradient)" opacity="0.8"/>
+          <text x="240" y="35" fill="white" font-family="system-ui, sans-serif" font-size="10" text-anchor="middle">Image 3</text>
+          
+          <!-- Recent Blogs -->
+          <rect x="320" y="0" width="150" height="60" rx="8" fill="hsl(210, 25%, 98%)" stroke="hsl(210, 25%, 88%)" stroke-width="1"/>
+          <text x="330" y="20" fill="hsl(210, 30%, 30%)" font-family="system-ui, sans-serif" font-size="11" font-weight="600">AI Marketing Guide</text>
+          <text x="330" y="35" fill="hsl(210, 30%, 50%)" font-family="system-ui, sans-serif" font-size="9">1,247 words • 5 min read</text>
+          <text x="330" y="50" fill="hsl(120, 60%, 45%)" font-family="system-ui, sans-serif" font-size="9">✓ Published</text>
+          
+          <rect x="490" y="0" width="150" height="60" rx="8" fill="hsl(210, 25%, 98%)" stroke="hsl(210, 25%, 88%)" stroke-width="1"/>
+          <text x="500" y="20" fill="hsl(210, 30%, 30%)" font-family="system-ui, sans-serif" font-size="11" font-weight="600">Brand Strategy Tips</text>
+          <text x="500" y="35" fill="hsl(210, 30%, 50%)" font-family="system-ui, sans-serif" font-size="9">892 words • 4 min read</text>
+          <text x="500" y="50" fill="hsl(45, 85%, 45%)" font-family="system-ui, sans-serif" font-size="9">📝 Draft</text>
+          
+          <!-- Recent Social Posts -->
+          <rect x="660" y="0" width="120" height="60" rx="8" fill="hsl(210, 25%, 98%)" stroke="hsl(210, 25%, 88%)" stroke-width="1"/>
+          <text x="720" y="20" fill="hsl(210, 30%, 30%)" font-family="system-ui, sans-serif" font-size="11" font-weight="600" text-anchor="middle">Social Posts</text>
+          <text x="720" y="35" fill="hsl(210, 30%, 50%)" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle">12 posts ready</text>
+          <text x="720" y="50" fill="hsl(180, 55%, 45%)" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle">🚀 Ready to post</text>
+        </g>
+        
+        <!-- View All Button -->
+        <rect x="780" y="110" width="120" height="25" rx="12" fill="url(#primaryGradient)"/>
+        <text x="840" y="125" fill="white" font-family="system-ui, sans-serif" font-size="12" font-weight="600" text-anchor="middle">👁️ View All</text>
+      </g>
+    </g>
+  </g>
+  
+  <!-- Floating Creative Elements -->
+  <g transform="translate(50, 400)" opacity="0.8">
+    <circle cx="0" cy="0" r="22" fill="url(#creativeGradient)" opacity="0.2">
+      <animate attributeName="r" values="22;32;22" dur="4s" repeatCount="indefinite"/>
+    </circle>
+    <path d="M0 -8L2 0L10 2L2 4L0 12L-2 4L-10 2L-2 0Z" fill="url(#creativeGradient)" filter="url(#strongGlow)">
+      <animateTransform attributeName="transform" type="rotate" values="0;360" dur="8s" repeatCount="indefinite"/>
+    </path>
+  </g>
+  
+  <g transform="translate(1130, 250)" opacity="0.7">
+    <circle cx="0" cy="0" r="28" fill="url(#accentGradient)" opacity="0.2">
+      <animate attributeName="r" values="28;38;28" dur="5s" repeatCount="indefinite"/>
+    </circle>
+    <path d="M0 -10L2.5 0L12.5 2.5L2.5 5L0 15L-2.5 5L-12.5 2.5L-2.5 0Z" fill="url(#accentGradient)" filter="url(#strongGlow)">
+      <animateTransform attributeName="transform" type="rotate" values="360;0" dur="6s" repeatCount="indefinite"/>
+    </path>
+  </g>
+</svg>

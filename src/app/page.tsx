@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import NextImage from 'next/image';
@@ -32,6 +32,93 @@ const HowItWorksStep = ({ number, title, description }: { number: string, title:
         </p>
     </div>
 );
+
+const HeroCarousel = () => {
+  const [currentSlide, setCurrentSlide] = useState(0);
+  
+  const heroImages = [
+    {
+      src: "/hero-brandforge-ai.svg",
+      alt: "BrandForge AI dashboard interface showing brand profile creation, content studio with AI-generated images, campaign manager, and deployment hub",
+      title: "Complete AI Branding Suite"
+    },
+    {
+      src: "/hero-brandforge-ai-2.svg",
+      alt: "BrandForge AI content creation studio with AI blog writer and social media generator",
+      title: "AI-Powered Content Creation"
+    },
+    {
+      src: "/hero-brandforge-ai-3.svg",
+      alt: "BrandForge AI content studio with AI image generator, blog writer, and social media post creator",
+      title: "AI Content Creation Studio"
+    },
+    {
+      src: "/hero-brandforge-ai-4.svg",
+      alt: "BrandForge AI brand builder with logo generation and brand profile customization",
+      title: "AI Brand Identity Builder"
+    }
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroImages.length);
+    }, 5000); // Change slide every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [heroImages.length]);
+
+  return (
+    <div className="relative mt-10 w-full max-w-4xl mx-auto group">
+      <div className="relative overflow-hidden rounded-xl">
+        {heroImages.map((image, index) => (
+          <div
+            key={index}
+            className={`transition-all duration-1000 ease-in-out ${
+              index === currentSlide
+                ? 'opacity-100 translate-x-0'
+                : index < currentSlide
+                  ? 'opacity-0 -translate-x-full absolute inset-0'
+                  : 'opacity-0 translate-x-full absolute inset-0'
+            }`}
+          >
+            <NextImage
+              src={image.src}
+              alt={image.alt}
+              width={1200}
+              height={675}
+              className="rounded-xl shadow-2xl border border-primary/10 transform group-hover:scale-[1.02] transition-transform duration-500 ease-out"
+              priority={index === 0}
+            />
+          </div>
+        ))}
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent rounded-xl"></div>
+      </div>
+      
+      {/* Slide Indicators */}
+      <div className="flex justify-center mt-6 space-x-2">
+        {heroImages.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => setCurrentSlide(index)}
+            className={`w-3 h-3 rounded-full transition-all duration-300 ${
+              index === currentSlide
+                ? 'bg-primary scale-110'
+                : 'bg-primary/30 hover:bg-primary/50'
+            }`}
+            aria-label={`Go to slide ${index + 1}`}
+          />
+        ))}
+      </div>
+      
+      {/* Slide Title */}
+      <div className="text-center mt-4">
+        <p className="text-sm text-muted-foreground font-medium">
+          {heroImages[currentSlide].title}
+        </p>
+      </div>
+    </div>
+  );
+};
 
 export default function LandingPage() {
   const { user, isLoading } = useAuth();
@@ -124,18 +211,7 @@ export default function LandingPage() {
                     Stop juggling tools. From logo ideas to deployed ad campaigns, BrandForge AI is your all-in-one platform to build, create, and grow your brand with the power of AI.
                 </p>
                 
-                <div className="relative mt-10 w-full max-w-4xl mx-auto group">
-                    <NextImage
-                        src="https://placehold.co/1200x675.png"
-                        alt="BrandForge AI application screenshot showing the dashboard"
-                        width={1200}
-                        height={675}
-                        className="rounded-xl shadow-2xl border border-primary/10 transform group-hover:scale-[1.02] transition-transform duration-500 ease-out"
-                        data-ai-hint="app dashboard"
-                        priority
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent rounded-xl"></div>
-                </div>
+                <HeroCarousel />
 
                 <div className="mt-12 flex justify-center gap-4">
                     <Button size="lg" className="btn-gradient-primary btn-lg-enhanced touch-target focus-enhanced" asChild>

@@ -235,14 +235,11 @@ export async function handleGenerateImagesAction(
       }
     }
     
-    const textToFeature = formData.get("textToFeature") as string | undefined;
-
     const input: GenerateImagesInput = {
       provider: formData.get("provider") as GenerateImagesInput['provider'] || undefined,
       brandDescription: formData.get("brandDescription") as string,
       industry: formData.get("industry") as string | undefined,
       imageStyle: formData.get("imageStyle") as string,
-      textToFeature: textToFeature && textToFeature.trim() !== "" ? textToFeature : undefined,
       exampleImage: exampleImageUrl && exampleImageUrl.trim() !== "" ? exampleImageUrl : undefined,
       exampleImageDescription: aiGeneratedDesc,
       aspectRatio: formData.get("aspectRatio") as string | undefined,
@@ -261,7 +258,6 @@ export async function handleGenerateImagesAction(
     if (input.industry === "" || input.industry === undefined) delete input.industry;
     if (!input.exampleImage) delete input.exampleImage;
     if (!input.exampleImageDescription) delete input.exampleImageDescription;
-    if (!input.textToFeature) delete input.textToFeature;
 
     const result = await generateImages(input);
     const message = `${result.generatedImages.length} image(s)/task(s) processed using ${result.providerUsed || 'default provider'}.`;
@@ -333,15 +329,31 @@ export async function handleGenerateSocialMediaCaptionAction(
       finalTone = `${presetTone} ${customNuances.trim()}`;
     }
     
+    // Extract and clean optional fields
+    const industry = formData.get("industry") as string | null;
+    const postGoal = formData.get("postGoal") as string | null;
+    const targetAudience = formData.get("targetAudience") as string | null;
+    const callToAction = formData.get("callToAction") as string | null;
+
     const input: GenerateSocialMediaCaptionInput = {
       brandDescription: formData.get("brandDescription") as string,
-      industry: formData.get("industry") as string | undefined,
       imageDescription: imageSrc ? imageDescription : undefined,
       tone: finalTone,
-      postGoal: formData.get("postGoal") as string | undefined,
-      targetAudience: formData.get("targetAudience") as string | undefined,
-      callToAction: formData.get("callToAction") as string | undefined,
     };
+
+    // Only add optional fields if they have valid string values
+    if (industry && industry.trim() !== "") {
+      input.industry = industry.trim();
+    }
+    if (postGoal && postGoal.trim() !== "") {
+      input.postGoal = postGoal.trim();
+    }
+    if (targetAudience && targetAudience.trim() !== "") {
+      input.targetAudience = targetAudience.trim();
+    }
+    if (callToAction && callToAction.trim() !== "") {
+      input.callToAction = callToAction.trim();
+    }
 
     if (!input.brandDescription || !input.tone) {
       return { error: "Brand description and tone are required." };
@@ -349,10 +361,6 @@ export async function handleGenerateSocialMediaCaptionAction(
     if (imageSrc && (!imageDescription || imageDescription.trim() === "")) {
         return { error: "Image description is required if an image is selected for the post."}
     }
-    if (input.industry === "" || input.industry === undefined) delete input.industry;
-    if (input.postGoal === "" || input.postGoal === undefined) delete input.postGoal;
-    if (input.targetAudience === "" || input.targetAudience === undefined) delete input.targetAudience;
-    if (input.callToAction === "" || input.callToAction === undefined) delete input.callToAction;
 
     const result = await generateSocialMediaCaption(input);
     const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/socialMediaPosts`);
@@ -365,6 +373,9 @@ export async function handleGenerateSocialMediaCaptionAction(
       createdAt: serverTimestamp(),
       status: 'draft',
     };
+    
+    // Only add optional fields if they exist in the input
+    if (input.industry) docData.industry = input.industry;
     if (input.postGoal) docData.postGoal = input.postGoal;
     if (input.targetAudience) docData.targetAudience = input.targetAudience;
     if (input.callToAction) docData.callToAction = input.callToAction;
@@ -442,25 +453,38 @@ export async function handleGenerateBlogContentAction(
     
     await ensureUserBrandProfileDocExists(userId, userEmail);
 
+    // Extract and clean optional fields
+    const industry = formData.get("industry") as string | null;
+    const websiteUrl = formData.get("blogWebsiteUrl") as string | null;
+    const articleStyle = formData.get("articleStyle") as string | null;
+    const targetAudience = formData.get("targetAudience") as string | null;
+
     const input: GenerateBlogContentInput = {
       brandName: formData.get("brandName") as string,
       brandDescription: formData.get("blogBrandDescription") as string,
-      industry: formData.get("industry") as string | undefined,
       keywords: formData.get("blogKeywords") as string,
       targetPlatform: formData.get("targetPlatform") as "Medium" | "Other",
-      websiteUrl: formData.get("blogWebsiteUrl") as string || undefined,
       blogOutline: formData.get("blogOutline") as string,
       blogTone: formData.get("blogTone") as string,
-      articleStyle: formData.get("articleStyle") as string | undefined,
-      targetAudience: formData.get("targetAudience") as string | undefined,
     };
+
+    // Only add optional fields if they have valid string values
+    if (industry && industry.trim() !== "") {
+      input.industry = industry.trim();
+    }
+    if (websiteUrl && websiteUrl.trim() !== "") {
+      input.websiteUrl = websiteUrl.trim();
+    }
+    if (articleStyle && articleStyle.trim() !== "") {
+      input.articleStyle = articleStyle.trim();
+    }
+    if (targetAudience && targetAudience.trim() !== "") {
+      input.targetAudience = targetAudience.trim();
+    }
+
      if (!input.brandName || !input.brandDescription || !input.keywords || !input.targetPlatform || !input.blogOutline || !input.blogTone) {
       return { error: "All fields (except optional website URL and industry) including outline and tone are required for blog content generation." };
     }
-    if (input.websiteUrl === "") delete input.websiteUrl;
-    if (input.industry === "" || input.industry === undefined) delete input.industry;
-    if (input.articleStyle === "" || input.articleStyle === undefined) delete input.articleStyle;
-    if (input.targetAudience === "" || input.targetAudience === undefined) delete input.targetAudience;
     
     const result = await generateBlogContent(input);
     const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/blogPosts`);
@@ -474,6 +498,10 @@ export async function handleGenerateBlogContentAction(
       createdAt: serverTimestamp(),
       status: 'draft',
     };
+    
+    // Only add optional fields if they exist in the input
+    if (input.industry) docData.industry = input.industry;
+    if (input.websiteUrl) docData.websiteUrl = input.websiteUrl;
     if (input.articleStyle) docData.articleStyle = input.articleStyle;
     if (input.targetAudience) docData.targetAudience = input.targetAudience;
 
@@ -507,18 +535,34 @@ export async function handleGenerateAdCampaignAction(
         return { error: "Budget must be a valid number." };
     }
 
+    // Extract and clean optional fields
+    const industry = formData.get("industry") as string | null;
+    const campaignGoal = formData.get("campaignGoal") as string | null;
+    const targetAudience = formData.get("targetAudience") as string | null;
+    const callToAction = formData.get("callToAction") as string | null;
+
     const input: GenerateAdCampaignInput = {
       brandName: formData.get("brandName") as string,
       brandDescription: formData.get("brandDescription") as string,
-      industry: formData.get("industry") as string | undefined,
       generatedContent: generatedContent,
       targetKeywords: formData.get("targetKeywords") as string,
       budget: budgetNum,
       platforms: platformsArray,
-      campaignGoal: formData.get("campaignGoal") as string | undefined,
-      targetAudience: formData.get("targetAudience") as string | undefined,
-      callToAction: formData.get("callToAction") as string | undefined,
     };
+
+    // Only add optional fields if they have valid string values
+    if (industry && industry.trim() !== "") {
+      input.industry = industry.trim();
+    }
+    if (campaignGoal && campaignGoal.trim() !== "") {
+      input.campaignGoal = campaignGoal.trim();
+    }
+    if (targetAudience && targetAudience.trim() !== "") {
+      input.targetAudience = targetAudience.trim();
+    }
+    if (callToAction && callToAction.trim() !== "") {
+      input.callToAction = callToAction.trim();
+    }
 
     if (!input.brandName || !input.brandDescription || !input.generatedContent || !input.targetKeywords || input.platforms.length === 0) {
         return { error: "Brand name, description, inspirational content, target keywords, and at least one platform are required." };
@@ -526,7 +570,6 @@ export async function handleGenerateAdCampaignAction(
     if (!input.generatedContent || !input.generatedContent.trim()) {
         return { error: "Inspirational content (selected or custom) cannot be empty."};
     }
-    if (input.industry === "" || input.industry === undefined) delete input.industry;
      if (!userId) {
         return { error: "User ID is missing. Cannot save ad campaign."};
     }
@@ -534,7 +577,9 @@ export async function handleGenerateAdCampaignAction(
 
     const result = await generateAdCampaign(input);
     const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/adCampaigns`);
-    await addDoc(firestoreCollectionRef, {
+    
+    // Prepare document data, only including optional fields if they exist
+    const docData: { [key: string]: any } = {
       campaignConcept: result.campaignConcept || "",
       headlines: result.headlines || [],
       bodyTexts: result.bodyTexts || [],
@@ -543,12 +588,16 @@ export async function handleGenerateAdCampaignAction(
       budget: input.budget,
       platforms: input.platforms,
       inspirationalContent: generatedContent,
-      campaignGoal: input.campaignGoal,
-      targetAudience: input.targetAudience,
-      callToAction: input.callToAction,
       createdAt: serverTimestamp(),
       status: 'draft',
-    });
+    };
+
+    // Only add optional fields if they exist in the input
+    if (input.campaignGoal) docData.campaignGoal = input.campaignGoal;
+    if (input.targetAudience) docData.targetAudience = input.targetAudience;
+    if (input.callToAction) docData.callToAction = input.callToAction;
+
+    await addDoc(firestoreCollectionRef, docData);
     return { data: result, message: "Ad campaign variations generated and saved successfully!" };
   } catch (e: any) {
     console.error("Error in handleGenerateAdCampaignAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
@@ -915,7 +964,7 @@ export async function handleGenerateBrandLogoAction(
   formData: FormData
 ): Promise<FormState<GenerateBrandLogoOutput>> {
   try {
-    const userId = formData.get('userId') as string; 
+    const userId = formData.get('userId') as string;
     const userEmail = formData.get('userEmail') as string | undefined;
 
     const input: GenerateBrandLogoInput = {
@@ -923,6 +972,8 @@ export async function handleGenerateBrandLogoAction(
       brandDescription: formData.get("brandDescription") as string,
       industry: formData.get("industry") as string | undefined,
       targetKeywords: formData.get("targetKeywords") as string | undefined,
+      logoShape: formData.get("logoShape") as GenerateBrandLogoInput['logoShape'] | undefined,
+      logoStyle: formData.get("logoStyle") as GenerateBrandLogoInput['logoStyle'] | undefined,
     };
 
     if (!input.brandName || !input.brandDescription) {
@@ -930,6 +981,8 @@ export async function handleGenerateBrandLogoAction(
     }
      if (input.industry === "" || input.industry === undefined) delete input.industry;
      if (input.targetKeywords === "" || input.targetKeywords === undefined) delete input.targetKeywords;
+     if (input.logoShape === "" || input.logoShape === undefined) delete input.logoShape;
+     if (input.logoStyle === "" || input.logoStyle === undefined) delete input.logoStyle;
     if (!userId) {
         return { error: "User ID is missing. Cannot save brand logo."};
     }
@@ -939,8 +992,10 @@ export async function handleGenerateBrandLogoAction(
     const result = await generateBrandLogo(input);
     const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/brandLogos`);
     await addDoc(firestoreCollectionRef, {
-      logoData: result.logoDataUri || "", 
+      logoData: result.logoDataUri || "",
       brandName: input.brandName,
+      logoShape: input.logoShape || "circle",
+      logoStyle: input.logoStyle || "modern",
       createdAt: serverTimestamp(),
     });
     return { data: result, message: "Brand logo generated and saved successfully!" };
