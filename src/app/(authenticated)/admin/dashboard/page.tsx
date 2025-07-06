@@ -94,7 +94,7 @@ export default function AdminDashboardPage() {
                             <p className="ml-4">Loading users...</p>
                         </div>
                     ) : (
-                        <div className="border rounded-lg overflow-hidden">
+                        <div className="border rounded-lg">
                         <Table>
                             <TableHeader>
                                 <TableRow>
