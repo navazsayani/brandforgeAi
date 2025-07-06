@@ -1,9 +1,9 @@
-
 "use client";
 
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import NextImage from 'next/image';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { LogIn, UserPlus, LayoutDashboard, Loader2, UserCircle, Rocket, Paintbrush, Send, CheckCircle, ArrowRight, Sparkles } from 'lucide-react';
@@ -123,7 +123,21 @@ export default function LandingPage() {
                 <p className="max-w-2xl mx-auto mt-6 text-lg md:text-xl text-muted-foreground text-balance">
                     Stop juggling tools. From logo ideas to deployed ad campaigns, BrandForge AI is your all-in-one platform to build, create, and grow your brand with the power of AI.
                 </p>
-                <div className="mt-10 flex justify-center gap-4">
+                
+                <div className="relative mt-10 w-full max-w-4xl mx-auto group">
+                    <NextImage
+                        src="https://placehold.co/1200x675.png"
+                        alt="BrandForge AI application screenshot showing the dashboard"
+                        width={1200}
+                        height={675}
+                        className="rounded-xl shadow-2xl border border-primary/10 transform group-hover:scale-[1.02] transition-transform duration-500 ease-out"
+                        data-ai-hint="app dashboard"
+                        priority
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent rounded-xl"></div>
+                </div>
+
+                <div className="mt-12 flex justify-center gap-4">
                     <Button size="lg" className="btn-gradient-primary btn-lg-enhanced touch-target focus-enhanced" asChild>
                         <Link href={user ? "/dashboard" : "/signup"}>
                             {user ? "Go to Dashboard" : "Get Started for Free"}
