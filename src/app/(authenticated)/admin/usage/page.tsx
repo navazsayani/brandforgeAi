@@ -85,7 +85,7 @@ export default function AdminUsageDashboardPage() {
                             <p className="ml-4">Loading usage data...</p>
                         </div>
                     ) : (
-                        <div className="border rounded-lg">
+                        <div className="border rounded-lg overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>
