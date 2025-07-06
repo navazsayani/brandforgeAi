@@ -5,6 +5,7 @@ import React, { useState, useMemo, useActionState, useEffect } from 'react';
 import { useFormStatus } from 'react-dom';
 import NextImage from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
+import { useBrand } from '@/contexts/BrandContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/lib/firebaseConfig';
 import { collection, getDocs, query, orderBy, Timestamp } from 'firebase/firestore';
@@ -29,6 +30,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { format } from 'date-fns';
+import SocialMediaPreviews from '@/components/SocialMediaPreviews';
 
 
 // Combined type for all deployable content
@@ -68,6 +70,7 @@ const XIcon = (props: React.SVGProps<SVGSVGElement>) => (
 // Main page component
 export default function DeploymentHubPage() {
   const { currentUser } = useAuth();
+  const { brandData } = useBrand();
   const [activeFilter, setActiveFilter] = useState<'all' | 'social' | 'blog' | 'ad'>('all');
 
   const { data: socialPosts = [], isLoading: isLoadingSocial, error: errorSocial } = useQuery({
@@ -166,7 +169,7 @@ export default function DeploymentHubPage() {
       {!isLoading && !fetchError && filteredContent.length > 0 && (
         <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
           {filteredContent.map(item => (
-            <ContentCard key={item.docPath} item={item} />
+            <ContentCard key={item.docPath} item={item} brandData={brandData} />
           ))}
         </div>
       )}
@@ -175,7 +178,7 @@ export default function DeploymentHubPage() {
 }
 
 
-function ContentCard({ item }: { item: DeployableContent }) {
+function ContentCard({ item, brandData }: { item: DeployableContent; brandData: any }) {
     const { currentUser } = useAuth();
     const queryClient = useQueryClient();
     const { toast } = useToast();
@@ -262,20 +265,22 @@ function ContentCard({ item }: { item: DeployableContent }) {
                 </div>
                 {renderContentPreview()}
             </CardContent>
-            <CardFooter className={cn("pt-4 mt-auto border-t grid gap-2 grid-cols-1 sm:grid-cols-3", isDeployed && "sm:grid-cols-2")}>
-                <ContentDetailsDialog item={item} />
-                 {isDeployed ? (
-                    <form action={formAction} className="w-full">
-                        <input type="hidden" name="userId" value={currentUser?.uid || ''} />
-                        <input type="hidden" name="docPath" value={item.docPath} />
-                        <StatusButton newStatus="draft" text="Revert" icon={<RefreshCw className="w-4 h-4 mr-2" />} variant="secondary" />
-                    </form>
-                 ) : (
-                    <>
-                        <EditContentDialog item={item} />
-                        <DeployDialog item={item} />
-                    </>
-                 )}
+            <CardFooter className="pt-4 mt-auto border-t">
+                <div className={cn("grid gap-2 w-full", isDeployed ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-3")}>
+                    <ContentDetailsDialog item={item} brandData={brandData} />
+                    {isDeployed ? (
+                        <form action={formAction} className="w-full">
+                            <input type="hidden" name="userId" value={currentUser?.uid || ''} />
+                            <input type="hidden" name="docPath" value={item.docPath} />
+                            <StatusButton newStatus="draft" text="Revert" icon={<RefreshCw className="w-4 h-4 mr-2 flex-shrink-0" />} variant="secondary" />
+                        </form>
+                    ) : (
+                        <>
+                            <EditContentDialog item={item} />
+                            <DeployDialog item={item} />
+                        </>
+                    )}
+                </div>
             </CardFooter>
         </Card>
     );
@@ -284,9 +289,9 @@ function ContentCard({ item }: { item: DeployableContent }) {
 function StatusButton({ newStatus, text, icon, variant = "default", ...props }: { newStatus: string, text: string, icon: React.ReactNode, variant?: "default" | "secondary", [key: string]: any }) {
     const { pending } = useFormStatus();
     return (
-        <Button type="submit" name="newStatus" value={newStatus} className="w-full h-full" variant={variant} disabled={pending} {...props}>
-            {pending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : icon}
-            {pending ? `Updating...` : text}
+        <Button type="submit" name="newStatus" value={newStatus} className="w-full h-full min-w-0" variant={variant} disabled={pending} {...props}>
+            {pending ? <Loader2 className="w-4 h-4 mr-2 animate-spin flex-shrink-0" /> : icon}
+            <span className="truncate">{pending ? `Updating...` : text}</span>
         </Button>
     );
 }
@@ -326,9 +331,9 @@ function DeployDialog({ item }: { item: DeployableContent }) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="default" className="w-full h-full">
-                    <Rocket className="w-4 h-4 mr-2"/>
-                    Deploy
+                <Button variant="default" className="w-full h-full min-w-0">
+                    <Rocket className="w-4 h-4 mr-2 flex-shrink-0"/>
+                    <span className="truncate">Deploy</span>
                 </Button>
             </DialogTrigger>
             <DialogContent>
@@ -447,8 +452,9 @@ function EditContentDialog({ item }: { item: DeployableContent }) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="secondary" className="w-full h-full">
-                    <Edit className="w-4 h-4 mr-2" /> Edit
+                <Button variant="secondary" className="w-full h-full min-w-0">
+                    <Edit className="w-4 h-4 mr-2 flex-shrink-0" />
+                    <span className="truncate">Edit</span>
                 </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl flex flex-col max-h-[90vh]">
@@ -548,7 +554,7 @@ function CopyButton({ textToCopy }: { textToCopy: string }) {
 }
 
 
-function ContentDetailsDialog({ item }: { item: DeployableContent }) {
+function ContentDetailsDialog({ item, brandData }: { item: DeployableContent; brandData: any }) {
     const typeName = item.type.charAt(0).toUpperCase() + item.type.slice(1);
     
     let details: React.ReactNode;
@@ -570,15 +576,15 @@ function ContentDetailsDialog({ item }: { item: DeployableContent }) {
         case 'social':
             copyText = `Caption:\n${item.caption}\n\nHashtags:\n${item.hashtags}`;
             details = (
-                <div className="space-y-4">
+                <div className="space-y-6">
                     {item.imageSrc && (
                         <div>
                              <div className="relative w-full aspect-video border rounded-md bg-muted overflow-hidden">
                                 <NextImage src={item.imageSrc} alt="Social post image" fill style={{objectFit:'contain'}} data-ai-hint="social media"/>
                             </div>
-                            <Button 
-                                variant="outline" 
-                                size="sm" 
+                            <Button
+                                variant="outline"
+                                size="sm"
                                 className="mt-2"
                                 onClick={() => downloadImage(item.imageSrc!, `social-post-${item.id}.png`)}
                             >
@@ -591,6 +597,17 @@ function ContentDetailsDialog({ item }: { item: DeployableContent }) {
                     <DetailItem label="Hashtags" isBlock>{item.hashtags}</DetailItem>
                     <DetailItem label="Tone">{item.tone}</DetailItem>
                     <DetailItem label="Goal">{item.postGoal}</DetailItem>
+                    
+                    {/* Social Media Previews */}
+                    <div className="pt-4 border-t border-gray-200">
+                        <SocialMediaPreviews
+                            caption={item.caption}
+                            hashtags={item.hashtags}
+                            imageSrc={item.imageSrc}
+                            brandName={brandData?.brandName || "YourBrand"}
+                            brandLogoUrl={brandData?.brandLogoUrl || null}
+                        />
+                    </div>
                 </div>
             );
             break;
@@ -636,7 +653,9 @@ function ContentDetailsDialog({ item }: { item: DeployableContent }) {
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant="outline" className="w-full h-full">View Details</Button>
+                <Button variant="outline" className="w-full h-full min-w-0">
+                    <span className="truncate">View Details</span>
+                </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
                 <DialogHeader>

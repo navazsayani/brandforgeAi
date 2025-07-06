@@ -13,12 +13,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Edit3, Send, Sparkles, Star, ShieldCheck, Paintbrush, FileText, Image as ImageIconLucide, Eye, AlertCircle, RefreshCcw, TestTube, Rocket, MessageSquare, Newspaper, Briefcase } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ArrowRight, Edit3, Send, Sparkles, Star, ShieldCheck, Paintbrush, FileText, Image as ImageIconLucide, Eye, AlertCircle, RefreshCcw, TestTube, Rocket, MessageSquare, Newspaper, Briefcase, Monitor } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { BrandData, SavedGeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { getPaymentMode } from '@/lib/actions';
 import { format } from 'date-fns';
+import SocialMediaPreviews from '@/components/SocialMediaPreviews';
 
 type RecentItem = {
   id: string;
@@ -28,6 +30,11 @@ type RecentItem = {
   imageUrl?: string | null;
   createdAt: any; // Firestore Timestamp
   href: string;
+  // Additional fields for social posts
+  caption?: string;
+  hashtags?: string;
+  platform?: string;
+  tone?: string;
 };
 
 const fetchLatestCreations = async (userId: string): Promise<RecentItem[]> => {
@@ -84,6 +91,11 @@ const fetchLatestCreations = async (userId: string): Promise<RecentItem[]> => {
       imageUrl: data.imageSrc || null,
       createdAt: data.createdAt,
       href: '/deployment-hub',
+      // Additional social post data for previews
+      caption: data.caption,
+      hashtags: data.hashtags,
+      platform: data.platform,
+      tone: data.tone,
     };
   });
 
@@ -372,6 +384,7 @@ function ActionCard({ href, icon, title, description, isLoading }: { href: strin
 
 function RecentCreations() {
     const { currentUser } = useAuth();
+    const { brandData } = useBrand();
 
     const { data: recentCreations, isLoading, error } = useQuery({
         queryKey: ['latestCreations', currentUser?.uid],
@@ -434,7 +447,7 @@ function RecentCreations() {
                 {hasRecentItems ? (
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                         {recentCreations.map((item) => (
-                          <RecentItemCard key={item.id + item.type} item={item} />
+                          <RecentItemCard key={item.id + item.type} item={item} brandData={brandData} />
                         ))}
                     </div>
                 ) : (
@@ -450,7 +463,7 @@ function RecentCreations() {
     );
 }
 
-function RecentItemCard({ item }: { item: RecentItem }) {
+function RecentItemCard({ item, brandData }: { item: RecentItem; brandData: BrandData | null }) {
     const iconMap: { [key: string]: React.ElementType } = {
         'Image': ImageIconLucide,
         'Social Post': MessageSquare,
@@ -484,11 +497,45 @@ function RecentItemCard({ item }: { item: RecentItem }) {
             </CardContent>
         </div>
         <CardFooter className="p-4 pt-0">
-             <Link href={item.href} passHref className="w-full">
-                <Button variant="secondary" className="w-full">
-                    View Details <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-            </Link>
+            {item.type === 'Social Post' && item.caption ? (
+                <div className="flex flex-col sm:flex-row gap-2 w-full">
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" className="flex-1 min-w-0">
+                                <Monitor className="w-4 h-4 mr-2 flex-shrink-0" />
+                                <span className="truncate">Preview</span>
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                            <DialogHeader>
+                                <DialogTitle>Social Media Preview</DialogTitle>
+                            </DialogHeader>
+                            <div className="mt-4">
+                                <SocialMediaPreviews
+                                    caption={item.caption || ''}
+                                    hashtags={item.hashtags || ''}
+                                    imageSrc={item.imageUrl}
+                                    brandName={brandData?.brandName || "YourBrand"}
+                                    brandLogoUrl={brandData?.brandLogoUrl || null}
+                                />
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                    <Link href={item.href} passHref className="flex-1">
+                        <Button variant="secondary" className="w-full min-w-0">
+                            <span className="truncate">Details</span>
+                            <ArrowRight className="w-4 h-4 ml-2 flex-shrink-0" />
+                        </Button>
+                    </Link>
+                </div>
+            ) : (
+                <Link href={item.href} passHref className="w-full">
+                    <Button variant="secondary" className="w-full min-w-0">
+                        <span className="truncate">View Details</span>
+                        <ArrowRight className="w-4 h-4 ml-2 flex-shrink-0" />
+                    </Button>
+                </Link>
+            )}
         </CardFooter>
       </>
     );

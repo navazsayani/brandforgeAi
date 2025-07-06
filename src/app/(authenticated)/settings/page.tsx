@@ -108,7 +108,7 @@ export default function SettingsPage() {
       formData.append('adminRequesterEmail', currentUser.email);
       startTransition(() => {
         getModelAction(formData);
-        getPlansAction(formData);
+        getPlansAction();
       });
     } else {
         setIsPageLoading(false);
@@ -172,7 +172,7 @@ export default function SettingsPage() {
         if (currentUser?.email) {
             const formData = new FormData();
             formData.append('adminRequesterEmail', currentUser.email);
-            startTransition(() => getPlansAction(formData));
+            startTransition(() => getPlansAction());
         }
     }
     if (updatePlansState.error) {

@@ -35,7 +35,7 @@ const populateImageFormPrompt = ai.definePrompt({
     name: 'populateImageFormPrompt',
     input: { schema: PopulateImageFormInputSchema },
     output: { schema: PopulateImageFormOutputSchema },
-    prompt: `You are an expert creative director and prompt engineer. Your task is to interpret a user's request for an image and populate a detailed image generation form.
+    prompt: `You are an expert creative director and prompt engineer specializing in strategic brand marketing visuals. Your task is to interpret a user's request for an image and populate a detailed image generation form that will produce high-quality, engaging marketing content.
 
 User's Request:
 "{{{userRequest}}}"
@@ -43,9 +43,15 @@ User's Request:
 Current Brand Description (for context, may be empty):
 "{{{currentBrandDescription}}}"
 
-Based on the user's request, fill out the following fields.
+Based on the user's request, fill out the following fields with a focus on creating compelling marketing visuals that drive engagement and brand recognition.
 
-1.  **refinedBrandDescription**: Synthesize the user's request and their current brand description into a single, effective description for the image generation model. This should be a concise paragraph capturing the essence of the desired image.
+1.  **refinedBrandDescription**: Synthesize the user's request and their current brand description into a strategic, marketing-focused description for the image generation model. This should be a concise but comprehensive paragraph that captures:
+    - The brand's unique value proposition and personality
+    - Target audience appeal and emotional triggers
+    - Key visual elements that support brand recognition
+    - The intended marketing objective (awareness, engagement, conversion)
+    - Context about how this image will be used (social media, advertising, etc.)
+    Think like a brand strategist - what story should this image tell to maximize impact?
 
 2.  **imageStylePreset**: Choose the *single best* style preset from the following list that matches the user's request.
     Valid presets: ${validStylePresets}

@@ -981,8 +981,8 @@ export async function handleGenerateBrandLogoAction(
     }
      if (input.industry === "" || input.industry === undefined) delete input.industry;
      if (input.targetKeywords === "" || input.targetKeywords === undefined) delete input.targetKeywords;
-     if (input.logoShape === "" || input.logoShape === undefined) delete input.logoShape;
-     if (input.logoStyle === "" || input.logoStyle === undefined) delete input.logoStyle;
+     if (!input.logoShape || input.logoShape === undefined) delete input.logoShape;
+     if (!input.logoStyle || input.logoStyle === undefined) delete input.logoStyle;
     if (!userId) {
         return { error: "User ID is missing. Cannot save brand logo."};
     }

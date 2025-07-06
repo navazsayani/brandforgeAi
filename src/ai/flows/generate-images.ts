@@ -321,7 +321,22 @@ const generateImagesFlow = ai.defineFlow(
                 console.log(`Freepik prompt using example image description: "${exampleImageDescription.substring(0,100)}..."`);
                 baseContentPrompt = `An example image was provided, which is described as: "${exampleImageDescription}". Using that description as primary inspiration for the subject and main visual elements, now generate an image based on the following concept: "${brandDescription}".`;
             } else {
-                baseContentPrompt = `Generate an image based on the concept: "${brandDescription}".`;
+                baseContentPrompt = `Create a strategic brand marketing image that embodies the concept: "${brandDescription}".${industryContext}
+
+**BRAND MARKETING OBJECTIVES:**
+- Capture attention in social media feeds with scroll-stopping visual appeal
+- Communicate the brand's unique value proposition and personality instantly
+- Appeal to the target demographic's aspirations, lifestyle, and visual preferences
+- Encourage engagement, sharing, and brand recognition
+- Support conversion goals through compelling visual storytelling
+
+**CREATIVE EXECUTION REQUIREMENTS:**
+- Avoid generic or stock-photo-like approaches
+- Include rich contextual elements that tell the brand's story
+- Use visual hierarchy and composition to guide viewer attention
+- Consider current social media trends while maintaining brand authenticity
+- Create content that works both standalone and in marketing campaigns
+- Ensure professional, market-ready quality suitable for paid advertising`;
             }
 
             let textualStyleComponent = "";
@@ -464,36 +479,66 @@ The provided example image serves as a category reference only. Your mission is 
 - Technically excellent (lighting, composition, clarity)
 - Brand-appropriate and on-message
 `;
-                } else { 
-                    coreInstructions = `You are creating a strategic brand marketing image designed to maximize social media engagement and brand recognition.
+                } else {
+                    coreInstructions = `You are creating a strategic brand marketing image designed to drive engagement, build brand awareness, and convert viewers into customers on social media platforms.
 
-**BRAND MARKETING OBJECTIVE:**
-Create a compelling visual that represents: "${brandDescription}"${industryContext}
+**BRAND STRATEGY CONTEXT:**
+Your mission is to create a compelling, brand-aligned visual asset that:
+- Captures attention in crowded social media feeds
+- Communicates brand values instantly and memorably
+- Appeals directly to the target demographic's aspirations and needs
+- Encourages social sharing, saves, and engagement
+- Supports the brand's marketing and conversion objectives
+- Establishes strong brand recognition and recall
 
-**STRATEGIC REQUIREMENTS:**
-- **Brand Storytelling**: The image should instantly communicate the brand's core value proposition
-- **Target Audience Appeal**: Consider who this brand serves and what resonates with them
-- **Social Media Optimization**: Design for maximum engagement on platforms like Instagram, TikTok, Facebook
-- **Conversion Focus**: Include elements that encourage viewers to learn more or take action
-- **Brand Differentiation**: Highlight what makes this brand unique in its market
+**CORE CREATIVE BRIEF:**
+1. **Brand Identity Deep Dive**: "${brandDescription}"${industryContext}
+   - Extract and amplify the brand's unique personality, values, and positioning
+   - Consider the target audience's lifestyle, pain points, desires, and social behaviors
+   - Identify the emotional triggers that drive purchase decisions in this market
+   - Think about what makes this brand memorable and different from competitors
+   - Consider the brand's aspirational qualities and how customers want to be perceived
 
-**VISUAL EXECUTION STYLE**: "${imageStyle}"
-- For realistic styles: Create professional, market-ready content
-- For artistic styles: Balance creativity with brand clarity
-- Ensure the style enhances rather than overshadows the brand message
+2. **Visual Execution Strategy**: "${imageStyle}"
+   - This defines the aesthetic approach, mood, technical execution, and brand personality expression
+   - For realistic styles: Create professional, market-ready visuals with authentic appeal
+   - For artistic styles: Balance creative expression with clear brand communication
+   - Consider platform-specific visual trends and best practices
+   - Ensure the style reinforces the brand's positioning and target audience preferences
 
-**MARKETING BEST PRACTICES:**
-- Use colors and composition that align with brand personality
-- Include contextual elements that tell a brand story
-- Consider current social media trends and visual preferences
-- Ensure the image works both standalone and in marketing campaigns
-- Create content that encourages social sharing and engagement
+**ADVANCED MARKETING OPTIMIZATION:**
+- **Scroll-stopping Power**: The image must immediately grab attention in fast-scrolling feeds
+- **Brand Consistency**: Align perfectly with the brand's visual identity, tone, and messaging strategy
+- **Demographic Targeting**: Resonate deeply with the specific target audience's visual preferences and cultural context
+- **Conversion Psychology**: Include subtle visual cues that encourage engagement and action
+- **Shareability Factor**: Create content that people actively want to share, save, and discuss
+- **Platform Optimization**: Consider where this will be posted and optimize for those specific platforms
+- **Trend Awareness**: Incorporate current visual trends while maintaining timeless brand appeal
 
-**QUALITY STANDARDS:**
-- Professional marketing-grade execution
-- Culturally appropriate and inclusive
-- Technically excellent (lighting, composition, clarity)
-- Brand-consistent and strategically aligned
+**STRATEGIC CREATIVE GUIDELINES:**
+- Create something completely original that embodies the brand's unique essence
+- Avoid generic, stock-photo-like, or cliché visual approaches
+- Include rich contextual elements that tell a compelling brand story
+- Consider seasonal trends, cultural moments, and social relevance
+- Ensure the image works as standalone content and as part of larger campaigns
+- Think about how this image fits into the customer journey and brand experience
+- Consider the emotional journey: awareness → interest → desire → action
+
+**ENHANCED COMPOSITION & STORYTELLING:**
+- Use visual hierarchy to guide the viewer's eye through the brand story
+- Include environmental context that reinforces the brand's world and values
+- Consider lighting and mood to evoke the desired emotional response
+- Use color psychology to reinforce brand personality and trigger desired emotions
+- Include subtle details that reward closer inspection and encourage engagement
+- Think about the "Instagram moment" - what makes this worth sharing?
+
+**PREMIUM QUALITY STANDARDS:**
+- Professional marketing-grade quality that rivals top brand campaigns
+- Optimized for maximum social media engagement and algorithmic performance
+- Culturally sensitive, inclusive, and globally appealing
+- Technically excellent: perfect lighting, composition, clarity, and visual balance
+- Brand-appropriate messaging that aligns with company values and positioning
+- Market-ready quality suitable for paid advertising and organic content
 `;
                 }
                 textPromptContent = `Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.\n\n${coreInstructions}`;

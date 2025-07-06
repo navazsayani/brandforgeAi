@@ -36,6 +36,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { industries, imageStylePresets, freepikImagen3EffectColors, freepikImagen3EffectLightnings, freepikImagen3EffectFramings, freepikImagen3AspectRatios, generalAspectRatios, blogTones, freepikValidStyles, socialPostGoals, socialTones, blogArticleStyles, DEFAULT_PLANS_CONFIG } from '@/lib/constants';
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import SocialMediaPreviews from '@/components/SocialMediaPreviews';
 
 // --- START: Image Grid Fix Components ---
 /**
@@ -457,7 +458,7 @@ export default function ContentStudioPage() {
     if (useExampleImageForGen && hasImages) {
         // Ensure index is valid and not out of bounds
         let currentIndex = selectedProfileImageIndexForGen ?? 0;
-        if (currentIndex >= brandData.exampleImages.length) {
+        if (brandData?.exampleImages && currentIndex >= brandData.exampleImages.length) {
             currentIndex = 0; // Reset to first image if index is invalid
             setSelectedProfileImageIndexForGen(0); // Also reset the index state
         }
@@ -466,7 +467,7 @@ export default function ContentStudioPage() {
             setSelectedProfileImageIndexForGen(currentIndex);
         }
         // Safely get the URL
-        const url = brandData.exampleImages[currentIndex];
+        const url = brandData?.exampleImages?.[currentIndex];
         setSelectedExampleImageUrl(url || ""); // Fallback to empty string if URL is unexpectedly undefined
     } else {
         // If checkbox is off or no images exist, clear the URL state.
@@ -913,21 +914,68 @@ export default function ContentStudioPage() {
 
     // Text-to-Feature prompt generation
     if (textToFeature && textToFeature.trim() !== "") {
-        textPromptContent = `You are a professional graphic designer specializing in creating typography-focused social media graphics. Your task is to create a visually stunning image that features the following text prominently.
+        textPromptContent = `You are an expert brand marketing designer specializing in creating contextual, engaging visual content that transforms text concepts into compelling brand-aligned graphics. Your mission is to understand the meaning and context behind the text and create a strategic visual representation that drives engagement and brand recognition.
 
-**Text to Feature:**
+**Text Content to Transform:**
 "${textToFeature}"
 
-**Design & Brand Context:**
+**STRATEGIC CONTENT ANALYSIS:**
+First, analyze the text content to understand:
+- What is the core message or value proposition?
+- What type of content is this? (tips, benefits, questions, statements, calls-to-action, etc.)
+- What emotions or actions should this content inspire?
+- Who is the target audience for this message?
+- What visual metaphors or concepts would best represent this content?
+
+**BRAND STRATEGY CONTEXT:**
 - **Brand Identity:** "${imageGenBrandDescription}"${industryCtx}
-  - Use this brand description to inform your choice of colors, fonts, and overall aesthetic. The visual style should match the brand's personality (e.g., if the brand is "tech-focused and modern", use clean, sans-serif fonts and a professional color palette).
-- **Visual Style Notes:** "${combinedStyle}"
-  - Apply these stylistic notes to the overall design. For example, 'minimalist' should result in a clean layout with lots of negative space; 'vibrant' should use bold, energetic colors.
-- **Legibility is Paramount:** The featured text must be the main focus and must be easily readable.
-- **No Photography:** Do not include any photographic elements unless the style explicitly calls for it. The focus is on a text-based graphic design.
-- **Composition:** Create a well-balanced and aesthetically pleasing composition.
-- **Format:** The final output should be a single, high-quality image of the graphic.
-`;
+  - Extract the brand's personality, values, and visual identity cues
+  - Consider how this brand would communicate this specific message
+  - Think about the brand's target audience and their preferences
+  - Ensure the visual approach aligns with the brand's positioning
+
+**VISUAL EXECUTION STRATEGY:** "${combinedStyle}"
+- Apply this style to enhance the content's impact and brand alignment
+- For realistic styles: Create professional, market-ready visuals with authentic appeal
+- For artistic styles: Balance creative expression with clear message communication
+- Ensure the style reinforces both the text content and brand personality
+
+**CONTEXTUAL DESIGN REQUIREMENTS:**
+- **Content-Driven Visuals:** Don't just display text - create visual representations of the concepts
+- **Strategic Messaging:** The image should work as standalone content that communicates the message even without reading every word
+- **Engagement Optimization:** Design for social media sharing, saving, and interaction
+- **Brand Consistency:** Maintain visual consistency with the brand's identity and values
+- **Audience Appeal:** Consider what would resonate with the brand's target demographic
+
+**ENHANCED CREATIVE GUIDELINES:**
+- **Conceptual Visualization:** If the text mentions "5 benefits," create visual elements that represent those benefits, not just list them
+- **Metaphorical Thinking:** Use visual metaphors that reinforce the message (e.g., growth charts for improvement tips, lightbulbs for ideas)
+- **Contextual Elements:** Include relevant icons, illustrations, or design elements that support the content theme
+- **Hierarchy & Flow:** Guide the viewer's eye through the content in a logical, engaging way
+- **Brand Storytelling:** Make the image tell a story that aligns with both the text content and brand narrative
+
+**CONTENT-SPECIFIC ADAPTATIONS:**
+- For lists/tips: Create visually appealing infographic-style layouts with icons and visual separators
+- For questions: Design thought-provoking visuals that encourage engagement and responses
+- For benefits/features: Use visual metaphors and compelling graphics that illustrate value
+- For calls-to-action: Create urgency and appeal through strategic design and visual cues
+- For educational content: Design clear, informative layouts that enhance learning and retention
+
+**MARKETING OPTIMIZATION:**
+- **Scroll-Stopping Power:** The image must immediately grab attention in social feeds
+- **Message Clarity:** The core message should be instantly understandable
+- **Shareability Factor:** Create content people want to save, share, and discuss
+- **Brand Recognition:** Ensure the image reinforces brand identity and recall
+- **Platform Optimization:** Consider where this will be posted and optimize accordingly
+
+**QUALITY STANDARDS:**
+- Professional marketing-grade execution suitable for paid advertising
+- Optimized for maximum social media engagement and algorithmic performance
+- Culturally sensitive, inclusive, and globally appealing
+- Technically excellent: perfect typography, composition, color harmony, and visual balance
+- Brand-appropriate messaging that aligns with company values and positioning
+
+**FINAL OUTPUT:** Create a single, high-quality marketing image that transforms the text content into a compelling visual experience that drives engagement, communicates value, and strengthens brand recognition.`;
     } else if (selectedImageProvider === 'FREEPIK') {
         if (exampleImg) {
             textPromptContent = `[An AI-generated description of your example image will be used here by the backend to guide content when Freepik/Imagen3 is selected.]\nUsing that description as primary inspiration for the subject and main visual elements, now generate an image based on the following concept: "${imageGenBrandDescription}".`;
@@ -1055,7 +1103,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
         brandDescription: imageGenBrandDescription,
         industry: currentIndustryValue === "_none_" ? "" : currentIndustryValue,
         imageStyle: combinedStyle,
-        textToFeature: (textToFeature && textToFeature.trim() !== "") ? textToFeature : undefined, 
+        // textToFeature: (textToFeature && textToFeature.trim() !== "") ? textToFeature : undefined,
         exampleImage: (useExampleImageForGen && exampleImg && exampleImg.trim() !== "") ? exampleImg : undefined,
         aspectRatio: aspect,
         numberOfImages: numImages,
@@ -1105,7 +1153,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
         
         formData.set("imageStyle", imageStyle);
         
-        const textToFeatureValue = (isAdmin || isPremiumActive) ? formSnapshot?.textToFeature : imageGenTextToFeature;
+        const textToFeatureValue = imageGenTextToFeature;
         if (textToFeatureValue && textToFeatureValue.trim() !== "") {
             formData.set("textToFeature", textToFeatureValue);
         }
@@ -1499,10 +1547,10 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                       name="textToFeature"
                       value={imageGenTextToFeature}
                       onChange={(e) => setImageGenTextToFeature(e.target.value)}
-                      placeholder="e.g., '5 Ways to Improve Your SEO'. Leave blank for object/scene generation."
+                      placeholder="e.g., '5 Ways to Improve Your SEO', 'Why Choose Our Product?', 'Transform Your Business Today'. Leave blank for object/scene generation."
                       rows={2}
                     />
-                     <p className="text-xs text-muted-foreground mt-1">If you enter text here, AI will generate a text-based graphic (like a quote card) instead of a standard image.</p>
+                     <p className="text-xs text-muted-foreground mt-1">AI will create a contextual, brand-aligned visual that represents your text content - not just typography, but strategic graphics that communicate your message effectively for social media.</p>
                   </div>
                   
                   <div>
@@ -2152,6 +2200,17 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                           <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedSocialPost.hashtags, "Hashtags")} className="mt-1 text-muted-foreground hover:text-primary">
                               <Copy className="w-3 h-3 mr-1" /> Copy Hashtags
                           </Button>
+                      </div>
+                      
+                      {/* Social Media Previews */}
+                      <div className="mt-6 pt-6 border-t border-gray-200">
+                        <SocialMediaPreviews
+                          caption={generatedSocialPost.caption}
+                          hashtags={generatedSocialPost.hashtags}
+                          imageSrc={generatedSocialPost.imageSrc}
+                          brandName={brandData?.brandName || "YourBrand"}
+                          brandLogoUrl={brandData?.brandLogoUrl}
+                        />
                       </div>
                   </CardContent>
                 </Card>
