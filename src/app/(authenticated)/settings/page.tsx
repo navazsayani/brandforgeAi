@@ -27,6 +27,7 @@ import { Badge } from '@/components/ui/badge';
 
 const modelSettingsSchema = z.object({
   imageGenerationModel: z.string().min(1, "Image generation model name cannot be empty."),
+  textToImageModel: z.string().min(1, "Text-to-Image model name cannot be empty."),
   fastModel: z.string().min(1, "Fast text model name cannot be empty."),
   visionModel: z.string().min(1, "Vision model name cannot be empty."),
   powerfulModel: z.string().min(1, "Powerful text model name cannot be empty."),
@@ -336,8 +337,9 @@ export default function SettingsPage() {
                             </a>
                             </AlertDescription>
                         </Alert>
-
-                        <FormField control={modelForm.control} name="imageGenerationModel" render={({ field }) => (<FormItem><FormLabel>Image Generation Model</FormLabel><FormControl><Input placeholder="e.g., googleai/gemini-2.0-flash-preview-image-generation" {...field} /></FormControl><FormDescription>Model for creating images (Gemini).</FormDescription><FormMessage /></FormItem>)} />
+                        
+                        <FormField control={modelForm.control} name="textToImageModel" render={({ field }) => (<FormItem><FormLabel>Text-to-Image Generation Model</FormLabel><FormControl><Input placeholder="e.g., googleai/gemini-2.0-flash-preview-image-generation" {...field} /></FormControl><FormDescription>Model for text-only image generation (no example image).</FormDescription><FormMessage /></FormItem>)} />
+                        <FormField control={modelForm.control} name="imageGenerationModel" render={({ field }) => (<FormItem><FormLabel>Multimodal Image Generation Model</FormLabel><FormControl><Input placeholder="e.g., googleai/gemini-1.5-flash-latest" {...field} /></FormControl><FormDescription>Model for creating images when an example image is provided (must support image+text input).</FormDescription><FormMessage /></FormItem>)} />
                         <FormField control={modelForm.control} name="visionModel" render={({ field }) => (<FormItem><FormLabel>Vision Model</FormLabel><FormControl><Input placeholder="e.g., googleai/gemini-1.5-flash-latest" {...field} /></FormControl><FormDescription>Model for analyzing and describing images.</FormDescription><FormMessage /></FormItem>)} />
                         <FormField control={modelForm.control} name="fastModel" render={({ field }) => (<FormItem><FormLabel>Fast Text Model</FormLabel><FormControl><Input placeholder="e.g., googleai/gemini-1.5-flash-latest" {...field} /></FormControl><FormDescription>For quick tasks like social captions and blog outlines.</FormDescription><FormMessage /></FormItem>)} />
                         <FormField control={modelForm.control} name="powerfulModel" render={({ field }) => (<FormItem><FormLabel>Powerful Text Model</FormLabel><FormControl><Input placeholder="e.g., googleai/gemini-1.5-pro-latest" {...field} /></FormControl><FormDescription>For complex tasks like full blog generation and ad campaigns.</FormDescription><FormMessage /></FormItem>)} />

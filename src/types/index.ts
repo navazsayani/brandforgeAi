@@ -93,6 +93,7 @@ export interface UserProfileSelectItem {
 // Type for the model configuration
 export interface ModelConfig {
   imageGenerationModel: string;
+  textToImageModel: string;
   fastModel: string;
   visionModel: string;
   powerfulModel: string;

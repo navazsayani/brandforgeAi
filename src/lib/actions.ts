@@ -1255,6 +1255,7 @@ export async function handleUpdateSettingsAction(
   try {
     const modelConfig: ModelConfig = {
       imageGenerationModel: formData.get("imageGenerationModel") as string,
+      textToImageModel: formData.get("textToImageModel") as string,
       fastModel: formData.get("fastModel") as string,
       visionModel: formData.get("visionModel") as string,
       powerfulModel: formData.get("powerfulModel") as string,
@@ -1262,7 +1263,7 @@ export async function handleUpdateSettingsAction(
       freepikEnabled: formData.get("freepikEnabled") === 'true',
     };
     
-    if (!modelConfig.imageGenerationModel || !modelConfig.fastModel || !modelConfig.visionModel || !modelConfig.powerfulModel) {
+    if (!modelConfig.imageGenerationModel || !modelConfig.textToImageModel || !modelConfig.fastModel || !modelConfig.visionModel || !modelConfig.powerfulModel) {
         return { error: "All model fields are required." };
     }
 

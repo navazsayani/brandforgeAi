@@ -66,15 +66,15 @@ export type GenerateImagesOutput = z.infer<typeof GenerateImagesOutputSchema>;
 async function _generateImageWithGemini(params: {
   aiInstance: typeof ai;
   promptParts: ({text: string} | {media: {url: string}})[];
+  model: string;
 }): Promise<string> {
-  const { aiInstance, promptParts } = params;
-  const { imageGenerationModel } = await getModelConfig();
+  const { aiInstance, promptParts, model } = params;
 
   console.log("Final prompt parts array for Gemini _generateImageWithGemini:", JSON.stringify(promptParts, null, 2));
 
   try {
     const {media} = await aiInstance.generate({
-      model: imageGenerationModel,
+      model: model,
       prompt: promptParts,
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
@@ -280,6 +280,7 @@ const generateImagesFlow = ai.defineFlow(
       freepikEffectFraming,
     } = input;
 
+    const { imageGenerationModel, textToImageModel } = await getModelConfig();
     const chosenProvider = input.provider || process.env.IMAGE_GENERATION_PROVIDER || 'GEMINI';
     console.log(`Image generation flow started. Chosen provider: ${chosenProvider}, Number of images: ${numberOfImages}`);
 
@@ -498,7 +499,7 @@ First, analyze the text content to understand:
 
 **BRAND STRATEGY CONTEXT:**
 - **Brand Identity:** "${brandDescription}"${industryContext}
-  - Extract the brand's personality, values, and visual identity cues
+  - Extract the brand's personality, values, and unique selling proposition
   - Consider how this brand would communicate this specific message
   - Think about the brand's target audience and their preferences
   - Ensure the visual approach aligns with the brand's positioning
@@ -685,6 +686,8 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                 switch (chosenProvider.toUpperCase()) {
                     case 'GEMINI':
                         const finalPromptPartsForGemini: ({text: string} | {media: {url: string}})[] = [];
+                        const modelForGemini = exampleImage ? imageGenerationModel : textToImageModel;
+                        
                         if (exampleImage) { 
                             finalPromptPartsForGemini.push({ media: { url: exampleImage } });
                         }
@@ -692,7 +695,8 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                         console.log("Final prompt parts array for Gemini (loop):", JSON.stringify(finalPromptPartsForGemini, null, 2));
                         resultValue = await _generateImageWithGemini({
                             aiInstance: ai,
-                            promptParts: finalPromptPartsForGemini
+                            promptParts: finalPromptPartsForGemini,
+                            model: modelForGemini,
                         });
                         break;
                     case 'LEONARDO_AI':
@@ -763,5 +767,3 @@ Your mission is to create a compelling, brand-aligned visual asset that:
 //         schema: GenerateImagesOutputSchema,
 //     },
 // });
-
-    
