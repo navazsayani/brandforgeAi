@@ -1493,7 +1493,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
               }}>
                 <input type="hidden" name="industry" value={selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || ""} />
                 <CardContent className="space-y-6">
-                  {(isAdmin || isPremiumActive) && (
+                  {(isAdmin || (isPremiumActive && freepikEnabled)) && (
                     <div>
                       <Label htmlFor="imageGenProviderSelect" className="flex items-center mb-1"><Server className="w-4 h-4 mr-2 text-primary" />Image Generation Provider</Label>
                       <Select name="provider" value={selectedImageProvider || 'GEMINI'} onValueChange={(value) => setSelectedImageProvider(value as GenerateImagesInput['provider'])}>
@@ -1504,9 +1504,9 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                               <SelectGroup>
                                   <SelectLabel>Providers</SelectLabel>
                                   {imageGenerationProviders.map(provider => (
-                                      <SelectItem 
-                                        key={provider.value} 
-                                        value={provider.value} 
+                                      <SelectItem
+                                        key={provider.value}
+                                        value={provider.value}
                                         disabled={provider.disabled || (provider.premium && !isAdmin && !isPremiumActive)}
                                       >
                                           <div className="flex items-center gap-2">
