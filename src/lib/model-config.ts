@@ -4,7 +4,7 @@ import { db } from '@/lib/firebaseConfig';
 import type { ModelConfig } from '@/types';
 
 export const DEFAULT_MODEL_CONFIG: ModelConfig = {
-  imageGenerationModel: 'googleai/gemini-1.5-flash-latest',
+  imageGenerationModel: 'googleai/gemini-2.0-flash-preview-image-generation',
   textToImageModel: 'googleai/gemini-2.0-flash-preview-image-generation',
   fastModel: 'googleai/gemini-1.5-flash-latest',
   visionModel: 'googleai/gemini-1.5-flash-latest',
