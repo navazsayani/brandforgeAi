@@ -23,6 +23,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 
 const modelSettingsSchema = z.object({
@@ -280,6 +281,8 @@ export default function SettingsPage() {
             </CardFooter>
         </Card>
 
+        <ThemeToggle />
+
         {isAdmin && (
             <Card className="shadow-lg">
                 <CardHeader>
@@ -338,7 +341,7 @@ export default function SettingsPage() {
                             </AlertDescription>
                         </Alert>
                         
-                        <FormField control={modelForm.control} name="textToImageModel" render={({ field }) => (<FormItem><FormLabel>Text-to-Image Generation Model</FormLabel><FormControl><Input placeholder="e.g., googleai/gemini-2.0-flash-preview-image-generation" {...field} /></FormControl><FormDescription>Model for text-only image generation (no example image).</FormDescription><FormMessage /></FormItem>)} />
+                        <FormField control={modelForm.control} name="textToImageModel" render={({ field }) => (<FormItem><FormLabel>Text-to-Image Generation Model</FormLabel><FormControl><Input placeholder="e.g., googleai/gemini-2.0-flash-preview-image-generation or imagen-3.0-generate-001" {...field} /></FormControl><FormDescription>Model for text-only image generation (no example image). Use <strong>googleai/</strong> prefix for Gemini models, but <strong>NO prefix</strong> for Imagen models (e.g., "imagen-3.0-generate-001"). For latest Imagen model names: <a href="https://ai.google.dev/gemini-api/docs/imagen" target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline-offset-4 hover:underline inline-flex items-center">View Imagen models <ExternalLink className="ml-1 h-3 w-3" /></a></FormDescription><FormMessage /></FormItem>)} />
                         <FormField control={modelForm.control} name="imageGenerationModel" render={({ field }) => (<FormItem><FormLabel>Multimodal Image Generation Model</FormLabel><FormControl><Input placeholder="e.g., googleai/gemini-1.5-flash-latest" {...field} /></FormControl><FormDescription>Model for creating images when an example image is provided (must support image+text input).</FormDescription><FormMessage /></FormItem>)} />
                         <FormField control={modelForm.control} name="visionModel" render={({ field }) => (<FormItem><FormLabel>Vision Model</FormLabel><FormControl><Input placeholder="e.g., googleai/gemini-1.5-flash-latest" {...field} /></FormControl><FormDescription>Model for analyzing and describing images.</FormDescription><FormMessage /></FormItem>)} />
                         <FormField control={modelForm.control} name="fastModel" render={({ field }) => (<FormItem><FormLabel>Fast Text Model</FormLabel><FormControl><Input placeholder="e.g., googleai/gemini-1.5-flash-latest" {...field} /></FormControl><FormDescription>For quick tasks like social captions and blog outlines.</FormDescription><FormMessage /></FormItem>)} />

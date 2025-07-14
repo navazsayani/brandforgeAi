@@ -116,6 +116,19 @@
 @layer base {
   * {
     @apply border-border;
+    /* Smooth transitions for theme switching */
+    transition: background-color 200ms ease-in-out,
+                border-color 200ms ease-in-out,
+                color 200ms ease-in-out,
+                box-shadow 200ms ease-in-out;
+  }
+  
+  /* Respect user's motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      transition: none !important;
+      animation: none !important;
+    }
   }
   
   html {
@@ -133,6 +146,7 @@
     max-width: 100vw;
     line-height: 1.6; /* Better reading comfort */
     letter-spacing: 0.01em; /* Slightly wider spacing for readability */
+    transition: background 200ms ease-in-out;
   }
 
   /* Prevent horizontal overflow on all elements */
@@ -319,6 +333,49 @@
     @apply flex-1 overflow-y-auto overscroll-contain;
     /* Ensure smooth scrolling on mobile */
     -webkit-overflow-scrolling: touch;
+  }
+
+  /* Enhanced theme-specific styles */
+  .theme-transition {
+    transition: all 200ms ease-in-out;
+  }
+
+  /* Dark mode specific enhancements */
+  .dark {
+    color-scheme: dark;
+  }
+
+  .dark img {
+    opacity: 0.9;
+  }
+
+  .dark .card-enhanced {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  }
+
+  .dark .card-enhanced:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Light mode specific enhancements */
+  .light {
+    color-scheme: light;
+  }
+
+  /* Focus styles that work in both themes */
+  .focus-visible:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  /* Selection styles for both themes */
+  ::selection {
+    background-color: hsl(var(--primary) / 0.2);
+    color: hsl(var(--primary-foreground));
+  }
+
+  .dark ::selection {
+    background-color: hsl(var(--primary) / 0.3);
   }
 }
 

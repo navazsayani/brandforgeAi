@@ -5,7 +5,8 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { QueryClient, QueryClientProvider as TanstackQueryClientProvider } from '@tanstack/react-query';
 import { BrandProvider } from '@/contexts/BrandContext';
-import { AuthProvider } from '@/contexts/AuthContext'; // Added
+import { AuthProvider } from '@/contexts/AuthContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import { Toaster } from "@/components/ui/toaster";
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -13,12 +14,14 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <TanstackQueryClientProvider client={queryClient}>
-      <AuthProvider> {/* Added AuthProvider */}
-        <BrandProvider>
-          {children}
-          <Toaster />
-        </BrandProvider>
-      </AuthProvider> {/* Closed AuthProvider */}
+      <ThemeProvider>
+        <AuthProvider>
+          <BrandProvider>
+            {children}
+            <Toaster />
+          </BrandProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </TanstackQueryClientProvider>
   );
 }
