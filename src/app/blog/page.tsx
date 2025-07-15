@@ -70,10 +70,16 @@ export default function BlogIndexPage() {
                     </Link>
                     <div className="flex items-center gap-2">
                         <Button variant="ghost" className="hidden sm:inline-flex touch-target focus-enhanced" asChild>
-                            <Link href="/features">Features</Link>
+                            <Link href="/features">
+                                <Sparkles className="mr-2 h-5 w-5" />
+                                <span>Features</span>
+                            </Link>
                         </Button>
                         <Button variant="ghost" className="hidden sm:inline-flex touch-target focus-enhanced" asChild>
-                            <Link href="/pricing">Pricing</Link>
+                            <Link href="/pricing">
+                                <CreditCard className="mr-2 h-5 w-5" />
+                                <span>Pricing</span>
+                            </Link>
                         </Button>
                         <Button variant="ghost" className="touch-target focus-enhanced" asChild>
                             <Link href="/login">Log In</Link>
