@@ -31,7 +31,7 @@ const initialVerifyState: FormState<{ success: boolean }> = { data: undefined, e
 const initialPlansState: FormState<any> = { data: null, error: undefined };
 
 
-export default function PricingPage() {
+export default function PricingPageClient() {
     const { currentUser } = useAuth();
     const { brandData, isLoading: isBrandLoading, refetchBrandData } = useBrand();
     const router = useRouter();

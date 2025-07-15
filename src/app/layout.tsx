@@ -19,7 +19,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 const siteUrl = "https://brandforge.me";
-const ogImageUrl = "https://placehold.co/1200x630.png";
+const ogImageUrl = `${siteUrl}/brandforge-og.png`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -77,7 +77,7 @@ export default function RootLayout({
         '@type': 'Organization',
         name: 'BrandForge AI',
         url: siteUrl,
-        logo: 'https://placehold.co/250x250.png',
+        logo: `${siteUrl}/brandforge-logo-schema.png`,
       },
       {
         '@type': 'WebSite',
