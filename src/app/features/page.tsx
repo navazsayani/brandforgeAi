@@ -1,7 +1,6 @@
 
 "use client";
 
-import type { Metadata } from 'next';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -9,14 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { UserCircle, Paintbrush, Send, Rocket, Sparkles, ArrowRight, CheckCircle, CreditCard, Newspaper, LogIn } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-
-export const metadata: Metadata = {
-  title: 'Features - BrandForge AI',
-  description: 'Explore the powerful features of BrandForge AI. From AI-powered brand identity creation and content generation to campaign management and deployment.',
-  alternates: {
-    canonical: '/features',
-  },
-};
 
 const FeatureDetailCard = ({ id, icon: Icon, title, description, benefits }: { id: string; icon: React.ElementType; title: string; description: string; benefits: string[] }) => (
     <Card id={id} className="card-enhanced w-full scroll-mt-24">
@@ -61,7 +52,7 @@ const PublicHeader = () => {
             </Link>
             <div className="flex items-center gap-2">
                 {navLinks.map((link) => (
-                    <Button key={link.href} variant="ghost" className={cn("hidden sm:inline-flex touch-target focus-enhanced", pathname === link.href && "text-primary bg-primary/10")} asChild>
+                    <Button key={link.href} variant="ghost" className={cn("hidden sm:inline-flex touch-target focus-enhanced", pathname.startsWith(link.href) && "text-primary bg-primary/10")} asChild>
                         <Link href={link.href}>
                             <link.icon className="mr-2 h-5 w-5" />
                             <span>{link.label}</span>

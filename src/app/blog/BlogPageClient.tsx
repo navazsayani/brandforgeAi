@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import NextImage from 'next/image';
 import { usePathname } from 'next/navigation';
-import { getBlogPosts, type BlogPost } from '@/lib/blog';
+import { type BlogPost } from '@/lib/blog';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -91,9 +91,7 @@ const PublicHeader = () => {
   );
 };
 
-export default function BlogPageClient() {
-    const posts = getBlogPosts();
-
+export default function BlogPageClient({ posts }: { posts: BlogPost[] }) {
     return (
         <div className="bg-background text-foreground">
              <PublicHeader />
@@ -130,6 +128,28 @@ export default function BlogPageClient() {
                     </div>
                 </section>
             </main>
+             {/* Footer */}
+            <footer className="border-t bg-card/50">
+                <div className="container-responsive py-8 text-center">
+                    <div className="flex justify-center gap-x-6 gap-y-2 flex-wrap mb-4">
+                        <Button variant="link" asChild className="text-muted-foreground">
+                            <Link href="/features">Features</Link>
+                        </Button>
+                        <Button variant="link" asChild className="text-muted-foreground">
+                            <Link href="/pricing">Pricing</Link>
+                        </Button>
+                        <Button variant="link" asChild className="text-muted-foreground">
+                            <Link href="/terms-of-service">Terms of Service</Link>
+                        </Button>
+                        <Button variant="link" asChild className="text-muted-foreground">
+                            <Link href="/privacy-policy">Privacy Policy</Link>
+                        </Button>
+                    </div>
+                <p className="text-sm text-muted-foreground text-break">
+                    &copy; {new Date().getFullYear()} BrandForge AI. All rights reserved.
+                </p>
+                </div>
+            </footer>
         </div>
     );
 }

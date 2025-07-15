@@ -1,6 +1,7 @@
 
 import type { Metadata } from 'next';
 import BlogPageClient from './BlogPageClient';
+import { getBlogPosts } from '@/lib/blog';
 
 export const metadata: Metadata = {
   title: 'Blog - BrandForge AI',
@@ -10,6 +11,8 @@ export const metadata: Metadata = {
   },
 };
 
+// This is now a Server Component
 export default function BlogIndexPage() {
-  return <BlogPageClient />;
+  const posts = getBlogPosts();
+  return <BlogPageClient posts={posts} />;
 }
