@@ -61,7 +61,7 @@ const PublicHeader = () => {
         <div className="container-responsive flex items-center justify-between h-18">
             <Link href="/" className="flex items-center gap-3 text-foreground hover:text-primary transition-colors duration-200">
                 <Sparkles className="h-7 w-7 text-primary" />
-                <span className="text-xl font-bold text-gradient-brand">BrandForge AI</span>
+                <span className="hidden sm:inline-block text-xl font-bold text-gradient-brand">BrandForge AI</span>
             </Link>
             <div className="flex items-center gap-2">
                 {navLinks.map((link) => (

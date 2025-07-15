@@ -73,7 +73,7 @@ const PublicHeader = () => {
         <div className="container-responsive flex items-center justify-between h-18">
             <Link href="/" className="flex items-center gap-3 text-foreground hover:text-primary transition-colors duration-200">
                 <Sparkles className="h-7 w-7 text-primary" />
-                <span className="text-xl font-bold text-gradient-brand">BrandForge AI</span>
+                <span className="hidden sm:inline-block text-xl font-bold text-gradient-brand">BrandForge AI</span>
             </Link>
             <div className="flex items-center gap-2">
                 {navLinks.map((link) => (
@@ -413,10 +413,11 @@ export default function PricingPageClient() {
                         {plansToRender.map((plan) => {
                             const isCurrentActivePlan = plan.id.startsWith('pro') && isPremiumActive;
                             const isExpiredProPlan = plan.id.startsWith('pro') && needsRenewal;
+                            const isCurrentUserOnFree = plan.id === 'free' && !isPremiumActive;
 
                             let ctaButton: React.ReactNode;
-                            if (plan.id === 'free') {
-                                ctaButton = <Button className="w-full text-base py-3 px-8" disabled={planStatus === 'free' && isPremiumActive === false}>{planStatus === 'free' && isPremiumActive === false ? "Your Current Plan" : " "}</Button>;
+                            if (isCurrentUserOnFree) {
+                                ctaButton = <Button className="w-full text-base py-3 px-8" disabled={true}><Check className="mr-2 w-5 h-5" />Your Current Plan</Button>;
                             } else if (isCurrentActivePlan) {
                                 ctaButton = <Button className="w-full text-base py-3 px-8" disabled><Check className="mr-2 w-5 h-5" />Current Plan</Button>;
                             } else if (isExpiredProPlan) {
