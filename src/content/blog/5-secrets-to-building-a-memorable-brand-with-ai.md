@@ -20,6 +20,7 @@ Here are five secrets to making AI your creative partner in brand building.
 Before you design anything, you need to know who you are. Your brand's identity is its source code. Instead of guessing, let AI do the heavy lifting. Tools like **BrandForge AI** can look at your website or existing materials and act as your brand strategist.
 
 It can help you:
+
 - **Pinpoint Your Core Message:** AI can sift through your content to find the recurring themes that truly define what you do.
 - **Understand Your Audience:** It analyzes your language to reveal who you're already speaking to, helping you hone your message.
 - **Craft a Powerful Description:** AI can synthesize all this information into a clear, compelling brand description that becomes the foundation for everything else.

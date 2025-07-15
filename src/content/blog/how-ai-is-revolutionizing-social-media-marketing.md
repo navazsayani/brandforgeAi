@@ -20,6 +20,7 @@ So, how exactly is this revolution unfolding?
 We've all been on the receiving end of a generic ad that completely misses the mark. AI is the cure for that. It analyzes user behavior—likes, shares, and clicks—to understand what people genuinely care about.
 
 This allows brands to:
+
 - **Deliver Dynamic Ads:** Instead of a single, one-size-fits-all ad, AI can create thousands of variations on the fly. It swaps out images, headlines, and offers to perfectly match the person seeing it, leading to a huge boost in engagement.
 - **Curate a Feed People Love:** AI helps ensure that your followers see the content and products from you that they are most likely to find interesting and useful.
 
