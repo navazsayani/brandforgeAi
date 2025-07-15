@@ -241,7 +241,14 @@ export default function LandingPage() {
                         </Button>
                     </>
                  )}
-                 <MobileNavMenu />
+                 <div className="sm:hidden flex items-center gap-2">
+                    {!user && (
+                        <Button size="sm" asChild>
+                            <Link href="/login">Log In</Link>
+                        </Button>
+                    )}
+                    <MobileNavMenu />
+                 </div>
             </div>
         </div>
       </header>

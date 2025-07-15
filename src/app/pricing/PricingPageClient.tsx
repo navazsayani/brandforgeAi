@@ -29,6 +29,7 @@ declare global {
 
 const PublicHeader = () => {
   const pathname = usePathname();
+  const { user } = useAuth();
   const navLinks = [
     { href: '/features', label: 'Features', icon: Layers },
     { href: '/blog', label: 'Blog', icon: Newspaper },
@@ -83,19 +84,30 @@ const PublicHeader = () => {
                         </Link>
                     </Button>
                 ))}
-                <Button variant="ghost" className="focus-enhanced hidden sm:inline-flex" asChild>
-                    <Link href="/login">
-                         <LogIn className="mr-2 h-5 w-5" />
-                         <span>Log In</span>
-                    </Link>
-                </Button>
-                <Button className="btn-gradient-primary focus-enhanced hidden sm:inline-flex" asChild>
-                    <Link href="/signup">
-                        <span>Get Started</span>
-                        <ArrowRight className="ml-2 h-5 w-5" />
-                    </Link>
-                </Button>
-                <MobileNavMenu />
+                {!user && (
+                    <>
+                        <Button variant="ghost" className="focus-enhanced hidden sm:inline-flex" asChild>
+                            <Link href="/login">
+                                <LogIn className="mr-2 h-5 w-5" />
+                                <span>Log In</span>
+                            </Link>
+                        </Button>
+                        <Button className="btn-gradient-primary focus-enhanced hidden sm:inline-flex" asChild>
+                            <Link href="/signup">
+                                <span>Get Started</span>
+                                <ArrowRight className="ml-2 h-5 w-5" />
+                            </Link>
+                        </Button>
+                    </>
+                )}
+                 <div className="sm:hidden flex items-center gap-2">
+                    {!user && (
+                        <Button size="sm" asChild>
+                            <Link href="/login">Log In</Link>
+                        </Button>
+                    )}
+                    <MobileNavMenu />
+                </div>
             </div>
         </div>
     </header>
@@ -399,7 +411,7 @@ export default function PricingPageClient() {
 
                             let ctaButton: React.ReactNode;
                             if (plan.id === 'free') {
-                                ctaButton = <Button className="w-full text-base py-3 px-8" disabled>{!isPremiumActive ? "Your Current Plan" : " "}</Button>;
+                                ctaButton = <Button className="w-full text-base py-3 px-8" disabled>{planStatus === 'free' ? "Your Current Plan" : " "}</Button>;
                             } else if (isCurrentActivePlan) {
                                 ctaButton = <Button className="w-full text-base py-3 px-8" disabled><Check className="mr-2 w-5 h-5" />Current Plan</Button>;
                             } else if (isExpiredProPlan) {

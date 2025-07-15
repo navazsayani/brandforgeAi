@@ -13,9 +13,11 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { useAuth } from '@/contexts/AuthContext';
 
 const PublicHeader = () => {
   const pathname = usePathname();
+  const { user } = useAuth();
   const navLinks = [
     { href: '/features', label: 'Features', icon: Layers },
     { href: '/blog', label: 'Blog', icon: Newspaper },
@@ -63,26 +65,37 @@ const PublicHeader = () => {
             </Link>
             <div className="flex items-center gap-2">
                 {navLinks.map((link) => (
-                    <Button key={link.href} variant="ghost" className={cn("hidden sm:inline-flex touch-target focus-enhanced", pathname.startsWith(link.href) && "text-primary bg-primary/10")} asChild>
+                    <Button key={link.href} variant="ghost" className={cn("hidden sm:inline-flex focus-enhanced", pathname.startsWith(link.href) && "text-primary bg-primary/10")} asChild>
                         <Link href={link.href}>
                             <link.icon className="mr-2 h-5 w-5" />
                             <span>{link.label}</span>
                         </Link>
                     </Button>
                 ))}
-                <Button variant="ghost" className="focus-enhanced hidden sm:inline-flex" asChild>
-                    <Link href="/login">
-                         <LogIn className="mr-2 h-5 w-5" />
-                         <span>Log In</span>
-                    </Link>
-                </Button>
-                <Button className="btn-gradient-primary focus-enhanced hidden sm:inline-flex" asChild>
-                    <Link href="/signup">
-                        <span>Get Started</span>
-                        <ArrowRight className="ml-2 h-5 w-5" />
-                    </Link>
-                </Button>
-                <MobileNavMenu />
+                {!user && (
+                    <>
+                        <Button variant="ghost" className="focus-enhanced hidden sm:inline-flex" asChild>
+                            <Link href="/login">
+                                <LogIn className="mr-2 h-5 w-5" />
+                                <span>Log In</span>
+                            </Link>
+                        </Button>
+                        <Button className="btn-gradient-primary focus-enhanced hidden sm:inline-flex" asChild>
+                            <Link href="/signup">
+                                <span>Get Started</span>
+                                <ArrowRight className="ml-2 h-5 w-5" />
+                            </Link>
+                        </Button>
+                    </>
+                )}
+                <div className="sm:hidden flex items-center gap-2">
+                    {!user && (
+                        <Button size="sm" asChild>
+                            <Link href="/login">Log In</Link>
+                        </Button>
+                    )}
+                    <MobileNavMenu />
+                </div>
             </div>
         </div>
     </header>
