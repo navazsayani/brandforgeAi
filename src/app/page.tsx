@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -6,7 +7,7 @@ import Link from 'next/link';
 import NextImage from 'next/image';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogIn, UserPlus, LayoutDashboard, Loader2, UserCircle, Rocket, Paintbrush, Send, CheckCircle, ArrowRight, Sparkles } from 'lucide-react';
+import { LogIn, UserPlus, LayoutDashboard, Loader2, UserCircle, Rocket, Paintbrush, Send, CheckCircle, ArrowRight, Sparkles, CreditCard } from 'lucide-react';
 
 const FeatureCard = ({ icon: Icon, title, description }: { icon: React.ElementType, title: string, description: string }) => (
     <div className="card-compact text-center p-6 md:p-8">
@@ -175,6 +176,12 @@ export default function LandingPage() {
                     </Button>
                  ) : (
                     <>
+                        <Button variant="ghost" className="hidden sm:inline-flex touch-target focus-enhanced" asChild>
+                            <Link href="/pricing">
+                                <CreditCard className="mr-2 h-5 w-5" />
+                                <span>Pricing</span>
+                            </Link>
+                        </Button>
                         <Button variant="ghost" className="touch-target focus-enhanced" asChild>
                             <Link href="/login">
                                 <LogIn className="mr-2 h-5 w-5" />
@@ -306,6 +313,9 @@ export default function LandingPage() {
                 </Button>
                  <Button variant="link" asChild className="text-muted-foreground">
                     <Link href="/privacy-policy">Privacy Policy</Link>
+                </Button>
+                 <Button variant="link" asChild className="text-muted-foreground">
+                    <Link href="/pricing">Pricing</Link>
                 </Button>
             </div>
           <p className="text-sm text-muted-foreground text-break">
