@@ -84,11 +84,7 @@ export default {
   				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
   				border: 'hsl(var(--sidebar-border))',
   				ring: 'hsl(var(--sidebar-ring))'
-  			},
-            brand: {
-                blue: 'hsl(var(--brand-blue))',
-                orange: 'hsl(var(--brand-orange))',
-            }
+  			}
   		},
   		borderRadius: {
   			lg: 'var(--radius)',
@@ -130,7 +126,45 @@ export default {
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
   			'accordion-up': 'accordion-up 0.2s ease-out'
-  		}
+  		},
+      typography: ({ theme }: { theme: any }) => ({
+        DEFAULT: {
+          css: {
+            '--tw-prose-body': theme('colors.foreground / 1'),
+            '--tw-prose-headings': theme('colors.foreground / 1'),
+            '--tw-prose-lead': theme('colors.muted.foreground / 1'),
+            '--tw-prose-links': theme('colors.primary / 1'),
+            '--tw-prose-bold': theme('colors.foreground / 1'),
+            '--tw-prose-counters': theme('colors.muted.foreground / 1'),
+            '--tw-prose-bullets': theme('colors.primary / 1'),
+            '--tw-prose-hr': theme('colors.border / 1'),
+            '--tw-prose-quotes': theme('colors.foreground / 1'),
+            '--tw-prose-quote-borders': theme('colors.primary / 1'),
+            '--tw-prose-captions': theme('colors.muted.foreground / 1'),
+            '--tw-prose-code': theme('colors.foreground / 1'),
+            '--tw-prose-pre-code': theme('colors.foreground / 1'),
+            '--tw-prose-pre-bg': theme('colors.muted / 1'),
+            '--tw-prose-th-borders': theme('colors.border / 1'),
+            '--tw-prose-td-borders': theme('colors.border / 1'),
+            '--tw-prose-invert-body': theme('colors.foreground / 1'),
+            '--tw-prose-invert-headings': theme('colors.foreground / 1'),
+            '--tw-prose-invert-lead': theme('colors.muted.foreground / 1'),
+            '--tw-prose-invert-links': theme('colors.primary / 1'),
+            '--tw-prose-invert-bold': theme('colors.foreground / 1'),
+            '--tw-prose-invert-counters': theme('colors.muted.foreground / 1'),
+            '--tw-prose-invert-bullets': theme('colors.primary / 1'),
+            '--tw-prose-invert-hr': theme('colors.border / 1'),
+            '--tw-prose-invert-quotes': theme('colors.foreground / 1'),
+            '--tw-prose-invert-quote-borders': theme('colors.primary / 1'),
+            '--tw-prose-invert-captions': theme('colors.muted.foreground / 1'),
+            '--tw-prose-invert-code': theme('colors.foreground / 1'),
+            '--tw-prose-invert-pre-code': theme('colors.foreground / 1'),
+            '--tw-prose-invert-pre-bg': theme('colors.muted / 1'),
+            '--tw-prose-invert-th-borders': theme('colors.border / 1'),
+            '--tw-prose-invert-td-borders': theme('colors.border / 1'),
+          },
+        },
+      }),
   	}
   },
   plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
