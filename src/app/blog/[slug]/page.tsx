@@ -96,7 +96,8 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
   };
 
   return (
-    <div className="bg-background text-foreground">
+    <>
+      <div className="bg-background text-foreground">
          <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -159,7 +160,7 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
                     </div>
                 </article>
             </div>
-        </section>
+        </main>
         
         {/* Footer */}
         <footer className="border-t bg-card/50 mt-12">
@@ -170,5 +171,6 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
             </div>
         </footer>
     </div>
+    </>
   );
 }
