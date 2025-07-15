@@ -2,12 +2,14 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import NextImage from 'next/image';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { LogIn, UserPlus, LayoutDashboard, Loader2, UserCircle, Rocket, Paintbrush, Send, CheckCircle, ArrowRight, Sparkles, CreditCard, Newspaper } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
 
 const FeatureCard = ({ icon: Icon, title, description, href }: { icon: React.ElementType, title: string, description: string, href: string }) => (
     <Link href={href} className="group">
@@ -126,6 +128,7 @@ const HeroCarousel = () => {
 export default function LandingPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (user && !isLoading) {
@@ -156,6 +159,12 @@ export default function LandingPage() {
     );
   }
 
+  const navLinks = [
+    { href: '/features', label: 'Features', icon: Sparkles },
+    { href: '/blog', label: 'Blog', icon: Newspaper },
+    { href: '/pricing', label: 'Pricing', icon: CreditCard },
+  ];
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
@@ -169,6 +178,14 @@ export default function LandingPage() {
               <span className="sr-only">BrandForge AI Home</span>
             </Link>
             <div className="flex items-center gap-2">
+                {navLinks.map((link) => (
+                     <Button key={link.href} variant="ghost" className={cn("hidden sm:inline-flex touch-target focus-enhanced", pathname === link.href && "text-primary bg-primary/10")} asChild>
+                        <Link href={link.href}>
+                            <link.icon className="mr-2 h-5 w-5" />
+                            <span>{link.label}</span>
+                        </Link>
+                    </Button>
+                ))}
                  {user ? (
                     <Button asChild className="touch-target focus-enhanced">
                         <Link href="/dashboard">
@@ -178,24 +195,6 @@ export default function LandingPage() {
                     </Button>
                  ) : (
                     <>
-                        <Button variant="ghost" className="hidden sm:inline-flex touch-target focus-enhanced" asChild>
-                            <Link href="/features">
-                                <Sparkles className="mr-2 h-5 w-5" />
-                                <span>Features</span>
-                            </Link>
-                        </Button>
-                         <Button variant="ghost" className="hidden sm:inline-flex touch-target focus-enhanced" asChild>
-                            <Link href="/blog">
-                                <Newspaper className="mr-2 h-5 w-5" />
-                                <span>Blog</span>
-                            </Link>
-                        </Button>
-                        <Button variant="ghost" className="hidden sm:inline-flex touch-target focus-enhanced" asChild>
-                            <Link href="/pricing">
-                                <CreditCard className="mr-2 h-5 w-5" />
-                                <span>Pricing</span>
-                            </Link>
-                        </Button>
                         <Button variant="ghost" className="touch-target focus-enhanced" asChild>
                             <Link href="/login">
                                 <LogIn className="mr-2 h-5 w-5" />

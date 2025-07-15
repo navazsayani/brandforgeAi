@@ -1,9 +1,14 @@
 
+"use client";
+
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { UserCircle, Paintbrush, Send, Rocket, Sparkles, ArrowRight, CheckCircle, CreditCard, Newspaper } from 'lucide-react';
+import { UserCircle, Paintbrush, Send, Rocket, Sparkles, ArrowRight, CheckCircle, CreditCard, Newspaper, LogIn } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
 
 export const metadata: Metadata = {
   title: 'Features - BrandForge AI',
@@ -39,35 +44,35 @@ const FeatureDetailCard = ({ id, icon: Icon, title, description, benefits }: { i
     </Card>
 );
 
+const PublicHeader = () => {
+  const pathname = usePathname();
+  const navLinks = [
+    { href: '/features', label: 'Features', icon: Sparkles },
+    { href: '/blog', label: 'Blog', icon: Newspaper },
+    { href: '/pricing', label: 'Pricing', icon: CreditCard },
+  ];
 
-export default function FeaturesPage() {
   return (
-    <div className="bg-background text-foreground">
-        {/* Header */}
-        <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b">
-          <div className="container-responsive flex items-center justify-between h-18">
-             <Link
-              href="/"
-              className="flex items-center gap-3 text-foreground hover:text-primary transition-colors duration-200"
-            >
-              <Sparkles className="h-7 w-7 text-primary" />
-              <span className="text-xl font-bold text-gradient-brand">BrandForge AI</span>
+    <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b">
+        <div className="container-responsive flex items-center justify-between h-18">
+            <Link href="/" className="flex items-center gap-3 text-foreground hover:text-primary transition-colors duration-200">
+                <Sparkles className="h-7 w-7 text-primary" />
+                <span className="text-xl font-bold text-gradient-brand">BrandForge AI</span>
             </Link>
             <div className="flex items-center gap-2">
-                <Button variant="ghost" className="hidden sm:inline-flex touch-target focus-enhanced" asChild>
-                    <Link href="/blog">
-                        <Newspaper className="mr-2 h-5 w-5" />
-                        <span>Blog</span>
-                    </Link>
-                </Button>
-                <Button variant="ghost" className="hidden sm:inline-flex touch-target focus-enhanced" asChild>
-                    <Link href="/pricing">
-                        <CreditCard className="mr-2 h-5 w-5" />
-                        <span>Pricing</span>
-                    </Link>
-                </Button>
+                {navLinks.map((link) => (
+                    <Button key={link.href} variant="ghost" className={cn("hidden sm:inline-flex touch-target focus-enhanced", pathname === link.href && "text-primary bg-primary/10")} asChild>
+                        <Link href={link.href}>
+                            <link.icon className="mr-2 h-5 w-5" />
+                            <span>{link.label}</span>
+                        </Link>
+                    </Button>
+                ))}
                 <Button variant="ghost" className="touch-target focus-enhanced" asChild>
-                    <Link href="/login">Log In</Link>
+                    <Link href="/login">
+                         <LogIn className="mr-2 h-5 w-5" />
+                         <span>Log In</span>
+                    </Link>
                 </Button>
                 <Button className="btn-gradient-primary touch-target focus-enhanced" asChild>
                     <Link href="/signup">
@@ -77,7 +82,15 @@ export default function FeaturesPage() {
                 </Button>
             </div>
         </div>
-      </header>
+    </header>
+  );
+};
+
+
+export default function FeaturesPage() {
+  return (
+    <div className="bg-background text-foreground">
+        <PublicHeader />
 
       <main className="pt-24">
          {/* Hero Section */}
