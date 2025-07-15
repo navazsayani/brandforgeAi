@@ -365,7 +365,7 @@ export default function PricingPageClient() {
 
                             let ctaButton: React.ReactNode;
                             if (plan.id === 'free') {
-                                ctaButton = <Button className="w-full text-base py-3 px-8" disabled>Your Plan</Button>;
+                                ctaButton = <Button className="w-full text-base py-3 px-8" disabled>{!isPremiumActive ? "Your Current Plan" : " "}</Button>;
                             } else if (isCurrentActivePlan) {
                                 ctaButton = <Button className="w-full text-base py-3 px-8" disabled><Check className="mr-2 w-5 h-5" />Current Plan</Button>;
                             } else if (isExpiredProPlan) {
