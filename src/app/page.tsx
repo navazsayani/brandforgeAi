@@ -7,7 +7,7 @@ import Link from 'next/link';
 import NextImage from 'next/image';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogIn, UserPlus, LayoutDashboard, Loader2, UserCircle, Rocket, Paintbrush, Send, CheckCircle, ArrowRight, Sparkles, CreditCard, Newspaper } from 'lucide-react';
+import { LogIn, UserPlus, LayoutDashboard, Loader2, UserCircle, Rocket, Paintbrush, Send, CheckCircle, ArrowRight, Sparkles, CreditCard, Newspaper, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 
@@ -160,7 +160,7 @@ export default function LandingPage() {
   }
 
   const navLinks = [
-    { href: '/features', label: 'Features', icon: Sparkles },
+    { href: '/features', label: 'Features', icon: Layers },
     { href: '/blog', label: 'Blog', icon: Newspaper },
     { href: '/pricing', label: 'Pricing', icon: CreditCard },
   ];

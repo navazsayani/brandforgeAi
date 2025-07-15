@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { UserCircle, Paintbrush, Send, Rocket, Sparkles, ArrowRight, CheckCircle, CreditCard, Newspaper, LogIn } from 'lucide-react';
+import { UserCircle, Paintbrush, Send, Rocket, Sparkles, ArrowRight, CheckCircle, CreditCard, Newspaper, LogIn, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 
@@ -38,7 +38,7 @@ const FeatureDetailCard = ({ id, icon: Icon, title, description, benefits }: { i
 const PublicHeader = () => {
   const pathname = usePathname();
   const navLinks = [
-    { href: '/features', label: 'Features', icon: Sparkles },
+    { href: '/features', label: 'Features', icon: Layers },
     { href: '/blog', label: 'Blog', icon: Newspaper },
     { href: '/pricing', label: 'Pricing', icon: CreditCard },
   ];

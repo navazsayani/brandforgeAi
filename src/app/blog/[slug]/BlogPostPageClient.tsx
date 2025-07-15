@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation';
 import { type BlogPost } from '@/lib/blog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Sparkles, CreditCard, Newspaper, LogIn, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Sparkles, CreditCard, Newspaper, LogIn, ArrowRight, Layers } from 'lucide-react';
 import { format } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 const PublicHeader = () => {
   const pathname = usePathname();
   const navLinks = [
-    { href: '/features', label: 'Features', icon: Sparkles },
+    { href: '/features', label: 'Features', icon: Layers },
     { href: '/blog', label: 'Blog', icon: Newspaper },
     { href: '/pricing', label: 'Pricing', icon: CreditCard },
   ];

@@ -8,7 +8,7 @@ import { type BlogPost } from '@/lib/blog';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Sparkles, CreditCard, Newspaper, LogIn } from 'lucide-react';
+import { ArrowRight, Sparkles, CreditCard, Newspaper, LogIn, Layers } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -52,7 +52,7 @@ const BlogCard = ({ post }: { post: BlogPost }) => (
 const PublicHeader = () => {
   const pathname = usePathname();
   const navLinks = [
-    { href: '/features', label: 'Features', icon: Sparkles },
+    { href: '/features', label: 'Features', icon: Layers },
     { href: '/blog', label: 'Blog', icon: Newspaper },
     { href: '/pricing', label: 'Pricing', icon: CreditCard },
   ];

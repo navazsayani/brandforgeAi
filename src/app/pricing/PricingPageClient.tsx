@@ -8,7 +8,7 @@ import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Check, ArrowRight, Star, X, Loader2, Info, RefreshCcw, TestTube, Copy, Globe, Sparkles, Newspaper, CreditCard, LogIn } from 'lucide-react';
+import { Check, ArrowRight, Star, X, Loader2, Info, RefreshCcw, TestTube, Copy, Globe, Sparkles, Newspaper, CreditCard, LogIn, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PlanDetails } from '@/types';
 import type { FormState } from '@/lib/actions';
@@ -29,7 +29,7 @@ declare global {
 const PublicHeader = () => {
   const pathname = usePathname();
   const navLinks = [
-    { href: '/features', label: 'Features', icon: Sparkles },
+    { href: '/features', label: 'Features', icon: Layers },
     { href: '/blog', label: 'Blog', icon: Newspaper },
     { href: '/pricing', label: 'Pricing', icon: CreditCard },
   ];
