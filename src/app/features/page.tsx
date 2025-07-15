@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { UserCircle, Paintbrush, Send, Rocket, Sparkles, ArrowRight, CheckCircle } from 'lucide-react';
+import { UserCircle, Paintbrush, Send, Rocket, Sparkles, ArrowRight, CheckCircle, CreditCard, Newspaper } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Features - BrandForge AI',
@@ -55,7 +55,16 @@ export default function FeaturesPage() {
             </Link>
             <div className="flex items-center gap-2">
                 <Button variant="ghost" className="hidden sm:inline-flex touch-target focus-enhanced" asChild>
-                    <Link href="/pricing">Pricing</Link>
+                    <Link href="/blog">
+                        <Newspaper className="mr-2 h-5 w-5" />
+                        <span>Blog</span>
+                    </Link>
+                </Button>
+                <Button variant="ghost" className="hidden sm:inline-flex touch-target focus-enhanced" asChild>
+                    <Link href="/pricing">
+                        <CreditCard className="mr-2 h-5 w-5" />
+                        <span>Pricing</span>
+                    </Link>
                 </Button>
                 <Button variant="ghost" className="touch-target focus-enhanced" asChild>
                     <Link href="/login">Log In</Link>
