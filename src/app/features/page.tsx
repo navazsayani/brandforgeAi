@@ -110,13 +110,18 @@ const PublicHeader = () => {
                     </>
                 )}
                 <div className="sm:hidden flex items-center gap-2">
-                    {!user && (
-                        <Button size="sm" asChild>
+                   {!user && (
+                        <>
+                         <Button variant="ghost" size="sm" asChild>
                             <Link href="/login">Log In</Link>
                         </Button>
+                        <Button size="sm" className="btn-gradient-primary" asChild>
+                            <Link href="/signup">Get Started</Link>
+                        </Button>
+                        </>
                     )}
                     <MobileNavMenu />
-                </div>
+                 </div>
             </div>
         </div>
     </header>

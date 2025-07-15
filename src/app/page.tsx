@@ -243,9 +243,14 @@ export default function LandingPage() {
                  )}
                  <div className="sm:hidden flex items-center gap-2">
                     {!user && (
-                        <Button size="sm" asChild>
+                        <>
+                         <Button variant="ghost" size="sm" asChild>
                             <Link href="/login">Log In</Link>
                         </Button>
+                        <Button size="sm" className="btn-gradient-primary" asChild>
+                            <Link href="/signup">Get Started</Link>
+                        </Button>
+                        </>
                     )}
                     <MobileNavMenu />
                  </div>
