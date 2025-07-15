@@ -162,7 +162,7 @@ export default function LandingPage() {
   const navLinks = [
     { href: '/features', label: 'Features', icon: Layers },
     { href: '/blog', label: 'Blog', icon: Newspaper },
-    { href: '/pricing', label: 'Pricing', icon: CreditCard },
+    { href: '/plans', label: 'Pricing', icon: CreditCard },
   ];
 
   return (
@@ -179,7 +179,7 @@ export default function LandingPage() {
             </Link>
             <div className="flex items-center gap-2">
                 {navLinks.map((link) => (
-                     <Button key={link.href} variant="ghost" className={cn("hidden sm:inline-flex touch-target focus-enhanced", pathname === link.href && "text-primary bg-primary/10")} asChild>
+                     <Button key={link.href} variant="ghost" className={cn("hidden sm:inline-flex focus-enhanced", pathname === link.href && "text-primary bg-primary/10")} asChild>
                         <Link href={link.href}>
                             <link.icon className="mr-2 h-5 w-5" />
                             <span>{link.label}</span>
@@ -187,7 +187,7 @@ export default function LandingPage() {
                     </Button>
                 ))}
                  {user ? (
-                    <Button asChild className="touch-target focus-enhanced">
+                    <Button asChild className="focus-enhanced">
                         <Link href="/dashboard">
                             <LayoutDashboard className="mr-2 h-5 w-5" />
                             <span>Go to Dashboard</span>
@@ -195,13 +195,13 @@ export default function LandingPage() {
                     </Button>
                  ) : (
                     <>
-                        <Button variant="ghost" className="touch-target focus-enhanced" asChild>
+                        <Button variant="ghost" className="focus-enhanced" asChild>
                             <Link href="/login">
                                 <LogIn className="mr-2 h-5 w-5" />
                                 <span>Log In</span>
                             </Link>
                         </Button>
-                        <Button className="btn-gradient-primary touch-target focus-enhanced" asChild>
+                        <Button className="btn-gradient-primary focus-enhanced" asChild>
                             <Link href="/signup">
                                 <span>Get Started</span>
                                 <ArrowRight className="ml-2 h-5 w-5" />
@@ -234,7 +234,7 @@ export default function LandingPage() {
                 <HeroCarousel />
 
                 <div className="mt-12 flex justify-center gap-4">
-                    <Button size="lg" className="btn-gradient-primary btn-lg-enhanced touch-target focus-enhanced" asChild>
+                    <Button size="lg" className="btn-gradient-primary btn-lg-enhanced focus-enhanced" asChild>
                         <Link href={user ? "/dashboard" : "/signup"}>
                             {user ? "Go to Dashboard" : "Get Started for Free"}
                             <ArrowRight className="ml-2 h-5 w-5" />
@@ -311,7 +311,7 @@ export default function LandingPage() {
                      <Button 
                         size="lg" 
                         variant="secondary"
-                        className="btn-lg-enhanced touch-target focus-enhanced bg-background/90 text-foreground hover:bg-background"
+                        className="btn-lg-enhanced focus-enhanced bg-background/90 text-foreground hover:bg-background"
                         asChild
                      >
                         <Link href="/signup">Start Your Free Trial Today <ArrowRight className="ml-2 h-5 w-5" /></Link>
@@ -332,7 +332,7 @@ export default function LandingPage() {
                     <Link href="/blog">Blog</Link>
                 </Button>
                  <Button variant="link" asChild className="text-muted-foreground">
-                    <Link href="/pricing">Pricing</Link>
+                    <Link href="/plans">Pricing</Link>
                 </Button>
                  <Button variant="link" asChild className="text-muted-foreground">
                     <Link href="/terms-of-service">Terms of Service</Link>

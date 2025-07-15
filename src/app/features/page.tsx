@@ -40,7 +40,7 @@ const PublicHeader = () => {
   const navLinks = [
     { href: '/features', label: 'Features', icon: Layers },
     { href: '/blog', label: 'Blog', icon: Newspaper },
-    { href: '/pricing', label: 'Pricing', icon: CreditCard },
+    { href: '/plans', label: 'Pricing', icon: CreditCard },
   ];
 
   return (
@@ -52,20 +52,20 @@ const PublicHeader = () => {
             </Link>
             <div className="flex items-center gap-2">
                 {navLinks.map((link) => (
-                    <Button key={link.href} variant="ghost" className={cn("hidden sm:inline-flex touch-target focus-enhanced", pathname.startsWith(link.href) && "text-primary bg-primary/10")} asChild>
+                    <Button key={link.href} variant="ghost" className={cn("hidden sm:inline-flex focus-enhanced", pathname.startsWith(link.href) && "text-primary bg-primary/10")} asChild>
                         <Link href={link.href}>
                             <link.icon className="mr-2 h-5 w-5" />
                             <span>{link.label}</span>
                         </Link>
                     </Button>
                 ))}
-                <Button variant="ghost" className="touch-target focus-enhanced" asChild>
+                <Button variant="ghost" className="focus-enhanced" asChild>
                     <Link href="/login">
                          <LogIn className="mr-2 h-5 w-5" />
                          <span>Log In</span>
                     </Link>
                 </Button>
-                <Button className="btn-gradient-primary touch-target focus-enhanced" asChild>
+                <Button className="btn-gradient-primary focus-enhanced" asChild>
                     <Link href="/signup">
                         <span>Get Started</span>
                         <ArrowRight className="ml-2 h-5 w-5" />
@@ -95,7 +95,7 @@ export default function FeaturesPage() {
                     Discover how BrandForge AI combines multiple tools into a single, seamless workflow to accelerate your brand building and marketing efforts from start to finish.
                 </p>
                 <div className="mt-12">
-                    <Button size="lg" className="btn-gradient-primary btn-lg-enhanced touch-target focus-enhanced" asChild>
+                    <Button size="lg" className="btn-gradient-primary btn-lg-enhanced focus-enhanced" asChild>
                         <Link href="/signup">
                             Start Forging Your Brand
                             <ArrowRight className="ml-2 h-5 w-5" />
@@ -171,7 +171,7 @@ export default function FeaturesPage() {
                     <Link href="/blog">Blog</Link>
                 </Button>
                  <Button variant="link" asChild className="text-muted-foreground">
-                    <Link href="/pricing">Pricing</Link>
+                    <Link href="/plans">Pricing</Link>
                 </Button>
                  <Button variant="link" asChild className="text-muted-foreground">
                     <Link href="/terms-of-service">Terms of Service</Link>

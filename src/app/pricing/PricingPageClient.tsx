@@ -31,7 +31,7 @@ const PublicHeader = () => {
   const navLinks = [
     { href: '/features', label: 'Features', icon: Layers },
     { href: '/blog', label: 'Blog', icon: Newspaper },
-    { href: '/pricing', label: 'Pricing', icon: CreditCard },
+    { href: '/plans', label: 'Pricing', icon: CreditCard },
   ];
 
   return (
@@ -43,20 +43,20 @@ const PublicHeader = () => {
             </Link>
             <div className="flex items-center gap-2">
                 {navLinks.map((link) => (
-                    <Button key={link.href} variant="ghost" className={cn("hidden sm:inline-flex touch-target focus-enhanced", pathname.startsWith(link.href) && "text-primary bg-primary/10")} asChild>
+                    <Button key={link.href} variant="ghost" className={cn("hidden sm:inline-flex focus-enhanced", pathname.startsWith(link.href) && "text-primary bg-primary/10")} asChild>
                         <Link href={link.href}>
                             <link.icon className="mr-2 h-5 w-5" />
                             <span>{link.label}</span>
                         </Link>
                     </Button>
                 ))}
-                <Button variant="ghost" className="touch-target focus-enhanced" asChild>
+                <Button variant="ghost" className="focus-enhanced" asChild>
                     <Link href="/login">
                          <LogIn className="mr-2 h-5 w-5" />
                          <span>Log In</span>
                     </Link>
                 </Button>
-                <Button className="btn-gradient-primary touch-target focus-enhanced" asChild>
+                <Button className="btn-gradient-primary focus-enhanced" asChild>
                     <Link href="/signup">
                         <span>Get Started</span>
                         <ArrowRight className="ml-2 h-5 w-5" />
@@ -75,7 +75,7 @@ const initialPlansState: FormState<any> = { data: null, error: undefined };
 
 
 export default function PricingPageClient() {
-    const { currentUser } = useAuth();
+    const { currentUser, isLoading: isAuthLoading } = useAuth();
     const { brandData, isLoading: isBrandLoading, refetchBrandData } = useBrand();
     const router = useRouter();
     const { toast } = useToast();
@@ -310,11 +310,11 @@ export default function PricingPageClient() {
         </div>
     );
     
-    if (isLoadingGeo || isBrandLoading || paymentMode === 'loading' || !plansState.data) {
+    if (isLoadingGeo || isAuthLoading || isBrandLoading || paymentMode === 'loading' || !plansState.data) {
         return (
             <div className="bg-background text-foreground">
-                <PublicHeader />
-                <main className="pt-24 pb-12 section-spacing">
+                {!isAuthLoading && !currentUser && <PublicHeader />}
+                <main className={cn("pb-12 section-spacing", !currentUser && "pt-24")}>
                     <div className="container-responsive">
                         {plansLoadingSkeleton}
                     </div>
@@ -327,8 +327,8 @@ export default function PricingPageClient() {
 
     return (
         <div className="bg-background text-foreground">
-            <PublicHeader />
-             <main className="pt-24 pb-12 section-spacing">
+            {!currentUser && <PublicHeader />}
+             <main className={cn("pb-12 section-spacing", !currentUser && "pt-24")}>
                 <div className="container-responsive max-w-5xl mx-auto">
                     <header className="text-center mb-12">
                         <h1 className="text-4xl md:text-5xl font-bold mb-4">Find the Perfect Plan</h1>

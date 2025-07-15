@@ -132,7 +132,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="space-y-4">
              <Button
                variant="default"
-               className="w-full justify-center btn-gradient-primary btn-lg-enhanced touch-target"
+               className="w-full justify-center btn-gradient-primary btn-lg-enhanced"
                asChild
              >
                 <Link href="/login">
@@ -142,7 +142,7 @@ export function AppShell({ children }: { children: ReactNode }) {
              </Button>
              <Button
                variant="outline"
-               className="w-full justify-center text-sidebar-foreground border-sidebar-border hover:bg-sidebar-accent hover:text-sidebar-accent-foreground btn-lg-enhanced touch-target"
+               className="w-full justify-center text-sidebar-foreground border-sidebar-border hover:bg-sidebar-accent hover:text-sidebar-accent-foreground btn-lg-enhanced"
                asChild
              >
                  <Link href="/signup">
@@ -168,7 +168,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <Button
                   variant="outline"
                   size="icon"
-                  className="touch-target focus-enhanced"
+                  className="focus-enhanced"
                 >
                   <Menu className="w-6 h-6" />
                   <span className="sr-only">Open navigation menu</span>
@@ -262,7 +262,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                       <div className="space-y-4">
                         <Button
                           variant="default"
-                          className="w-full justify-center btn-gradient-primary btn-lg-enhanced touch-target"
+                          className="w-full justify-center btn-gradient-primary btn-lg-enhanced"
                           asChild
                         >
                           <Link href="/login">
@@ -272,7 +272,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                         </Button>
                         <Button
                           variant="outline"
-                          className="w-full justify-center text-sidebar-foreground border-sidebar-border hover:bg-sidebar-accent hover:text-sidebar-accent-foreground btn-lg-enhanced touch-target"
+                          className="w-full justify-center text-sidebar-foreground border-sidebar-border hover:bg-sidebar-accent hover:text-sidebar-accent-foreground btn-lg-enhanced"
                           asChild
                         >
                           <Link href="/signup">
@@ -313,7 +313,7 @@ function AuthUserMenu() {
         <Button 
           variant="outline" 
           size="sm"
-          className="hidden sm:flex touch-target focus-enhanced" 
+          className="hidden sm:flex focus-enhanced" 
           asChild
         >
           <Link href="/login">
@@ -324,7 +324,7 @@ function AuthUserMenu() {
         <Button 
           variant="default" 
           size="sm"
-          className="btn-gradient-primary touch-target focus-enhanced" 
+          className="btn-gradient-primary focus-enhanced" 
           asChild
         >
           <Link href="/signup">
@@ -344,7 +344,7 @@ function AuthUserMenu() {
         <Button 
           variant="ghost" 
           size="icon"
-          className="rounded-full touch-target focus-enhanced"
+          className="rounded-full focus-enhanced"
         >
           <Avatar className="h-9 w-9">
             {user.photoURL ? (
