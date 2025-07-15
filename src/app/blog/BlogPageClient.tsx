@@ -127,10 +127,10 @@ const PublicHeader = () => {
                     {!user && (
                         <>
                          <Button variant="ghost" size="sm" asChild>
-                            <Link href="/login">Log In</Link>
+                            <Link href="/login"><LogIn className="mr-2 h-5 w-5" />Log In</Link>
                         </Button>
                         <Button size="sm" className="btn-gradient-primary" asChild>
-                            <Link href="/signup">Get Started</Link>
+                            <Link href="/signup">Get Started<ArrowRight className="ml-2 h-5 w-5" /></Link>
                         </Button>
                         </>
                     )}

@@ -104,10 +104,10 @@ const PublicHeader = () => {
                     {!user && (
                         <>
                          <Button variant="ghost" size="sm" asChild>
-                            <Link href="/login">Log In</Link>
+                            <Link href="/login"><LogIn className="mr-2 h-5 w-5" />Log In</Link>
                         </Button>
                         <Button size="sm" className="btn-gradient-primary" asChild>
-                            <Link href="/signup">Get Started</Link>
+                            <Link href="/signup">Get Started<ArrowRight className="ml-2 h-5 w-5" /></Link>
                         </Button>
                         </>
                     )}
@@ -416,7 +416,7 @@ export default function PricingPageClient() {
 
                             let ctaButton: React.ReactNode;
                             if (plan.id === 'free') {
-                                ctaButton = <Button className="w-full text-base py-3 px-8" disabled={planStatus === 'free'}>{planStatus === 'free' ? "Your Current Plan" : " "}</Button>;
+                                ctaButton = <Button className="w-full text-base py-3 px-8" disabled={planStatus === 'free' && isPremiumActive === false}>{planStatus === 'free' && isPremiumActive === false ? "Your Current Plan" : " "}</Button>;
                             } else if (isCurrentActivePlan) {
                                 ctaButton = <Button className="w-full text-base py-3 px-8" disabled><Check className="mr-2 w-5 h-5" />Current Plan</Button>;
                             } else if (isExpiredProPlan) {
