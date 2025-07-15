@@ -7,18 +7,20 @@ import Link from 'next/link';
 import NextImage from 'next/image';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogIn, UserPlus, LayoutDashboard, Loader2, UserCircle, Rocket, Paintbrush, Send, CheckCircle, ArrowRight, Sparkles, CreditCard } from 'lucide-react';
+import { LogIn, UserPlus, LayoutDashboard, Loader2, UserCircle, Rocket, Paintbrush, Send, CheckCircle, ArrowRight, Sparkles, CreditCard, Newspaper } from 'lucide-react';
 
-const FeatureCard = ({ icon: Icon, title, description }: { icon: React.ElementType, title: string, description: string }) => (
-    <div className="card-compact text-center p-6 md:p-8">
-        <div className="p-4 bg-primary/10 rounded-xl w-fit mx-auto mb-6 shadow-sm">
-            <Icon className="h-10 w-10 text-primary" />
+const FeatureCard = ({ icon: Icon, title, description, href }: { icon: React.ElementType, title: string, description: string, href: string }) => (
+    <Link href={href} className="group">
+        <div className="card-compact text-center p-6 md:p-8 h-full flex flex-col">
+            <div className="p-4 bg-primary/10 rounded-xl w-fit mx-auto mb-6 shadow-sm group-hover:scale-110 transition-transform duration-300">
+                <Icon className="h-10 w-10 text-primary" />
+            </div>
+            <h3 className="text-xl font-bold mb-3 text-break">{title}</h3>
+            <p className="text-base text-muted-foreground text-balance flex-grow">
+                {description}
+            </p>
         </div>
-        <h3 className="text-xl font-bold mb-3 text-break">{title}</h3>
-        <p className="text-base text-muted-foreground text-balance">
-            {description}
-        </p>
-    </div>
+    </Link>
 );
 
 const HowItWorksStep = ({ number, title, description }: { number: string, title: string, description: string }) => (
@@ -177,6 +179,18 @@ export default function LandingPage() {
                  ) : (
                     <>
                         <Button variant="ghost" className="hidden sm:inline-flex touch-target focus-enhanced" asChild>
+                            <Link href="/features">
+                                <Sparkles className="mr-2 h-5 w-5" />
+                                <span>Features</span>
+                            </Link>
+                        </Button>
+                         <Button variant="ghost" className="hidden sm:inline-flex touch-target focus-enhanced" asChild>
+                            <Link href="/blog">
+                                <Newspaper className="mr-2 h-5 w-5" />
+                                <span>Blog</span>
+                            </Link>
+                        </Button>
+                        <Button variant="ghost" className="hidden sm:inline-flex touch-target focus-enhanced" asChild>
                             <Link href="/pricing">
                                 <CreditCard className="mr-2 h-5 w-5" />
                                 <span>Pricing</span>
@@ -243,24 +257,28 @@ export default function LandingPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 sm:gap-8 mt-12 max-w-5xl mx-auto">
               <FeatureCard 
+                href="/features#brand-identity"
                 icon={UserCircle}
                 title="AI Brand Identity"
-                description="Input your website URL and let our AI extract key brand information, descriptions, and keywords to build your foundational profile."
+                description="Input your website URL and let our AI extract key brand information, descriptions, and keywords. Generate a unique logo and build your foundational profile in minutes."
               />
               <FeatureCard 
+                href="/features#content-studio"
                 icon={Paintbrush}
                 title="Content Studio"
-                description="Generate stunning images, engaging social media posts, and complete SEO-friendly blog articles from a single creative hub."
+                description="Instantly generate SEO-optimized blog articles, create viral social media posts for Instagram and X, and design unique marketing images from a simple text prompt."
               />
               <FeatureCard 
+                href="/features#campaign-manager"
                 icon={Send}
                 title="Campaign Manager"
-                description="Craft compelling ad copy and creative variations for Google and Meta campaigns, all guided by your unique brand data."
+                description="Turn your generated content into high-performing ads. Our AI crafts compelling ad copy and creative variations for Google and Meta campaigns, all guided by your unique brand data."
               />
                <FeatureCard 
+                href="/features#deployment-hub"
                 icon={Rocket}
                 title="Deployment Hub"
-                description="Review, manage, and (soon) deploy all your generated content directly to your connected social platforms."
+                description="Organize your content workflow. Review, manage status, and (soon) deploy all your generated social posts, blog articles, and ad campaigns directly to your connected platforms."
               />
             </div>
           </div>
@@ -309,13 +327,19 @@ export default function LandingPage() {
         <div className="container-responsive py-8 text-center">
             <div className="flex justify-center gap-x-6 gap-y-2 flex-wrap mb-4">
                  <Button variant="link" asChild className="text-muted-foreground">
+                    <Link href="/features">Features</Link>
+                </Button>
+                <Button variant="link" asChild className="text-muted-foreground">
+                    <Link href="/blog">Blog</Link>
+                </Button>
+                 <Button variant="link" asChild className="text-muted-foreground">
+                    <Link href="/pricing">Pricing</Link>
+                </Button>
+                 <Button variant="link" asChild className="text-muted-foreground">
                     <Link href="/terms-of-service">Terms of Service</Link>
                 </Button>
                  <Button variant="link" asChild className="text-muted-foreground">
                     <Link href="/privacy-policy">Privacy Policy</Link>
-                </Button>
-                 <Button variant="link" asChild className="text-muted-foreground">
-                    <Link href="/pricing">Pricing</Link>
                 </Button>
             </div>
           <p className="text-sm text-muted-foreground text-break">
