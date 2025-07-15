@@ -12,7 +12,7 @@ Welcome to BrandForge AI! This guide will walk you through all the features to h
 The Dashboard is your central hub. It provides:
 - A quick overview of your brand and plan status.
 - Quick links to the main features of the app.
-- A feed of your most recent creations.
+- A feed of your most recently saved creations.
 
 ## 2. Core Features
 
@@ -38,9 +38,10 @@ This is your creative workspace. It's organized into three tabs:
     - Generate engaging captions and hashtags for Instagram.
     - You can choose to generate a text-only post or associate it with an image from your library or a newly generated one.
     - The AI can also describe your selected image for you to provide better context for the caption.
+    - Use "AI Quick Start" to populate the form from a simple request.
 
 3.  **Blog Post:**
-    - **Generate an Outline:** First, use the AI to generate a structured, SEO-friendly outline for your blog post.
+    - **Generate an Outline:** First, use the AI to generate a structured, SEO-friendly outline for your blog post based on a simple idea.
     - **Edit & Refine:** You can edit the outline to fit your exact needs.
     - **Generate Content:** Once you're happy with the outline, click "Generate Blog Post" to have the AI write the full article.
 
@@ -48,20 +49,29 @@ This is your creative workspace. It's organized into three tabs:
 - Create compelling ad creatives for Google and Meta campaigns.
 - You can use previously generated content (like a blog snippet or social post) as inspiration for the ad copy.
 - The AI will generate multiple headline and body text variations for you to A/B test.
+- Use "AI Quick Start" to have AI fill out the form from a simple description of your campaign goal.
 
 ### Deployment Hub
 - This is where all your saved content (social posts, blog articles, ad campaigns) lives.
 - **Review:** See all your generated content in one place.
-- **Manage Status:** Mark content as a `draft`, `scheduled`, or `deployed`.
+- **Manage Status:** Mark content as a `draft` or `deployed`.
+- **Edit Content:** Make manual changes to any generated content.
 - **Deploy (Simulation):** Click the "Deploy" button to simulate posting to social platforms. *Note: This is currently a simulation and does not post to live accounts.*
 
 ### Image Library
 - View all the images you've saved from the Content Studio.
 - See the images you've uploaded to your Brand Profile for reference.
+- Delete images you no longer need.
 
 ### Settings
 - **Connected Accounts (Simulation):** Simulate connecting your social media accounts for future direct deployment.
-- **Admin Panel (Admins Only):** Admins can manage system-wide settings like AI models and user plans.
+- **Theme:** Choose between Light, Dark, or System theme for the application.
+- **Admin Panel (Admins Only):** Admins can manage system-wide settings like AI models, feature flags, pricing, and user quotas.
+
+### Pricing
+- View the available plans (Free and Pro).
+- Upgrade to the Pro plan to unlock more features and higher usage quotas.
+- The page will show your current plan status.
 
 ---
 Thank you for using BrandForge AI! We're excited to see what you create.

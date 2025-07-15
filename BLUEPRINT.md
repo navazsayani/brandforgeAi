@@ -40,9 +40,10 @@ See the [High-Level Design Document](./HIGH_LEVEL_DESIGN.md) for a visual diagra
 The `src` directory is organized to separate concerns:
 
 -   `/app`: Contains all pages and layouts, following the Next.js App Router convention.
-    -   `/(authenticated)`: Layout and pages for logged-in users.
+    -   `/(authenticated)`: Layout and pages for logged-in users (Dashboard, Brand Profile, Content Studio, etc.). The authenticated pricing page (`/pricing`) also lives here.
     -   `/(legal)`: Layout and pages for legal documents (Terms, Privacy).
     -   `/login`, `/signup`: Authentication pages.
+    -   `/plans`: The public-facing pricing page.
     -   `/api`: Server-side API routes (e.g., for OAuth callbacks).
 -   `/ai`: Home for all Genkit-related code.
     -   `/flows`: Contains individual Genkit flow definitions (e.g., `generate-images.ts`, `generate-blog-content.ts`). Each flow is a self-contained AI task.
@@ -54,6 +55,7 @@ The `src` directory is organized to separate concerns:
 -   `/contexts`: Global state management using React Context.
     -   `AuthContext.tsx`: Manages user authentication state.
     -   `BrandContext.tsx`: Manages the current user's brand data and session-level generated content.
+    -   `ThemeContext.tsx`: Manages the application's light/dark theme.
 -   `/hooks`: Custom React hooks, such as `useToast`.
 -   `/lib`: Core application logic, constants, and configuration.
     -   `actions.ts`: **Server Actions**. This is the bridge between the frontend and backend/AI logic.
@@ -71,11 +73,11 @@ The `src` directory is organized to separate concerns:
 4.  A `useEffect` hook in `AuthenticatedLayout.tsx` listens for auth state changes and redirects unauthorized users to `/login`.
 
 ### AI Content Generation (e.g., Blog Post)
-1.  **Client-Side (`content-studio/page.tsx`):** A user fills a form and clicks "Generate".
+1.  **Client-Side (`content-studio/page.tsx`):** A user fills a form (or uses the "AI Quick Start" to populate it) and clicks "Generate".
 2.  **Form Submission:** The form submission triggers a **Server Action** defined in `lib/actions.ts` (e.g., `handleGenerateBlogContentAction`).
 3.  **Server Action (`lib/actions.ts`):**
     -   Receives the `FormData`.
-    -   Performs validation and authorization checks.
+    -   Performs authorization and usage quota checks.
     -   Constructs an input object for the corresponding Genkit flow.
     -   Calls the Genkit flow function (e.g., `generateBlogContent()`).
 4.  **Genkit Flow (`ai/flows/generate-blog-content.ts`):**
@@ -95,7 +97,7 @@ The `src` directory is organized to separate concerns:
 ## 5. Database Schema (Firestore)
 
 -   **`users/{userId}`**
-    -   A top-level document for each user, primarily for organizing subcollections.
+    -   A top-level document for each user.
     -   **Subcollection: `brandProfiles/{userId}`**
         -   Stores the user's `BrandData` (name, description, logo URL, plan details, etc.). There is only one document in this subcollection, with the same ID as the user.
     -   **Subcollection: `savedLibraryImages/{imageId}`**
@@ -106,10 +108,12 @@ The `src` directory is organized to separate concerns:
         -   Stores generated blog posts.
     -   **Subcollection: `adCampaigns/{campaignId}`**
         -   Stores generated ad campaigns.
+    -   **Subcollection: `usage/{YYYY-MM}`**
+        -   Stores monthly usage quotas (e.g., `usage/2024-07`).
 
 -   **`configuration/{docId}`**
     -   A collection for system-wide configuration.
-    -   `models`: Stores the names of the AI models to use.
+    -   `models`: Stores the names of the AI models to use, payment gateway mode, and feature flags.
     -   `plans`: Stores pricing and feature details for subscription plans.
 
 -   **`userIndex/profiles`**
