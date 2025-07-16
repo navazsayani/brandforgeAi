@@ -21,8 +21,11 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const code = searchParams.get('code');
   const state = searchParams.get('state');
-  const platform = searchParams.get('platform');
   const error = searchParams.get('error');
+
+  // Infer platform from state or another parameter if Meta doesn't pass it back
+  // For now, we assume Meta is the only active integration.
+  const platform = 'meta'; 
 
   console.log('[OAuth Callback] Received request.');
   
@@ -33,8 +36,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (!code || !platform) {
-    console.error('[OAuth Callback] Missing code or platform parameter.');
+  if (!code) {
+    console.error('[OAuth Callback] Missing code parameter.');
     const redirectUrl = new URL('/settings', request.url);
     redirectUrl.searchParams.set('error', 'Incomplete callback from authorization server.');
     return NextResponse.redirect(redirectUrl);

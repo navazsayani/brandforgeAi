@@ -1621,30 +1621,37 @@ export async function handleInitiateOAuthAction(
     'https://brandforge.me',
     'https://app.labelmunazzahsayani.in',
     'https://ai.brandforge.me',
-    // Allow any subdomain of cloudworkstations.dev for development
-    // In production, you might want to be more specific
   ];
 
-  const parsedOrigin = new URL(origin);
-  const isAllowed = allowedOrigins.some(allowed => parsedOrigin.hostname === allowed.replace(/^https?:\/\//, '')) || 
-                    parsedOrigin.hostname.endsWith('.cloudworkstations.dev');
+  let parsedOrigin: URL;
+  try {
+    parsedOrigin = new URL(origin);
+  } catch (e) {
+    console.error(`[OAuth] Invalid origin URL format: ${origin}`);
+    return { error: 'Invalid origin format. Request blocked for security reasons.' };
+  }
   
+  const isAllowed = allowedOrigins.some(allowed => parsedOrigin.origin === allowed) || 
+                    parsedOrigin.hostname.endsWith('.cloudworkstations.dev');
+
   if (!isAllowed) {
     console.error(`[OAuth] Disallowed origin detected: ${origin}`);
     return { error: 'Invalid origin. Request blocked for security reasons.' };
   }
 
   const state = crypto.randomBytes(16).toString('hex');
-  const baseRedirectUri = `${origin}/api/oauth/callback`;
+  // Construct the redirect URI exactly as configured in the Meta developer portal.
+  const redirectUri = `${parsedOrigin.origin}/api/oauth/callback`;
     
   let authUrl = '';
 
   if (platform === 'meta') {
     const clientId = process.env.META_CLIENT_ID;
     if (!clientId) return { error: "Meta integration is not configured on the server." };
+    
     const params = new URLSearchParams({
       client_id: clientId,
-      redirect_uri: `${baseRedirectUri}?platform=meta`,
+      redirect_uri: redirectUri, // Use the exact, validated redirect URI
       state: state,
       scope: 'instagram_basic,pages_show_list,instagram_content_publish,pages_read_engagement',
       response_type: 'code',
