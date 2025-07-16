@@ -1622,7 +1622,11 @@ export async function handleInitiateOAuthAction(
   
   const baseRedirectUri = process.env.NEXT_PUBLIC_BASE_URL
     ? `${process.env.NEXT_PUBLIC_BASE_URL}/api/oauth/callback`
-    : 'http://localhost:9002/api/oauth/callback';
+    : undefined;
+
+  if (!baseRedirectUri) {
+    return { error: "The application's base URL is not configured on the server. Please set NEXT_PUBLIC_BASE_URL." };
+  }
     
   let authUrl = '';
 
