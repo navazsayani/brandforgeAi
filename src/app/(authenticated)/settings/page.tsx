@@ -81,7 +81,7 @@ export default function SettingsPage() {
       formData.append('userId', currentUser.uid);
       startTransition(async () => {
         setIsLoadingConnections(true);
-        const statusState = await handleGetConnectedAccountsStatusAction({ data: undefined }, formData);
+        const statusState = await handleGetConnectedAccountsStatusAction({ data: undefined, message: undefined, error: undefined }, formData);
         if (statusState.data) {
           setConnectionStatus(statusState.data);
         }
