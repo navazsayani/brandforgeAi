@@ -2,7 +2,6 @@
 "use client";
 
 import React, { useEffect, useState, useActionState, startTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -12,19 +11,18 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
-import { handleGetSettingsAction, handleUpdateSettingsAction, handleGetPlansConfigAction, handleUpdatePlansConfigAction, type FormState } from '@/lib/actions';
+import { handleGetSettingsAction, handleUpdateSettingsAction, handleGetPlansConfigAction, handleUpdatePlansConfigAction, handleInitiateOAuthAction, handleGetConnectedAccountsStatusAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from '@/components/SubmitButton';
 import { DEFAULT_MODEL_CONFIG } from '@/lib/model-config';
 import { DEFAULT_PLANS_CONFIG } from '@/lib/constants';
-import type { ModelConfig, PlansConfig } from '@/types';
-import { Settings, Loader2, ExternalLink, TestTube, ShoppingCart, Power, CreditCard, BarChart, Facebook, Network } from 'lucide-react';
+import type { ModelConfig, PlansConfig, ConnectedAccountsStatus } from '@/types';
+import { Settings, Loader2, ExternalLink, TestTube, ShoppingCart, Power, CreditCard, BarChart, Facebook, Network, CheckCircle, Link2, Unlink } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ThemeToggle } from '@/components/ThemeToggle';
-
 
 const modelSettingsSchema = z.object({
   imageGenerationModel: z.string().min(1, "Image generation model name cannot be empty."),
@@ -37,17 +35,13 @@ const modelSettingsSchema = z.object({
 });
 
 const plansSettingsSchema = z.object({
-  // USD Prices
   usd_pro_price: z.string().min(1, "Price is required"),
   usd_pro_original_price: z.string().optional(),
-  // INR Prices
   inr_pro_price: z.string().min(1, "Price is required"),
   inr_pro_original_price: z.string().optional(),
-  // Free Quotas
   free_images_quota: z.coerce.number().min(0, "Quota must be 0 or more"),
   free_social_quota: z.coerce.number().min(0, "Quota must be 0 or more"),
   free_blogs_quota: z.coerce.number().min(0, "Quota must be 0 or more"),
-  // Pro Quotas
   pro_images_quota: z.coerce.number().min(0, "Quota must be 0 or more"),
   pro_social_quota: z.coerce.number().min(0, "Quota must be 0 or more"),
   pro_blogs_quota: z.coerce.number().min(0, "Quota must be 0 or more"),
@@ -60,6 +54,8 @@ const initialGetModelState: FormState<ModelConfig> = { error: undefined, data: u
 const initialUpdateModelState: FormState<ModelConfig> = { error: undefined, data: undefined, message: undefined };
 const initialGetPlansState: FormState<PlansConfig> = { error: undefined, data: undefined, message: undefined };
 const initialUpdatePlansState: FormState<PlansConfig> = { error: undefined, data: undefined, message: undefined };
+const initialOAuthState: FormState<{ redirectUrl: string }> = { error: undefined, data: undefined, message: undefined };
+const initialConnectionStatusState: FormState<ConnectedAccountsStatus> = { error: undefined, data: undefined, message: undefined };
 
 const XIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 16 16" fill="currentColor" {...props}>
@@ -73,6 +69,45 @@ export default function SettingsPage() {
 
   const isAdmin = currentUser?.email === 'admin@brandforge.ai';
   const [isPageLoading, setIsPageLoading] = useState(true);
+  
+  const [oAuthActionState, oAuthAction] = useActionState(handleInitiateOAuthAction, initialOAuthState);
+
+  const [connectionStatus, setConnectionStatus] = useState<ConnectedAccountsStatus>({ meta: false, x: false });
+  const [isLoadingConnections, setIsLoadingConnections] = useState(true);
+
+  useEffect(() => {
+    if (currentUser?.uid) {
+      const formData = new FormData();
+      formData.append('userId', currentUser.uid);
+      startTransition(async () => {
+        setIsLoadingConnections(true);
+        const statusState = await handleGetConnectedAccountsStatusAction({ data: undefined }, formData);
+        if (statusState.data) {
+          setConnectionStatus(statusState.data);
+        }
+        setIsLoadingConnections(false);
+      });
+    }
+  }, [currentUser?.uid]);
+  
+  useEffect(() => {
+    if(oAuthActionState.data?.redirectUrl) {
+        window.location.href = oAuthActionState.data.redirectUrl;
+    }
+    if (oAuthActionState.error) {
+        toast({ title: "Connection Error", description: oAuthActionState.error, variant: "destructive" });
+    }
+  }, [oAuthActionState, toast]);
+
+  const handleConnect = (platform: 'meta' | 'x') => {
+    if (!currentUser?.uid) return;
+    const formData = new FormData();
+    formData.append('platform', platform);
+    formData.append('userId', currentUser.uid);
+    startTransition(() => {
+        oAuthAction(formData);
+    });
+  };
 
   const [getModelState, getModelAction] = useActionState(handleGetSettingsAction, initialGetModelState);
   const [updateModelState, updateModelAction] = useActionState(handleUpdateSettingsAction, initialUpdateModelState);
@@ -103,7 +138,6 @@ export default function SettingsPage() {
     },
   });
 
-  // Fetch admin settings on load if user is admin
   useEffect(() => {
     if (isAdmin && currentUser?.email) {
       const formData = new FormData();
@@ -117,7 +151,6 @@ export default function SettingsPage() {
     }
   }, [isAdmin, currentUser, getModelAction, getPlansAction]);
 
-  // Handle settings fetch result for admin
   useEffect(() => {
     if (isAdmin) {
         if (getModelState.data) {
@@ -150,7 +183,6 @@ export default function SettingsPage() {
     }
   }, [getModelState, getPlansState, isAdmin, modelForm, plansForm, toast]);
   
-  // Handle settings update result
   useEffect(() => {
     if (updateModelState.message && !updateModelState.error) {
         toast({ title: "Success", description: updateModelState.message });
@@ -243,40 +275,63 @@ export default function SettingsPage() {
                 <CardDescription>Connect your social media accounts to enable direct deployment from the Deployment Hub.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg bg-secondary/30 gap-4 opacity-70">
+                {isLoadingConnections ? (
+                    <div className="flex items-center justify-center p-4">
+                        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                        <p className="ml-3">Loading connection status...</p>
+                    </div>
+                ) : (
+                <>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg bg-secondary/30 gap-4">
                     <div className="flex items-start sm:items-center gap-4">
                         <Facebook className="w-6 h-6 text-[#1877F2] shrink-0 mt-1 sm:mt-0" />
                         <div className="space-y-1">
                             <p className="font-semibold">Meta (Facebook & Instagram)</p>
                             <p className="text-sm text-muted-foreground">
-                                Directly deploy posts to your Facebook and Instagram accounts.
+                                {connectionStatus.meta ? "Account connected." : "Directly deploy posts to your accounts."}
                             </p>
                         </div>
                     </div>
-                    <div className="flex flex-col items-start sm:items-end gap-2">
-                        <Button variant="outline" disabled className="w-full sm:w-auto shrink-0">Connect</Button>
-                        <Badge variant="outline">Under Development</Badge>
-                    </div>
+                    {connectionStatus.meta ? (
+                         <Button variant="secondary" disabled>
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Connected
+                        </Button>
+                    ) : (
+                        <Button variant="outline" onClick={() => handleConnect('meta')}>
+                            <Link2 className="w-4 h-4 mr-2" />
+                            Connect
+                        </Button>
+                    )}
                 </div>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg bg-secondary/30 gap-4 opacity-70">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg bg-secondary/30 gap-4">
                     <div className="flex items-start sm:items-center gap-4">
                         <XIcon className="w-5 h-5 shrink-0 mt-1 sm:mt-0" />
                         <div className="space-y-1">
                             <p className="font-semibold">X (Twitter)</p>
-                            <p className="text-sm text-muted-foreground">
-                                Directly deploy posts and threads to your X account.
+                             <p className="text-sm text-muted-foreground">
+                                {connectionStatus.x ? "Account connected." : "Directly deploy posts and threads."}
                             </p>
                         </div>
                     </div>
-                     <div className="flex flex-col items-start sm:items-end gap-2">
-                        <Button variant="outline" disabled className="w-full sm:w-auto shrink-0">Connect</Button>
-                        <Badge variant="outline">Under Development</Badge>
-                    </div>
+                    {connectionStatus.x ? (
+                         <Button variant="secondary" disabled>
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Connected
+                        </Button>
+                    ) : (
+                        <Button variant="outline" onClick={() => handleConnect('x')}>
+                            <Link2 className="w-4 h-4 mr-2" />
+                            Connect
+                        </Button>
+                    )}
                 </div>
+                </>
+                )}
             </CardContent>
              <CardFooter>
                 <p className="text-xs text-muted-foreground">
-                Connection functionality is under development and will be available soon.
+                    This will redirect you to the platform to authorize BrandForge AI. We only request permissions needed for deployment.
                 </p>
             </CardFooter>
         </Card>

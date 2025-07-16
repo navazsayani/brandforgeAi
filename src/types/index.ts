@@ -1,4 +1,5 @@
 
+
 export interface BrandData {
   brandName?: string;
   websiteUrl?: string;
@@ -20,7 +21,6 @@ export interface GeneratedImage {
   style: string;
 }
 
-// New type for images saved to the user's library
 export interface SavedGeneratedImage {
   id: string; // Firestore document ID
   storageUrl: string; // Firebase Storage URL
@@ -31,13 +31,12 @@ export interface SavedGeneratedImage {
 
 export interface GeneratedSocialMediaPost {
   id: string;
-  platform: 'Instagram'; // Hardcoded for now, can be expanded
+  platform: 'Instagram'; 
   imageSrc: string | null;
   imageDescription: string;
   caption: string;
   hashtags: string;
   tone: string;
-  // --- New fields for better context ---
   postGoal?: string;
   targetAudience?: string;
   callToAction?: string;
@@ -51,7 +50,6 @@ export interface GeneratedBlogPost {
   content: string;
   tags: string;
   platform: 'Medium' | 'Other';
-  // --- New fields for better context ---
   articleStyle?: string;
   targetAudience?: string;
   blogTone?: string;
@@ -67,7 +65,6 @@ export interface GeneratedAdCampaign {
   bodyTexts: string[];
   platformGuidance: string;
   targetPlatforms: ('google_ads' | 'meta')[];
-  // The following fields are based on the input to help associate the campaign
   brandName?: string;
   brandDescription?: string;
   industry?: string;
@@ -81,7 +78,6 @@ export interface GeneratedAdCampaign {
   status: 'draft' | 'scheduled' | 'deployed';
 }
 
-// Type for the admin user selection dropdown
 export interface UserProfileSelectItem {
   userId: string;
   brandName: string;
@@ -90,7 +86,6 @@ export interface UserProfileSelectItem {
   subscriptionEndDate?: string | null;
 }
 
-// Type for the model configuration
 export interface ModelConfig {
   imageGenerationModel: string;
   textToImageModel: string;
@@ -101,7 +96,6 @@ export interface ModelConfig {
   freepikEnabled?: boolean;
 }
 
-// --- START: New Types for Dynamic Plan Configuration ---
 export interface PlanFeature {
   name: string;
   included: boolean;
@@ -135,7 +129,6 @@ export interface PlansConfig {
     pro: PlanDetails;
   };
 }
-// --- END: New Types for Dynamic Plan Configuration ---
 
 export interface MonthlyUsage {
   imageGenerations: number;
@@ -147,4 +140,19 @@ export interface AdminUserUsage extends MonthlyUsage {
   userId: string;
   brandName: string;
   userEmail: string;
+}
+
+// For OAuth connections
+export interface ConnectedAccountsStatus {
+    meta: boolean;
+    x: boolean;
+}
+
+export interface UserApiCredentials {
+    [platform: string]: {
+        accessToken: string;
+        refreshToken?: string;
+        expiresAt?: any; // Firestore Timestamp
+        updatedAt: any; // Firestore Timestamp
+    };
 }

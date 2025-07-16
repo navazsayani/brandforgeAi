@@ -19,7 +19,7 @@ import { populateAdCampaignForm, type PopulateAdCampaignFormInput, type Populate
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where, collectionGroup, deleteDoc, runTransaction } from 'firebase/firestore';
-import type { UserProfileSelectItem, BrandData, ModelConfig, PlansConfig, MonthlyUsage, AdminUserUsage } from '@/types';
+import type { UserProfileSelectItem, BrandData, ModelConfig, PlansConfig, MonthlyUsage, AdminUserUsage, ConnectedAccountsStatus } from '@/types';
 import { getModelConfig, clearModelConfigCache } from './model-config';
 import { getPlansConfig, clearPlansConfigCache } from './plans-config';
 import { DEFAULT_PLANS_CONFIG } from './constants';
@@ -41,7 +41,6 @@ async function ensureUserBrandProfileDocExists(userId: string, userEmail?: strin
     throw new Error("User ID is required to ensure brand profile document exists.");
   }
   
-  // Step 1: Ensure the top-level user document exists.
   const userDocRef = doc(db, 'users', userId);
   console.log(`[ensureUserBrandProfileDocExists] Checking for top-level user doc at users/${userId}`);
   const userDocSnap = await getDoc(userDocRef);
@@ -49,14 +48,13 @@ async function ensureUserBrandProfileDocExists(userId: string, userEmail?: strin
     console.log(`[ensureUserBrandProfileDocExists] Top-level user document for ${userId} does not exist. Creating it...`);
     await setDoc(userDocRef, {
       email: userEmail || 'unknown',
-      createdAt: new Date(), // Add a creation timestamp
+      createdAt: new Date(),
     });
     console.log(`[ensureUserBrandProfileDocExists] Successfully created top-level user document for ${userId}.`);
   } else {
     console.log(`[ensureUserBrandProfileDocExists] Top-level user doc for ${userId} already exists.`);
   }
 
-  // Step 2: Proceed with ensuring the nested brand profile document exists.
   const brandProfileDocRef = doc(db, `users/${userId}/brandProfiles/${userId}`);
   console.log(`[ensureUserBrandProfileDocExists] Checking for nested brand profile doc at users/${userId}/brandProfiles/${userId}`);
   const brandProfileDocSnap = await getDoc(brandProfileDocRef);
@@ -97,12 +95,11 @@ async function checkAndIncrementUsage(userId: string, contentType: 'imageGenerat
   const isAdmin = brandData.userEmail === 'admin@brandforge.ai';
   if (isAdmin) {
     console.log(`[Usage Check] Admin user ${userId}. Skipping quota check.`);
-    return; // Admins have unlimited usage
+    return; 
   }
 
   const isPremiumActive = brandData.plan === 'premium' && brandData.subscriptionEndDate && (brandData.subscriptionEndDate.toDate ? brandData.subscriptionEndDate.toDate() : new Date(brandData.subscriptionEndDate)) > new Date();
   const planKey = isPremiumActive ? 'pro' : 'free';
-  // Assuming quotas are same across currencies, using USD as reference
   const planDetails = plansConfig.USD[planKey];
   const quotaLimit = planDetails.quotas[contentType];
 
@@ -137,7 +134,6 @@ async function checkAndIncrementUsage(userId: string, contentType: 'imageGenerat
         throw new Error(`You have reached your monthly quota of ${quotaLimit} for ${contentType.replace(/([A-Z])/g, ' $1').toLowerCase()}. Your quota will reset next month.`);
       }
 
-      // Increment the usage count
       const newCount = currentCount + 1;
       const updateData = { ...currentUsage, [contentType]: newCount };
 
@@ -145,7 +141,6 @@ async function checkAndIncrementUsage(userId: string, contentType: 'imageGenerat
     });
     console.log(`[Usage Check] Usage for ${contentType} incremented for user ${userId}.`);
   } catch (error: any) {
-    // Re-throw the error to be caught by the calling action
     console.error(`[Usage Check] Transaction failed for user ${userId}:`, error.message);
     throw error;
   }
@@ -173,15 +168,13 @@ export async function handleGenerateImagesAction(
     const isPremiumActive = brandData.plan === 'premium' && brandData.subscriptionEndDate && (brandData.subscriptionEndDate.toDate ? brandData.subscriptionEndDate.toDate() : new Date(brandData.subscriptionEndDate)) > new Date();
     const isAdmin = brandData.userEmail === 'admin@brandforge.ai';
     
-    // --- START: Quota Check ---
     const plansConfig = await getPlansConfig();
     const planKey = isPremiumActive ? 'pro' : 'free';
-    const planDetails = plansConfig.USD[planKey]; // Assuming USD for quota logic, as quotas are same across currencies
+    const planDetails = plansConfig.USD[planKey]; 
 
     if (!isAdmin && planDetails.quotas.imageGenerations <= 0) {
       return { error: "Image generation is not available on your current plan. Please upgrade." };
     }
-    // --- END: Quota Check ---
     
     const numberOfImagesStr = formData.get("numberOfImages") as string;
     const numberOfImages = parseInt(numberOfImagesStr, 10) || 1;
@@ -298,7 +291,6 @@ export async function handleGenerateSocialMediaCaptionAction(
 
     await checkAndIncrementUsage(userId, 'socialPosts');
 
-    // --- START: Quota Check ---
     const userDocRef = doc(db, 'users', userId, 'brandProfiles', userId);
     const userDocSnap = await getDoc(userDocRef);
     if (!userDocSnap.exists()) {
@@ -315,7 +307,6 @@ export async function handleGenerateSocialMediaCaptionAction(
     if (!isAdmin && planDetails.quotas.socialPosts <= 0) {
       return { error: "Social post generation is not available on your current plan. Please upgrade." };
     }
-    // --- END: Quota Check ---
 
     const selectedImageSrc = formData.get("selectedImageSrcForSocialPost") as string;
     const imageSrc = selectedImageSrc && selectedImageSrc.trim() !== "" ? selectedImageSrc : null;
@@ -329,7 +320,6 @@ export async function handleGenerateSocialMediaCaptionAction(
       finalTone = `${presetTone} ${customNuances.trim()}`;
     }
     
-    // Extract and clean optional fields
     const industry = formData.get("industry") as string | null;
     const postGoal = formData.get("postGoal") as string | null;
     const targetAudience = formData.get("targetAudience") as string | null;
@@ -341,7 +331,6 @@ export async function handleGenerateSocialMediaCaptionAction(
       tone: finalTone,
     };
 
-    // Only add optional fields if they have valid string values
     if (industry && industry.trim() !== "") {
       input.industry = industry.trim();
     }
@@ -374,7 +363,6 @@ export async function handleGenerateSocialMediaCaptionAction(
       status: 'draft',
     };
     
-    // Only add optional fields if they exist in the input
     if (input.industry) docData.industry = input.industry;
     if (input.postGoal) docData.postGoal = input.postGoal;
     if (input.targetAudience) docData.targetAudience = input.targetAudience;
@@ -433,7 +421,6 @@ export async function handleGenerateBlogContentAction(
 
     await checkAndIncrementUsage(userId, 'blogPosts');
 
-    // --- START: Quota Check ---
     const userDocRef = doc(db, 'users', userId, 'brandProfiles', userId);
     const userDocSnap = await getDoc(userDocRef);
     if (!userDocSnap.exists()) {
@@ -444,16 +431,14 @@ export async function handleGenerateBlogContentAction(
 
     const plansConfig = await getPlansConfig();
     const planKey = (brandData.plan === 'premium') ? 'pro' : 'free';
-    const planDetails = plansConfig.USD[planKey]; // Quotas are consistent across currencies
+    const planDetails = plansConfig.USD[planKey];
 
     if (!isAdmin && planDetails.quotas.blogPosts <= 0) {
       return { error: "Blog post generation is not available on your current plan. Please upgrade or check plan details." };
     }
-    // --- END: Quota Check ---
     
     await ensureUserBrandProfileDocExists(userId, userEmail);
 
-    // Extract and clean optional fields
     const industry = formData.get("industry") as string | null;
     const websiteUrl = formData.get("blogWebsiteUrl") as string | null;
     const articleStyle = formData.get("articleStyle") as string | null;
@@ -468,7 +453,6 @@ export async function handleGenerateBlogContentAction(
       blogTone: formData.get("blogTone") as string,
     };
 
-    // Only add optional fields if they have valid string values
     if (industry && industry.trim() !== "") {
       input.industry = industry.trim();
     }
@@ -499,7 +483,6 @@ export async function handleGenerateBlogContentAction(
       status: 'draft',
     };
     
-    // Only add optional fields if they exist in the input
     if (input.industry) docData.industry = input.industry;
     if (input.websiteUrl) docData.websiteUrl = input.websiteUrl;
     if (input.articleStyle) docData.articleStyle = input.articleStyle;
@@ -535,7 +518,6 @@ export async function handleGenerateAdCampaignAction(
         return { error: "Budget must be a valid number." };
     }
 
-    // Extract and clean optional fields
     const industry = formData.get("industry") as string | null;
     const campaignGoal = formData.get("campaignGoal") as string | null;
     const targetAudience = formData.get("targetAudience") as string | null;
@@ -550,7 +532,6 @@ export async function handleGenerateAdCampaignAction(
       platforms: platformsArray,
     };
 
-    // Only add optional fields if they have valid string values
     if (industry && industry.trim() !== "") {
       input.industry = industry.trim();
     }
@@ -578,7 +559,6 @@ export async function handleGenerateAdCampaignAction(
     const result = await generateAdCampaign(input);
     const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/adCampaigns`);
     
-    // Prepare document data, only including optional fields if they exist
     const docData: { [key: string]: any } = {
       campaignConcept: result.campaignConcept || "",
       headlines: result.headlines || [],
@@ -592,7 +572,6 @@ export async function handleGenerateAdCampaignAction(
       status: 'draft',
     };
 
-    // Only add optional fields if they exist in the input
     if (input.campaignGoal) docData.campaignGoal = input.campaignGoal;
     if (input.targetAudience) docData.targetAudience = input.targetAudience;
     if (input.callToAction) docData.callToAction = input.callToAction;
@@ -866,21 +845,14 @@ export async function handleDeleteSavedImageAction(
       return { error: 'Missing required information to delete the image.' };
   }
   
-  // In a real production app, you'd verify the userId against the authenticated session.
-  // Here, we rely on the client sending the correct ID and Firestore rules for security.
-
   try {
-      // Delete the Firestore document first
       const imageDocRef = doc(db, 'users', userId, 'brandProfiles', userId, 'savedLibraryImages', imageId);
       await deleteDoc(imageDocRef);
 
-      // Then, delete the file from Firebase Storage
       try {
           const imageStorageRef = storageRef(storage, storageUrl);
           await deleteObject(imageStorageRef);
       } catch (storageError: any) {
-          // Log this error but don't fail the whole action, as the reference is already gone from the UI.
-          // This can happen if the storage object was already deleted or permissions changed.
           console.warn(`[handleDeleteSavedImageAction] Failed to delete file from Storage, but Firestore doc was deleted. This may result in an orphaned file. URL: ${storageUrl}. Error:`, storageError);
       }
 
@@ -1159,15 +1131,13 @@ export async function handleResetUserUsageByAdminAction(
     
     const usageDocRef = doc(db, 'users', userId, 'usage', usageDocId);
     
-    // Deleting the document effectively resets the quota for the month.
-    // If it doesn't exist, this operation is a no-op and doesn't throw an error.
     await deleteDoc(usageDocRef);
 
     return { data: { success: true }, message: `Successfully reset current month's usage quota for user.` };
 
   } catch (e: any) {
     console.error("Error resetting user usage by admin:", e);
-    return { error: `Failed to reset user usage: ${e.message || "Unknown error"}` };
+    return { error: `Failed to reset user usage: ${e.message || "Unknown error."}` };
   }
 }
 
@@ -1210,7 +1180,7 @@ export async function handleUpdateUserPlanByAdminAction(
           updateData.subscriptionEndDate = newEndDate;
         }
       }
-    } else { // 'free' plan
+    } else { 
       updateData.subscriptionEndDate = null;
     }
 
@@ -1220,7 +1190,7 @@ export async function handleUpdateUserPlanByAdminAction(
 
   } catch (e: any) {
     console.error("Error updating user plan by admin:", e);
-    return { error: `Failed to update user plan: ${e.message || "Unknown error"}` };
+    return { error: `Failed to update user plan: ${e.message || "Unknown error."}` };
   }
 }
 
@@ -1234,7 +1204,6 @@ export async function handleGetSettingsAction(
     return { error: "Unauthorized: You do not have permission to perform this action." };
   }
   try {
-    // Force a refresh from the database to bypass the server-side cache.
     const modelConfig = await getModelConfig(true); 
     return { data: modelConfig, message: "Model configuration loaded." };
   } catch (e: any) {
@@ -1269,7 +1238,7 @@ export async function handleUpdateSettingsAction(
 
     const configDocRef = doc(db, 'configuration', 'models');
     await setDoc(configDocRef, modelConfig, { merge: true });
-    clearModelConfigCache(); // Invalidate the cache
+    clearModelConfigCache();
 
     return { data: modelConfig, message: "Model configuration updated successfully." };
   } catch (e: any) {
@@ -1380,24 +1349,18 @@ export async function handleVerifyPaymentAction(
       .digest('hex');
 
     if (expectedSignature === razorpay_signature) {
-      // Payment is legit.
-      
-      // 1. Reset the user's current monthly usage quota upon successful renewal.
       const now = new Date();
       const year = now.getFullYear();
       const month = (now.getMonth() + 1).toString().padStart(2, '0');
       const usageDocId = `${year}-${month}`;
       const usageDocRef = doc(db, 'users', userId, 'usage', usageDocId);
       
-      // Delete the current month's usage document to reset quotas.
-      // If it doesn't exist, this operation does nothing and doesn't throw an error.
       await deleteDoc(usageDocRef);
       console.log(`[Plan Renewal] Usage quota for ${usageDocId} has been reset for user ${userId}.`);
       
-      // 2. Update user's plan in Firestore.
       const brandDocRef = doc(db, 'users', userId, 'brandProfiles', userId);
       const subscriptionEndDate = new Date();
-      subscriptionEndDate.setDate(subscriptionEndDate.getDate() + 30); // Set expiry to 30 days from now
+      subscriptionEndDate.setDate(subscriptionEndDate.getDate() + 30); 
 
       await setDoc(brandDocRef, { 
         plan: 'premium',
@@ -1424,14 +1387,11 @@ export async function getPaymentMode(): Promise<{ paymentMode: 'live' | 'test', 
   }
 }
 
-
-// New actions for plan configuration
 export async function handleGetPlansConfigAction(
   prevState: FormState<PlansConfig>,
   formData?: FormData
 ): Promise<FormState<PlansConfig>> {
    const adminRequesterEmail = formData?.get('adminRequesterEmail') as string | undefined;
-   // If an admin is requesting (which they do after an update), force a refresh.
    const forceRefresh = !!adminRequesterEmail; 
   try {
     const plansConfig = await getPlansConfig(forceRefresh);
@@ -1508,7 +1468,7 @@ export async function handleUpdatePlansConfigAction(
     
     const configDocRef = doc(db, 'configuration', 'plans');
     await setDoc(configDocRef, updatedConfig, { merge: true });
-    clearPlansConfigCache(); // Invalidate the cache
+    clearPlansConfigCache();
 
     return { data: updatedConfig, message: "Plans configuration updated successfully." };
   } catch (e: any) {
@@ -1529,8 +1489,6 @@ export async function handleUpdateContentStatusAction(
     return { error: 'Missing required information to update content status.' };
   }
 
-  // Security check: This basic check ensures a user can't maliciously construct a path
-  // to another user's data. For production, Firestore Rules are the primary security layer.
   if (!docPath.startsWith(`users/${userId}/`)) {
     return { error: "Permission denied. You cannot modify this content." };
   }
@@ -1604,17 +1562,13 @@ export async function handleSimulatedDeployAction(
     return { error: 'Missing required information to deploy content.' };
   }
 
-  // Security check
   if (!docPath.startsWith(`users/${userId}/`)) {
     return { error: "Permission denied. You cannot modify this content." };
   }
 
   try {
-    // In a real scenario, you would retrieve the user's API token for 'platform'
-    // and make the API call here.
     console.log(`[SIMULATED DEPLOY] Deploying content from path '${docPath}' to platform '${platform}' for user '${userId}'.`);
     
-    // For now, we just update the status to 'deployed'.
     const docRef = doc(db, docPath);
     await setDoc(docRef, { status: 'deployed' }, { merge: true });
 
@@ -1636,7 +1590,6 @@ export async function handleDeleteContentAction(
     return { error: 'Missing required information to delete content.' };
   }
 
-  // Security check
   if (!docPath.startsWith(`users/${userId}/`)) {
     return { error: "Permission denied. You cannot modify this content." };
   }
@@ -1651,30 +1604,112 @@ export async function handleDeleteContentAction(
   }
 }
 
-// Placeholder action for storing API tokens
-interface StoreTokenInput {
-    userId: string;
-    platform: string;
-    accessToken: string;
-    refreshToken?: string;
-    expiresIn?: number;
+export async function handleInitiateOAuthAction(
+  prevState: FormState<{ redirectUrl: string }>,
+  formData: FormData
+): Promise<FormState<{ redirectUrl: string }>> {
+  const platform = formData.get('platform') as 'meta' | 'x';
+  const userId = formData.get('userId') as string;
+
+  if (!userId || !platform) {
+    return { error: 'User ID and platform are required to initiate connection.' };
+  }
+
+  // Generate a random state for security (CSRF protection)
+  const state = crypto.randomBytes(16).toString('hex');
+  // Store the state in the user's session or a short-lived Firestore doc to verify on callback
+  // For simplicity here, we will just pass it along. In production, it MUST be stored and verified.
+  
+  const baseRedirectUri = process.env.NEXT_PUBLIC_BASE_URL
+    ? `${process.env.NEXT_PUBLIC_BASE_URL}/api/oauth/callback`
+    : 'http://localhost:9002/api/oauth/callback';
+    
+  let authUrl = '';
+
+  if (platform === 'meta') {
+    const clientId = process.env.META_CLIENT_ID; // You would get this from your Meta App dashboard
+    if (!clientId) return { error: "Meta integration is not configured on the server." };
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: `${baseRedirectUri}?platform=meta`,
+      state: state,
+      scope: 'instagram_basic,pages_show_list,instagram_content_publish,pages_read_engagement', // Example scopes
+      response_type: 'code',
+    });
+    authUrl = `https://www.facebook.com/v19.0/dialog/oauth?${params.toString()}`;
+  } else if (platform === 'x') {
+    // This is a placeholder, X/Twitter uses OAuth 2.0 with PKCE which is more complex
+     return { error: "Connecting to X (Twitter) is not yet implemented." };
+  } else {
+    return { error: 'Unsupported platform specified.' };
+  }
+
+  return { data: { redirectUrl: authUrl } };
 }
-export async function handleStoreUserApiTokenAction(input: StoreTokenInput): Promise<{ success: boolean; error?: string }> {
-    console.log('[handleStoreUserApiTokenAction] Received request to store token.');
-    console.log('[handleStoreUserApiTokenAction] Input:', input);
 
-    if (!input.userId || !input.platform || !input.accessToken) {
-        const errorMsg = "User ID, platform, and access token are required.";
-        console.error(`[handleStoreUserApiTokenAction] ERROR: ${errorMsg}`);
-        return { success: false, error: errorMsg };
-    }
 
-    // In a real implementation, you would:
-    // 1. Encrypt the access and refresh tokens before storing them.
-    // 2. Save the encrypted tokens to a secure Firestore collection like `userApiCredentials/{userId}`.
-    // e.g., await setDoc(doc(db, 'userApiCredentials', input.userId), { [input.platform]: encryptedTokens });
+export async function handleStoreUserApiTokenAction(input: {
+  userId: string;
+  platform: string;
+  accessToken: string;
+  refreshToken?: string;
+  expiresIn?: number;
+}): Promise<{ success: boolean; error?: string }> {
+  console.log('[handleStoreUserApiTokenAction] Received request to store token.');
+  
+  if (!input.userId || !input.platform || !input.accessToken) {
+    const errorMsg = "User ID, platform, and access token are required.";
+    console.error(`[handleStoreUserApiTokenAction] ERROR: ${errorMsg}`);
+    return { success: false, error: errorMsg };
+  }
+
+  try {
+    const credentialsRef = doc(db, 'userApiCredentials', input.userId);
+    const tokenData = {
+      accessToken: input.accessToken,
+      refreshToken: input.refreshToken,
+      expiresAt: input.expiresIn ? new Date(Date.now() + input.expiresIn * 1000) : null,
+      updatedAt: serverTimestamp(),
+    };
     
-    console.log(`[handleStoreUserApiTokenAction] SIMULATION: Would save token for platform '${input.platform}' for user '${input.userId}' to Firestore.`);
-    
+    // Store tokens under a key for the specific platform (e.g., 'meta', 'x')
+    await setDoc(credentialsRef, { [input.platform]: tokenData }, { merge: true });
+
+    console.log(`[handleStoreUserApiTokenAction] Successfully stored token for platform '${input.platform}' for user '${input.userId}'.`);
     return { success: true };
+  } catch (e: any) {
+    console.error("Error storing API token in Firestore:", e);
+    return { success: false, error: `Failed to save connection credentials: ${e.message}` };
+  }
+}
+
+export async function handleGetConnectedAccountsStatusAction(
+  prevState: FormState<ConnectedAccountsStatus>,
+  formData: FormData
+): Promise<FormState<ConnectedAccountsStatus>> {
+  const userId = formData.get('userId') as string;
+
+  if (!userId) {
+    return { error: 'User not authenticated.' };
+  }
+
+  try {
+    const credentialsRef = doc(db, 'userApiCredentials', userId);
+    const docSnap = await getDoc(credentialsRef);
+
+    if (!docSnap.exists()) {
+      return { data: { meta: false, x: false } };
+    }
+    
+    const data = docSnap.data();
+    const status: ConnectedAccountsStatus = {
+      meta: !!data.meta?.accessToken,
+      x: !!data.x?.accessToken,
+    };
+
+    return { data: status };
+  } catch (e: any) {
+    console.error("Error fetching connected accounts status:", e);
+    return { error: `Failed to fetch connection status: ${e.message}` };
+  }
 }
