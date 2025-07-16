@@ -104,6 +104,8 @@ export default function SettingsPage() {
     const formData = new FormData();
     formData.append('platform', platform);
     formData.append('userId', currentUser.uid);
+    // Pass the current browser's origin to the server action
+    formData.append('origin', window.location.origin);
     startTransition(() => {
         oAuthAction(formData);
     });

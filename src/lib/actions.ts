@@ -1610,40 +1610,48 @@ export async function handleInitiateOAuthAction(
 ): Promise<FormState<{ redirectUrl: string }>> {
   const platform = formData.get('platform') as 'meta' | 'x';
   const userId = formData.get('userId') as string;
+  const origin = formData.get('origin') as string;
 
-  if (!userId || !platform) {
-    return { error: 'User ID and platform are required to initiate connection.' };
+  if (!userId || !platform || !origin) {
+    return { error: 'User ID, platform, and origin are required to initiate connection.' };
   }
 
-  // Generate a random state for security (CSRF protection)
-  const state = crypto.randomBytes(16).toString('hex');
-  // Store the state in the user's session or a short-lived Firestore doc to verify on callback
-  // For simplicity here, we will just pass it along. In production, it MUST be stored and verified.
+  // Security: Validate the origin against a list of allowed domains
+  const allowedOrigins = [
+    'https://brandforge.me',
+    'https://app.labelmunazzahsayani.in',
+    'https://ai.brandforge.me',
+    // Allow any subdomain of cloudworkstations.dev for development
+    // In production, you might want to be more specific
+  ];
+
+  const parsedOrigin = new URL(origin);
+  const isAllowed = allowedOrigins.some(allowed => parsedOrigin.hostname === allowed.replace(/^https?:\/\//, '')) || 
+                    parsedOrigin.hostname.endsWith('.cloudworkstations.dev');
   
-  const baseRedirectUri = process.env.NEXT_PUBLIC_BASE_URL
-    ? `${process.env.NEXT_PUBLIC_BASE_URL}/api/oauth/callback`
-    : undefined;
-
-  if (!baseRedirectUri) {
-    return { error: "The application's base URL is not configured on the server. Please set NEXT_PUBLIC_BASE_URL." };
+  if (!isAllowed) {
+    console.error(`[OAuth] Disallowed origin detected: ${origin}`);
+    return { error: 'Invalid origin. Request blocked for security reasons.' };
   }
+
+  const state = crypto.randomBytes(16).toString('hex');
+  const baseRedirectUri = `${origin}/api/oauth/callback`;
     
   let authUrl = '';
 
   if (platform === 'meta') {
-    const clientId = process.env.META_CLIENT_ID; // You would get this from your Meta App dashboard
+    const clientId = process.env.META_CLIENT_ID;
     if (!clientId) return { error: "Meta integration is not configured on the server." };
     const params = new URLSearchParams({
       client_id: clientId,
       redirect_uri: `${baseRedirectUri}?platform=meta`,
       state: state,
-      scope: 'instagram_basic,pages_show_list,instagram_content_publish,pages_read_engagement', // Example scopes
+      scope: 'instagram_basic,pages_show_list,instagram_content_publish,pages_read_engagement',
       response_type: 'code',
     });
     authUrl = `https://www.facebook.com/v19.0/dialog/oauth?${params.toString()}`;
   } else if (platform === 'x') {
-    // This is a placeholder, X/Twitter uses OAuth 2.0 with PKCE which is more complex
-     return { error: "Connecting to X (Twitter) is not yet implemented." };
+    return { error: "Connecting to X (Twitter) is not yet implemented." };
   } else {
     return { error: 'Unsupported platform specified.' };
   }
