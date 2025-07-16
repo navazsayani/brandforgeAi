@@ -23,6 +23,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { useSearchParams } from 'next/navigation';
 
 const modelSettingsSchema = z.object({
   imageGenerationModel: z.string().min(1, "Image generation model name cannot be empty."),
@@ -63,32 +64,59 @@ const XIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
-export default function SettingsPage() {
+function SettingsPageContent() {
   const { currentUser, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
+  const searchParams = useSearchParams();
 
   const isAdmin = currentUser?.email === 'admin@brandforge.ai';
   const [isPageLoading, setIsPageLoading] = useState(true);
   
   const [oAuthActionState, oAuthAction] = useActionState(handleInitiateOAuthAction, initialOAuthState);
 
-  const [connectionStatus, setConnectionStatus] = useState<ConnectedAccountsStatus>({ meta: false, x: false });
+  const [connectionStatusState, connectionStatusAction] = useActionState(handleGetConnectedAccountsStatusAction, initialConnectionStatusState);
+
   const [isLoadingConnections, setIsLoadingConnections] = useState(true);
 
   useEffect(() => {
     if (currentUser?.uid) {
+      setIsLoadingConnections(true);
       const formData = new FormData();
       formData.append('userId', currentUser.uid);
-      startTransition(async () => {
-        setIsLoadingConnections(true);
-        const statusState = await handleGetConnectedAccountsStatusAction({ data: undefined, message: undefined, error: undefined }, formData);
-        if (statusState.data) {
-          setConnectionStatus(statusState.data);
-        }
-        setIsLoadingConnections(false);
+      startTransition(() => {
+        connectionStatusAction(formData);
       });
     }
-  }, [currentUser?.uid]);
+  }, [currentUser?.uid, connectionStatusAction]);
+
+  useEffect(() => {
+    if (connectionStatusState.data || connectionStatusState.error) {
+      setIsLoadingConnections(false);
+    }
+    if (connectionStatusState.error) {
+        toast({ title: "Error Loading Connections", description: connectionStatusState.error, variant: "destructive"});
+    }
+  }, [connectionStatusState, toast]);
+
+  // Handle OAuth callback parameters
+  useEffect(() => {
+    const connectedPlatform = searchParams.get('connected');
+    const error = searchParams.get('error');
+
+    if (connectedPlatform) {
+      toast({ title: 'Connection Successful', description: `Your account has been connected to ${connectedPlatform}.` });
+      if (currentUser?.uid) {
+        setIsLoadingConnections(true);
+        const formData = new FormData();
+        formData.append('userId', currentUser.uid);
+        startTransition(() => connectionStatusAction(formData));
+      }
+    } else if (error) {
+      toast({ title: 'Connection Failed', description: error, variant: 'destructive' });
+    }
+  // This effect should only run once when the page loads with search params.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
   
   useEffect(() => {
     if(oAuthActionState.data?.redirectUrl) {
@@ -104,7 +132,6 @@ export default function SettingsPage() {
     const formData = new FormData();
     formData.append('platform', platform);
     formData.append('userId', currentUser.uid);
-    // Pass the current browser's origin to the server action
     formData.append('origin', window.location.origin);
     startTransition(() => {
         oAuthAction(formData);
@@ -290,11 +317,11 @@ export default function SettingsPage() {
                         <div className="space-y-1">
                             <p className="font-semibold">Meta (Facebook & Instagram)</p>
                             <p className="text-sm text-muted-foreground">
-                                {connectionStatus.meta ? "Account connected." : "Directly deploy posts to your accounts."}
+                                {connectionStatusState.data?.meta ? "Account connected." : "Directly deploy posts to your accounts."}
                             </p>
                         </div>
                     </div>
-                    {connectionStatus.meta ? (
+                    {connectionStatusState.data?.meta ? (
                          <Button variant="secondary" disabled>
                             <CheckCircle className="w-4 h-4 mr-2" />
                             Connected
@@ -312,7 +339,7 @@ export default function SettingsPage() {
                         <div className="space-y-1">
                             <p className="font-semibold">X (Twitter)</p>
                              <p className="text-sm text-muted-foreground">
-                                {connectionStatus.x ? "Account connected." : "Deployment to X is coming soon."}
+                                {connectionStatusState.data?.x ? "Account connected." : "Deployment to X is coming soon."}
                             </p>
                         </div>
                     </div>
@@ -448,4 +475,13 @@ export default function SettingsPage() {
         )}
     </div>
   );
+}
+
+// Wrap the main content in a Suspense boundary to handle search params
+export default function SettingsPage() {
+    return (
+        <React.Suspense fallback={<div>Loading...</div>}>
+            <SettingsPageContent />
+        </React.Suspense>
+    );
 }
