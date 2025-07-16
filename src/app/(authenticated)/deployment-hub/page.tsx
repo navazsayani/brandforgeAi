@@ -14,10 +14,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Send, Image as ImageIconLucide, MessageSquareText, Newspaper, Briefcase, AlertCircle, RefreshCw, Layers, CheckCircle, Loader2, Copy, Rocket, Facebook, Edit, Download, Trash2 } from 'lucide-react';
-import type { GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign } from '@/types';
+import { Send, Image as ImageIconLucide, MessageSquareText, Newspaper, Briefcase, AlertCircle, RefreshCw, Layers, CheckCircle, Loader2, Copy, Rocket, Facebook, Edit, Download, Trash2, Instagram } from 'lucide-react';
+import type { GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign, InstagramAccount } from '@/types';
 import { cn } from '@/lib/utils';
-import { handleDeleteContentAction, handleUpdateContentStatusAction, handleSimulatedDeployAction, handleUpdateContentAction, type FormState } from '@/lib/actions';
+import { handleDeleteContentAction, handleUpdateContentStatusAction, handleSimulatedDeployAction, handleUpdateContentAction, handleGetInstagramAccountsAction, type FormState } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -31,6 +31,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { format } from 'date-fns';
 import SocialMediaPreviews from '@/components/SocialMediaPreviews';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 
 // Combined type for all deployable content
@@ -296,37 +297,57 @@ function StatusButton({ newStatus, text, icon, variant = "default", ...props }: 
     );
 }
 
-function DeployPlatformButton({ platform, icon, children }: { platform: string; icon: React.ReactNode; children: React.ReactNode }) {
-    const { pending } = useFormStatus();
-    return (
-        <Button type="submit" name="platform" value={platform} className="w-full justify-start gap-3 h-auto" variant="outline" disabled={pending}>
-             {pending ? <Loader2 className="w-5 h-5 animate-spin" /> : icon}
-             <span className="whitespace-normal text-left">{children}</span>
-        </Button>
-    )
-}
-
-
 function DeployDialog({ item }: { item: DeployableContent }) {
     const { currentUser } = useAuth();
-    const queryClient = useQueryClient();
     const { toast } = useToast();
     const [open, setOpen] = React.useState(false);
-    const initialFormState: FormState<{ success: boolean }> = { data: undefined, error: undefined, message: undefined };
-    const [state, formAction] = useActionState(handleSimulatedDeployAction, initialFormState);
+    const [accounts, setAccounts] = React.useState<InstagramAccount[]>([]);
+    const [selectedAccountId, setSelectedAccountId] = React.useState<string | null>(null);
+
+    const initialFetchState: FormState<{ accounts: InstagramAccount[] }> = { data: undefined, error: undefined, message: undefined };
+    const [fetchState, fetchAccountsAction] = useActionState(handleGetInstagramAccountsAction, initialFetchState);
+    
+    const initialDeployState: FormState<{ success: boolean }> = { data: undefined, error: undefined, message: undefined };
+    const [deployState, deployAction] = useActionState(handleSimulatedDeployAction, initialDeployState);
 
     useEffect(() => {
-        if (state.data?.success) {
-            setOpen(false); // Close dialog on success
-            toast({ title: "Deployment Submitted", description: state.message });
-            queryClient.invalidateQueries({ queryKey: ['socialPosts', currentUser?.uid] });
-            queryClient.invalidateQueries({ queryKey: ['blogPosts', currentUser?.uid] });
-            queryClient.invalidateQueries({ queryKey: ['adCampaigns', currentUser?.uid] });
+        if (open && currentUser?.uid) {
+            const formData = new FormData();
+            formData.append('userId', currentUser.uid);
+            fetchAccountsAction(formData);
         }
-        if (state.error) {
-            toast({ title: "Deployment Error", description: state.error, variant: "destructive" });
+    }, [open, currentUser?.uid, fetchAccountsAction]);
+
+    useEffect(() => {
+        if (fetchState.data) {
+            setAccounts(fetchState.data.accounts);
         }
-    }, [state, setOpen, queryClient, currentUser, toast]);
+        if (fetchState.error) {
+            toast({ title: "Could Not Fetch Accounts", description: fetchState.error, variant: "destructive" });
+        }
+    }, [fetchState, toast]);
+
+    useEffect(() => {
+        if (deployState.data?.success) {
+            setOpen(false);
+            toast({ title: "Deployment Submitted", description: deployState.message });
+            // You might want to invalidate queries here if status changes upon deployment
+        }
+        if (deployState.error) {
+            toast({ title: "Deployment Error", description: deployState.error, variant: "destructive" });
+        }
+    }, [deployState, toast, setOpen]);
+    
+    const handleDeploy = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!selectedAccountId) {
+            toast({ title: "No Account Selected", description: "Please select an Instagram account to post to.", variant: "destructive" });
+            return;
+        }
+        const formData = new FormData(event.currentTarget);
+        formData.append('selectedAccountId', selectedAccountId);
+        deployAction(formData);
+    };
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -340,31 +361,62 @@ function DeployDialog({ item }: { item: DeployableContent }) {
                 <DialogHeader>
                     <DialogTitle>Deploy Content</DialogTitle>
                     <DialogDescription>
-                        Choose where to deploy this content. This is a simulation and will not post to a live account yet.
+                        Choose which connected account to publish this content to.
                     </DialogDescription>
                 </DialogHeader>
-                 <form action={formAction} className="space-y-4 py-4">
+                <form onSubmit={handleDeploy} className="space-y-4 py-4">
                     <input type="hidden" name="userId" value={currentUser?.uid || ''} />
                     <input type="hidden" name="docPath" value={item.docPath} />
-                    <p className="text-sm font-semibold">Automated Deployment (Simulation)</p>
-                    <div className="p-4 border rounded-lg bg-secondary/50 space-y-3">
-                       <DeployPlatformButton platform="Meta" icon={<Facebook className="w-5 h-5 text-[#1877F2]" />}>
-                           Deploy to Meta (Facebook/Instagram)
-                       </DeployPlatformButton>
-                       <DeployPlatformButton platform="X" icon={<XIcon className="w-5 h-5" />}>
-                           Deploy to X (Twitter)
-                       </DeployPlatformButton>
-                    </div>
-                 </form>
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button type="button" variant="ghost">Cancel</Button>
-                    </DialogClose>
-                </DialogFooter>
+
+                    {fetchState.error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{fetchState.error}</AlertDescription></Alert>}
+                    
+                    {fetchState.data?.accounts.length === 0 && !fetchState.error && (
+                        <Alert>
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>No Instagram Accounts Found</AlertTitle>
+                            <AlertDescription>
+                                We couldn't find any Instagram Business accounts connected to your Meta profile. Please ensure you have one and have granted permissions. 
+                                <Link href="/settings" className="font-bold underline ml-1">Connect again?</Link>
+                            </AlertDescription>
+                        </Alert>
+                    )}
+
+                    {fetchState.data && fetchState.data.accounts.length > 0 && (
+                        <RadioGroup onValueChange={setSelectedAccountId} value={selectedAccountId || ""}>
+                            <Label>Select an Instagram Account</Label>
+                            <div className="p-4 border rounded-lg bg-secondary/50 space-y-3 max-h-60 overflow-y-auto">
+                                {fetchState.data.accounts.map(acc => (
+                                    <Label key={acc.id} htmlFor={acc.id} className="flex items-center space-x-3 p-3 rounded-md border bg-background hover:bg-accent/50 has-[:checked]:bg-primary/10 has-[:checked]:border-primary cursor-pointer transition-colors">
+                                        <RadioGroupItem value={acc.id} id={acc.id} />
+                                        <div className="flex items-center gap-2">
+                                            <Instagram className="w-5 h-5" />
+                                            <span>{acc.username}</span>
+                                        </div>
+                                    </Label>
+                                ))}
+                            </div>
+                        </RadioGroup>
+                    )}
+
+                    {fetchState.data === undefined && !fetchState.error && (
+                        <div className="flex items-center justify-center p-8">
+                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                            <p className="ml-3">Fetching your accounts...</p>
+                        </div>
+                    )}
+
+                    <DialogFooter>
+                        <DialogClose asChild><Button type="button" variant="ghost">Cancel</Button></DialogClose>
+                        <SubmitButton loadingText="Deploying..." disabled={!selectedAccountId}>
+                            Publish to Instagram
+                        </SubmitButton>
+                    </DialogFooter>
+                </form>
             </DialogContent>
         </Dialog>
     );
 }
+
 
 function EditContentDialog({ item }: { item: DeployableContent }) {
     const { currentUser } = useAuth();

@@ -1,5 +1,4 @@
 
-
 export interface BrandData {
   brandName?: string;
   websiteUrl?: string;
@@ -155,4 +154,9 @@ export interface UserApiCredentials {
         expiresAt?: any; // Firestore Timestamp
         updatedAt: any; // Firestore Timestamp
     };
+}
+
+export interface InstagramAccount {
+  id: string;
+  username: string;
 }

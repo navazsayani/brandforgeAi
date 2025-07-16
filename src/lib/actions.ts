@@ -19,7 +19,7 @@ import { populateAdCampaignForm, type PopulateAdCampaignFormInput, type Populate
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where, collectionGroup, deleteDoc, runTransaction } from 'firebase/firestore';
-import type { UserProfileSelectItem, BrandData, ModelConfig, PlansConfig, MonthlyUsage, AdminUserUsage, ConnectedAccountsStatus } from '@/types';
+import type { UserProfileSelectItem, BrandData, ModelConfig, PlansConfig, MonthlyUsage, AdminUserUsage, ConnectedAccountsStatus, InstagramAccount } from '@/types';
 import { getModelConfig, clearModelConfigCache } from './model-config';
 import { getPlansConfig, clearPlansConfigCache } from './plans-config';
 import { DEFAULT_PLANS_CONFIG } from './constants';
@@ -1412,62 +1412,34 @@ export async function handleUpdatePlansConfigAction(
   }
 
   try {
-    const currentConfig = await getPlansConfig();
-
-    const updatedConfig: PlansConfig = {
-      ...currentConfig,
-      USD: {
-        ...currentConfig.USD,
-        pro: {
-          ...currentConfig.USD.pro,
-          price: {
-            ...currentConfig.USD.pro.price,
-            amount: formData.get('usd_pro_price') as string,
-            originalAmount: formData.get('usd_pro_original_price') as string || undefined,
-          },
-          quotas: {
-            imageGenerations: parseInt(formData.get('pro_images_quota') as string, 10),
-            socialPosts: parseInt(formData.get('pro_social_quota') as string, 10),
-            blogPosts: parseInt(formData.get('pro_blogs_quota') as string, 10),
-          }
-        },
-        free: {
-          ...currentConfig.USD.free,
-           quotas: {
-            imageGenerations: parseInt(formData.get('free_images_quota') as string, 10),
-            socialPosts: parseInt(formData.get('free_social_quota') as string, 10),
-            blogPosts: parseInt(formData.get('free_blogs_quota') as string, 10),
-          }
-        }
-      },
-      INR: {
-        ...currentConfig.INR,
-        pro: {
-          ...currentConfig.INR.pro,
-          price: {
-            ...currentConfig.INR.pro.price,
-            amount: formData.get('inr_pro_price') as string,
-            originalAmount: formData.get('inr_pro_original_price') as string || undefined,
-          },
-           quotas: {
-            imageGenerations: parseInt(formData.get('pro_images_quota') as string, 10),
-            socialPosts: parseInt(formData.get('pro_social_quota') as string, 10),
-            blogPosts: parseInt(formData.get('pro_blogs_quota') as string, 10),
-          }
-        },
-         free: {
-          ...currentConfig.INR.free,
-           quotas: {
-            imageGenerations: parseInt(formData.get('free_images_quota') as string, 10),
-            socialPosts: parseInt(formData.get('free_social_quota') as string, 10),
-            blogPosts: parseInt(formData.get('free_blogs_quota') as string, 10),
-          }
-        }
-      }
-    };
+    const currentConfig = await getPlansConfig(true); // Get the latest config to merge with
     
+    const updatedConfig: PlansConfig = JSON.parse(JSON.stringify(currentConfig)); // Deep copy
+
+    // Update USD Pro Plan
+    updatedConfig.USD.pro.price.amount = formData.get('usd_pro_price') as string;
+    updatedConfig.USD.pro.price.originalAmount = formData.get('usd_pro_original_price') as string || undefined;
+    updatedConfig.USD.pro.quotas.imageGenerations = Number(formData.get('pro_images_quota'));
+    updatedConfig.USD.pro.quotas.socialPosts = Number(formData.get('pro_social_quota'));
+    updatedConfig.USD.pro.quotas.blogPosts = Number(formData.get('pro_blogs_quota'));
+    
+    // Update INR Pro Plan
+    updatedConfig.INR.pro.price.amount = formData.get('inr_pro_price') as string;
+    updatedConfig.INR.pro.price.originalAmount = formData.get('inr_pro_original_price') as string || undefined;
+    updatedConfig.INR.pro.quotas.imageGenerations = Number(formData.get('pro_images_quota'));
+    updatedConfig.INR.pro.quotas.socialPosts = Number(formData.get('pro_social_quota'));
+    updatedConfig.INR.pro.quotas.blogPosts = Number(formData.get('pro_blogs_quota'));
+
+    // Update Free Plan (quotas are the same across currencies)
+    updatedConfig.USD.free.quotas.imageGenerations = Number(formData.get('free_images_quota'));
+    updatedConfig.USD.free.quotas.socialPosts = Number(formData.get('free_social_quota'));
+    updatedConfig.USD.free.quotas.blogPosts = Number(formData.get('free_blogs_quota'));
+    updatedConfig.INR.free.quotas.imageGenerations = Number(formData.get('free_images_quota'));
+    updatedConfig.INR.free.quotas.socialPosts = Number(formData.get('free_social_quota'));
+    updatedConfig.INR.free.quotas.blogPosts = Number(formData.get('free_blogs_quota'));
+
     const configDocRef = doc(db, 'configuration', 'plans');
-    await setDoc(configDocRef, updatedConfig, { merge: true });
+    await setDoc(configDocRef, updatedConfig);
     clearPlansConfigCache();
 
     return { data: updatedConfig, message: "Plans configuration updated successfully." };
@@ -1476,6 +1448,7 @@ export async function handleUpdatePlansConfigAction(
     return { error: `Failed to update plans configuration: ${e.message || "Unknown error."}` };
   }
 }
+
 
 export async function handleUpdateContentStatusAction(
   prevState: FormState<{ success: boolean }>,
@@ -1735,5 +1708,59 @@ export async function handleGetConnectedAccountsStatusAction(
   } catch (e: any) {
     console.error("Error fetching connected accounts status:", e);
     return { error: `Failed to fetch connection status: ${e.message}` };
+  }
+}
+
+export async function handleGetInstagramAccountsAction(
+  prevState: FormState<{ accounts: InstagramAccount[] }>,
+  formData: FormData
+): Promise<FormState<{ accounts: InstagramAccount[] }>> {
+  const userId = formData.get('userId') as string;
+  if (!userId) {
+    return { error: 'User not authenticated.' };
+  }
+
+  try {
+    const credsDocRef = doc(db, 'userApiCredentials', userId);
+    const credsDocSnap = await getDoc(credsDocRef);
+
+    if (!credsDocSnap.exists() || !credsDocSnap.data()?.meta?.accessToken) {
+      return { error: "Meta account not connected or access token is missing." };
+    }
+    
+    const accessToken = credsDocSnap.data().meta.accessToken;
+
+    // 1. Get Facebook pages the user has access to
+    const pagesUrl = `https://graph.facebook.com/v19.0/me/accounts?access_token=${accessToken}&fields=id,name,access_token`;
+    const pagesResponse = await fetch(pagesUrl);
+    const pagesData = await pagesResponse.json();
+
+    if (pagesData.error) {
+      throw new Error(`Failed to fetch pages: ${pagesData.error.message}`);
+    }
+    if (!pagesData.data || pagesData.data.length === 0) {
+      return { data: { accounts: [] }, message: "No Facebook Pages found." };
+    }
+
+    // 2. For each page, get the connected Instagram Business Account
+    const igAccounts: InstagramAccount[] = [];
+    for (const page of pagesData.data) {
+      const igUrl = `https://graph.facebook.com/v19.0/${page.id}?fields=instagram_business_account{id,username}&access_token=${accessToken}`;
+      const igResponse = await fetch(igUrl);
+      const igData = await igResponse.json();
+
+      if (igData.instagram_business_account) {
+        igAccounts.push({
+          id: igData.instagram_business_account.id,
+          username: igData.instagram_business_account.username,
+        });
+      }
+    }
+
+    return { data: { accounts: igAccounts }, message: `Found ${igAccounts.length} Instagram account(s).` };
+
+  } catch (e: any) {
+    console.error("Error in handleGetInstagramAccountsAction:", e);
+    return { error: `Failed to fetch Instagram accounts: ${e.message}` };
   }
 }
