@@ -1616,13 +1616,12 @@ export async function handleInitiateOAuthAction(
     return { error: 'User ID, platform, and origin are required to initiate connection.' };
   }
 
-  // Security: Validate the origin against a list of allowed domains
   const allowedOrigins = [
     'https://brandforge.me',
     'https://app.labelmunazzahsayani.in',
     'https://ai.brandforge.me',
   ];
-
+  
   let parsedOrigin: URL;
   try {
     parsedOrigin = new URL(origin);
@@ -1630,7 +1629,7 @@ export async function handleInitiateOAuthAction(
     console.error(`[OAuth] Invalid origin URL format: ${origin}`);
     return { error: 'Invalid origin format. Request blocked for security reasons.' };
   }
-  
+
   const isAllowed = allowedOrigins.some(allowed => parsedOrigin.origin === allowed) || 
                     parsedOrigin.hostname.endsWith('.cloudworkstations.dev');
 
@@ -1640,9 +1639,16 @@ export async function handleInitiateOAuthAction(
   }
 
   const state = crypto.randomBytes(16).toString('hex');
-  // Construct the redirect URI exactly as configured in the Meta developer portal.
   const redirectUri = `${parsedOrigin.origin}/api/oauth/callback`;
     
+  // Store the state and userId temporarily in Firestore
+  const stateDocRef = doc(db, 'oauthStates', state);
+  await setDoc(stateDocRef, { 
+    userId,
+    createdAt: serverTimestamp() // To clean up old states later
+  });
+
+
   let authUrl = '';
 
   if (platform === 'meta') {
@@ -1651,7 +1657,7 @@ export async function handleInitiateOAuthAction(
     
     const params = new URLSearchParams({
       client_id: clientId,
-      redirect_uri: redirectUri, // Use the exact, validated redirect URI
+      redirect_uri: redirectUri,
       state: state,
       scope: 'instagram_basic,pages_show_list,instagram_content_publish,pages_read_engagement',
       response_type: 'code',
@@ -1691,7 +1697,6 @@ export async function handleStoreUserApiTokenAction(input: {
       updatedAt: serverTimestamp(),
     };
     
-    // Store tokens under a key for the specific platform (e.g., 'meta', 'x')
     await setDoc(credentialsRef, { [input.platform]: tokenData }, { merge: true });
 
     console.log(`[handleStoreUserApiTokenAction] Successfully stored token for platform '${input.platform}' for user '${input.userId}'.`);
