@@ -16,7 +16,7 @@ import { SubmitButton } from '@/components/SubmitButton';
 import { DEFAULT_MODEL_CONFIG } from '@/lib/model-config';
 import { DEFAULT_PLANS_CONFIG } from '@/lib/constants';
 import type { ModelConfig, PlansConfig, ConnectedAccountsStatus } from '@/types';
-import { Settings, Loader2, ExternalLink, TestTube, ShoppingCart, Power, CreditCard, BarChart, Facebook, Network, CheckCircle, Link2, Unlink } from 'lucide-react';
+import { Settings, Loader2, ExternalLink, TestTube, ShoppingCart, Power, CreditCard, BarChart, Facebook, Network, CheckCircle, Link2, Unlink, Palette } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
@@ -310,21 +310,13 @@ export default function SettingsPage() {
                         <div className="space-y-1">
                             <p className="font-semibold">X (Twitter)</p>
                              <p className="text-sm text-muted-foreground">
-                                {connectionStatus.x ? "Account connected." : "Directly deploy posts and threads."}
+                                {connectionStatus.x ? "Account connected." : "Deployment to X is coming soon."}
                             </p>
                         </div>
                     </div>
-                    {connectionStatus.x ? (
-                         <Button variant="secondary" disabled>
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                            Connected
-                        </Button>
-                    ) : (
-                        <Button variant="outline" onClick={() => handleConnect('x')}>
-                            <Link2 className="w-4 h-4 mr-2" />
-                            Connect
-                        </Button>
-                    )}
+                    <Button variant="outline" disabled>
+                        Coming Soon
+                    </Button>
                 </div>
                 </>
                 )}
