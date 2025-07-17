@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Send, Image as ImageIconLucide, MessageSquareText, Newspaper, Briefcase, AlertCircle, RefreshCw, Layers, CheckCircle, Loader2, Copy, Rocket, Facebook, Edit, Download, Trash2, Instagram } from 'lucide-react';
+import { Send, Image as ImageIconLucide, MessageSquareText, Newspaper, Briefcase, AlertCircle, RefreshCw, Layers, CheckCircle, Loader2, Copy, Rocket, Facebook, Edit, Download, Trash2, Instagram, ExternalLink } from 'lucide-react';
 import type { GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign, InstagramAccount } from '@/types';
 import { cn } from '@/lib/utils';
 import { handleDeleteContentAction, handleUpdateContentStatusAction, handleSimulatedDeployAction, handleUpdateContentAction, handleGetInstagramAccountsAction, type FormState } from '@/lib/actions';
@@ -312,7 +312,9 @@ function DeployDialog({ item }: { item: DeployableContent }) {
 
     useEffect(() => {
         if (open && currentUser?.uid) {
-            fetchAccountsAction(new FormData()); // No need to pass userId, it's inferred from session
+            const formData = new FormData();
+            formData.append('userId', currentUser.uid); // Pass userId for server-side auth
+            fetchAccountsAction(formData);
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, currentUser?.uid]);
@@ -372,13 +374,19 @@ function DeployDialog({ item }: { item: DeployableContent }) {
                     {fetchState.data?.accounts.length === 0 && !fetchState.error && (
                         <Alert>
                             <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>No Instagram Accounts Found</AlertTitle>
+                            <AlertTitle>No Instagram Business Accounts Found</AlertTitle>
                             <AlertDescription>
-                                We couldn't find any Instagram Business accounts connected to your Meta profile. Please ensure you have one and have granted permissions. 
-                                <Link href="/settings" className="font-bold underline ml-1">Connect again?</Link>
+                                <p className="mb-2">To deploy content, Meta requires an Instagram Business account linked to a Facebook Page. We couldn&apos;t find any associated with your connected Meta profile.</p>
+                                <p className="font-semibold">How to fix this:</p>
+                                <ul className="list-decimal text-xs space-y-1 pl-4 mt-1">
+                                    <li>Ensure you have converted your Instagram account to a <a href="https://help.instagram.com/502981923235522" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-primary">Business or Creator account</a>.</li>
+                                    <li>Make sure your Instagram account is <a href="https://help.instagram.com/399237273466453" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-primary">linked to a Facebook Page</a> you manage.</li>
+                                </ul>
+                                <Button variant="link" asChild className="p-0 h-auto text-xs mt-2"><Link href="/settings">Reconnect your Meta account after making changes <ExternalLink className="w-3 h-3 ml-1" /></Link></Button>
                             </AlertDescription>
                         </Alert>
                     )}
+
 
                     {fetchState.data && fetchState.data.accounts.length > 0 && (
                         <RadioGroup onValueChange={setSelectedAccountId} value={selectedAccountId || ""}>
