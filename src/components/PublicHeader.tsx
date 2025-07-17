@@ -89,22 +89,25 @@ export default function PublicHeader() {
                     <CompactThemeToggle />
                 </div>
                 
-                {!user && (
-                    <>
-                        <Button variant="ghost" className="focus-enhanced hidden sm:inline-flex" asChild>
-                            <Link href="/login">
-                                <LogIn className="mr-2 h-5 w-5" />
-                                <span>Log In</span>
-                            </Link>
-                        </Button>
-                        <Button className="btn-gradient-primary focus-enhanced hidden sm:inline-flex" asChild>
-                            <Link href="/signup">
-                                <UserPlus className="mr-2 h-5 w-5" />
-                                <span>Get Started</span>
-                            </Link>
-                        </Button>
-                    </>
-                )}
+                <div className="hidden sm:inline-flex items-center gap-2">
+                    {!user && (
+                        <>
+                            <Button variant="ghost" className="focus-enhanced" asChild>
+                                <Link href="/login">
+                                    <LogIn className="mr-2 h-5 w-5" />
+                                    <span>Log In</span>
+                                </Link>
+                            </Button>
+                            <Button className="btn-gradient-primary focus-enhanced" asChild>
+                                <Link href="/signup">
+                                    <UserPlus className="mr-2 h-5 w-5" />
+                                    <span>Get Started</span>
+                                </Link>
+                            </Button>
+                        </>
+                    )}
+                </div>
+                
                 <div className="sm:hidden">
                     <MobileNavMenu />
                 </div>
