@@ -312,11 +312,10 @@ function DeployDialog({ item }: { item: DeployableContent }) {
 
     useEffect(() => {
         if (open && currentUser?.uid) {
-            const formData = new FormData();
-            formData.append('userId', currentUser.uid);
-            fetchAccountsAction(formData);
+            fetchAccountsAction(new FormData()); // No need to pass userId, it's inferred from session
         }
-    }, [open, currentUser?.uid, fetchAccountsAction]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, currentUser?.uid]);
 
     useEffect(() => {
         if (fetchState.data) {

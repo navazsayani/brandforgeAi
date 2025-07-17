@@ -24,6 +24,14 @@ import { getModelConfig, clearModelConfigCache } from './model-config';
 import { getPlansConfig, clearPlansConfigCache } from './plans-config';
 import { DEFAULT_PLANS_CONFIG } from './constants';
 import Razorpay from 'razorpay';
+import admin from 'firebase-admin';
+
+// Initialize Firebase Admin SDK
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.applicationDefault(),
+  });
+}
 
 // Generic type for form state with error
 export interface FormState<T = any> {
@@ -1104,7 +1112,7 @@ export async function handleGetUsageForAllUsersAction(
     if (e.code === 'permission-denied') {
       return { error: "Database permission error. Check Firestore rules." };
     }
-    return { error: `Failed to fetch usage data: ${e.message || "Unknown error"}` };
+    return { error: `Failed to fetch usage data: ${e.message || "Unknown error."}` };
   }
 }
 
@@ -1715,7 +1723,18 @@ export async function handleGetInstagramAccountsAction(
   prevState: FormState<{ accounts: InstagramAccount[] }>,
   formData: FormData
 ): Promise<FormState<{ accounts: InstagramAccount[] }>> {
-  const userId = formData.get('userId') as string;
+  const sessionCookie = formData.get('__session') as string;
+  let userId = formData.get('userId') as string;
+  
+  if (!userId && sessionCookie) {
+    try {
+        const decodedToken = await admin.auth().verifySessionCookie(sessionCookie, true);
+        userId = decodedToken.uid;
+    } catch(e) {
+        return { error: 'Invalid session. Please log in again.' };
+    }
+  }
+
   if (!userId) {
     return { error: 'User not authenticated.' };
   }
