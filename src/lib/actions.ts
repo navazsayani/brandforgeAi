@@ -1723,18 +1723,20 @@ export async function handleGetInstagramAccountsAction(
   prevState: FormState<{ accounts: InstagramAccount[] }>,
   formData: FormData
 ): Promise<FormState<{ accounts: InstagramAccount[] }>> {
-  const sessionCookie = formData.get('__session') as string;
   let userId = formData.get('userId') as string;
-  
-  if (!userId && sessionCookie) {
-    try {
-        const decodedToken = await admin.auth().verifySessionCookie(sessionCookie, true);
-        userId = decodedToken.uid;
-    } catch(e) {
-        return { error: 'Invalid session. Please log in again.' };
+
+  if (!userId) {
+    const sessionCookie = formData.get('__session') as string;
+    if (sessionCookie) {
+        try {
+            const decodedToken = await admin.auth().verifySessionCookie(sessionCookie, true);
+            userId = decodedToken.uid;
+        } catch(e) {
+            return { error: 'Invalid session. Please log in again.' };
+        }
     }
   }
-
+  
   if (!userId) {
     return { error: 'User not authenticated.' };
   }
