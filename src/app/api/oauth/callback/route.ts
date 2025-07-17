@@ -1,8 +1,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { handleStoreUserApiTokenAction } from '@/lib/actions';
 import { db } from '@/lib/firebaseConfig';
-import { doc, getDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, deleteDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -76,19 +75,19 @@ export async function GET(request: NextRequest) {
     const { access_token, expires_in } = tokenData;
     console.log(`[OAuth Callback] Real access token obtained for user ${userId}.`);
 
-    const storeResult = await handleStoreUserApiTokenAction({
-      userId,
-      platform,
+    // **FIX: Write directly to Firestore from the API route**
+    const credentialsRef = doc(db, 'userApiCredentials', userId);
+    const tokenDataToStore = {
       accessToken: access_token,
-      expiresIn: expires_in,
-    });
-
+      expiresAt: expires_in ? new Date(Date.now() + expires_in * 1000) : null,
+      updatedAt: serverTimestamp(),
+    };
+    
+    await setDoc(credentialsRef, { [platform]: tokenDataToStore }, { merge: true });
+    console.log(`[OAuth Callback] Successfully stored token for platform '${platform}' for user '${userId}'.`);
+    
     const finalRedirectUrl = new URL('/settings', request.url);
-    if (storeResult.success) {
-        finalRedirectUrl.searchParams.set('connected', platform);
-    } else {
-        finalRedirectUrl.searchParams.set('error', storeResult.error || `Failed to store token for ${platform}.`);
-    }
+    finalRedirectUrl.searchParams.set('connected', platform);
     
     return NextResponse.redirect(finalRedirectUrl);
 
