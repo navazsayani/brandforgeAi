@@ -145,6 +145,10 @@ export interface AdminUserUsage extends MonthlyUsage {
 export interface ConnectedAccountsStatus {
     meta: boolean;
     x: boolean;
+    metaHealth?: 'healthy' | 'expired' | 'invalid' | 'unknown';
+    metaExpiresAt?: string;
+    metaLastValidated?: string;
+    xHealth?: 'healthy' | 'expired' | 'invalid' | 'unknown';
 }
 
 export interface UserApiCredentials {
@@ -153,6 +157,11 @@ export interface UserApiCredentials {
         refreshToken?: string;
         expiresAt?: any; // Firestore Timestamp
         updatedAt: any; // Firestore Timestamp
+        tokenType?: 'short_lived' | 'long_lived';
+        validatedAt?: any; // Firestore Timestamp
+        metaUserId?: string;
+        metaUserName?: string;
+        lastRefreshed?: any; // Firestore Timestamp
     };
 }
 

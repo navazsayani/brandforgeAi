@@ -11,12 +11,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
-import { handleGetSettingsAction, handleUpdateSettingsAction, handleGetPlansConfigAction, handleUpdatePlansConfigAction, handleInitiateOAuthAction, handleGetConnectedAccountsStatusAction, type FormState } from '@/lib/actions';
+import { handleGetSettingsAction, handleUpdateSettingsAction, handleGetPlansConfigAction, handleUpdatePlansConfigAction, handleInitiateOAuthAction, handleGetConnectedAccountsStatusAction, handleDisconnectAccountAction, handleTestInstagramPermissionsAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from '@/components/SubmitButton';
 import { DEFAULT_MODEL_CONFIG } from '@/lib/model-config';
 import { DEFAULT_PLANS_CONFIG } from '@/lib/constants';
 import type { ModelConfig, PlansConfig, ConnectedAccountsStatus } from '@/types';
-import { Settings, Loader2, ExternalLink, TestTube, ShoppingCart, Power, CreditCard, BarChart, Facebook, Network, CheckCircle, Link2, Unlink, Palette } from 'lucide-react';
+import { Settings, Loader2, ExternalLink, TestTube, ShoppingCart, Power, CreditCard, BarChart, Facebook, Network, CheckCircle, Link2, Unlink, Palette, AlertTriangle, Clock, RefreshCw, XCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
@@ -57,6 +57,8 @@ const initialGetPlansState: FormState<PlansConfig> = { error: undefined, data: u
 const initialUpdatePlansState: FormState<PlansConfig> = { error: undefined, data: undefined, message: undefined };
 const initialOAuthState: FormState<{ redirectUrl: string }> = { error: undefined, data: undefined, message: undefined };
 const initialConnectionStatusState: FormState<ConnectedAccountsStatus> = { error: undefined, data: undefined, message: undefined };
+const initialDisconnectState: FormState<{ success: boolean }> = { error: undefined, data: undefined, message: undefined };
+const initialTestPermissionsState: FormState<{ success: boolean; testResults: any }> = { error: undefined, data: undefined, message: undefined };
 
 const XIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 16 16" fill="currentColor" {...props}>
@@ -75,8 +77,11 @@ function SettingsPageContent() {
   const [oAuthActionState, oAuthAction] = useActionState(handleInitiateOAuthAction, initialOAuthState);
 
   const [connectionStatusState, connectionStatusAction] = useActionState(handleGetConnectedAccountsStatusAction, initialConnectionStatusState);
+  const [disconnectState, disconnectAction] = useActionState(handleDisconnectAccountAction, initialDisconnectState);
+  const [testPermissionsState, testPermissionsAction] = useActionState(handleTestInstagramPermissionsAction, initialTestPermissionsState);
 
   const [isLoadingConnections, setIsLoadingConnections] = useState(true);
+  const [isTestingPermissions, setIsTestingPermissions] = useState(false);
 
   useEffect(() => {
     if (currentUser?.uid) {
@@ -127,6 +132,39 @@ function SettingsPageContent() {
     }
   }, [oAuthActionState, toast]);
 
+  // Handle disconnect action results
+  useEffect(() => {
+    if (disconnectState.data?.success) {
+      toast({ title: "Account Disconnected", description: disconnectState.message });
+      // Refresh connection status
+      if (currentUser?.uid) {
+        setIsLoadingConnections(true);
+        const formData = new FormData();
+        formData.append('userId', currentUser.uid);
+        startTransition(() => connectionStatusAction(formData));
+      }
+    }
+    if (disconnectState.error) {
+      toast({ title: "Disconnect Failed", description: disconnectState.error, variant: "destructive" });
+    }
+  }, [disconnectState, toast, currentUser, connectionStatusAction]);
+
+  // Handle test permissions results
+  useEffect(() => {
+    if (testPermissionsState.data?.success) {
+      toast({
+        title: "Permission Test Completed",
+        description: testPermissionsState.message,
+        duration: 8000 // Longer duration for important message
+      });
+      setIsTestingPermissions(false);
+    }
+    if (testPermissionsState.error) {
+      toast({ title: "Permission Test Failed", description: testPermissionsState.error, variant: "destructive" });
+      setIsTestingPermissions(false);
+    }
+  }, [testPermissionsState, toast]);
+
   const handleConnect = (platform: 'meta' | 'x') => {
     if (!currentUser?.uid) return;
     const formData = new FormData();
@@ -136,6 +174,26 @@ function SettingsPageContent() {
     startTransition(() => {
         oAuthAction(formData);
     });
+  };
+
+  const handleDisconnect = (platform: 'meta' | 'x') => {
+    if (!currentUser?.uid) return;
+    const formData = new FormData();
+    formData.append('platform', platform);
+    formData.append('userId', currentUser.uid);
+    startTransition(() => {
+      disconnectAction(formData);
+    });
+  };
+
+  const handleTestPermissions = () => {
+    if (!currentUser?.uid) return;
+    
+    setIsTestingPermissions(true);
+    const formData = new FormData();
+    formData.append('userId', currentUser.uid);
+    
+    startTransition(() => testPermissionsAction(formData));
   };
 
   const [getModelState, getModelAction] = useActionState(handleGetSettingsAction, initialGetModelState);
@@ -315,23 +373,132 @@ function SettingsPageContent() {
                     <div className="flex items-start sm:items-center gap-4">
                         <Facebook className="w-6 h-6 text-[#1877F2] shrink-0 mt-1 sm:mt-0" />
                         <div className="space-y-1">
-                            <p className="font-semibold">Meta (Facebook & Instagram)</p>
-                            <p className="text-sm text-muted-foreground">
-                                {connectionStatusState.data?.meta ? "Account connected." : "Directly deploy posts to your accounts."}
-                            </p>
+                            <div className="flex items-center gap-2">
+                                <p className="font-semibold">Meta (Facebook & Instagram)</p>
+                                {connectionStatusState.data?.meta && (
+                                    <>
+                                        {connectionStatusState.data.metaHealth === 'healthy' && (
+                                            <Badge variant="secondary" className="text-green-600 bg-green-50 border-green-200">
+                                                <CheckCircle className="w-3 h-3 mr-1" />
+                                                Healthy
+                                            </Badge>
+                                        )}
+                                        {connectionStatusState.data.metaHealth === 'expired' && (
+                                            <Badge variant="destructive" className="text-red-600 bg-red-50 border-red-200">
+                                                <Clock className="w-3 h-3 mr-1" />
+                                                Expired
+                                            </Badge>
+                                        )}
+                                        {connectionStatusState.data.metaHealth === 'invalid' && (
+                                            <Badge variant="destructive" className="text-red-600 bg-red-50 border-red-200">
+                                                <XCircle className="w-3 h-3 mr-1" />
+                                                Invalid
+                                            </Badge>
+                                        )}
+                                        {connectionStatusState.data.metaHealth === 'unknown' && (
+                                            <Badge variant="outline" className="text-amber-600 bg-amber-50 border-amber-200">
+                                                <AlertTriangle className="w-3 h-3 mr-1" />
+                                                Unknown
+                                            </Badge>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-sm text-muted-foreground">
+                                    {connectionStatusState.data?.meta ? (
+                                        connectionStatusState.data.metaHealth === 'healthy' ? 
+                                            "Account connected and working properly." :
+                                        connectionStatusState.data.metaHealth === 'expired' ?
+                                            "Token has expired. Please reconnect your account." :
+                                        connectionStatusState.data.metaHealth === 'invalid' ?
+                                            "Token is invalid. Please reconnect your account." :
+                                            "Connection status could not be verified."
+                                    ) : "Directly deploy posts to your accounts."}
+                                </p>
+                                {connectionStatusState.data?.meta && connectionStatusState.data.metaExpiresAt && (
+                                    <p className="text-xs text-muted-foreground">
+                                        Expires: {new Date(connectionStatusState.data.metaExpiresAt).toLocaleDateString()} at {new Date(connectionStatusState.data.metaExpiresAt).toLocaleTimeString()}
+                                    </p>
+                                )}
+                                {connectionStatusState.data?.meta && connectionStatusState.data.metaLastValidated && (
+                                    <p className="text-xs text-muted-foreground">
+                                        Last validated: {new Date(connectionStatusState.data.metaLastValidated).toLocaleDateString()} at {new Date(connectionStatusState.data.metaLastValidated).toLocaleTimeString()}
+                                    </p>
+                                )}
+                            </div>
                         </div>
                     </div>
-                    {connectionStatusState.data?.meta ? (
-                         <Button variant="secondary" disabled>
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                            Connected
-                        </Button>
-                    ) : (
-                        <Button variant="outline" onClick={() => handleConnect('meta')}>
-                            <Link2 className="w-4 h-4 mr-2" />
-                            Connect
-                        </Button>
-                    )}
+                    <div className="flex flex-col gap-2">
+                        {connectionStatusState.data?.meta ? (
+                            <>
+                                {(connectionStatusState.data.metaHealth === 'expired' || connectionStatusState.data.metaHealth === 'invalid') ? (
+                                    <Button variant="outline" onClick={() => handleConnect('meta')} className="text-amber-600 border-amber-200 hover:bg-amber-50">
+                                        <RefreshCw className="w-4 h-4 mr-2" />
+                                        Reconnect
+                                    </Button>
+                                ) : (
+                                    <div className="flex flex-col gap-2">
+                                        <Button variant="secondary" disabled>
+                                            <CheckCircle className="w-4 h-4 mr-2" />
+                                            Connected
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleDisconnect('meta')}
+                                            className="text-red-600 border-red-200 hover:bg-red-50"
+                                        >
+                                            <Unlink className="w-3 h-3 mr-1" />
+                                            Disconnect
+                                        </Button>
+                                    </div>
+                                )}
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                        if (currentUser?.uid) {
+                                            setIsLoadingConnections(true);
+                                            const formData = new FormData();
+                                            formData.append('userId', currentUser.uid);
+                                            startTransition(() => connectionStatusAction(formData));
+                                        }
+                                    }}
+                                    className="text-xs"
+                                >
+                                    <RefreshCw className="w-3 h-3 mr-1" />
+                                    Check Status
+                                </Button>
+                                {isAdmin && connectionStatusState.data?.metaHealth === 'healthy' && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleTestPermissions}
+                                        disabled={isTestingPermissions}
+                                        className="text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
+                                    >
+                                        {isTestingPermissions ? (
+                                            <>
+                                                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                                Testing...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <TestTube className="w-3 h-3 mr-1" />
+                                                Test Permissions
+                                            </>
+                                        )}
+                                    </Button>
+                                )}
+                            </>
+                        ) : (
+                            <Button variant="outline" onClick={() => handleConnect('meta')}>
+                                <Link2 className="w-4 h-4 mr-2" />
+                                Connect
+                            </Button>
+                        )}
+                    </div>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg bg-secondary/30 gap-4">
                     <div className="flex items-start sm:items-center gap-4">
@@ -348,6 +515,21 @@ function SettingsPageContent() {
                     </Button>
                 </div>
                 </>
+                )}
+                
+                {/* Instagram Permissions Information - Admin Only */}
+                {isAdmin && connectionStatusState.data?.meta && connectionStatusState.data.metaHealth === 'healthy' && (
+                    <Alert className="bg-blue-50 border-blue-200">
+                        <TestTube className="h-4 w-4 text-blue-600" />
+                        <AlertTitle className="text-blue-800">Admin: Instagram App Permission Setup</AlertTitle>
+                        <AlertDescription className="text-blue-700">
+                            If users are seeing "Instagram account not found" during deployment, the Meta app needs permission activation at the app level.
+                            Click "Test Permissions" above to make the required API calls that will activate the instagram_content_publish permission request button in your Meta Developer Console.
+                            <br /><br />
+                            <strong>This is a one-time app-level setup:</strong> Visit your <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener noreferrer" className="underline font-medium">Meta Developer Console</a>,
+                            go to App Review → Permissions and Features, and request advanced access for "instagram_content_publish". Once approved, all users will be able to access their Instagram Business accounts.
+                        </AlertDescription>
+                    </Alert>
                 )}
             </CardContent>
              <CardFooter>

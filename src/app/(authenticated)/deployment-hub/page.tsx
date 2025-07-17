@@ -267,8 +267,11 @@ function ContentCard({ item, brandData }: { item: DeployableContent; brandData: 
                 {renderContentPreview()}
             </CardContent>
             <CardFooter className="pt-4 mt-auto border-t">
-                <div className={cn("grid gap-2 w-full", isDeployed ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-3")}>
+                <div className="flex flex-col gap-2 w-full">
+                    {/* View Details button - always full width first row */}
                     <ContentDetailsDialog item={item} brandData={brandData} />
+                    
+                    {/* Action buttons - always full width second row */}
                     {isDeployed ? (
                         <form action={formAction} className="w-full">
                             <input type="hidden" name="userId" value={currentUser?.uid || ''} />
@@ -276,10 +279,10 @@ function ContentCard({ item, brandData }: { item: DeployableContent; brandData: 
                             <StatusButton newStatus="draft" text="Revert" icon={<RefreshCw className="w-4 h-4 mr-2 flex-shrink-0" />} variant="secondary" />
                         </form>
                     ) : (
-                        <>
+                        <div className="flex gap-2 w-full">
                             <EditContentDialog item={item} />
                             <DeployDialog item={item} />
-                        </>
+                        </div>
                     )}
                 </div>
             </CardFooter>
@@ -303,6 +306,7 @@ function DeployDialog({ item }: { item: DeployableContent }) {
     const [open, setOpen] = React.useState(false);
     const [accounts, setAccounts] = React.useState<InstagramAccount[]>([]);
     const [selectedAccountId, setSelectedAccountId] = React.useState<string | null>(null);
+    const [requestId, setRequestId] = React.useState<string>('');
 
     const initialFetchState: FormState<{ accounts: InstagramAccount[] }> = { data: undefined, error: undefined, message: undefined };
     const [fetchState, fetchAccountsAction] = useActionState(handleGetInstagramAccountsAction, initialFetchState);
@@ -310,45 +314,126 @@ function DeployDialog({ item }: { item: DeployableContent }) {
     const initialDeployState: FormState<{ success: boolean }> = { data: undefined, error: undefined, message: undefined };
     const [deployState, deployAction] = useActionState(handleSimulatedDeployAction, initialDeployState);
 
+    // Generate unique request ID for tracking
+    useEffect(() => {
+        if (open) {
+            const newRequestId = `deploy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            setRequestId(newRequestId);
+            console.log(`[DEPLOY_FLOW] ${newRequestId}: Dialog opened for content type: ${item.type}, ID: ${item.id}`);
+        }
+    }, [open, item.type, item.id]);
+
     useEffect(() => {
         if (open && currentUser?.uid) {
+            console.log(`[DEPLOY_FLOW] ${requestId}: Fetching Instagram accounts for user: ${currentUser.uid}`);
             const formData = new FormData();
-            formData.append('userId', currentUser.uid); // Pass userId for server-side auth
+            formData.append('userId', currentUser.uid);
+            formData.append('requestId', requestId); // Pass request ID for tracking
             startTransition(() => {
                 fetchAccountsAction(formData);
             });
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open, currentUser?.uid]);
+    }, [open, currentUser?.uid, requestId]);
 
     useEffect(() => {
         if (fetchState.data) {
+            console.log(`[DEPLOY_FLOW] ${requestId}: Successfully fetched ${fetchState.data.accounts.length} Instagram accounts`);
             setAccounts(fetchState.data.accounts);
         }
         if (fetchState.error) {
-            toast({ title: "Could Not Fetch Accounts", description: fetchState.error, variant: "destructive" });
+            console.error(`[DEPLOY_FLOW] ${requestId}: Failed to fetch Instagram accounts:`, fetchState.error);
+            
+            // Enhanced error handling with categorization
+            let errorTitle = "Could Not Fetch Accounts";
+            let errorDescription = fetchState.error;
+            let actionableGuidance = "";
+
+            if (fetchState.error.includes("Invalid OAuth access token")) {
+                errorTitle = "Instagram Connection Issue";
+                errorDescription = "Your Instagram connection has expired or is invalid.";
+                actionableGuidance = "Please reconnect your Meta account in Settings to restore access.";
+            } else if (fetchState.error.includes("Failed to fetch pages")) {
+                errorTitle = "Facebook Pages Access Issue";
+                errorDescription = "Unable to access your Facebook Pages.";
+                actionableGuidance = "Ensure your Meta account has proper permissions and try reconnecting.";
+            } else if (fetchState.error.includes("Network")) {
+                errorTitle = "Connection Problem";
+                errorDescription = "Unable to connect to Instagram services.";
+                actionableGuidance = "Please check your internet connection and try again.";
+            }
+
+            toast({
+                title: errorTitle,
+                description: `${errorDescription} ${actionableGuidance}`,
+                variant: "destructive"
+            });
         }
-    }, [fetchState, toast]);
+    }, [fetchState, toast, requestId]);
 
     useEffect(() => {
         if (deployState.data?.success) {
+            console.log(`[DEPLOY_FLOW] ${requestId}: Deployment successful for content ID: ${item.id}`);
             setOpen(false);
             toast({ title: "Deployment Submitted", description: deployState.message });
             // You might want to invalidate queries here if status changes upon deployment
         }
         if (deployState.error) {
-            toast({ title: "Deployment Error", description: deployState.error, variant: "destructive" });
+            console.error(`[DEPLOY_FLOW] ${requestId}: Deployment failed for content ID: ${item.id}:`, deployState.error);
+            
+            // Enhanced deployment error handling
+            let errorTitle = "Deployment Failed";
+            let errorDescription = deployState.error;
+            let actionableGuidance = "";
+
+            if (deployState.error.includes("access token")) {
+                errorTitle = "Authentication Error";
+                errorDescription = "Your Instagram connection is no longer valid.";
+                actionableGuidance = "Please reconnect your Meta account in Settings.";
+            } else if (deployState.error.includes("rate limit")) {
+                errorTitle = "Rate Limit Exceeded";
+                errorDescription = "Too many posts in a short time.";
+                actionableGuidance = "Please wait a few minutes before trying again.";
+            } else if (deployState.error.includes("content policy")) {
+                errorTitle = "Content Policy Violation";
+                errorDescription = "The content doesn't meet Instagram's guidelines.";
+                actionableGuidance = "Please review and edit your content before reposting.";
+            }
+
+            toast({
+                title: errorTitle,
+                description: `${errorDescription} ${actionableGuidance}`,
+                variant: "destructive"
+            });
         }
-    }, [deployState, toast, setOpen]);
+    }, [deployState, toast, setOpen, requestId, item.id]);
     
     const handleDeploy = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        
+        console.log(`[DEPLOY_FLOW] ${requestId}: Starting deployment process`);
+        
         if (!selectedAccountId) {
+            console.warn(`[DEPLOY_FLOW] ${requestId}: No account selected for deployment`);
             toast({ title: "No Account Selected", description: "Please select an Instagram account to post to.", variant: "destructive" });
             return;
         }
+
+        const selectedAccount = accounts.find(acc => acc.id === selectedAccountId);
+        console.log(`[DEPLOY_FLOW] ${requestId}: Deploying to account: ${selectedAccount?.username || selectedAccountId}`);
+        console.log(`[DEPLOY_FLOW] ${requestId}: Content details:`, {
+            type: item.type,
+            id: item.id,
+            hasImage: item.type === 'social' && !!(item as any).imageSrc,
+            contentLength: item.type === 'social' ? (item as any).caption?.length :
+                          item.type === 'blog' ? (item as any).content?.length :
+                          (item as any).campaignConcept?.length
+        });
+
         const formData = new FormData(event.currentTarget);
         formData.append('selectedAccountId', selectedAccountId);
+        formData.append('requestId', requestId); // Pass request ID for tracking
+        
         deployAction(formData);
     };
 

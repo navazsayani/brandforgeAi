@@ -1693,30 +1693,251 @@ export async function handleGetConnectedAccountsStatusAction(
   formData: FormData
 ): Promise<FormState<ConnectedAccountsStatus>> {
   const userId = formData.get('userId') as string;
+  const requestId = Math.random().toString(36).substring(2, 10);
+
+  console.log(`[Connection Status:${requestId}] === CHECKING CONNECTION STATUS ===`);
 
   if (!userId) {
+    console.error(`[Connection Status:${requestId}] No user ID provided`);
     return { error: 'User not authenticated.' };
   }
 
   try {
+    console.log(`[Connection Status:${requestId}] Fetching credentials for user ${userId}`);
     const credentialsRef = doc(db, 'userApiCredentials', userId);
     const docSnap = await getDoc(credentialsRef);
 
     if (!docSnap.exists()) {
+      console.log(`[Connection Status:${requestId}] No credentials document found`);
       return { data: { meta: false, x: false } };
     }
     
     const data = docSnap.data();
-    const status: ConnectedAccountsStatus = {
-      meta: !!data.meta?.accessToken,
-      x: !!data.x?.accessToken,
+    console.log(`[Connection Status:${requestId}] Credentials document found, checking platforms`);
+
+    // Enhanced status with health checks
+    const status: ConnectedAccountsStatus & {
+      metaHealth?: 'healthy' | 'expired' | 'invalid' | 'unknown';
+      metaExpiresAt?: string;
+      metaLastValidated?: string;
+      xHealth?: 'healthy' | 'expired' | 'invalid' | 'unknown';
+    } = {
+      meta: false,
+      x: false,
     };
 
-    return { data: status };
+    // Check Meta connection
+    if (data.meta?.accessToken) {
+      console.log(`[Connection Status:${requestId}] Meta token found, performing health check`);
+      status.meta = true;
+      
+      // Check expiration
+      if (data.meta.expiresAt) {
+        const expirationDate = data.meta.expiresAt.toDate ? data.meta.expiresAt.toDate() : new Date(data.meta.expiresAt);
+        status.metaExpiresAt = expirationDate.toISOString();
+        
+        const now = new Date();
+        const timeUntilExpiry = expirationDate.getTime() - now.getTime();
+        const bufferTime = 5 * 60 * 1000; // 5 minutes buffer
+        
+        if (timeUntilExpiry < 0) {
+          status.metaHealth = 'expired';
+          console.warn(`[Connection Status:${requestId}] Meta token expired at ${expirationDate}`);
+        } else if (timeUntilExpiry < bufferTime) {
+          status.metaHealth = 'expired'; // Treat as expired if expiring soon
+          console.warn(`[Connection Status:${requestId}] Meta token expiring soon at ${expirationDate}`);
+        } else {
+          // Check if token was recently validated (within last 30 minutes)
+          const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+          const validatedAt = data.meta.validatedAt?.toDate();
+          
+          if (validatedAt && validatedAt > thirtyMinutesAgo) {
+            status.metaHealth = 'healthy';
+            console.log(`[Connection Status:${requestId}] Meta token recently validated at ${validatedAt.toISOString()}, skipping validation test`);
+          } else {
+            // Perform a quick validation test
+            try {
+            const testUrl = `https://graph.facebook.com/v19.0/me?access_token=${data.meta.accessToken}&fields=id`;
+            const testResponse = await fetch(testUrl, {
+              method: 'GET',
+              signal: AbortSignal.timeout(5000) // 5 second timeout
+            });
+            const testData = await testResponse.json();
+            
+            if (testData.error) {
+              status.metaHealth = 'invalid';
+              console.warn(`[Connection Status:${requestId}] Meta token validation failed:`, testData.error);
+            } else {
+              status.metaHealth = 'healthy';
+              console.log(`[Connection Status:${requestId}] Meta token is healthy`);
+              
+              // Update the validation timestamp in Firestore
+              try {
+                const credentialsRef = doc(db, 'userApiCredentials', userId);
+                await setDoc(credentialsRef, {
+                  meta: {
+                    ...data.meta,
+                    validatedAt: serverTimestamp()
+                  }
+                }, { merge: true });
+                console.log(`[Connection Status:${requestId}] Updated validation timestamp for healthy token`);
+              } catch (updateError: any) {
+                console.warn(`[Connection Status:${requestId}] Failed to update validation timestamp:`, updateError.message);
+              }
+            }
+          } catch (testError: any) {
+            // If validation test fails, but token is not expired, assume it might still be healthy
+            // This handles cases where the validation test fails due to network issues
+            if (testError.name === 'TimeoutError' || testError.message.includes('timeout')) {
+              status.metaHealth = 'healthy'; // Assume healthy if just a timeout
+              console.warn(`[Connection Status:${requestId}] Meta token validation timed out, assuming healthy:`, testError.message);
+            } else {
+              status.metaHealth = 'unknown';
+              console.warn(`[Connection Status:${requestId}] Meta token validation test failed:`, testError.message);
+            }
+          }
+        }
+       }
+     } else {
+        // No expiration date, assume long-lived token, still test it
+        try {
+          const testUrl = `https://graph.facebook.com/v19.0/me?access_token=${data.meta.accessToken}&fields=id`;
+          const testResponse = await fetch(testUrl, { 
+            method: 'GET',
+            signal: AbortSignal.timeout(5000)
+          });
+          const testData = await testResponse.json();
+          
+          if (testData.error) {
+            status.metaHealth = 'invalid';
+            console.warn(`[Connection Status:${requestId}] Meta token (no expiry) validation failed:`, testData.error);
+          } else {
+            status.metaHealth = 'healthy';
+            console.log(`[Connection Status:${requestId}] Meta token (no expiry) is healthy`);
+          }
+        } catch (testError: any) {
+          status.metaHealth = 'unknown';
+          console.warn(`[Connection Status:${requestId}] Meta token (no expiry) validation test failed:`, testError.message);
+        }
+      }
+      
+      if (data.meta.validatedAt) {
+        const validatedDate = data.meta.validatedAt.toDate ? data.meta.validatedAt.toDate() : new Date(data.meta.validatedAt);
+        status.metaLastValidated = validatedDate.toISOString();
+      }
+    } else {
+      console.log(`[Connection Status:${requestId}] No Meta token found`);
+    }
+
+    // Check X connection (placeholder for future implementation)
+    if (data.x?.accessToken) {
+      console.log(`[Connection Status:${requestId}] X token found`);
+      status.x = true;
+      status.xHealth = 'unknown'; // X integration not fully implemented
+    } else {
+      console.log(`[Connection Status:${requestId}] No X token found`);
+    }
+
+    console.log(`[Connection Status:${requestId}] === STATUS CHECK COMPLETE ===`, {
+      meta: status.meta,
+      metaHealth: status.metaHealth,
+      x: status.x
+    });
+
+    return { data: status as ConnectedAccountsStatus };
   } catch (e: any) {
-    console.error("Error fetching connected accounts status:", e);
+    console.error(`[Connection Status:${requestId}] === ERROR ===`, {
+      message: e.message,
+      stack: e.stack,
+      name: e.name
+    });
     return { error: `Failed to fetch connection status: ${e.message}` };
   }
+}
+
+export async function handleDisconnectAccountAction(
+  prevState: FormState<{ success: boolean }>,
+  formData: FormData
+): Promise<FormState<{ success: boolean }>> {
+  const userId = formData.get('userId') as string;
+  const platform = formData.get('platform') as 'meta' | 'x';
+  const requestId = Math.random().toString(36).substring(2, 10);
+
+  console.log(`[Disconnect Account:${requestId}] === DISCONNECTING ${platform.toUpperCase()} ACCOUNT ===`);
+
+  if (!userId || !platform) {
+    console.error(`[Disconnect Account:${requestId}] Missing required parameters`);
+    return { error: 'User ID and platform are required to disconnect account.' };
+  }
+
+  try {
+    console.log(`[Disconnect Account:${requestId}] Removing ${platform} credentials for user ${userId}`);
+    const credentialsRef = doc(db, 'userApiCredentials', userId);
+    
+    // Remove the specific platform's credentials
+    const updateData = {
+      [platform]: null
+    };
+    
+    await setDoc(credentialsRef, updateData, { merge: true });
+    
+    console.log(`[Disconnect Account:${requestId}] Successfully disconnected ${platform} account for user ${userId}`);
+    return {
+      data: { success: true },
+      message: `${platform === 'meta' ? 'Meta (Facebook & Instagram)' : 'X (Twitter)'} account disconnected successfully.`
+    };
+  } catch (e: any) {
+    console.error(`[Disconnect Account:${requestId}] === ERROR ===`, {
+      message: e.message,
+      stack: e.stack,
+      name: e.name
+    });
+    return { error: `Failed to disconnect ${platform} account: ${e.message}` };
+  }
+}
+
+// Helper function to validate and refresh Meta token if needed
+async function validateAndRefreshMetaToken(userId: string, currentToken: string): Promise<{ token: string; refreshed: boolean; error?: string }> {
+  try {
+    // First, test the current token
+    const testUrl = `https://graph.facebook.com/v19.0/me?access_token=${currentToken}&fields=id,name`;
+    const testResponse = await fetch(testUrl);
+    const testData = await testResponse.json();
+    
+    if (!testData.error) {
+      console.log(`[Token Validation] Current token is valid for user ${userId}`);
+      return { token: currentToken, refreshed: false };
+    }
+    
+    console.warn(`[Token Validation] Current token invalid for user ${userId}:`, testData.error);
+    
+    // If token is invalid, we can't refresh it automatically with the current Meta API
+    // The user needs to re-authenticate
+    return { 
+      token: currentToken, 
+      refreshed: false, 
+      error: `Token expired or invalid: ${testData.error.message}. Please reconnect your Meta account.` 
+    };
+    
+  } catch (error: any) {
+    console.error(`[Token Validation] Validation failed for user ${userId}:`, error);
+    return { 
+      token: currentToken, 
+      refreshed: false, 
+      error: `Token validation failed: ${error.message}` 
+    };
+  }
+}
+
+// Helper function to check token expiration
+function isTokenExpired(expiresAt: any): boolean {
+  if (!expiresAt) return false; // No expiration date means it doesn't expire
+  
+  const expirationDate = expiresAt.toDate ? expiresAt.toDate() : new Date(expiresAt);
+  const now = new Date();
+  const bufferTime = 5 * 60 * 1000; // 5 minutes buffer
+  
+  return expirationDate.getTime() - now.getTime() < bufferTime;
 }
 
 export async function handleGetInstagramAccountsAction(
@@ -1724,6 +1945,9 @@ export async function handleGetInstagramAccountsAction(
   formData: FormData
 ): Promise<FormState<{ accounts: InstagramAccount[] }>> {
   let userId = formData.get('userId') as string;
+  const requestId = Math.random().toString(36).substring(2, 10);
+
+  console.log(`[Instagram Accounts:${requestId}] === FETCHING INSTAGRAM ACCOUNTS ===`);
 
   if (!userId) {
     const sessionCookie = formData.get('__session') as string;
@@ -1731,57 +1955,284 @@ export async function handleGetInstagramAccountsAction(
         try {
             const decodedToken = await admin.auth().verifySessionCookie(sessionCookie, true);
             userId = decodedToken.uid;
+            console.log(`[Instagram Accounts:${requestId}] User ID extracted from session: ${userId}`);
         } catch(e) {
+            console.error(`[Instagram Accounts:${requestId}] Session validation failed:`, e);
             return { error: 'Invalid session. Please log in again.' };
         }
     }
   }
   
   if (!userId) {
+    console.error(`[Instagram Accounts:${requestId}] No user ID available`);
     return { error: 'User not authenticated.' };
   }
 
   try {
+    console.log(`[Instagram Accounts:${requestId}] Step 1: Fetching stored credentials for user ${userId}`);
     const credsDocRef = doc(db, 'userApiCredentials', userId);
     const credsDocSnap = await getDoc(credsDocRef);
 
-    if (!credsDocSnap.exists() || !credsDocSnap.data()?.meta?.accessToken) {
-      return { error: "Meta account not connected or access token is missing." };
+    if (!credsDocSnap.exists()) {
+      console.error(`[Instagram Accounts:${requestId}] No credentials document found for user ${userId}`);
+      return { error: "Meta account not connected. Please connect your Meta account first." };
     }
-    
-    const accessToken = credsDocSnap.data().meta.accessToken;
 
+    const credsData = credsDocSnap.data();
+    const metaData = credsData?.meta;
+
+    if (!metaData?.accessToken) {
+      console.error(`[Instagram Accounts:${requestId}] No Meta access token found for user ${userId}`);
+      return { error: "Meta account not connected or access token is missing. Please reconnect your Meta account." };
+    }
+
+    console.log(`[Instagram Accounts:${requestId}] Step 2: Checking token expiration`);
+    const tokenExpired = isTokenExpired(metaData.expiresAt);
+    if (tokenExpired) {
+      console.warn(`[Instagram Accounts:${requestId}] Token is expired or expiring soon for user ${userId}`);
+      return { error: "Your Meta access token has expired. Please reconnect your Meta account in Settings." };
+    }
+
+    console.log(`[Instagram Accounts:${requestId}] Step 3: Validating current token`);
+    const tokenValidation = await validateAndRefreshMetaToken(userId, metaData.accessToken);
+    
+    if (tokenValidation.error) {
+      console.error(`[Instagram Accounts:${requestId}] Token validation failed:`, tokenValidation.error);
+      return { error: tokenValidation.error };
+    }
+
+    const accessToken = tokenValidation.token;
+    console.log(`[Instagram Accounts:${requestId}] Step 4: Token validated successfully (refreshed: ${tokenValidation.refreshed})`);
+
+    // If token was refreshed, update it in Firestore
+    if (tokenValidation.refreshed) {
+      console.log(`[Instagram Accounts:${requestId}] Updating refreshed token in Firestore`);
+      await setDoc(credsDocRef, { 
+        meta: { 
+          ...metaData, 
+          accessToken: tokenValidation.token,
+          updatedAt: serverTimestamp(),
+          lastRefreshed: serverTimestamp()
+        } 
+      }, { merge: true });
+    }
+
+    console.log(`[Instagram Accounts:${requestId}] Step 5: Fetching Facebook pages`);
     // 1. Get Facebook pages the user has access to
     const pagesUrl = `https://graph.facebook.com/v19.0/me/accounts?access_token=${accessToken}&fields=id,name,access_token`;
-    const pagesResponse = await fetch(pagesUrl);
+    const pagesResponse = await fetch(pagesUrl, {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'BrandForge-Instagram/1.0'
+      }
+    });
+    
+    console.log(`[Instagram Accounts:${requestId}] Pages API response status: ${pagesResponse.status}`);
     const pagesData = await pagesResponse.json();
 
     if (pagesData.error) {
-      throw new Error(`Failed to fetch pages: ${pagesData.error.message}`);
+      console.error(`[Instagram Accounts:${requestId}] Pages API error:`, pagesData.error);
+      
+      // Handle specific error cases
+      if (pagesData.error.code === 190) {
+        return { error: "Your Meta access token is invalid or expired. Please reconnect your Meta account." };
+      } else if (pagesData.error.code === 102) {
+        return { error: "Session key invalid. Please reconnect your Meta account." };
+      }
+      
+      throw new Error(`Failed to fetch pages: ${pagesData.error.message} (Code: ${pagesData.error.code})`);
     }
+    
     if (!pagesData.data || pagesData.data.length === 0) {
-      return { data: { accounts: [] }, message: "No Facebook Pages found." };
+      console.log(`[Instagram Accounts:${requestId}] No Facebook pages found for user ${userId}`);
+      return { data: { accounts: [] }, message: "No Facebook Pages found. You need to have a Facebook Page connected to an Instagram Business Account." };
     }
+
+    console.log(`[Instagram Accounts:${requestId}] Step 6: Found ${pagesData.data.length} Facebook pages, checking for Instagram accounts`);
 
     // 2. For each page, get the connected Instagram Business Account
     const igAccounts: InstagramAccount[] = [];
-    for (const page of pagesData.data) {
+    for (const [index, page] of pagesData.data.entries()) {
+      console.log(`[Instagram Accounts:${requestId}] Checking page ${index + 1}/${pagesData.data.length}: ${page.name} (${page.id})`);
+      
       const igUrl = `https://graph.facebook.com/v19.0/${page.id}?fields=instagram_business_account{id,username}&access_token=${accessToken}`;
-      const igResponse = await fetch(igUrl);
+      const igResponse = await fetch(igUrl, {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'BrandForge-Instagram/1.0'
+        }
+      });
+      
       const igData = await igResponse.json();
+      console.log(`[Instagram Accounts:${requestId}] Instagram check for page ${page.name}:`, {
+        hasInstagram: !!igData.instagram_business_account,
+        error: igData.error || 'none'
+      });
+
+      if (igData.error) {
+        console.warn(`[Instagram Accounts:${requestId}] Error checking Instagram for page ${page.name}:`, igData.error);
+        continue;
+      }
 
       if (igData.instagram_business_account) {
         igAccounts.push({
           id: igData.instagram_business_account.id,
           username: igData.instagram_business_account.username,
         });
+        console.log(`[Instagram Accounts:${requestId}] Found Instagram account: @${igData.instagram_business_account.username}`);
       }
     }
 
+    console.log(`[Instagram Accounts:${requestId}] === COMPLETED: Found ${igAccounts.length} Instagram accounts ===`);
     return { data: { accounts: igAccounts }, message: `Found ${igAccounts.length} Instagram account(s).` };
 
   } catch (e: any) {
-    console.error("Error in handleGetInstagramAccountsAction:", e);
+    console.error(`[Instagram Accounts:${requestId}] === ERROR ===`, {
+      message: e.message,
+      stack: e.stack,
+      name: e.name
+    });
     return { error: `Failed to fetch Instagram accounts: ${e.message}` };
+  }
+}
+
+export async function handleTestInstagramPermissionsAction(
+  prevState: FormState<{ success: boolean; testResults: any }>,
+  formData: FormData
+): Promise<FormState<{ success: boolean; testResults: any }>> {
+  const userId = formData.get('userId') as string;
+  const requestId = Math.random().toString(36).substring(2, 10);
+
+  console.log(`[Test Instagram Permissions:${requestId}] === TESTING INSTAGRAM PERMISSIONS ===`);
+
+  if (!userId) {
+    return { error: 'User not authenticated.' };
+  }
+
+  // Admin-only restriction - this is app-level configuration
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    const userDocSnap = await getDoc(userDocRef);
+    
+    if (!userDocSnap.exists()) {
+      return { error: 'User not found.' };
+    }
+    
+    const userData = userDocSnap.data();
+    if (!userData || userData.email !== 'admin@brandforge.ai') {
+      return { error: 'Unauthorized: Admin access required for permission testing.' };
+    }
+  } catch (e: any) {
+    return { error: 'Failed to verify admin access.' };
+  }
+
+  try {
+    console.log(`[Test Instagram Permissions:${requestId}] Step 1: Fetching stored credentials for user ${userId}`);
+    const credsDocRef = doc(db, 'userApiCredentials', userId);
+    const credsDocSnap = await getDoc(credsDocRef);
+
+    if (!credsDocSnap.exists()) {
+      return { error: "Meta account not connected. Please connect your Meta account first." };
+    }
+
+    const credsData = credsDocSnap.data();
+    const metaData = credsData?.meta;
+
+    if (!metaData?.accessToken) {
+      return { error: "Meta account not connected or access token is missing." };
+    }
+
+    const accessToken = metaData.accessToken;
+    const testResults: any = {};
+
+    console.log(`[Test Instagram Permissions:${requestId}] Step 2: Testing basic user info`);
+    // Test 1: Basic user info (should work)
+    try {
+      const userResponse = await fetch(`https://graph.facebook.com/v19.0/me?access_token=${accessToken}&fields=id,name`);
+      const userData = await userResponse.json();
+      testResults.userInfo = userData;
+      console.log(`[Test Instagram Permissions:${requestId}] User info test:`, userData.error ? 'FAILED' : 'SUCCESS');
+    } catch (e: any) {
+      testResults.userInfo = { error: e.message };
+    }
+
+    console.log(`[Test Instagram Permissions:${requestId}] Step 3: Testing pages access`);
+    // Test 2: Pages access (should work with current permissions)
+    try {
+      const pagesResponse = await fetch(`https://graph.facebook.com/v19.0/me/accounts?access_token=${accessToken}&fields=id,name,access_token`);
+      const pagesData = await pagesResponse.json();
+      testResults.pages = pagesData;
+      console.log(`[Test Instagram Permissions:${requestId}] Pages test:`, pagesData.error ? 'FAILED' : `SUCCESS (${pagesData.data?.length || 0} pages)`);
+    } catch (e: any) {
+      testResults.pages = { error: e.message };
+    }
+
+    console.log(`[Test Instagram Permissions:${requestId}] Step 4: Testing Instagram Business Account access`);
+    // Test 3: Try to access Instagram Business Account (this is the key test)
+    if (testResults.pages?.data && testResults.pages.data.length > 0) {
+      const firstPage = testResults.pages.data[0];
+      try {
+        const igResponse = await fetch(`https://graph.facebook.com/v19.0/${firstPage.id}?fields=instagram_business_account{id,username}&access_token=${accessToken}`);
+        const igData = await igResponse.json();
+        testResults.instagramTest = igData;
+        console.log(`[Test Instagram Permissions:${requestId}] Instagram test:`, igData.error ? `FAILED: ${igData.error.message}` : 'SUCCESS');
+        
+        // If this succeeds, try to get more Instagram account details
+        if (igData.instagram_business_account) {
+          try {
+            const igDetailsResponse = await fetch(`https://graph.facebook.com/v19.0/${igData.instagram_business_account.id}?fields=id,username,account_type,media_count&access_token=${accessToken}`);
+            const igDetailsData = await igDetailsResponse.json();
+            testResults.instagramDetails = igDetailsData;
+            console.log(`[Test Instagram Permissions:${requestId}] Instagram details test:`, igDetailsData.error ? 'FAILED' : 'SUCCESS');
+          } catch (e: any) {
+            testResults.instagramDetails = { error: e.message };
+          }
+        }
+      } catch (e: any) {
+        testResults.instagramTest = { error: e.message };
+      }
+    }
+
+    console.log(`[Test Instagram Permissions:${requestId}] Step 5: Testing Instagram content publish capability`);
+    // Test 4: Test Instagram content publish (this will likely fail but activates the permission)
+    if (testResults.instagramTest?.instagram_business_account) {
+      try {
+        const igAccountId = testResults.instagramTest.instagram_business_account.id;
+        // Try to get media (this requires instagram_content_publish permission)
+        const mediaResponse = await fetch(`https://graph.facebook.com/v19.0/${igAccountId}/media?access_token=${accessToken}&fields=id,media_type,media_url,timestamp`);
+        const mediaData = await mediaResponse.json();
+        testResults.mediaTest = mediaData;
+        console.log(`[Test Instagram Permissions:${requestId}] Media test:`, mediaData.error ? `FAILED: ${mediaData.error.message}` : 'SUCCESS');
+      } catch (e: any) {
+        testResults.mediaTest = { error: e.message };
+      }
+    }
+
+    console.log(`[Test Instagram Permissions:${requestId}] === TEST COMPLETED ===`);
+    
+    // Determine if tests were successful enough to activate permission request
+    const hasPages = testResults.pages?.data && testResults.pages.data.length > 0;
+    const hasInstagramAccount = testResults.instagramTest?.instagram_business_account;
+    const madeInstagramApiCall = testResults.instagramTest || testResults.mediaTest;
+
+    let message = "Permission tests completed. ";
+    if (hasPages && hasInstagramAccount) {
+      message += "Instagram Business Account detected! ";
+    } else if (hasPages && !hasInstagramAccount) {
+      message += "Facebook Pages found but no Instagram Business Account linked. ";
+    }
+    
+    if (madeInstagramApiCall) {
+      message += "Instagram API calls made - this should activate the permission request button within 24 hours.";
+    }
+
+    return {
+      data: { success: true, testResults },
+      message
+    };
+
+  } catch (e: any) {
+    console.error(`[Test Instagram Permissions:${requestId}] === ERROR ===`, e);
+    return { error: `Failed to test Instagram permissions: ${e.message}` };
   }
 }
