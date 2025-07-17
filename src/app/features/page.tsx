@@ -2,13 +2,10 @@
 "use client";
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { UserCircle, Paintbrush, Send, Rocket, Sparkles, ArrowRight, CheckCircle, CreditCard, Newspaper, LogIn, Layers, Menu } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { useAuth } from '@/contexts/AuthContext';
+import { UserCircle, Paintbrush, Send, Rocket, ArrowRight, CheckCircle } from 'lucide-react';
+import PublicHeader from '@/components/PublicHeader';
 
 
 const FeatureDetailCard = ({ id, icon: Icon, title, description, benefits }: { id: string; icon: React.ElementType; title: string; description: string; benefits: string[] }) => (
@@ -36,98 +33,6 @@ const FeatureDetailCard = ({ id, icon: Icon, title, description, benefits }: { i
         </CardContent>
     </Card>
 );
-
-const PublicHeader = () => {
-  const pathname = usePathname();
-  const { user } = useAuth();
-  const navLinks = [
-    { href: '/features', label: 'Features', icon: Layers },
-    { href: '/blog', label: 'Blog', icon: Newspaper },
-    { href: '/plans', label: 'Pricing', icon: CreditCard },
-  ];
-
-  const MobileNavMenu = () => (
-    <Sheet>
-        <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="sm:hidden">
-                <Menu className="h-6 w-6" />
-                <span className="sr-only">Open Menu</span>
-            </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-full max-w-xs bg-sidebar text-sidebar-foreground border-r-0">
-            <SheetHeader className="p-4 border-b border-sidebar-border">
-                <SheetTitle>
-                    <Link href="/" className="flex items-center gap-3">
-                        <Sparkles className="h-7 w-7 text-primary" />
-                        <span className="text-xl font-bold text-gradient-brand">BrandForge AI</span>
-                    </Link>
-                </SheetTitle>
-            </SheetHeader>
-            <nav className="flex flex-col space-y-2 p-4">
-                {navLinks.map((link) => (
-                    <Button key={link.href} variant="ghost" className={cn("justify-start text-base py-3", pathname.startsWith(link.href) && "text-primary bg-primary/10")} asChild>
-                        <Link href={link.href}>
-                            <link.icon className="mr-3 h-5 w-5" />
-                            <span>{link.label}</span>
-                        </Link>
-                    </Button>
-                ))}
-            </nav>
-        </SheetContent>
-    </Sheet>
-  );
-
-  return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b">
-        <div className="container-responsive flex items-center justify-between h-18">
-            <Link href="/" className="flex items-center gap-3 text-foreground hover:text-primary transition-colors duration-200">
-                <Sparkles className="h-7 w-7 text-primary" />
-                <span className="hidden sm:inline-block text-xl font-bold text-gradient-brand">BrandForge AI</span>
-            </Link>
-            <div className="flex items-center gap-2">
-                {navLinks.map((link) => (
-                    <Button key={link.href} variant="ghost" className={cn("hidden sm:inline-flex focus-enhanced", pathname.startsWith(link.href) && "text-primary bg-primary/10")} asChild>
-                        <Link href={link.href}>
-                            <link.icon className="mr-2 h-5 w-5" />
-                            <span>{link.label}</span>
-                        </Link>
-                    </Button>
-                ))}
-                {!user && (
-                    <>
-                        <Button variant="ghost" className="focus-enhanced hidden sm:inline-flex" asChild>
-                            <Link href="/login">
-                                <LogIn className="mr-2 h-5 w-5" />
-                                <span>Log In</span>
-                            </Link>
-                        </Button>
-                        <Button className="btn-gradient-primary focus-enhanced hidden sm:inline-flex" asChild>
-                            <Link href="/signup">
-                                <span>Get Started</span>
-                                <ArrowRight className="ml-2 h-5 w-5" />
-                            </Link>
-                        </Button>
-                    </>
-                )}
-                <div className="sm:hidden flex items-center gap-2">
-                   {!user && (
-                        <>
-                         <Button variant="ghost" size="sm" asChild>
-                            <Link href="/login"><LogIn className="mr-2 h-5 w-5" />Log In</Link>
-                        </Button>
-                        <Button size="sm" className="btn-gradient-primary" asChild>
-                            <Link href="/signup">Get Started<ArrowRight className="ml-2 h-5 w-5" /></Link>
-                        </Button>
-                        </>
-                    )}
-                    <MobileNavMenu />
-                 </div>
-            </div>
-        </div>
-    </header>
-  );
-};
-
 
 export default function FeaturesPage() {
   return (

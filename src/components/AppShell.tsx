@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CompactThemeToggle } from './ThemeToggle';
 
 interface NavItem {
   href: string;
@@ -286,7 +287,10 @@ export function AppShell({ children }: { children: ReactNode }) {
               </SheetContent>
             </Sheet>
           </div>
-          <AuthUserMenu />
+          <div className="flex items-center gap-4">
+            <CompactThemeToggle />
+            <AuthUserMenu />
+          </div>
         </header>
         <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
           <div className="container-responsive py-4 sm:py-6 lg:py-8">

@@ -2,13 +2,13 @@
 "use client";
 
 import React, { useState, useEffect, useActionState, useMemo, startTransition } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Check, ArrowRight, Star, X, Loader2, Info, RefreshCcw, TestTube, Copy, Globe, Sparkles, Newspaper, CreditCard, LogIn, Layers, Menu } from 'lucide-react';
+import { Check, ArrowRight, Star, X, Loader2, Info, RefreshCcw, TestTube, Copy, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PlanDetails } from '@/types';
 import type { FormState } from '@/lib/actions';
@@ -19,106 +19,13 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import PublicHeader from '@/components/PublicHeader';
 
 declare global {
     interface Window {
       Razorpay: any;
     }
 }
-
-const PublicHeader = () => {
-  const pathname = usePathname();
-  const { user } = useAuth();
-  const navLinks = [
-    { href: '/features', label: 'Features', icon: Layers },
-    { href: '/blog', label: 'Blog', icon: Newspaper },
-    { href: '/plans', label: 'Pricing', icon: CreditCard },
-  ];
-
-  const MobileNavMenu = () => (
-    <Sheet>
-        <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="sm:hidden">
-                <Menu className="h-6 w-6" />
-                <span className="sr-only">Open Menu</span>
-            </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-full max-w-xs bg-sidebar text-sidebar-foreground border-r-0">
-            <SheetHeader className="p-4 border-b border-sidebar-border">
-                <SheetTitle>
-                    <Link href="/" className="flex items-center gap-3">
-                        <Sparkles className="h-7 w-7 text-primary" />
-                        <span className="text-xl font-bold text-gradient-brand">BrandForge AI</span>
-                    </Link>
-                </SheetTitle>
-            </SheetHeader>
-            <nav className="flex flex-col space-y-2 p-4">
-                {navLinks.map((link) => (
-                    <Button key={link.href} variant="ghost" className={cn("justify-start text-base py-3", pathname.startsWith(link.href) && "text-primary bg-primary/10")} asChild>
-                        <Link href={link.href}>
-                            <link.icon className="mr-3 h-5 w-5" />
-                            <span>{link.label}</span>
-                        </Link>
-                    </Button>
-                ))}
-            </nav>
-        </SheetContent>
-    </Sheet>
-  );
-
-
-  return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b">
-        <div className="container-responsive flex items-center justify-between h-18">
-            <Link href="/" className="flex items-center gap-3 text-foreground hover:text-primary transition-colors duration-200">
-                <Sparkles className="h-7 w-7 text-primary" />
-                <span className="hidden sm:inline-block text-xl font-bold text-gradient-brand">BrandForge AI</span>
-            </Link>
-            <div className="flex items-center gap-2">
-                {navLinks.map((link) => (
-                    <Button key={link.href} variant="ghost" className={cn("hidden sm:inline-flex focus-enhanced", pathname.startsWith(link.href) && "text-primary bg-primary/10")} asChild>
-                        <Link href={link.href}>
-                            <link.icon className="mr-2 h-5 w-5" />
-                            <span>{link.label}</span>
-                        </Link>
-                    </Button>
-                ))}
-                {!user && (
-                    <>
-                        <Button variant="ghost" className="focus-enhanced hidden sm:inline-flex" asChild>
-                            <Link href="/login">
-                                <LogIn className="mr-2 h-5 w-5" />
-                                <span>Log In</span>
-                            </Link>
-                        </Button>
-                        <Button className="btn-gradient-primary focus-enhanced hidden sm:inline-flex" asChild>
-                            <Link href="/signup">
-                                <span>Get Started</span>
-                                <ArrowRight className="ml-2 h-5 w-5" />
-                            </Link>
-                        </Button>
-                    </>
-                )}
-                 <div className="sm:hidden flex items-center gap-2">
-                    {!user && (
-                        <>
-                         <Button variant="ghost" size="sm" asChild>
-                            <Link href="/login"><LogIn className="mr-2 h-5 w-5" />Log In</Link>
-                        </Button>
-                        <Button size="sm" className="btn-gradient-primary" asChild>
-                            <Link href="/signup">Get Started<ArrowRight className="ml-2 h-5 w-5" /></Link>
-                        </Button>
-                        </>
-                    )}
-                    <MobileNavMenu />
-                 </div>
-            </div>
-        </div>
-    </header>
-  );
-};
-
 
 const initialSubscriptionState: FormState<{ orderId: string; amount: number; currency: string } | null> = { data: null, error: undefined, message: undefined };
 const initialVerifyState: FormState<{ success: boolean }> = { data: undefined, error: undefined, message: undefined };
