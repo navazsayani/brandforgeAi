@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useActionState, useEffect } from 'react';
+import React, { useState, useMemo, useActionState, useEffect, startTransition } from 'react';
 import { useFormStatus } from 'react-dom';
 import NextImage from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
@@ -314,7 +314,9 @@ function DeployDialog({ item }: { item: DeployableContent }) {
         if (open && currentUser?.uid) {
             const formData = new FormData();
             formData.append('userId', currentUser.uid); // Pass userId for server-side auth
-            fetchAccountsAction(formData);
+            startTransition(() => {
+                fetchAccountsAction(formData);
+            });
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, currentUser?.uid]);

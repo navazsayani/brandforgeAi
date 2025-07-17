@@ -1,6 +1,5 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { randomBytes } from 'crypto';
 import { handleStoreUserApiTokenAction } from '@/lib/actions';
 import { db } from '@/lib/firebaseConfig';
 import { doc, getDoc, deleteDoc } from 'firebase/firestore';
@@ -29,7 +28,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
   
-  // Retrieve the original userId from the state document in Firestore
   const stateDocRef = doc(db, 'oauthStates', state);
   const stateDocSnap = await getDoc(stateDocRef);
 
@@ -40,9 +38,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  const { userId } = stateDocSnap.data();
+  const { userId, origin } = stateDocSnap.data();
 
-  // Clean up the state document
   await deleteDoc(stateDocRef);
 
   if (!userId) {
@@ -52,28 +49,54 @@ export async function GET(request: NextRequest) {
      return NextResponse.redirect(redirectUrl);
   }
 
+  // --- Start Real Token Exchange ---
+  try {
+    const clientId = process.env.META_CLIENT_ID;
+    const clientSecret = process.env.META_CLIENT_SECRET;
+    const redirectUri = `${origin}/api/oauth/callback`;
 
-  console.log(`[OAuth Callback] Simulating token exchange for platform: ${platform} with code: ${code}`);
+    if (!clientId || !clientSecret) {
+      throw new Error("Meta application credentials are not configured on the server.");
+    }
+    
+    const tokenUrl = new URL('https://graph.facebook.com/v19.0/oauth/access_token');
+    tokenUrl.searchParams.append('client_id', clientId);
+    tokenUrl.searchParams.append('redirect_uri', redirectUri);
+    tokenUrl.searchParams.append('client_secret', clientSecret);
+    tokenUrl.searchParams.append('code', code);
 
-  const simulatedAccessToken = `sim_access_token_${platform}_${randomBytes(16).toString('hex')}`;
-  const simulatedRefreshToken = `sim_refresh_token_${platform}_${randomBytes(16).toString('hex')}`;
-  
-  console.log(`[OAuth Callback] Simulated access token obtained for user ${userId}.`);
+    console.log(`[OAuth Callback] Exchanging code for access token for user ${userId}...`);
+    const tokenResponse = await fetch(tokenUrl.toString(), { method: 'GET' });
+    const tokenData = await tokenResponse.json();
 
-  const storeResult = await handleStoreUserApiTokenAction({
-    userId,
-    platform,
-    accessToken: simulatedAccessToken,
-    refreshToken: simulatedRefreshToken,
-    expiresIn: 3600, // Simulate 1 hour expiry
-  });
+    if (tokenData.error) {
+      throw new Error(`Token exchange failed: ${tokenData.error.message}`);
+    }
 
-  const redirectUrl = new URL('/settings', request.url);
-  if (storeResult.success) {
-      redirectUrl.searchParams.set('connected', platform);
-  } else {
-      redirectUrl.searchParams.set('error', storeResult.error || `Failed to store token for ${platform}.`);
+    const { access_token, expires_in } = tokenData;
+    console.log(`[OAuth Callback] Real access token obtained for user ${userId}.`);
+
+    const storeResult = await handleStoreUserApiTokenAction({
+      userId,
+      platform,
+      accessToken: access_token,
+      expiresIn: expires_in,
+    });
+
+    const finalRedirectUrl = new URL('/settings', request.url);
+    if (storeResult.success) {
+        finalRedirectUrl.searchParams.set('connected', platform);
+    } else {
+        finalRedirectUrl.searchParams.set('error', storeResult.error || `Failed to store token for ${platform}.`);
+    }
+    
+    return NextResponse.redirect(finalRedirectUrl);
+
+  } catch (e: any) {
+    console.error('[OAuth Callback] CRITICAL ERROR during token exchange:', e);
+    const redirectUrl = new URL('/settings', request.url);
+    redirectUrl.searchParams.set('error', `Token exchange failed: ${e.message}`);
+    return NextResponse.redirect(redirectUrl);
   }
-  
-  return NextResponse.redirect(redirectUrl);
+  // --- End Real Token Exchange ---
 }

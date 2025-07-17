@@ -1622,11 +1622,11 @@ export async function handleInitiateOAuthAction(
   const state = crypto.randomBytes(16).toString('hex');
   const redirectUri = `${parsedOrigin.origin}/api/oauth/callback`;
     
-  // Store the state and userId temporarily in Firestore
   const stateDocRef = doc(db, 'oauthStates', state);
   await setDoc(stateDocRef, { 
     userId,
-    createdAt: serverTimestamp() // To clean up old states later
+    origin, // Store origin to reconstruct redirect_uri in callback
+    createdAt: serverTimestamp()
   });
 
 
