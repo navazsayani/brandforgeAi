@@ -78,15 +78,15 @@ export default function PublicHeader() {
                 {!user && (
                     <div className="flex items-center gap-2">
                         <Button variant="ghost" className={cn("focus-enhanced", pathname.startsWith('/login') && "text-primary bg-primary/10")} asChild>
-                            <Link href="/login">
-                                <LogIn className="mr-2 h-5 w-5 sm:hidden" />
-                                <span className="hidden sm:inline">Log In</span>
+                            <Link href="/login" className="flex items-center">
+                                <LogIn className="mr-2 h-5 w-5" />
+                                <span>Log In</span>
                             </Link>
                         </Button>
                         <Button className="btn-gradient-primary focus-enhanced" asChild>
-                            <Link href="/signup">
-                                <UserPlus className="mr-2 h-5 w-5 sm:hidden" />
-                                <span className="hidden sm:inline">Get Started</span>
+                            <Link href="/signup" className="flex items-center">
+                                <UserPlus className="mr-2 h-5 w-5" />
+                                <span>Get Started</span>
                             </Link>
                         </Button>
                     </div>
