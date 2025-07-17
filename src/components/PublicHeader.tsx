@@ -47,22 +47,6 @@ export default function PublicHeader() {
                 ))}
             </nav>
             <div className="p-4 border-t border-sidebar-border/50 mt-auto">
-              {!user && (
-                  <div className="space-y-3 mb-4">
-                      <Button variant="ghost" className="w-full justify-start text-base py-3" asChild>
-                          <Link href="/login">
-                              <LogIn className="mr-3 h-5 w-5" />
-                              <span>Log In</span>
-                          </Link>
-                      </Button>
-                      <Button className="w-full justify-start text-base py-3 bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/90" asChild>
-                          <Link href="/signup">
-                              <UserPlus className="mr-3 h-5 w-5" />
-                              <span>Get Started</span>
-                          </Link>
-                      </Button>
-                  </div>
-              )}
               <CompactThemeToggle />
             </div>
         </SheetContent>
@@ -76,12 +60,13 @@ export default function PublicHeader() {
                 <Sparkles className="h-7 w-7 text-primary" />
                 <span className="hidden sm:inline-block text-xl font-bold text-gradient-brand">BrandForge AI</span>
             </Link>
+
             <div className="flex items-center gap-2">
+                {/* Desktop Navigation */}
                 <div className="hidden sm:flex items-center gap-2">
                     {navLinks.map((link) => (
                         <Button key={link.href} variant="ghost" className={cn("focus-enhanced", pathname.startsWith(link.href) && "text-primary bg-primary/10")} asChild>
                             <Link href={link.href}>
-                                <link.icon className="mr-2 h-5 w-5" />
                                 <span>{link.label}</span>
                             </Link>
                         </Button>
@@ -89,25 +74,25 @@ export default function PublicHeader() {
                     <CompactThemeToggle />
                 </div>
                 
-                <div className="hidden sm:inline-flex items-center gap-2">
-                    {!user && (
-                        <>
-                            <Button variant="ghost" className="focus-enhanced" asChild>
-                                <Link href="/login">
-                                    <LogIn className="mr-2 h-5 w-5" />
-                                    <span>Log In</span>
-                                </Link>
-                            </Button>
-                            <Button className="btn-gradient-primary focus-enhanced" asChild>
-                                <Link href="/signup">
-                                    <UserPlus className="mr-2 h-5 w-5" />
-                                    <span>Get Started</span>
-                                </Link>
-                            </Button>
-                        </>
-                    )}
-                </div>
+                {/* Auth buttons, always visible if not logged in */}
+                {!user && (
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" className={cn("focus-enhanced", pathname.startsWith('/login') && "text-primary bg-primary/10")} asChild>
+                            <Link href="/login">
+                                <LogIn className="mr-2 h-5 w-5 sm:hidden" />
+                                <span className="hidden sm:inline">Log In</span>
+                            </Link>
+                        </Button>
+                        <Button className="btn-gradient-primary focus-enhanced" asChild>
+                            <Link href="/signup">
+                                <UserPlus className="mr-2 h-5 w-5 sm:hidden" />
+                                <span className="hidden sm:inline">Get Started</span>
+                            </Link>
+                        </Button>
+                    </div>
+                )}
                 
+                {/* Mobile Hamburger Menu */}
                 <div className="sm:hidden">
                     <MobileNavMenu />
                 </div>
