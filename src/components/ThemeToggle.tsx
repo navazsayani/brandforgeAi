@@ -7,6 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Sun, Moon, Monitor, Palette } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Tooltip, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 
 export function ThemeToggle() {
   const { theme, setTheme, resolvedTheme } = useTheme();
@@ -127,39 +130,38 @@ export function ThemeToggle() {
 
 // Compact theme toggle for navigation/header use
 export function CompactThemeToggle() {
-  const { theme, setTheme, resolvedTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
 
-  const cycleTheme = () => {
-    const themes: Array<'light' | 'dark' | 'system'> = ['light', 'dark', 'system'];
-    const currentIndex = themes.indexOf(theme);
-    const nextIndex = (currentIndex + 1) % themes.length;
-    setTheme(themes[nextIndex]);
-  };
-
-  const getIcon = () => {
-    if (theme === 'system') {
-      return <Monitor className="w-4 h-4" />;
-    }
-    return resolvedTheme === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />;
-  };
-
-  const getLabel = () => {
-    if (theme === 'system') {
-      return `System (${resolvedTheme})`;
-    }
-    return theme === 'dark' ? 'Dark' : 'Light';
-  };
+  const themeOptions = [
+    { value: 'light', icon: Sun, label: 'Light' },
+    { value: 'dark', icon: Moon, label: 'Dark' },
+    { value: 'system', icon: Monitor, label: 'System' },
+  ] as const;
 
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={cycleTheme}
-      className="gap-2"
-      aria-label={`Current theme: ${getLabel()}. Click to cycle themes.`}
-    >
-      {getIcon()}
-      <span className="hidden sm:inline">{getLabel()}</span>
-    </Button>
+    <div className="flex items-center gap-1 p-1 rounded-full border bg-muted/50">
+      <TooltipProvider delayDuration={100}>
+        {themeOptions.map((option) => (
+          <Tooltip key={option.value}>
+            <TooltipTrigger asChild>
+              <Button
+                variant={theme === option.value ? 'default' : 'ghost'}
+                size="icon"
+                className={cn("h-8 w-8 rounded-full transition-all duration-200", 
+                  theme === option.value && "shadow-sm"
+                )}
+                onClick={() => setTheme(option.value)}
+                aria-label={`Set theme to ${option.label}`}
+              >
+                <option.icon className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>{option.label}</p>
+            </TooltipContent>
+          </Tooltip>
+        ))}
+      </TooltipProvider>
+    </div>
   );
 }
