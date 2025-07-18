@@ -1,6 +1,6 @@
 ---
 title: "Stop Guessing, Start Ranking: How to Write SEO Content with AI"
-date: "2024-07-10"
+date: "2025-07-10"
 author: "Priya Sharma"
 excerpt: "Tired of writing content that never gets seen? SEO feels like a dark art, but AI can be your guiding light. Learn how to use AI to create blog posts that Google and your readers will love."
 image: "/blog/stop guessing.png"

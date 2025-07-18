@@ -1,6 +1,6 @@
 ---
 title: "AI Marketing Automation for Small Businesses: Compete with Enterprise Giants on Any Budget"
-date: "2024-07-25"
+date: "2025-07-25"
 author: "Rajesh Kumar"
 excerpt: "Small businesses are using AI marketing automation to punch above their weight class. Discover how entrepreneurs are leveraging intelligent tools to create enterprise-level marketing campaigns without the enterprise budget or team."
 image: "/blog/david_goliath.png"

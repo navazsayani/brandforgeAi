@@ -1,6 +1,6 @@
 ---
 title: "Is AI the New Social Media Manager? A Revolution in Marketing"
-date: "2024-06-15"
+date: "2025-06-15"
 author: "Aisha Begum"
 excerpt: "Social media marketing used to be a manual grind. Not anymore. From hyper-personalized ads to content that practically writes itself, AI is changing the game. Here's what you need to know."
 image: "/blog/ai manager.png"
