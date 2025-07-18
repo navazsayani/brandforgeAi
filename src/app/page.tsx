@@ -168,15 +168,15 @@ export default function LandingPage() {
         <section className="pt-32 pb-20 text-center animate-fade-in">
           <div className="container-responsive">
             <div className="max-w-4xl mx-auto">
-                <h1 className="text-5xl md:text-6xl font-extrabold text-gradient-brand mb-4 text-balance">
+                <p className="text-5xl md:text-6xl font-extrabold text-gradient-brand mb-4 text-balance">
                     BrandForge AI
-                </h1>
+                </p>
                  <p className="text-lg md:text-xl text-primary font-semibold mb-6">
                     Your Complete AI Branding & Marketing Suite
                  </p>
-                <h2 className="text-4xl md:text-5xl font-bold text-balance">
+                <h1 className="text-4xl md:text-5xl font-bold text-balance">
                     Forge a Stronger Brand, Faster Than Ever
-                </h2>
+                </h1>
                 <p className="max-w-2xl mx-auto mt-6 text-lg md:text-xl text-muted-foreground text-balance">
                     Stop juggling tools. From logo ideas to deployed ad campaigns, BrandForge AI is your all-in-one platform to build, create, and grow your brand with the power of AI.
                 </p>

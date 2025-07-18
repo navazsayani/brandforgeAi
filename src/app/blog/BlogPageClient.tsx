@@ -49,8 +49,41 @@ const BlogCard = ({ post }: { post: BlogPost }) => (
 );
 
 export default function BlogPageClient({ posts }: { posts: BlogPost[] }) {
+    const jsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'Blog',
+        "name": "BrandForge AI Blog",
+        "description": "Insights, tutorials, and articles on AI-powered branding, marketing, and content creation from the BrandForge AI team.",
+        "publisher": {
+            '@type': 'Organization',
+            "name": "BrandForge AI",
+            "logo": {
+                "@type": "ImageObject",
+                "url": "https://brandforge.me/brandforge-logo-schema.png"
+            }
+        },
+        "blogPost": posts.map(post => ({
+            "@type": "BlogPosting",
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": `https://brandforge.me/blog/${post.slug}`
+            },
+            "headline": post.title,
+            "image": `https://brandforge.me${post.image}`,
+            "datePublished": post.date,
+            "author": {
+                "@type": "Person",
+                "name": post.author
+            }
+        }))
+    };
+    
     return (
         <div className="bg-background text-foreground">
+             <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
              <PublicHeader />
             
             <main className="pt-24">
