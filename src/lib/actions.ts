@@ -1238,6 +1238,7 @@ export async function handleUpdateSettingsAction(
       powerfulModel: formData.get("powerfulModel") as string,
       paymentMode: formData.get("paymentMode") as 'live' | 'test' | undefined,
       freepikEnabled: formData.get("freepikEnabled") === 'true',
+      socialMediaConnectionsEnabled: formData.get("socialMediaConnectionsEnabled") === 'true',
     };
     
     if (!modelConfig.imageGenerationModel || !modelConfig.textToImageModel || !modelConfig.fastModel || !modelConfig.visionModel || !modelConfig.powerfulModel) {
