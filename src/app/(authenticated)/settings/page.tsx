@@ -33,6 +33,7 @@ const modelSettingsSchema = z.object({
   powerfulModel: z.string().min(1, "Powerful text model name cannot be empty."),
   paymentMode: z.enum(['live', 'test']).optional(),
   freepikEnabled: z.boolean().optional(),
+  socialMediaConnectionsEnabled: z.boolean().optional(),
 });
 
 const plansSettingsSchema = z.object({
@@ -375,7 +376,7 @@ function SettingsPageContent() {
                         <div className="space-y-1">
                             <div className="flex items-center gap-2">
                                 <p className="font-semibold">Meta (Facebook & Instagram)</p>
-                                {connectionStatusState.data?.meta && (
+                                {connectionStatusState.data?.meta && getModelState.data?.socialMediaConnectionsEnabled !== false && (
                                     <>
                                         {connectionStatusState.data.metaHealth === 'healthy' && (
                                             <Badge variant="secondary" className="text-green-600 bg-green-50 border-green-200">
@@ -406,8 +407,10 @@ function SettingsPageContent() {
                             </div>
                             <div className="space-y-1">
                                 <p className="text-sm text-muted-foreground">
-                                    {connectionStatusState.data?.meta ? (
-                                        connectionStatusState.data.metaHealth === 'healthy' ? 
+                                    {getModelState.data?.socialMediaConnectionsEnabled === false ? (
+                                        "Social media connections are currently disabled by admin."
+                                    ) : connectionStatusState.data?.meta ? (
+                                        connectionStatusState.data.metaHealth === 'healthy' ?
                                             "Account connected and working properly." :
                                         connectionStatusState.data.metaHealth === 'expired' ?
                                             "Token has expired. Please reconnect your account." :
@@ -416,12 +419,12 @@ function SettingsPageContent() {
                                             "Connection status could not be verified."
                                     ) : "Directly deploy posts to your accounts."}
                                 </p>
-                                {connectionStatusState.data?.meta && connectionStatusState.data.metaExpiresAt && (
+                                {connectionStatusState.data?.meta && connectionStatusState.data.metaExpiresAt && getModelState.data?.socialMediaConnectionsEnabled !== false && (
                                     <p className="text-xs text-muted-foreground">
                                         Expires: {new Date(connectionStatusState.data.metaExpiresAt).toLocaleDateString()} at {new Date(connectionStatusState.data.metaExpiresAt).toLocaleTimeString()}
                                     </p>
                                 )}
-                                {connectionStatusState.data?.meta && connectionStatusState.data.metaLastValidated && (
+                                {connectionStatusState.data?.meta && connectionStatusState.data.metaLastValidated && getModelState.data?.socialMediaConnectionsEnabled !== false && (
                                     <p className="text-xs text-muted-foreground">
                                         Last validated: {new Date(connectionStatusState.data.metaLastValidated).toLocaleDateString()} at {new Date(connectionStatusState.data.metaLastValidated).toLocaleTimeString()}
                                     </p>
@@ -430,7 +433,11 @@ function SettingsPageContent() {
                         </div>
                     </div>
                     <div className="flex flex-col gap-2">
-                        {connectionStatusState.data?.meta ? (
+                        {getModelState.data?.socialMediaConnectionsEnabled === false ? (
+                            <Button variant="outline" disabled>
+                                Coming Soon
+                            </Button>
+                        ) : connectionStatusState.data?.meta ? (
                             <>
                                 {(connectionStatusState.data.metaHealth === 'expired' || connectionStatusState.data.metaHealth === 'invalid') ? (
                                     <Button variant="outline" onClick={() => handleConnect('meta')} className="text-amber-600 border-amber-200 hover:bg-amber-50">
@@ -506,7 +513,10 @@ function SettingsPageContent() {
                         <div className="space-y-1">
                             <p className="font-semibold">X (Twitter)</p>
                              <p className="text-sm text-muted-foreground">
-                                {connectionStatusState.data?.x ? "Account connected." : "Deployment to X is coming soon."}
+                                {getModelState.data?.socialMediaConnectionsEnabled === false ?
+                                    "Social media connections are currently disabled by admin." :
+                                    connectionStatusState.data?.x ? "Account connected." : "Deployment to X is coming soon."
+                                }
                             </p>
                         </div>
                     </div>
@@ -582,6 +592,16 @@ function SettingsPageContent() {
                             render={({ field }) => (
                                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-background">
                                 <div className="space-y-0.5"><FormLabel>Enable Freepik API</FormLabel><FormDescription>Allow users to select Freepik as a premium image provider.</FormDescription></div>
+                                <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                                </FormItem>
+                            )}
+                            />
+                            <FormField
+                            control={modelForm.control}
+                            name="socialMediaConnectionsEnabled"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-background">
+                                <div className="space-y-0.5"><FormLabel>Enable Social Media Connections</FormLabel><FormDescription>Allow users to connect and use social media accounts. When disabled, shows "Coming Soon" for all platforms.</FormDescription></div>
                                 <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                                 </FormItem>
                             )}

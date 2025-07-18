@@ -93,6 +93,7 @@ export interface ModelConfig {
   powerfulModel: string;
   paymentMode?: 'live' | 'test';
   freepikEnabled?: boolean;
+  socialMediaConnectionsEnabled?: boolean;
 }
 
 export interface PlanFeature {

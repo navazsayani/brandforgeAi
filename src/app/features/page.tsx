@@ -11,13 +11,13 @@ import PublicHeader from '@/components/PublicHeader';
 const FeatureDetailCard = ({ id, icon: Icon, title, description, benefits }: { id: string; icon: React.ElementType; title: string; description: string; benefits: string[] }) => (
     <Card id={id} className="card-enhanced w-full scroll-mt-24">
         <CardHeader>
-            <div className="flex items-center gap-4">
-                <div className="p-4 bg-primary/10 rounded-xl w-fit">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 text-center sm:text-left">
+                <div className="p-4 bg-primary/10 rounded-xl w-fit mx-auto sm:mx-0">
                     <Icon className="h-10 w-10 text-primary" />
                 </div>
                 <div>
-                    <CardTitle className="text-3xl font-bold">{title}</CardTitle>
-                    <CardDescription className="text-lg mt-1">{description}</CardDescription>
+                    <CardTitle className="text-2xl sm:text-3xl font-bold">{title}</CardTitle>
+                    <CardDescription className="text-base sm:text-lg mt-1">{description}</CardDescription>
                 </div>
             </div>
         </CardHeader>

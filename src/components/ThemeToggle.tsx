@@ -13,7 +13,19 @@ import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/comp
 
 
 export function ThemeToggle() {
-  const { theme, setTheme, resolvedTheme } = useTheme();
+  let theme: 'light' | 'dark' | 'system' = 'system';
+  let setTheme: (theme: 'light' | 'dark' | 'system') => void = () => {};
+  let resolvedTheme: 'light' | 'dark' = 'light';
+
+  try {
+    const themeContext = useTheme();
+    theme = themeContext.theme;
+    setTheme = themeContext.setTheme;
+    resolvedTheme = themeContext.resolvedTheme;
+  } catch (error) {
+    // Theme context not available during SSR/static generation
+    // Use default values
+  }
 
   const themeOptions = [
     {
@@ -131,7 +143,17 @@ export function ThemeToggle() {
 
 // Compact theme toggle for navigation/header use
 export function CompactThemeToggle() {
-  const { theme, setTheme } = useTheme();
+  let theme: 'light' | 'dark' | 'system' = 'system';
+  let setTheme: (theme: 'light' | 'dark' | 'system') => void = () => {};
+
+  try {
+    const themeContext = useTheme();
+    theme = themeContext.theme;
+    setTheme = themeContext.setTheme;
+  } catch (error) {
+    // Theme context not available during SSR/static generation
+    // Use default values
+  }
 
   const themeOptions = [
     { value: 'light', icon: Sun, label: 'Light' },
@@ -148,7 +170,7 @@ export function CompactThemeToggle() {
               <Button
                 variant={theme === option.value ? 'default' : 'ghost'}
                 size="icon"
-                className={cn("h-8 w-8 rounded-full transition-all duration-200", 
+                className={cn("h-8 w-8 rounded-full transition-all duration-200",
                   theme === option.value && "shadow-sm"
                 )}
                 onClick={() => setTheme(option.value)}

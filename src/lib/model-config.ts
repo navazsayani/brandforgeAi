@@ -11,6 +11,7 @@ export const DEFAULT_MODEL_CONFIG: ModelConfig = {
   powerfulModel: 'googleai/gemini-1.5-pro-latest',
   paymentMode: 'test',
   freepikEnabled: true,
+  socialMediaConnectionsEnabled: true,
 };
 
 // Removed in-memory cache to ensure consistency in serverless environments.
