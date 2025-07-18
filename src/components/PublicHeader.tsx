@@ -22,7 +22,7 @@ export default function PublicHeader() {
   const MobileNavMenu = () => (
     <Sheet>
         <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="sm:hidden">
+            <Button variant="ghost" size="icon" className="md:hidden">
                 <Menu className="h-6 w-6" />
                 <span className="sr-only">Open Menu</span>
             </Button>
@@ -56,14 +56,13 @@ export default function PublicHeader() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b">
         <div className="container-responsive flex items-center justify-between h-18">
-            <Link href="/" className="flex items-center gap-3 text-foreground hover:text-primary transition-colors duration-200">
-                <Sparkles className="h-7 w-7 text-primary" />
-                <span className="hidden sm:inline-block text-xl font-bold text-gradient-brand">BrandForge AI</span>
-            </Link>
-
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4">
+                <Link href="/" className="flex items-center gap-3 text-foreground hover:text-primary transition-colors duration-200">
+                    <Sparkles className="h-7 w-7 text-primary" />
+                    <span className="hidden sm:inline-block text-xl font-bold text-gradient-brand">BrandForge AI</span>
+                </Link>
                 {/* Desktop Navigation */}
-                <div className="hidden sm:flex items-center gap-2">
+                <nav className="hidden md:flex items-center gap-2">
                     {navLinks.map((link) => (
                         <Button key={link.href} variant="ghost" className={cn("focus-enhanced", pathname.startsWith(link.href) && "text-primary bg-primary/10")} asChild>
                             <Link href={link.href}>
@@ -71,8 +70,13 @@ export default function PublicHeader() {
                             </Link>
                         </Button>
                     ))}
+                </nav>
+            </div>
+
+            <div className="flex items-center gap-2">
+                 <div className="hidden md:block">
                     <CompactThemeToggle />
-                </div>
+                 </div>
                 
                 {/* Auth buttons, always visible if not logged in */}
                 {!user && (
@@ -93,7 +97,7 @@ export default function PublicHeader() {
                 )}
                 
                 {/* Mobile Hamburger Menu */}
-                <div className="sm:hidden">
+                <div className="md:hidden">
                     <MobileNavMenu />
                 </div>
             </div>
