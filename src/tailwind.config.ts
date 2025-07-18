@@ -7,6 +7,8 @@ export default {
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    // Add the prose class to ensure Tailwind applies typography styles
+    "./src/app/blog/**/*.{js,ts,jsx,tsx,mdx}", 
   ],
   theme: {
     fontFamily: {

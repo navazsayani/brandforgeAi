@@ -78,7 +78,7 @@ export default function BlogPostPageClient({ post }: { post: BlogPost }) {
                         />
                     </div>
                     
-                    <div className="prose prose-lg dark:prose-invert max-w-none mx-auto prose-headings:font-bold prose-headings:text-balance prose-a:text-primary hover:prose-a:underline prose-img:rounded-lg prose-img:shadow-md">
+                    <div className="prose prose-lg dark:prose-invert max-w-none mx-auto prose-p:my-4 prose-headings:font-bold prose-headings:text-balance prose-a:text-primary hover:prose-a:underline prose-img:rounded-lg prose-img:shadow-md">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
                     </div>
                 </article>
