@@ -13,7 +13,7 @@ import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/comp
 
 
 export function ThemeToggle() {
-  let theme: 'light' | 'dark' | 'system' = 'system';
+  let theme: 'light' | 'dark' | 'system' = 'light';
   let setTheme: (theme: 'light' | 'dark' | 'system') => void = () => {};
   let resolvedTheme: 'light' | 'dark' = 'light';
 
@@ -99,7 +99,7 @@ export function ThemeToggle() {
                       </div>
                     </div>
                   </div>
-                  {theme === 'system' && (
+                  {option.value === 'system' && theme === 'system' && (
                     <div className="text-xs text-muted-foreground">
                       Currently: {resolvedTheme}
                     </div>
@@ -143,7 +143,7 @@ export function ThemeToggle() {
 
 // Compact theme toggle for navigation/header use
 export function CompactThemeToggle() {
-  let theme: 'light' | 'dark' | 'system' = 'system';
+  let theme: 'light' | 'dark' | 'system' = 'light';
   let setTheme: (theme: 'light' | 'dark' | 'system') => void = () => {};
 
   try {
