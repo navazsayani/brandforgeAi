@@ -15,9 +15,10 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Send, Image as ImageIconLucide, MessageSquareText, Newspaper, Briefcase, AlertCircle, RefreshCw, Layers, CheckCircle, Loader2, Copy, Rocket, Facebook, Edit, Download, Trash2, Instagram, ExternalLink } from 'lucide-react';
-import type { GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign, InstagramAccount } from '@/types';
+import type { GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign, InstagramAccount, ModelConfig } from '@/types';
 import { cn } from '@/lib/utils';
-import { handleDeleteContentAction, handleUpdateContentStatusAction, handleSimulatedDeployAction, handleUpdateContentAction, handleGetInstagramAccountsAction, type FormState } from '@/lib/actions';
+import { handleDeleteContentAction, handleUpdateContentStatusAction, handleSimulatedDeployAction, handleUpdateContentAction, handleGetInstagramAccountsAction, handleGetSettingsAction, type FormState } from '@/lib/actions';
+import { getModelConfig } from '@/lib/model-config';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -92,8 +93,15 @@ export default function DeploymentHubPage() {
     enabled: !!currentUser,
   });
 
-  const isLoading = isLoadingSocial || isLoadingBlog || isLoadingAds;
-  const fetchError = errorSocial || errorBlog || errorAds;
+  // Fetch model configuration to check if social media connections are enabled
+  const { data: modelConfig, isLoading: isLoadingConfig, error: errorConfig } = useQuery({
+    queryKey: ['modelConfig'],
+    queryFn: () => getModelConfig(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const isLoading = isLoadingSocial || isLoadingBlog || isLoadingAds || isLoadingConfig;
+  const fetchError = errorSocial || errorBlog || errorAds || errorConfig;
 
   const allContent = useMemo(() => {
     const combined = [...socialPosts, ...blogPosts, ...adCampaigns];
@@ -303,10 +311,18 @@ function StatusButton({ newStatus, text, icon, variant = "default", ...props }: 
 function DeployDialog({ item }: { item: DeployableContent }) {
     const { currentUser } = useAuth();
     const { toast } = useToast();
+    const queryClient = useQueryClient();
     const [open, setOpen] = React.useState(false);
     const [accounts, setAccounts] = React.useState<InstagramAccount[]>([]);
     const [selectedAccountId, setSelectedAccountId] = React.useState<string | null>(null);
     const [requestId, setRequestId] = React.useState<string>('');
+
+    // Fetch model configuration to check if social media connections are enabled
+    const { data: modelConfig } = useQuery({
+        queryKey: ['modelConfig'],
+        queryFn: () => getModelConfig(),
+        staleTime: 5 * 60 * 1000, // 5 minutes
+    });
 
     const initialFetchState: FormState<{ accounts: InstagramAccount[] }> = { data: undefined, error: undefined, message: undefined };
     const [fetchState, fetchAccountsAction] = useActionState(handleGetInstagramAccountsAction, initialFetchState);
@@ -408,10 +424,60 @@ function DeployDialog({ item }: { item: DeployableContent }) {
         }
     }, [deployState, toast, setOpen, requestId, item.id]);
     
-    const handleDeploy = (event: React.FormEvent<HTMLFormElement>) => {
+    const handleDeploy = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         
         console.log(`[DEPLOY_FLOW] ${requestId}: Starting deployment process`);
+        
+        // Check if social media connections are enabled for social content
+        const isSocialMediaEnabled = modelConfig?.socialMediaConnectionsEnabled !== false;
+        const isSocialContent = item.type === 'social';
+        
+        // If social media connections are disabled and this is social content, show mock deployment
+        if (isSocialContent && !isSocialMediaEnabled) {
+            console.log(`[DEPLOY_FLOW] ${requestId}: Social media connections disabled, performing mock deployment`);
+            
+            toast({
+                title: "Mock Deployment",
+                description: "Social media connections are disabled. This is a simulated deployment for testing purposes.",
+            });
+            
+            try {
+                // Update content status to deployed for UI purposes
+                const formData = new FormData();
+                formData.append('userId', currentUser?.uid || '');
+                formData.append('docPath', item.docPath);
+                formData.append('newStatus', 'deployed');
+                
+                const result = await handleUpdateContentStatusAction(
+                    { data: undefined, error: undefined, message: undefined },
+                    formData
+                );
+                
+                if (result.data?.success) {
+                    setOpen(false);
+                    // Refresh the data
+                    queryClient.invalidateQueries({ queryKey: ['socialPosts', currentUser?.uid] });
+                    queryClient.invalidateQueries({ queryKey: ['blogPosts', currentUser?.uid] });
+                    queryClient.invalidateQueries({ queryKey: ['adCampaigns', currentUser?.uid] });
+                } else {
+                    toast({
+                        title: "Mock Deployment Failed",
+                        description: result.error || result.message || "Failed to update content status",
+                        variant: "destructive",
+                    });
+                }
+            } catch (error) {
+                console.error('Mock deployment error:', error);
+                toast({
+                    title: "Mock Deployment Error",
+                    description: "An error occurred during mock deployment.",
+                    variant: "destructive",
+                });
+            }
+            
+            return;
+        }
         
         if (!selectedAccountId) {
             console.warn(`[DEPLOY_FLOW] ${requestId}: No account selected for deployment`);
