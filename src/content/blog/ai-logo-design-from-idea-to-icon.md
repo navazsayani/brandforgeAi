@@ -3,7 +3,7 @@ title: "AI Logo Design: From Idea to Icon in Minutes"
 date: "2024-07-05"
 author: "Aarav Sharma"
 excerpt: "Dreaming of a custom logo but dreading the cost and endless revisions? Discover how AI logo generators are empowering small businesses to create stunning, professional logos without the designer price tag."
-image: "/blog/ai-logo-design.svg"
+image: "/blog/logo.png"
 tags: ["AI Logo Design", "Brand Identity", "Small Business", "Logo Generator"]
 ---
 

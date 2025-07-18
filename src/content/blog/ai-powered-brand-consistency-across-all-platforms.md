@@ -3,7 +3,7 @@ title: "AI-Powered Brand Consistency: How to Maintain Your Brand Voice Across Al
 date: "2024-07-20"
 author: "Maya Patel"
 excerpt: "Brand inconsistency kills trust and confuses customers. Discover how AI tools are helping businesses maintain perfect brand alignment across websites, social media, ads, and content—without the manual headache."
-image: "/blog/brand-consistency-ai.svg"
+image: "/blog/ai_brand_consis_v2.png"
 tags: ["Brand Consistency", "AI Branding", "Multi-Platform Marketing", "Brand Management", "Digital Marketing"]
 ---
 

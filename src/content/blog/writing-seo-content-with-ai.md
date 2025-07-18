@@ -3,7 +3,7 @@ title: "Stop Guessing, Start Ranking: How to Write SEO Content with AI"
 date: "2024-07-10"
 author: "Priya Sharma"
 excerpt: "Tired of writing content that never gets seen? SEO feels like a dark art, but AI can be your guiding light. Learn how to use AI to create blog posts that Google and your readers will love."
-image: "/blog/seo-content-ai.svg"
+image: "/blog/stop guessing.png"
 tags: ["SEO", "Content Marketing", "AI Writing", "Blog Strategy"]
 ---
 

@@ -3,7 +3,7 @@ title: "AI Marketing Automation for Small Businesses: Compete with Enterprise Gi
 date: "2024-07-25"
 author: "Rajesh Kumar"
 excerpt: "Small businesses are using AI marketing automation to punch above their weight class. Discover how entrepreneurs are leveraging intelligent tools to create enterprise-level marketing campaigns without the enterprise budget or team."
-image: "/blog/ai-marketing-automation.svg"
+image: "/blog/david_goliath.png"
 tags: ["AI Marketing Automation", "Small Business Marketing", "Marketing Technology", "Business Growth", "Digital Marketing Strategy"]
 ---
 

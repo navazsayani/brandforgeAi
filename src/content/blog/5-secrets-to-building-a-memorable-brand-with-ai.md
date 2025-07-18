@@ -3,7 +3,7 @@ title: "5 Secrets to Building a Brand People Actually Remember, with AI"
 date: "2024-06-25"
 author: "Sameer Khan"
 excerpt: "In a world of endless noise, how do you make your brand's voice heard? The secret isn't shouting louder; it's building a memorable connection. Here's how AI can be your surprising new partner in crafting a brand that sticks."
-image: "/blog/memorable-brand-ai.svg"
+image: "/blog/5 brand types.png"
 tags: ["AI", "Branding", "Marketing", "Strategy"]
 ---
 
