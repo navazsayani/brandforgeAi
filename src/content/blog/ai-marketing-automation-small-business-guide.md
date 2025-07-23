@@ -146,15 +146,19 @@ More importantly, you get your life back. Instead of spending evenings and weeke
 ### Common Concerns and How to Address Them
 
 **"Will AI make my marketing feel robotic?"**
+
 Modern AI tools are designed to enhance your unique voice, not replace it. The best AI marketing feels more human than most manual marketing because it's consistent, timely, and relevant.
 
 **"What if I lose the personal touch?"**
+
 AI handles the routine tasks so you can focus on high-value personal interactions. You'll actually have more time for genuine customer relationships.
 
 **"Is it too expensive for a small business?"**
+
 AI marketing automation often costs less than hiring a part-time marketing assistant, while delivering far better results. Many tools offer free trials and scalable pricing.
 
 **"What if the technology is too complicated?"**
+
 Today's AI marketing tools are designed for business owners, not technical experts. If you can use email and social media, you can use AI marketing automation.
 
 ### Your Competitive Advantage Awaits
