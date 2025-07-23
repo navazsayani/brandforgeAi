@@ -7,8 +7,6 @@ export default {
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
-    // Add the prose class to ensure Tailwind applies typography styles
-    "./src/app/blog/**/*.{js,ts,jsx,tsx,mdx}", 
   ],
   theme: {
     fontFamily: {
@@ -164,6 +162,16 @@ export default {
             '--tw-prose-invert-pre-bg': theme('colors.muted / 1'),
             '--tw-prose-invert-th-borders': theme('colors.border / 1'),
             '--tw-prose-invert-td-borders': theme('colors.border / 1'),
+            // Add paragraph margins
+            p: {
+              marginTop: '1.25em',
+              marginBottom: '1.25em',
+            },
+            // Add list item margins
+            li: {
+              marginTop: '0.5em',
+              marginBottom: '0.5em',
+            }
           },
         },
       }),
