@@ -69,6 +69,40 @@ export async function GET(request: NextRequest) {
   console.log(`[OAuth Callback:${requestId}] Request URL: ${request.url}`);
   console.log(`[OAuth Callback:${requestId}] Parameters - code: ${code ? 'present' : 'missing'}, state: ${state ? 'present' : 'missing'}, error: ${error || 'none'}`);
   
+  // Get state data first to access origin for proper redirects
+  let origin: string | undefined;
+  let userId: string | undefined;
+  
+  if (state) {
+    console.log(`[OAuth Callback:${requestId}] Validating state parameter: ${state}`);
+    const stateDocRef = doc(db, 'oauthStates', state);
+    
+    let stateDocSnap;
+    try {
+      stateDocSnap = await getDoc(stateDocRef);
+      if (stateDocSnap.exists()) {
+        const stateData = stateDocSnap.data();
+        userId = stateData.userId;
+        origin = stateData.origin;
+        console.log(`[OAuth Callback:${requestId}] State validated - userId: ${userId}, origin: ${origin}`);
+        
+        // Clean up state document
+        try {
+          await deleteDoc(stateDocRef);
+          console.log(`[OAuth Callback:${requestId}] State document cleaned up successfully`);
+        } catch (cleanupError: any) {
+          console.warn(`[OAuth Callback:${requestId}] Failed to cleanup state document:`, cleanupError);
+          // Continue processing even if cleanup fails
+        }
+      }
+    } catch (firestoreError: any) {
+      console.error(`[OAuth Callback:${requestId}] Firestore error while fetching state:`, firestoreError);
+      const redirectUrl = new URL('/settings', origin || request.url);
+      redirectUrl.searchParams.set('error', 'Database error during authentication. Please try again.');
+      return NextResponse.redirect(redirectUrl);
+    }
+  }
+
   // Enhanced error handling for OAuth errors
   if (error) {
     console.error(`[OAuth Callback:${requestId}] OAuth error received from ${platform}:`);
@@ -76,7 +110,7 @@ export async function GET(request: NextRequest) {
     console.error(`[OAuth Callback:${requestId}] - Reason: ${errorReason || 'not provided'}`);
     console.error(`[OAuth Callback:${requestId}] - Description: ${errorDescription || 'not provided'}`);
     
-    const redirectUrl = new URL('/settings', request.url);
+    const redirectUrl = new URL('/settings', origin || request.url);
     let errorMessage = `Authorization failed on ${platform}: ${error}`;
     if (errorDescription) {
       errorMessage += ` - ${errorDescription}`;
@@ -87,49 +121,16 @@ export async function GET(request: NextRequest) {
 
   if (!code || !state) {
     console.error(`[OAuth Callback:${requestId}] Missing required parameters - code: ${!!code}, state: ${!!state}`);
-    const redirectUrl = new URL('/settings', request.url);
+    const redirectUrl = new URL('/settings', origin || request.url);
     redirectUrl.searchParams.set('error', 'Incomplete callback from authorization server. Please try connecting again.');
     return NextResponse.redirect(redirectUrl);
   }
-  
-  console.log(`[OAuth Callback:${requestId}] Validating state parameter: ${state}`);
-  const stateDocRef = doc(db, 'oauthStates', state);
-  
-  let stateDocSnap;
-  try {
-    stateDocSnap = await getDoc(stateDocRef);
-  } catch (firestoreError: any) {
-    console.error(`[OAuth Callback:${requestId}] Firestore error while fetching state:`, firestoreError);
-    const redirectUrl = new URL('/settings', request.url);
-    redirectUrl.searchParams.set('error', 'Database error during authentication. Please try again.');
-    return NextResponse.redirect(redirectUrl);
-  }
 
-  if (!stateDocSnap.exists()) {
+  if (!userId || !origin) {
     console.error(`[OAuth Callback:${requestId}] Invalid or expired state parameter. Potential CSRF attack or expired session.`);
-    const redirectUrl = new URL('/settings', request.url);
+    const redirectUrl = new URL('/settings', origin || request.url);
     redirectUrl.searchParams.set('error', 'Invalid or expired authentication session. Please try connecting again.');
     return NextResponse.redirect(redirectUrl);
-  }
-
-  const stateData = stateDocSnap.data();
-  const { userId, origin } = stateData;
-  console.log(`[OAuth Callback:${requestId}] State validated - userId: ${userId}, origin: ${origin}`);
-
-  // Clean up state document
-  try {
-    await deleteDoc(stateDocRef);
-    console.log(`[OAuth Callback:${requestId}] State document cleaned up successfully`);
-  } catch (cleanupError: any) {
-    console.warn(`[OAuth Callback:${requestId}] Failed to cleanup state document:`, cleanupError);
-    // Continue processing even if cleanup fails
-  }
-
-  if (!userId) {
-     console.error(`[OAuth Callback:${requestId}] No userId found in state data. User must be logged in.`);
-     const redirectUrl = new URL('/settings', request.url);
-     redirectUrl.searchParams.set('error', 'You must be logged in to connect an account.');
-     return NextResponse.redirect(redirectUrl);
   }
 
   // --- Enhanced Token Exchange Process ---
@@ -254,7 +255,7 @@ export async function GET(request: NextRequest) {
     }
     
     console.log(`[OAuth Callback:${requestId}] === OAUTH CALLBACK COMPLETED SUCCESSFULLY ===`);
-    const finalRedirectUrl = new URL('/settings', request.url);
+    const finalRedirectUrl = new URL('/settings', origin);
     finalRedirectUrl.searchParams.set('connected', platform);
     finalRedirectUrl.searchParams.set('success', 'true');
     
@@ -268,7 +269,7 @@ export async function GET(request: NextRequest) {
       name: e.name
     });
     
-    const redirectUrl = new URL('/settings', request.url);
+    const redirectUrl = new URL('/settings', origin || request.url);
     redirectUrl.searchParams.set('error', `Connection failed: ${e.message}`);
     redirectUrl.searchParams.set('error_type', 'token_exchange');
     return NextResponse.redirect(redirectUrl);
