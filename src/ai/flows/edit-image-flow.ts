@@ -5,7 +5,7 @@
  *
  * - editImage - A function that handles the image editing process.
  * - EditImageInput - The input type for the editImage function.
- * - EditImageOutput - The return type for the editImage function.
+ * - EditImageOutput - The return type for the function.
  */
 
 import {ai} from '@/ai/genkit';
@@ -26,15 +26,15 @@ const editImageFlow = ai.defineFlow(
     outputSchema: EditImageOutputSchema,
   },
   async (input) => {
-    const { visionModel } = await getModelConfig();
+    const { imageGenerationModel } = await getModelConfig();
 
-    console.log(`[editImageFlow] Starting refinement with model: ${visionModel}`);
+    console.log(`[editImageFlow] Starting refinement with model: ${imageGenerationModel}`);
     console.log(`[editImageFlow] Instruction: ${input.instruction}`);
     console.log(`[editImageFlow] Image data URI (first 100 chars): ${input.imageDataUri.substring(0, 100)}...`);
 
     try {
       const {media} = await ai.generate({
-        model: visionModel,
+        model: imageGenerationModel,
         prompt: [
             { media: { url: input.imageDataUri } },
             { text: `You are an expert photo editor. Your task is to edit the provided image based on the following instruction. Fulfill the request precisely. The output must be a new image that reflects the change. Instruction: "${input.instruction}"` }
