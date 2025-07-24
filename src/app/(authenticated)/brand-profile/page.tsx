@@ -543,24 +543,50 @@ export default function BrandProfilePage() {
     setShowAcceptDialog(true);
   };
   
-  const handleOverwriteImage = () => {
-    if (!acceptedRefinement) return;
-    const { originalUrl, newUrl } = acceptedRefinement;
-    const currentImages = form.getValues("exampleImages") || [];
-    const updatedImages = currentImages.map(img => (img === originalUrl ? newUrl : img));
-    form.setValue('exampleImages', updatedImages, { shouldValidate: true });
-    
-    toast({
-        title: "Image Updated",
-        description: "The original image has been replaced. Click 'Save Brand Profile' to keep the change.",
-    });
-    setShowAcceptDialog(false);
-    setAcceptedRefinement(null);
+  // New helper function to upload a data URI and return the storage URL
+  const uploadDataUriAsImage = async (dataUri: string): Promise<string> => {
+    if (!effectiveUserIdForStorage) {
+      throw new Error("User context unclear. Cannot upload refined image.");
+    }
+    const filePath = `users/${effectiveUserIdForStorage}/brand_example_images/refined_${Date.now()}.png`;
+    const imageStorageRef = storageRef(storage, filePath);
+    const snapshot = await uploadString(imageStorageRef, dataUri, 'data_url');
+    return getDownloadURL(snapshot.ref);
   };
   
-  const handleSaveAsNewImage = () => {
+  const handleOverwriteImage = async () => {
     if (!acceptedRefinement) return;
-    const { newUrl } = acceptedRefinement;
+    setIsUploading(true);
+    try {
+      const newStorageUrl = await uploadDataUriAsImage(acceptedRefinement.newUrl);
+      const currentImages = form.getValues("exampleImages") || [];
+      const updatedImages = currentImages.map(img => (img === acceptedRefinement.originalUrl ? newStorageUrl : img));
+      form.setValue('exampleImages', updatedImages, { shouldValidate: true, shouldDirty: true });
+
+      // Delete the old image from storage if it was a storage URL
+      if (acceptedRefinement.originalUrl.includes("firebasestorage.googleapis.com")) {
+        try {
+          await deleteObject(storageRef(storage, acceptedRefinement.originalUrl));
+        } catch (deleteError) {
+          console.warn("Failed to delete old image, it may be orphaned:", deleteError);
+        }
+      }
+      
+      toast({
+        title: "Image Updated",
+        description: "The original image has been replaced. Click 'Save Brand Profile' to finalize.",
+      });
+    } catch (error) {
+      toast({ title: "Upload Failed", description: "Could not upload the new image. Please try again.", variant: "destructive" });
+    } finally {
+      setIsUploading(false);
+      setShowAcceptDialog(false);
+      setAcceptedRefinement(null);
+    }
+  };
+  
+  const handleSaveAsNewImage = async () => {
+    if (!acceptedRefinement) return;
     const currentImages = form.getValues("exampleImages") || [];
 
     if (currentImages.length >= maxImagesAllowed) {
@@ -569,19 +595,30 @@ export default function BrandProfilePage() {
           description: `Cannot save as new. Your plan allows a maximum of ${maxImagesAllowed} example images.`,
           variant: "destructive",
         });
+        setShowAcceptDialog(false);
+        setAcceptedRefinement(null);
         return;
     }
+    
+    setIsUploading(true);
+    try {
+      const newStorageUrl = await uploadDataUriAsImage(acceptedRefinement.newUrl);
+      const updatedImages = [...currentImages, newStorageUrl];
+      form.setValue('exampleImages', updatedImages, { shouldValidate: true, shouldDirty: true });
 
-    const updatedImages = [...currentImages, newUrl];
-    form.setValue('exampleImages', updatedImages, { shouldValidate: true });
-
-    toast({
-        title: "Saved as New Image",
-        description: "The refined image has been added to your example images. Click 'Save Brand Profile' to keep the change.",
-    });
-    setShowAcceptDialog(false);
-    setAcceptedRefinement(null);
+      toast({
+          title: "Saved as New Image",
+          description: "The refined image has been added. Click 'Save Brand Profile' to finalize.",
+      });
+    } catch (error) {
+       toast({ title: "Upload Failed", description: "Could not upload the new image. Please try again.", variant: "destructive" });
+    } finally {
+       setIsUploading(false);
+       setShowAcceptDialog(false);
+       setAcceptedRefinement(null);
+    }
   };
+
 
   if (isAuthLoading || (isBrandContextLoading && !currentProfileBeingEdited && !(isAdmin && adminTargetUserId))) {
     return (
@@ -611,13 +648,15 @@ export default function BrandProfilePage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setAcceptedRefinement(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSaveAsNewImage} disabled={(form.getValues("exampleImages")?.length || 0) >= maxImagesAllowed}>
+            <Button variant="ghost" onClick={() => { setShowAcceptDialog(false); setAcceptedRefinement(null); }} disabled={isUploading}>Cancel</Button>
+            <Button onClick={handleSaveAsNewImage} disabled={(form.getValues("exampleImages")?.length || 0) >= maxImagesAllowed || isUploading}>
+                {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                 Save as New Image
-            </AlertDialogAction>
-            <AlertDialogAction onClick={handleOverwriteImage} className="btn-gradient-primary">
+            </Button>
+            <Button onClick={handleOverwriteImage} className="btn-gradient-primary" disabled={isUploading}>
+                {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                 Overwrite Original
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -992,7 +1031,7 @@ export default function BrandProfilePage() {
                 size="lg"
                 disabled={isAuthLoading || isBrandContextLoading || isAdminLoadingTargetProfile || form.formState.isSubmitting || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing || isLoadingAdminProfiles}
               >
-                {(isUploadingLogo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null)}
+                {(isUploadingLogo || isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null)}
                 {isUploadingLogo ? 'Uploading & Saving...' : (isUploading ? 'Uploading Image(s)...' : (isAuthLoading || isBrandContextLoading || isAdminLoadingTargetProfile ? 'Loading...' : (form.formState.isSubmitting ? 'Saving...' : (isExtracting ? 'Extracting...' : 'Save Brand Profile'))))}
               </Button>
             </CardFooter>
@@ -1002,4 +1041,3 @@ export default function BrandProfilePage() {
     </>
   );
 }
-
