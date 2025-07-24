@@ -11,16 +11,9 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { getModelConfig } from '@/lib/model-config';
+import { EnhanceRefinePromptInputSchema, EnhanceRefinePromptOutputSchema, type EnhanceRefinePromptInput, type EnhanceRefinePromptOutput } from '@/types';
 
-export const EnhanceRefinePromptInputSchema = z.object({
-  instruction: z.string().min(3, { message: "Instruction must be at least 3 characters." }).describe('The user-provided simple instruction to be enhanced.'),
-});
-export type EnhanceRefinePromptInput = z.infer<typeof EnhanceRefinePromptInputSchema>;
-
-export const EnhanceRefinePromptOutputSchema = z.object({
-  enhancedInstruction: z.string().describe('The AI-enhanced, more detailed instruction for the image editing model.'),
-});
-export type EnhanceRefinePromptOutput = z.infer<typeof EnhanceRefinePromptOutputSchema>;
+export type { EnhanceRefinePromptInput, EnhanceRefinePromptOutput };
 
 export async function enhanceRefinePrompt(input: EnhanceRefinePromptInput): Promise<EnhanceRefinePromptOutput> {
   return enhanceRefinePromptFlow(input);

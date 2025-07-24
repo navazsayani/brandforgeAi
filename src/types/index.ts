@@ -1,4 +1,6 @@
 
+import { z } from 'zod';
+
 export interface BrandData {
   brandName?: string;
   websiteUrl?: string;
@@ -170,3 +172,25 @@ export interface InstagramAccount {
   id: string;
   username: string;
 }
+
+// Schemas for new Image Refinement feature
+export const EditImageInputSchema = z.object({
+  imageDataUri: z.string().describe("The base image to edit, as a data URI."),
+  instruction: z.string().min(3, { message: "Instruction must be at least 3 characters." }).describe('The user\'s instruction on how to edit the image.'),
+});
+export type EditImageInput = z.infer<typeof EditImageInputSchema>;
+
+export const EditImageOutputSchema = z.object({
+  editedImageDataUri: z.string().describe('The edited image as a data URI.'),
+});
+export type EditImageOutput = z.infer<typeof EditImageOutputSchema>;
+
+export const EnhanceRefinePromptInputSchema = z.object({
+  instruction: z.string().min(3, { message: "Instruction must be at least 3 characters." }).describe('The user-provided simple instruction to be enhanced.'),
+});
+export type EnhanceRefinePromptInput = z.infer<typeof EnhanceRefinePromptInputSchema>;
+
+export const EnhanceRefinePromptOutputSchema = z.object({
+  enhancedInstruction: z.string().describe('The AI-enhanced, more detailed instruction for the image editing model.'),
+});
+export type EnhanceRefinePromptOutput = z.infer<typeof EnhanceRefinePromptOutputSchema>;

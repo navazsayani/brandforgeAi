@@ -11,17 +11,9 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { getModelConfig } from '@/lib/model-config';
+import { EditImageInputSchema, EditImageOutputSchema, type EditImageInput, type EditImageOutput } from '@/types';
 
-export const EditImageInputSchema = z.object({
-  imageDataUri: z.string().describe("The base image to edit, as a data URI."),
-  instruction: z.string().min(3, { message: "Instruction must be at least 3 characters." }).describe('The user\'s instruction on how to edit the image.'),
-});
-export type EditImageInput = z.infer<typeof EditImageInputSchema>;
-
-export const EditImageOutputSchema = z.object({
-  editedImageDataUri: z.string().describe('The edited image as a data URI.'),
-});
-export type EditImageOutput = z.infer<typeof EditImageOutputSchema>;
+export type { EditImageInput, EditImageOutput };
 
 export async function editImage(input: EditImageInput): Promise<EditImageOutput> {
   return editImageFlow(input);
