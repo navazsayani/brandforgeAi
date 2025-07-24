@@ -122,7 +122,12 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
   const { pending: isProcessing } = useFormStatus();
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      // Only allow closing if not processing.
+      if (!isProcessing) {
+        onOpenChange(open);
+      }
+    }}>
       <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0">
         <DialogHeader className="p-6 pb-2 border-b">
           <DialogTitle className="flex items-center gap-2 text-2xl"><Wand2 className="w-7 h-7 text-primary"/> Image Refinement Studio</DialogTitle>
