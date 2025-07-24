@@ -3,13 +3,12 @@
 
 import React, { useState, useActionState, startTransition, useEffect, useMemo } from 'react';
 import NextImage from 'next/image';
-import { useFormStatus } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Wand2, Sparkles, ArrowLeft, X, Check, RefreshCcw } from 'lucide-react';
+import { Loader2, Wand2, Sparkles, X, Check, RefreshCcw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { handleEditImageAction, handleEnhanceRefinePromptAction } from '@/lib/actions';
@@ -27,12 +26,11 @@ interface RefineImageDialogProps {
   onRefinementAccepted: (originalUrl: string, newUrl: string) => void;
 }
 
-function RefineSubmitButton({ children, ...props }: React.ComponentProps<typeof Button>) {
-  const { pending } = useFormStatus();
+function RefineSubmitButton({ isProcessing, children, ...props }: React.ComponentProps<typeof Button> & { isProcessing: boolean }) {
   return (
-    <Button type="submit" {...props} disabled={pending || props.disabled}>
-      {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-      {pending ? 'Generating...' : children}
+    <Button type="submit" {...props} disabled={isProcessing || props.disabled}>
+      {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+      {isProcessing ? 'Generating...' : children}
     </Button>
   );
 }
@@ -43,27 +41,32 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
 
   const [editState, editAction] = useActionState(handleEditImageAction, initialEditImageState);
   const [enhanceState, enhanceAction] = useActionState(handleEnhanceRefinePromptAction, initialEnhancePromptState);
+  
+  const [isEditing, setIsEditing] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
 
   const [instruction, setInstruction] = useState('');
   const [refinementHistory, setRefinementHistory] = useState<string[]>([]);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
-
-  const { pending: isEnhancing } = useFormStatus();
+  
+  const isProcessing = isEditing || isEnhancing;
 
   useEffect(() => {
     if (imageToRefine && isOpen) {
       setCurrentImage(imageToRefine);
       setRefinementHistory([imageToRefine]);
-    } else {
+    } else if (!isOpen) {
       // Reset state when dialog closes
       setCurrentImage(null);
       setRefinementHistory([]);
+      setInstruction('');
+      // Reset action states if needed
     }
-    setInstruction('');
   }, [imageToRefine, isOpen]);
 
 
   useEffect(() => {
+    setIsEditing(false); // Action is complete
     if (editState.data?.editedImageDataUri) {
       const newImage = editState.data.editedImageDataUri;
       setCurrentImage(newImage);
@@ -76,6 +79,7 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
   }, [editState, toast]);
 
   useEffect(() => {
+    setIsEnhancing(false); // Action is complete
     if (enhanceState.data?.enhancedInstruction) {
       setInstruction(enhanceState.data.enhancedInstruction);
       toast({ title: "Prompt Enhanced", description: "Your refinement instruction has been improved by AI." });
@@ -90,6 +94,7 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
       toast({ title: "Instruction too short", description: "Please provide a longer instruction to enhance.", variant: "default" });
       return;
     }
+    setIsEnhancing(true);
     const formData = new FormData();
     formData.append("instruction", instruction);
     startTransition(() => enhanceAction(formData));
@@ -98,6 +103,7 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
   const handleRefineSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!currentImage || !instruction) return;
+    setIsEditing(true);
     const formData = new FormData();
     formData.append("userId", userId || "");
     formData.append("imageDataUri", currentImage);
@@ -119,15 +125,8 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
     onOpenChange(false);
   };
 
-  const { pending: isProcessing } = useFormStatus();
-
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      // Only allow closing if not processing.
-      if (!isProcessing) {
-        onOpenChange(open);
-      }
-    }}>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0">
         <DialogHeader className="p-6 pb-2 border-b">
           <DialogTitle className="flex items-center gap-2 text-2xl"><Wand2 className="w-7 h-7 text-primary"/> Image Refinement Studio</DialogTitle>
@@ -138,7 +137,7 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
           {/* Main Content Area */}
           <div className="flex flex-col gap-6">
             <div className="relative aspect-square w-full bg-muted rounded-lg overflow-hidden border-2 border-dashed flex items-center justify-center">
-              {isProcessing && !editState.data ? (
+              {isEditing ? (
                 <div className="flex flex-col items-center justify-center text-muted-foreground">
                   <Loader2 className="w-12 h-12 animate-spin text-primary mb-4"/>
                   <p className="font-semibold">Generating refinement...</p>
@@ -168,7 +167,7 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
                     type="button"
                     variant="ghost" size="icon"
                     onClick={handleEnhancePrompt}
-                    disabled={isEnhancing || isProcessing || instruction.length < 3}
+                    disabled={isEnhancing || isEditing || instruction.length < 3}
                     className="absolute bottom-2 right-2 h-9 w-9 text-muted-foreground hover:text-primary"
                     title="Enhance instruction with AI"
                   >
@@ -176,7 +175,7 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
                   </Button>
                 </div>
               </div>
-              <RefineSubmitButton className="w-full text-base py-3" disabled={isProcessing || !instruction}>
+              <RefineSubmitButton className="w-full text-base py-3" isProcessing={isEditing} disabled={isProcessing || !instruction}>
                 Generate Refinement
               </RefineSubmitButton>
               {editState.error && <p className="text-sm text-destructive text-center">{editState.error}</p>}
