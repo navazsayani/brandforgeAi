@@ -524,13 +524,15 @@ export default function BrandProfilePage() {
   };
 
   const handleAcceptRefinement = (originalUrl: string, newUrl: string) => {
+    // When refining an image from the Brand Profile, replace the old URL with the new one.
     const currentImages = form.getValues("exampleImages") || [];
-    const updatedImages = currentImages.map(img => img === originalUrl ? newUrl : img);
+    const updatedImages = currentImages.map(img => (img === originalUrl ? newUrl : img));
     form.setValue('exampleImages', updatedImages);
-    setSessionLastImageGenerationResult({
-        ...sessionLastImageGenerationResult,
-        generatedImages: [newUrl],
-    } as any);
+    
+    toast({
+        title: "Image Updated",
+        description: "The refined image has replaced the original. Click 'Save Brand Profile' to keep the change.",
+    });
   };
 
   if (isAuthLoading || (isBrandContextLoading && !currentProfileBeingEdited && !(isAdmin && adminTargetUserId))) {

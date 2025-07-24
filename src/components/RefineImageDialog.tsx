@@ -51,7 +51,7 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
   const { pending: isEnhancing } = useFormStatus();
 
   useEffect(() => {
-    if (imageToRefine) {
+    if (imageToRefine && isOpen) {
       setCurrentImage(imageToRefine);
       setRefinementHistory([imageToRefine]);
     } else {
@@ -59,7 +59,8 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
       setRefinementHistory([]);
     }
     setInstruction('');
-  }, [imageToRefine]);
+  }, [imageToRefine, isOpen]);
+
 
   useEffect(() => {
     if (editState.data?.editedImageDataUri) {
