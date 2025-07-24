@@ -9,7 +9,6 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
 import { getModelConfig } from '@/lib/model-config';
 import { EditImageInputSchema, EditImageOutputSchema, type EditImageInput, type EditImageOutput } from '@/types';
 
@@ -26,6 +25,7 @@ const editImageFlow = ai.defineFlow(
     outputSchema: EditImageOutputSchema,
   },
   async (input) => {
+    // IMPORTANT: Use the dedicated image generation model for this task.
     const { imageGenerationModel } = await getModelConfig();
 
     console.log(`[editImageFlow] Starting refinement with model: ${imageGenerationModel}`);
@@ -33,11 +33,29 @@ const editImageFlow = ai.defineFlow(
     console.log(`[editImageFlow] Image data URI (first 100 chars): ${input.imageDataUri.substring(0, 100)}...`);
 
     try {
+        const enhancedPrompt = `
+You are an expert AI photo editor. Your task is to edit the provided image based on the user's instruction.
+Your goal is to fulfill the user's request precisely and with high fidelity.
+
+**CRITICAL INSTRUCTIONS:**
+1.  **Analyze the original image:** Understand its subject, style, composition, and lighting.
+2.  **Analyze the user's instruction:** Identify the core intent of the change requested.
+3.  **Perform the edit:** Modify the image according to the instruction. The output must be a new image that reflects the change.
+    - If the user asks to "add" something, integrate it seamlessly.
+    - If the user asks to "change" something (e.g., color, background), alter only that element while preserving the rest of the image's integrity.
+    - If the user asks to "make it look like X", apply the style X while maintaining the original subject and composition.
+4.  **Maintain Quality:** The output image should be of the same or higher quality than the original. Avoid introducing artifacts or blurriness unless specifically requested.
+5.  **Return ONLY the image:** Your final output must be just the edited image. Do not add text, watermarks, or any other annotations to the image itself.
+
+**User's Edit Instruction:**
+"${input.instruction}"
+`;
+      
       const {media} = await ai.generate({
         model: imageGenerationModel,
         prompt: [
             { media: { url: input.imageDataUri } },
-            { text: `You are an expert photo editor. Your task is to edit the provided image based on the following instruction. Fulfill the request precisely. The output must be a new image that reflects the change. Instruction: "${input.instruction}"` }
+            { text: enhancedPrompt }
         ],
         config: {
           responseModalities: ['TEXT', 'IMAGE'],

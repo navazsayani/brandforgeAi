@@ -31,18 +31,16 @@ import type { GenerateImagesInput } from '@/ai/flows/generate-images';
 import type { PopulateImageFormOutput } from '@/ai/flows/populate-image-form-flow';
 import type { PopulateSocialFormOutput } from '@/ai/flows/populate-social-form-flow';
 import type { PopulateBlogFormOutput } from '@/ai/flows/populate-blog-form-flow';
-import type { EditImageOutput } from '@/ai/flows/edit-image-flow';
-import type { EnhanceRefinePromptOutput } from '@/ai/flows/enhance-refine-prompt-flow';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; 
 import { industries, imageStylePresets, freepikImagen3EffectColors, freepikImagen3EffectLightnings, freepikImagen3EffectFramings, freepikImagen3AspectRatios, generalAspectRatios, blogTones, freepikValidStyles, socialPostGoals, socialTones, blogArticleStyles, DEFAULT_PLANS_CONFIG } from '@/lib/constants';
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import SocialMediaPreviews from '@/components/SocialMediaPreviews';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { RefineImageDialog } from '@/components/RefineImageDialog';
 import { Badge } from '@/components/ui/badge';
 
-// --- START: Image Grid Fix Components ---
+
 /**
  * ImprovedImageGrid Component
  * This component replaces the existing image grid in the Content Studio page.
@@ -164,64 +162,62 @@ const ImageGridItem = ({
   };
 
   return (
-    <div className="relative group w-full overflow-hidden rounded-md border bg-muted aspect-video">
-      {isDisplayableImage ? (
-        <>
-          <NextImage
-            src={displayUrl}
-            alt={`Generated brand image ${index + 1}`}
-            fill
-            sizes="(max-width: 639px) 90vw, (max-width: 767px) 45vw, (max-width: 1023px) 30vw, 23vw"
-            style={{objectFit: 'contain', objectPosition: 'center'}}
-            data-ai-hint="brand marketing"
-            className="transition-opacity duration-300 opacity-100 group-hover:opacity-80"
-          />
-          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-2 z-10">
+    <Card className="relative group w-full overflow-hidden rounded-md shadow-md hover:shadow-xl transition-shadow duration-300">
+        <div className="relative w-full overflow-hidden rounded-t-md border-b bg-muted aspect-video">
+            {isDisplayableImage ? (
+                <NextImage
+                    src={displayUrl}
+                    alt={`Generated brand image ${index + 1}`}
+                    fill
+                    sizes="(max-width: 639px) 90vw, (max-width: 767px) 45vw, (max-width: 1023px) 30vw, 23vw"
+                    style={{objectFit: 'contain', objectPosition: 'center'}}
+                    data-ai-hint="brand marketing"
+                    className="transition-opacity duration-300 opacity-100 group-hover:opacity-80"
+                />
+            ) : isTaskId ? (
+                <div className="flex flex-col items-center justify-center h-full text-xs text-muted-foreground p-2 text-center">
+                <Loader2 className="w-6 h-6 animate-spin mb-2" />
+                Freepik image task pending. <br/> Task ID: {url.substring(8).substring(0,8)}...
+                <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCheckFreepikTask}
+                    disabled={isCheckingStatus}
+                    className="mt-2"
+                >
+                    {isCheckingStatus ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+                    Check Status
+                </Button>
+                </div>
+            ) : (
+                <div className="flex items-center justify-center h-full text-xs text-muted-foreground">
+                Image not available
+                </div>
+            )}
+        </div>
+        <div className="p-3 bg-card rounded-b-md flex flex-col sm:flex-row gap-2">
             <Button
                 variant="outline"
-                size="icon"
-                className="h-8 w-8 bg-background/70 hover:bg-background"
+                size="sm"
+                className="w-full"
                 onClick={() => onRefine(displayUrl)}
-                title="Refine image with AI"
+                disabled={!isDisplayableImage}
             >
-                <Wand2 className="h-4 w-4"/>
+                <Wand2 className="h-4 w-4 mr-2"/> Refine
             </Button>
             <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 bg-background/70 hover:bg-background"
+                variant="secondary"
+                size="sm"
+                className="w-full"
                 onClick={() => onDownload(displayUrl, `generated-image-${index + 1}.png`)}
-                title="Download image"
+                disabled={!isDisplayableImage}
             >
-                <Download className="h-4 w-4"/>
+                <Download className="h-4 w-4 mr-2"/> Download
             </Button>
-          </div>
-        </>
-      ) : isTaskId ? (
-        <div className="flex flex-col items-center justify-center h-full text-xs text-muted-foreground p-2 text-center">
-          <Loader2 className="w-6 h-6 animate-spin mb-2" />
-          Freepik image task pending. <br/> Task ID: {url.substring(8).substring(0,8)}...
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleCheckFreepikTask}
-            disabled={isCheckingStatus}
-            className="mt-2"
-          >
-            {isCheckingStatus ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
-            Check Status
-          </Button>
         </div>
-      ) : (
-        <div className="flex items-center justify-center h-full text-xs text-muted-foreground">
-          Image not available
-        </div>
-      )}
-    </div>
+    </Card>
   );
 };
-// --- END: Image Grid Fix Components ---
-
 
 const initialImageFormState: FormState<{ generatedImages: string[]; promptUsed: string; providerUsed: string; }>= { error: undefined, data: undefined, message: undefined };
 const initialSocialFormState: FormState<{ caption: string; hashtags: string; imageSrc: string | null }> = { error: undefined, data: undefined, message: undefined };
@@ -234,8 +230,6 @@ const initialPopulateSocialFormState: FormState<PopulateSocialFormOutput> = { er
 const initialPopulateBlogFormState: FormState<PopulateBlogFormOutput> = { error: undefined, data: undefined, message: undefined };
 const initialFreepikTaskStatusState: FormState<{ status: string; images: string[] | null; taskId: string;}> = { error: undefined, data: undefined, message: undefined, taskId: "" };
 const initialPlansState: FormState<PlansConfig> = { data: undefined, error: undefined, message: undefined };
-const initialEditImageState: FormState<EditImageOutput> = { error: undefined, data: undefined, message: undefined };
-const initialEnhanceRefinePromptState: FormState<EnhanceRefinePromptOutput> = { error: undefined, data: undefined, message: undefined };
 
 
 type SocialImageChoice = 'generated' | 'profile' | 'library' | null;
@@ -368,14 +362,8 @@ export default function ContentStudioPage() {
   const [freepikEnabled, setFreepikEnabled] = useState(false);
 
   // State for image refinement
-  const [refineState, refineAction] = useActionState(handleEditImageAction, initialEditImageState);
-  const [enhanceRefineState, enhanceRefineAction] = useActionState(handleEnhanceRefinePromptAction, initialEnhanceRefinePromptState);
-  const [isRefiningImage, setIsRefiningImage] = useState(false);
-  const [isEnhancingRefine, setIsEnhancingRefine] = useState(false);
   const [refineModalOpen, setRefineModalOpen] = useState(false);
   const [imageToRefine, setImageToRefine] = useState<string | null>(null);
-  const [refineInstruction, setRefineInstruction] = useState("");
-  const [refinedImage, setRefinedImage] = useState<string | null>(null);
 
   const isPremiumActive = useMemo(() => {
     if (!brandData) return false;
@@ -776,29 +764,6 @@ export default function ContentStudioPage() {
             toast({ title: "Population Error", description: populateBlogFormState.error, variant: "destructive" });
         }
     }, [populateBlogFormState, toast]);
-
-  // Effects for image refinement
-  useEffect(() => {
-    setIsRefiningImage(false);
-    if (refineState.data) {
-      setRefinedImage(refineState.data.editedImageDataUri);
-      toast({ title: "Refinement Complete", description: "Image has been updated with your instructions." });
-    }
-    if (refineState.error) {
-      toast({ title: "Refinement Failed", description: refineState.error, variant: "destructive" });
-    }
-  }, [refineState, toast]);
-
-  useEffect(() => {
-    setIsEnhancingRefine(false);
-    if (enhanceRefineState.data) {
-      setRefineInstruction(enhanceRefineState.data.enhancedInstruction);
-      toast({ title: "Prompt Enhanced", description: "Your refinement instruction has been improved by AI." });
-    }
-    if (enhanceRefineState.error) {
-      toast({ title: "Enhancement Failed", description: enhanceRefineState.error, variant: "destructive" });
-    }
-  }, [enhanceRefineState, toast]);
 
   const copyToClipboard = (text: string, type: string) => {
     navigator.clipboard.writeText(text);
@@ -1444,47 +1409,14 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
   const handleOpenRefineModal = (imageUrl: string) => {
     setImageToRefine(imageUrl);
     setRefineModalOpen(true);
-    setRefinedImage(null);
-    setRefineInstruction("");
-  };
-
-  const handleRefineInstructionEnhance = () => {
-    if (refineInstruction.trim().length < 3) {
-      toast({ title: "Instruction too short", description: "Please provide a longer instruction to enhance.", variant: "default" });
-      return;
-    }
-    setIsEnhancingRefine(true);
-    const formData = new FormData();
-    formData.append("instruction", refineInstruction);
-    startTransition(() => enhanceRefineAction(formData));
   };
   
-  const handleRefineSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!imageToRefine || !refineInstruction) return;
-
-    setIsRefiningImage(true);
-    const formData = new FormData();
-    formData.append("userId", userId || "");
-    formData.append("imageDataUri", imageToRefine);
-    formData.append("instruction", refineInstruction);
-    startTransition(() => refineAction(formData));
-  };
-  
-  const handleAcceptRefinement = () => {
-    if (!refinedImage) return;
-
-    // Replace the original image in the main generation results with the new one
-    const updatedImages = lastSuccessfulGeneratedImageUrls.map(url =>
-      url === imageToRefine ? refinedImage : url
-    );
-    setSessionLastImageGenerationResult(prev => prev ? {...prev, generatedImages: updatedImages} : null);
-    
-    // Reset and close the modal
-    setRefineModalOpen(false);
-    setImageToRefine(null);
-    setRefinedImage(null);
-    setRefineInstruction("");
+  const handleAcceptRefinement = (originalUrl: string, newUrl: string) => {
+    setSessionLastImageGenerationResult(prev => {
+        if (!prev) return null;
+        const updatedImages = prev.generatedImages.map(url => url === originalUrl ? newUrl : url);
+        return { ...prev, generatedImages: updatedImages };
+    });
   };
 
   return (
@@ -1501,79 +1433,12 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
           </div>
       </div>
 
-      <Dialog open={refineModalOpen} onOpenChange={setRefineModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
-            <DialogHeader>
-                <DialogTitle className="flex items-center gap-2"><Wand2 className="w-6 h-6 text-primary"/> Refine Image with AI</DialogTitle>
-                <DialogDescription>Instruct the AI on how to change your image. Each refinement is an iterative step.</DialogDescription>
-            </DialogHeader>
-            <div className="grid md:grid-cols-2 gap-6 overflow-y-auto flex-1 p-1">
-                <div className="flex flex-col gap-4">
-                    <div className="relative aspect-square w-full bg-muted rounded-lg overflow-hidden border">
-                        {imageToRefine && <NextImage src={imageToRefine} alt="Original image to refine" fill className="object-contain"/>}
-                        <Badge variant="secondary" className="absolute top-2 left-2">Original</Badge>
-                    </div>
-                    <div className="relative aspect-square w-full bg-muted rounded-lg overflow-hidden border">
-                         {isRefiningImage ? (
-                            <div className="flex items-center justify-center h-full"><Loader2 className="w-8 h-8 animate-spin text-primary"/></div>
-                         ) : refinedImage ? (
-                            <NextImage src={refinedImage} alt="Refined image" fill className="object-contain" />
-                         ) : (
-                            <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Refined image will appear here</div>
-                         )}
-                         <Badge variant="default" className="absolute top-2 left-2">Refined</Badge>
-                    </div>
-                </div>
-                <div className="flex flex-col gap-4">
-                    <form onSubmit={handleRefineSubmit} className="space-y-4">
-                        <div>
-                            <Label htmlFor="refine-instruction" className="text-base font-medium">Instruction</Label>
-                            <p className="text-xs text-muted-foreground mb-2">Be specific. E.g., &quot;Change the car to red&quot;, &quot;Add sunglasses to the person&quot;, &quot;Make the background a cityscape at night&quot;.</p>
-                            <div className="relative">
-                                <Textarea
-                                    id="refine-instruction"
-                                    value={refineInstruction}
-                                    onChange={(e) => setRefineInstruction(e.target.value)}
-                                    placeholder="Type your change here..."
-                                    rows={5}
-                                    className="pr-12"
-                                />
-                                <Button
-                                    type="button"
-                                    variant="ghost" size="icon"
-                                    onClick={handleRefineInstructionEnhance}
-                                    disabled={isEnhancingRefine || refineInstruction.length < 3}
-                                    className="absolute bottom-2 right-2 h-8 w-8 text-muted-foreground hover:text-primary"
-                                    title="Enhance instruction with AI"
-                                >
-                                    {isEnhancingRefine ? <Loader2 className="w-4 h-4 animate-spin" /> : <SparklesIcon className="w-4 h-4"/>}
-                                </Button>
-                            </div>
-                        </div>
-                        <SubmitButton className="w-full" loadingText="Generating..." disabled={isRefiningImage || !refineInstruction}>
-                            <Wand2 className="mr-2 h-4 w-4"/> Generate Refinement
-                        </SubmitButton>
-                        {refineState.error && <p className="text-sm text-destructive">{refineState.error}</p>}
-                    </form>
-                </div>
-            </div>
-            <DialogFooter>
-                <Button variant="outline" onClick={() => setRefineModalOpen(false)}>Close</Button>
-                <Button disabled={!refinedImage || isRefiningImage} onClick={() => {
-                    if (refinedImage) {
-                        setImageToRefine(refinedImage); // The new image becomes the base for next refinement
-                        setRefinedImage(null);
-                        setRefineInstruction("");
-                    }
-                }}>
-                    <RefreshCw className="mr-2 h-4 w-4"/> Continue Refining
-                </Button>
-                <Button disabled={!refinedImage || isRefiningImage} onClick={handleAcceptRefinement}>
-                    <Check className="mr-2 h-4 w-4"/> Accept & Use This Image
-                </Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
+      <RefineImageDialog
+        isOpen={refineModalOpen}
+        onOpenChange={setRefineModalOpen}
+        imageToRefine={imageToRefine}
+        onRefinementAccepted={handleAcceptRefinement}
+      />
 
 
       <Tabs defaultValue="image" value={activeTab} onValueChange={setActiveTab} className="w-full">

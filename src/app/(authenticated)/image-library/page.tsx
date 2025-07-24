@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useActionState, useEffect, useRef } from 'react';
+import React, { useActionState, useEffect, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import NextImage from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -9,7 +9,7 @@ import { db } from '@/lib/firebaseConfig';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import type { SavedGeneratedImage } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Images, UserCircle, FileImage, Trash2, Loader2 } from 'lucide-react';
+import { AlertCircle, Images, UserCircle, FileImage, Trash2, Loader2, Wand2 } from 'lucide-react';
 import { Alert, AlertTitle } from '@/components/ui/alert';
 import { useBrand } from '@/contexts/BrandContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { handleDeleteSavedImageAction } from '@/lib/actions';
 import type { FormState as DeleteFormState } from '@/lib/actions';
+import { RefineImageDialog } from '@/components/RefineImageDialog';
 
 
 const fetchSavedLibraryImages = async (userId: string): Promise<SavedGeneratedImage[]> => {
@@ -52,7 +53,7 @@ function DeleteButton() {
     );
 }
 
-function SavedImageCard({ image, userId }: { image: SavedGeneratedImage; userId: string }) {
+function SavedImageCard({ image, userId, onRefineClick }: { image: SavedGeneratedImage; userId: string; onRefineClick: (url: string) => void; }) {
     const { toast } = useToast();
     const queryClient = useQueryClient();
     const formRef = useRef<HTMLFormElement>(null);
@@ -71,7 +72,7 @@ function SavedImageCard({ image, userId }: { image: SavedGeneratedImage; userId:
     }, [state, toast, queryClient, userId]);
 
     return (
-        <Card className="overflow-hidden shadow-md hover:shadow-xl transition-shadow group">
+        <Card className="overflow-hidden shadow-md hover:shadow-xl transition-shadow group flex flex-col">
             <div className="relative w-full aspect-square bg-muted overflow-hidden">
                 <NextImage
                     src={image.storageUrl}
@@ -88,13 +89,17 @@ function SavedImageCard({ image, userId }: { image: SavedGeneratedImage; userId:
                     <DeleteButton />
                 </form>
             </div>
-            <CardContent className="p-3 space-y-1">
-                <p className="text-xs text-muted-foreground truncate" title={image.prompt}>
+            <CardContent className="p-3 space-y-2 flex-grow flex flex-col">
+                <p className="text-xs text-muted-foreground truncate flex-grow" title={image.prompt}>
                     <strong>Prompt:</strong> {image.prompt || 'N/A'}
                 </p>
                 <p className="text-xs text-muted-foreground truncate" title={image.style}>
                     <strong>Style:</strong> {image.style || 'N/A'}
                 </p>
+                <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => onRefineClick(image.storageUrl)}>
+                    <Wand2 className="w-4 h-4 mr-2" />
+                    Refine with AI
+                </Button>
             </CardContent>
         </Card>
     );
@@ -104,6 +109,11 @@ function SavedImageCard({ image, userId }: { image: SavedGeneratedImage; userId:
 export default function ImageLibraryPage() {
   const { user, isLoading: isLoadingUser } = useAuth();
   const { brandData, isLoading: isLoadingBrand, error: errorBrand } = useBrand();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const [refineModalOpen, setRefineModalOpen] = useState(false);
+  const [imageToRefine, setImageToRefine] = useState<string | null>(null);
 
   const { 
     data: savedImages = [], 
@@ -112,16 +122,37 @@ export default function ImageLibraryPage() {
   } = useQuery<SavedGeneratedImage[], Error>({
     queryKey: ['savedLibraryImages', user?.uid],
     queryFn: () => fetchSavedLibraryImages(user!.uid),
-    enabled: !!user, // Only run query if user is available
+    enabled: !!user,
   });
   
   const errorSaved = errorSavedFetch ? `Failed to load AI-generated images: ${errorSavedFetch.message}. Check Firestore permissions and connectivity.` : null;
 
   const brandProfileImages = brandData?.exampleImages || [];
 
+  const handleOpenRefineModal = (url: string) => {
+    setImageToRefine(url);
+    setRefineModalOpen(true);
+  };
+
+  const handleRefinementAccepted = () => {
+    toast({ title: 'Refinement Saved', description: 'Your refined image has been saved. You can find it in your generated library after saving it from Content Studio.'});
+    // For simplicity, we just notify. A more advanced implementation might upload the new image here.
+    queryClient.invalidateQueries({ queryKey: ['savedLibraryImages', user?.uid] });
+  };
+
+
   return (
-    // AppShell is now handled by AuthenticatedLayout
     <div className="max-w-6xl mx-auto">
+      <RefineImageDialog
+          isOpen={refineModalOpen}
+          onOpenChange={setRefineModalOpen}
+          imageToRefine={imageToRefine}
+          onRefinementAccepted={() => {
+            // In this context, accepting just closes the dialog. 
+            // The user would need to save the new image from the Content Studio flow.
+            toast({ title: 'Edit Session Ended', description: 'To save the new version, please generate and save it from the Content Studio.'});
+          }}
+      />
       <CardHeader className="px-0 mb-6">
         <div className="flex items-center space-x-3">
           <Images className="w-10 h-10 text-primary" />
@@ -229,7 +260,7 @@ export default function ImageLibraryPage() {
         {!isLoadingSaved && !errorSaved && savedImages.length > 0 && user && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {savedImages.map((image) => (
-                <SavedImageCard key={image.id} image={image} userId={user.uid} />
+                <SavedImageCard key={image.id} image={image} userId={user.uid} onRefineClick={handleOpenRefineModal} />
             ))}
           </div>
         )}
