@@ -144,7 +144,7 @@ export default function ImageLibraryPage() {
     // and allows the user to save it as a new asset.
     setSessionLastImageGenerationResult({
         generatedImages: [newUrl],
-        promptUsed: `Refined from library image: ${originalUrl.split('/').pop()?.split('?')[0] || 'original'}`,
+        promptUsed: "Image refined from the library.",
         providerUsed: "refine" 
     });
     toast({
