@@ -1,5 +1,5 @@
 
-"use server";
+'use server';
 
 import crypto from 'crypto';
 import { generateImages, type GenerateImagesInput } from '@/ai/flows/generate-images';
@@ -16,6 +16,8 @@ import { populateImageForm, type PopulateImageFormInput, type PopulateImageFormO
 import { populateSocialForm, type PopulateSocialFormInput, type PopulateSocialFormOutput } from '@/ai/flows/populate-social-form-flow';
 import { populateBlogForm, type PopulateBlogFormInput, type PopulateBlogFormOutput } from '@/ai/flows/populate-blog-form-flow';
 import { populateAdCampaignForm, type PopulateAdCampaignFormInput, type PopulateAdCampaignFormOutput } from '@/ai/flows/populate-ad-campaign-form-flow';
+import { editImage, type EditImageInput, type EditImageOutput } from '@/ai/flows/edit-image-flow';
+import { enhanceRefinePrompt, type EnhanceRefinePromptInput, type EnhanceRefinePromptOutput } from '@/ai/flows/enhance-refine-prompt-flow';
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where, collectionGroup, deleteDoc, runTransaction } from 'firebase/firestore';
@@ -704,6 +706,57 @@ export async function handlePopulateAdCampaignFormAction(
   } catch (e: any) {
     console.error("Error in handlePopulateAdCampaignFormAction:", e);
     return { error: `Failed to populate form: ${e.message || "Unknown error."}` };
+  }
+}
+
+export async function handleEditImageAction(
+  prevState: FormState<EditImageOutput>,
+  formData: FormData
+): Promise<FormState<EditImageOutput>> {
+  try {
+    const userId = formData.get("userId") as string;
+    if (!userId) {
+      return { error: "User not authenticated. Cannot refine image." };
+    }
+
+    // Every refinement is a new generation, so we check the quota.
+    await checkAndIncrementUsage(userId, 'imageGenerations');
+
+    const input: EditImageInput = {
+      imageDataUri: formData.get("imageDataUri") as string,
+      instruction: formData.get("instruction") as string,
+    };
+
+    if (!input.imageDataUri || !input.instruction) {
+      return { error: "Base image and an instruction are required for refinement." };
+    }
+
+    const result = await editImage(input);
+    return { data: result, message: "Image refinement successful." };
+  } catch (e: any) {
+    console.error("Error in handleEditImageAction:", e);
+    return { error: `Failed to refine image: ${e.message || "Unknown error."}` };
+  }
+}
+
+export async function handleEnhanceRefinePromptAction(
+  prevState: FormState<EnhanceRefinePromptOutput>,
+  formData: FormData
+): Promise<FormState<EnhanceRefinePromptOutput>> {
+  try {
+    const input: EnhanceRefinePromptInput = {
+      instruction: formData.get("instruction") as string,
+    };
+
+    if (!input.instruction) {
+      return { error: "An instruction is required to enhance the prompt." };
+    }
+
+    const result = await enhanceRefinePrompt(input);
+    return { data: result, message: "Refinement prompt enhanced." };
+  } catch (e: any) {
+    console.error("Error in handleEnhanceRefinePromptAction:", e);
+    return { error: `Failed to enhance prompt: ${e.message || "Unknown error."}` };
   }
 }
 
