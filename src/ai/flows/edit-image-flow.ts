@@ -30,31 +30,53 @@ const editImageFlow = ai.defineFlow(
 
     console.log(`[editImageFlow] Starting refinement with model: ${imageGenerationModel}`);
     console.log(`[editImageFlow] Instruction: ${input.instruction}`);
-    console.log(`[editImageFlow] Image data URI (first 100 chars): ${input.imageDataUri.substring(0, 100)}...`);
+    
+    // Check if the input is a URL and fetch it on the server if necessary
+    let imageDataUri = input.imageDataUri;
+    if (imageDataUri.startsWith('http')) {
+      console.log(`[editImageFlow] Detected URL, fetching image data from: ${imageDataUri}`);
+      try {
+        const response = await fetch(imageDataUri);
+        if (!response.ok) {
+          throw new Error(`HTTP error fetching media '${imageDataUri}': ${response.status} ${response.statusText}`);
+        }
+        const blob = await response.blob();
+        const buffer = Buffer.from(await blob.arrayBuffer());
+        imageDataUri = `data:${blob.type};base64,${buffer.toString('base64')}`;
+        console.log(`[editImageFlow] Successfully converted URL to data URI.`);
+      } catch (fetchError: any) {
+        console.error(`[editImageFlow] Failed to fetch image from URL:`, fetchError);
+        throw new Error(`Error fetching image data: ${fetchError.message}`);
+      }
+    }
 
-    try {
-        const enhancedPrompt = `
-You are an expert AI photo editor. Your task is to edit the provided image based on the user's instruction.
-Your goal is to fulfill the user's request precisely and with high fidelity.
+    const enhancedPrompt = `You are a master AI photo editor and digital artist. Your primary goal is to perform precise, high-fidelity edits on a provided image based on a user's instruction, preserving the original image's integrity as much as possible.
 
-**CRITICAL INSTRUCTIONS:**
-1.  **Analyze the original image:** Understand its subject, style, composition, and lighting.
-2.  **Analyze the user's instruction:** Identify the core intent of the change requested.
-3.  **Perform the edit:** Modify the image according to the instruction. The output must be a new image that reflects the change.
-    - If the user asks to "add" something, integrate it seamlessly.
-    - If the user asks to "change" something (e.g., color, background), alter only that element while preserving the rest of the image's integrity.
-    - If the user asks to "make it look like X", apply the style X while maintaining the original subject and composition.
-4.  **Maintain Quality:** The output image should be of the same or higher quality than the original. Avoid introducing artifacts or blurriness unless specifically requested.
-5.  **Return ONLY the image:** Your final output must be just the edited image. Do not add text, watermarks, or any other annotations to the image itself.
+**//-- EXECUTION HIERARCHY --//**
+Your execution must follow these rules in order of importance:
 
-**User's Edit Instruction:**
+1.  **PRESERVE UNEDITED ELEMENTS (Highest Priority):** Do NOT change any part of the image that is not directly targeted by the user's instruction. The core subject, background elements, and overall composition must remain identical unless the instruction explicitly asks to change them.
+
+2.  **EXECUTE THE INSTRUCTION PRECISELY:** Fulfill the user's request with surgical precision.
+    *   **Addition:** If asked to "add a cat," integrate a cat that matches the image's lighting, perspective, and style seamlessly.
+    *   **Modification:** If asked to "make the dress red," only change the dress color, carefully maintaining its texture, shadows, and highlights.
+    *   **Style Change:** If asked to "make it look like a watercolor painting," apply the watercolor style while preserving the original subjects and composition.
+
+3.  **MAINTAIN VISUAL COHERENCE:** The final image must be believable and internally consistent. Ensure lighting, shadows, reflections, and perspective are logical and harmonious after the edit. The edit should not look "pasted on."
+
+**//-- FINAL OUTPUT REQUIREMENTS --//**
+-   The output must be ONLY the final, edited image.
+-   Do not add any text, watermarks, or annotations.
+-   The image resolution and quality must be equal to or higher than the original.
+
+**Instruction to execute:**
 "${input.instruction}"
 `;
       
       const {media} = await ai.generate({
         model: imageGenerationModel,
         prompt: [
-            { media: { url: input.imageDataUri } },
+            { media: { url: imageDataUri } },
             { text: enhancedPrompt }
         ],
         config: {
@@ -68,9 +90,5 @@ Your goal is to fulfill the user's request precisely and with high fidelity.
       }
       return { editedImageDataUri: media.url };
 
-    } catch (error: any) {
-        console.error("Error during ai.generate call for image editing:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
-        throw new Error(`Error during image editing API call: ${error.message || 'Unknown error from ai.generate()'}`);
-    }
   }
 );
