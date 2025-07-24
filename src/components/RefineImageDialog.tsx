@@ -172,7 +172,7 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0">
         <DialogHeader className="p-6 pb-2 border-b">
-          <DialogTitle className="flex items-center gap-2 text-2xl"><Wand2 className="w-7 h-7 text-primary"/> Image Refinement Studio</DialogTitle>
+          <DialogTitle className="flex items-center gap-2 text-2xl"><Wand2 className="w-7 h-7 text-primary"/> AI Image Refinement Studio</DialogTitle>
           <DialogDescription>Iteratively refine your image with AI instructions. Each refinement generates a new version.</DialogDescription>
         </DialogHeader>
         
