@@ -27,12 +27,12 @@ interface RefineImageDialogProps {
 }
 
 function RefineSubmitButton({ isProcessing, children, ...props }: React.ComponentProps<typeof Button> & { isProcessing: boolean }) {
-  return (
-    <Button type="submit" {...props} disabled={isProcessing || props.disabled}>
-      {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-      {isProcessing ? 'Generating...' : children}
-    </Button>
-  );
+    return (
+      <Button type="submit" {...props} disabled={isProcessing || props.disabled}>
+        {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+        {isProcessing ? 'Generating...' : children}
+      </Button>
+    );
 }
 
 export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefinementAccepted }: RefineImageDialogProps) {
@@ -60,13 +60,14 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
       setCurrentImage(null);
       setRefinementHistory([]);
       setInstruction('');
-      // Reset action states if needed
     }
   }, [imageToRefine, isOpen]);
 
 
   useEffect(() => {
-    setIsEditing(false); // Action is complete
+    if (editState.data || editState.error) {
+        setIsEditing(false); // Action is complete
+    }
     if (editState.data?.editedImageDataUri) {
       const newImage = editState.data.editedImageDataUri;
       setCurrentImage(newImage);
@@ -76,10 +77,13 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
     if (editState.error) {
       toast({ title: "Refinement Failed", description: editState.error, variant: "destructive" });
     }
-  }, [editState, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editState]);
 
   useEffect(() => {
-    setIsEnhancing(false); // Action is complete
+    if (enhanceState.data || enhanceState.error) {
+        setIsEnhancing(false); // Action is complete
+    }
     if (enhanceState.data?.enhancedInstruction) {
       setInstruction(enhanceState.data.enhancedInstruction);
       toast({ title: "Prompt Enhanced", description: "Your refinement instruction has been improved by AI." });
@@ -87,7 +91,8 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
     if (enhanceState.error) {
       toast({ title: "Enhancement Failed", description: enhanceState.error, variant: "destructive" });
     }
-  }, [enhanceState, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enhanceState]);
 
   const handleEnhancePrompt = () => {
     if (instruction.trim().length < 3) {
