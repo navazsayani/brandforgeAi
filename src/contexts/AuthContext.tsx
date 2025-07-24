@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation';
 interface AuthContextType {
   user: User | null;
   currentUser: User | null;
-  userId: string | null; // Added userId
+  userId: string | null; 
   isLoading: boolean;
   error: string | null;
   signUp: (email: string, pass: string) => Promise<User | null>;
@@ -123,8 +123,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   const contextValue = useMemo(() => ({
     user,
-    currentUser,
-    userId: currentUser?.uid || null, // Directly expose the userId
+    currentUser: user, // ensure currentUser is always in sync
+    userId: user?.uid || null,
     isLoading,
     error,
     signUp,
@@ -133,7 +133,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     logOut,
     setError
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [user, currentUser, isLoading, error]);
+  }), [user, isLoading, error]);
 
   return (
     <AuthContext.Provider value={contextValue}>

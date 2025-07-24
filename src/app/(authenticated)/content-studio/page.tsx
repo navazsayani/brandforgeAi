@@ -197,9 +197,8 @@ const ImageGridItem = ({
         </div>
         <div className="p-3 bg-card rounded-b-md flex flex-col sm:flex-row gap-2">
             <Button
-                variant="outline"
+                className="w-full btn-gradient-primary"
                 size="sm"
-                className="w-full"
                 onClick={() => onRefine(displayUrl)}
                 disabled={!isDisplayableImage}
             >
@@ -251,8 +250,8 @@ const fetchSavedLibraryImages = async (userId: string | undefined): Promise<Save
 
 
 export default function ContentStudioPage() {
-  const { currentUser } = useAuth(); 
-  const { brandData, addGeneratedImage, addGeneratedSocialPost, addGeneratedBlogPost, userId, sessionLastImageGenerationResult, setSessionLastImageGenerationResult } = useBrand();
+  const { currentUser, userId } = useAuth(); 
+  const { brandData, addGeneratedImage, addGeneratedSocialPost, addGeneratedBlogPost, sessionLastImageGenerationResult, setSessionLastImageGenerationResult } = useBrand();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -1412,10 +1411,16 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
   };
   
   const handleAcceptRefinement = (originalUrl: string, newUrl: string) => {
+    // This is for the Content Studio. It just replaces the image in the current generation results.
+    // It does not interact with the library or profile directly.
     setSessionLastImageGenerationResult(prev => {
         if (!prev) return null;
         const updatedImages = prev.generatedImages.map(url => url === originalUrl ? newUrl : url);
         return { ...prev, generatedImages: updatedImages };
+    });
+    toast({
+        title: "Image Updated",
+        description: "The refined image has replaced the original in this session. You can now save it to your library.",
     });
   };
 

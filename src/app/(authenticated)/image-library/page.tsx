@@ -112,7 +112,7 @@ function SavedImageCard({ image, userId, onRefineClick }: { image: SavedGenerate
 
 export default function ImageLibraryPage() {
   const { user, isLoading: isLoadingUser } = useAuth();
-  const { brandData, isLoading: isLoadingBrand, error: errorBrand, setSessionLastImageGenerationResult, sessionLastImageGenerationResult } = useBrand();
+  const { brandData, isLoading: isLoadingBrand, error: errorBrand, setSessionLastImageGenerationResult } = useBrand();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -139,17 +139,18 @@ export default function ImageLibraryPage() {
   };
 
   const handleRefinementAccepted = (originalUrl: string, newUrl: string) => {
-    // When a user accepts a refinement from the library, we can't directly replace
-    // the image in Firestore. Instead, we can set it as the last generated image
-    // so it appears in the Content Studio for saving.
+    // When a user accepts a refinement from the library, send it to the Content Studio
+    // to be treated as a new generation. This prevents direct modification of the library
+    // and allows the user to save it as a new asset.
     setSessionLastImageGenerationResult({
         generatedImages: [newUrl],
-        promptUsed: "Refined from library image",
+        promptUsed: `Refined from library image: ${originalUrl.split('/').pop()?.split('?')[0] || 'original'}`,
         providerUsed: "refine" 
     });
     toast({
         title: "Refinement Ready",
         description: "Your refined image is now available in the Content Studio to be saved to your library.",
+        duration: 8000
     });
     queryClient.invalidateQueries({ queryKey: ['savedLibraryImages', user?.uid] });
   };

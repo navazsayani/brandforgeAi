@@ -32,6 +32,18 @@ import { industries } from '@/lib/constants';
 import type { BrandData, UserProfileSelectItem } from '@/types';
 import { cn } from '@/lib/utils';
 import { RefineImageDialog } from '@/components/RefineImageDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
 
 const MAX_IMAGES_PREMIUM = 5;
 const MAX_IMAGES_FREE = 2;
@@ -80,8 +92,8 @@ const initialAdminFetchProfilesState: AdminFetchProfilesState<UserProfileSelectI
 const initialEnhanceState: EnhanceDescriptionState<EnhanceBrandDescriptionOutput> = { error: undefined, data: undefined, message: undefined };
 
 export default function BrandProfilePage() {
-  const { currentUser, isLoading: isAuthLoading } = useAuth();
-  const { brandData: contextBrandData, setBrandData: setContextBrandData, isLoading: isBrandContextLoading, error: brandContextError, sessionLastImageGenerationResult, setSessionLastImageGenerationResult } = useBrand();
+  const { currentUser, userId, isLoading: isAuthLoading } = useAuth();
+  const { brandData: contextBrandData, setBrandData: setContextBrandData, isLoading: isBrandContextLoading, error: brandContextError, setSessionLastImageGenerationResult } = useBrand();
   const { toast } = useToast();
 
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
@@ -114,9 +126,11 @@ export default function BrandProfilePage() {
 
   const [refineModalOpen, setRefineModalOpen] = useState(false);
   const [imageToRefine, setImageToRefine] = useState<string | null>(null);
+  const [showAcceptDialog, setShowAcceptDialog] = useState(false);
+  const [acceptedRefinement, setAcceptedRefinement] = useState<{ originalUrl: string, newUrl: string } | null>(null);
 
   const currentProfileBeingEdited = isAdmin && adminTargetUserId && adminLoadedProfileData ? adminLoadedProfileData : contextBrandData;
-  const effectiveUserIdForStorage = isAdmin && adminTargetUserId ? adminTargetUserId : currentUser?.uid;
+  const effectiveUserIdForStorage = isAdmin && adminTargetUserId ? adminTargetUserId : userId;
 
   const isPremiumActive = useMemo(() => {
     if (!currentProfileBeingEdited) return false;
@@ -341,7 +355,7 @@ export default function BrandProfilePage() {
     if (logoStyle) formData.append("logoStyle", logoStyle);
     if (effectiveUserIdForStorage) formData.append("userId", effectiveUserIdForStorage);
     
-    const emailForLogoAction = currentProfileBeingEdited?.userEmail || (currentUser?.uid === effectiveUserIdForStorage ? currentUser?.email : undefined);
+    const emailForLogoAction = currentProfileBeingEdited?.userEmail || (userId === effectiveUserIdForStorage ? currentUser?.email : undefined);
     if (emailForLogoAction) formData.append("userEmail", emailForLogoAction);
 
 
@@ -440,7 +454,7 @@ export default function BrandProfilePage() {
 
   const onSubmit: SubmitHandler<BrandProfileFormData> = async (data) => {
     let finalData = { ...data };
-    const userIdToSaveFor = isAdmin && adminTargetUserId ? adminTargetUserId : currentUser?.uid;
+    const userIdToSaveFor = isAdmin && adminTargetUserId ? adminTargetUserId : userId;
 
     if (!userIdToSaveFor) {
       toast({ title: "Save Error", description: "User context is unclear. Cannot save profile.", variant: "destructive" });
@@ -472,7 +486,7 @@ export default function BrandProfilePage() {
         toast({ title: "Image Limit Adjusted", description: `Images adjusted to ${maxImagesAllowed} for plan.`, variant: "default" });
     }
 
-    if (!isAdmin || (isAdmin && userIdToSaveFor === currentUser?.uid)) {
+    if (!isAdmin || (isAdmin && userIdToSaveFor === userId)) {
       finalData.userEmail = currentUser?.email || "";
     } else if (isAdmin && adminTargetUserId && adminLoadedProfileData) {
       finalData.userEmail = adminLoadedProfileData.userEmail || "";
@@ -507,8 +521,8 @@ export default function BrandProfilePage() {
       if (isAdmin && adminTargetUserId) { 
         await setContextBrandData(finalData, adminTargetUserId);
         setAdminLoadedProfileData(finalData); 
-      } else if (currentUser) { 
-        await setContextBrandData(finalData, currentUser.uid);
+      } else if (userId) { 
+        await setContextBrandData(finalData, userId);
       }
       toast({ title: "Brand Profile Saved", description: "Information saved successfully." });
     } catch (error: any) {
@@ -524,15 +538,49 @@ export default function BrandProfilePage() {
   };
 
   const handleAcceptRefinement = (originalUrl: string, newUrl: string) => {
-    // When refining an image from the Brand Profile, replace the old URL with the new one.
+    // This is for Brand Profile images. The logic for Image Library is different.
+    setAcceptedRefinement({ originalUrl, newUrl });
+    setShowAcceptDialog(true);
+  };
+  
+  const handleOverwriteImage = () => {
+    if (!acceptedRefinement) return;
+    const { originalUrl, newUrl } = acceptedRefinement;
     const currentImages = form.getValues("exampleImages") || [];
     const updatedImages = currentImages.map(img => (img === originalUrl ? newUrl : img));
-    form.setValue('exampleImages', updatedImages);
+    form.setValue('exampleImages', updatedImages, { shouldValidate: true });
     
     toast({
         title: "Image Updated",
-        description: "The refined image has replaced the original. Click 'Save Brand Profile' to keep the change.",
+        description: "The original image has been replaced. Click 'Save Brand Profile' to keep the change.",
     });
+    setShowAcceptDialog(false);
+    setAcceptedRefinement(null);
+  };
+  
+  const handleSaveAsNewImage = () => {
+    if (!acceptedRefinement) return;
+    const { newUrl } = acceptedRefinement;
+    const currentImages = form.getValues("exampleImages") || [];
+
+    if (currentImages.length >= maxImagesAllowed) {
+        toast({
+          title: "Image Limit Reached",
+          description: `Cannot save as new. Your plan allows a maximum of ${maxImagesAllowed} example images.`,
+          variant: "destructive",
+        });
+        return;
+    }
+
+    const updatedImages = [...currentImages, newUrl];
+    form.setValue('exampleImages', updatedImages, { shouldValidate: true });
+
+    toast({
+        title: "Saved as New Image",
+        description: "The refined image has been added to your example images. Click 'Save Brand Profile' to keep the change.",
+    });
+    setShowAcceptDialog(false);
+    setAcceptedRefinement(null);
   };
 
   if (isAuthLoading || (isBrandContextLoading && !currentProfileBeingEdited && !(isAdmin && adminTargetUserId))) {
@@ -547,13 +595,33 @@ export default function BrandProfilePage() {
   const currentLogoToDisplay = generatedLogoPreview || currentProfileBeingEdited?.brandLogoUrl;
   const canUploadMoreImages = (form.getValues("exampleImages")?.length || 0) < maxImagesAllowed;
   
-  const isEditingOwnProfileAsAdmin = isAdmin && adminTargetUserId === currentUser?.uid;
+  const isEditingOwnProfileAsAdmin = isAdmin && adminTargetUserId === userId;
   const displayTitleText = isAdmin && adminTargetUserId ? 
     (isEditingOwnProfileAsAdmin ? "Brand Profile (Editing My Profile as Admin)" : `Editing Profile for: ${currentProfileBeingEdited?.userEmail || adminTargetUserId.substring(0,8)}...`) : 
     "Brand Profile";
 
   return (
     <>
+      <AlertDialog open={showAcceptDialog} onOpenChange={setShowAcceptDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>How would you like to save the refined image?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You can either overwrite the original image or save your new creation as an additional example image for your profile.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setAcceptedRefinement(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSaveAsNewImage} disabled={(form.getValues("exampleImages")?.length || 0) >= maxImagesAllowed}>
+                Save as New Image
+            </AlertDialogAction>
+            <AlertDialogAction onClick={handleOverwriteImage} className="btn-gradient-primary">
+                Overwrite Original
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <RefineImageDialog
         isOpen={refineModalOpen}
         onOpenChange={setRefineModalOpen}
@@ -934,3 +1002,4 @@ export default function BrandProfilePage() {
     </>
   );
 }
+

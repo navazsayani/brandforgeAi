@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { handleEditImageAction, handleEnhanceRefinePromptAction } from '@/lib/actions';
 import type { FormState } from '@/lib/actions';
 import type { EditImageOutput, EnhanceRefinePromptOutput } from '@/types';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const initialEditImageState: FormState<EditImageOutput> = { error: undefined, data: undefined };
 const initialEnhancePromptState: FormState<EnhanceRefinePromptOutput> = { error: undefined, data: undefined };
@@ -55,6 +55,7 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
       setCurrentImage(imageToRefine);
       setRefinementHistory([imageToRefine]);
     } else {
+      // Reset state when dialog closes
       setCurrentImage(null);
       setRefinementHistory([]);
     }
@@ -230,7 +231,7 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
             <X className="mr-2 h-4 w-4"/>
             Cancel
           </Button>
-          <Button onClick={handleAcceptAndClose} disabled={isProcessing || currentImage === imageToRefine}>
+          <Button onClick={handleAcceptAndClose} disabled={isProcessing || currentImage === imageToRefine} className="btn-gradient-primary">
             <Check className="mr-2 h-4 w-4"/>
             Accept & Use Image
           </Button>
