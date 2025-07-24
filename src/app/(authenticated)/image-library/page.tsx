@@ -96,7 +96,11 @@ function SavedImageCard({ image, userId, onRefineClick }: { image: SavedGenerate
                 <p className="text-xs text-muted-foreground truncate" title={image.style}>
                     <strong>Style:</strong> {image.style || 'N/A'}
                 </p>
-                <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => onRefineClick(image.storageUrl)}>
+                <Button
+                    className="btn-gradient-primary w-full mt-2"
+                    size="sm"
+                    onClick={() => onRefineClick(image.storageUrl)}
+                >
                     <Wand2 className="w-4 h-4 mr-2" />
                     Refine with AI
                 </Button>
@@ -108,7 +112,7 @@ function SavedImageCard({ image, userId, onRefineClick }: { image: SavedGenerate
 
 export default function ImageLibraryPage() {
   const { user, isLoading: isLoadingUser } = useAuth();
-  const { brandData, isLoading: isLoadingBrand, error: errorBrand } = useBrand();
+  const { brandData, isLoading: isLoadingBrand, error: errorBrand, setSessionLastImageGenerationResult, sessionLastImageGenerationResult } = useBrand();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -134,9 +138,19 @@ export default function ImageLibraryPage() {
     setRefineModalOpen(true);
   };
 
-  const handleRefinementAccepted = () => {
-    toast({ title: 'Refinement Saved', description: 'Your refined image has been saved. You can find it in your generated library after saving it from Content Studio.'});
-    // For simplicity, we just notify. A more advanced implementation might upload the new image here.
+  const handleRefinementAccepted = (originalUrl: string, newUrl: string) => {
+    // When a user accepts a refinement from the library, we can't directly replace
+    // the image in Firestore. Instead, we can set it as the last generated image
+    // so it appears in the Content Studio for saving.
+    setSessionLastImageGenerationResult({
+        generatedImages: [newUrl],
+        promptUsed: "Refined from library image",
+        providerUsed: "refine" 
+    });
+    toast({
+        title: "Refinement Ready",
+        description: "Your refined image is now available in the Content Studio to be saved to your library.",
+    });
     queryClient.invalidateQueries({ queryKey: ['savedLibraryImages', user?.uid] });
   };
 
@@ -147,11 +161,7 @@ export default function ImageLibraryPage() {
           isOpen={refineModalOpen}
           onOpenChange={setRefineModalOpen}
           imageToRefine={imageToRefine}
-          onRefinementAccepted={() => {
-            // In this context, accepting just closes the dialog. 
-            // The user would need to save the new image from the Content Studio flow.
-            toast({ title: 'Edit Session Ended', description: 'To save the new version, please generate and save it from the Content Studio.'});
-          }}
+          onRefinementAccepted={handleRefinementAccepted}
       />
       <CardHeader className="px-0 mb-6">
         <div className="flex items-center space-x-3">
@@ -201,7 +211,7 @@ export default function ImageLibraryPage() {
         {!isLoadingBrand && !errorBrand && brandProfileImages.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {brandProfileImages.map((imageUrl, index) => (
-              <Card key={`brand-img-${index}`} className="overflow-hidden shadow-md hover:shadow-xl transition-shadow group">
+              <Card key={`brand-img-${index}`} className="overflow-hidden shadow-md hover:shadow-xl transition-shadow group flex flex-col">
                 <div className="relative w-full aspect-square bg-muted overflow-hidden">
                   <NextImage
                     src={imageUrl}
@@ -212,8 +222,16 @@ export default function ImageLibraryPage() {
                     data-ai-hint="brand example"
                   />
                 </div>
-                  <CardContent className="p-3">
-                  <p className="text-xs text-muted-foreground truncate">Profile Image {index + 1}</p>
+                <CardContent className="p-3 flex flex-col flex-grow">
+                    <p className="text-xs text-muted-foreground truncate flex-grow">Profile Image {index + 1}</p>
+                    <Button
+                        className="btn-gradient-primary w-full mt-2"
+                        size="sm"
+                        onClick={() => handleOpenRefineModal(imageUrl)}
+                    >
+                        <Wand2 className="w-4 h-4 mr-2" />
+                        Refine with AI
+                    </Button>
                 </CardContent>
               </Card>
             ))}

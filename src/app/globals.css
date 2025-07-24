@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -54,7 +55,7 @@
 
     /* Custom gradient variables */
     --gradient-primary: linear-gradient(135deg, hsl(180 55% 42%) 0%, hsl(180 45% 35%) 100%);
-    --gradient-secondary: linear-gradient(135deg, hsl(45 85% 58%) 0%, hsl(45 75% 50%) 100%);
+    --gradient-secondary: linear-gradient(135deg, hsl(var(--accent)) 0%, hsl(45 75% 50%) 100%);
     --gradient-background: linear-gradient(135deg, hsl(40 30% 97%) 0%, hsl(210 25% 96%) 50%, hsl(180 15% 95%) 100%);
     --gradient-card: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(210 25% 98%) 100%);
   }

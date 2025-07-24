@@ -31,6 +31,7 @@ import type { EnhanceBrandDescriptionOutput } from '@/ai/flows/enhance-brand-des
 import { industries } from '@/lib/constants';
 import type { BrandData, UserProfileSelectItem } from '@/types';
 import { cn } from '@/lib/utils';
+import { RefineImageDialog } from '@/components/RefineImageDialog';
 
 const MAX_IMAGES_PREMIUM = 5;
 const MAX_IMAGES_FREE = 2;
@@ -80,7 +81,7 @@ const initialEnhanceState: EnhanceDescriptionState<EnhanceBrandDescriptionOutput
 
 export default function BrandProfilePage() {
   const { currentUser, isLoading: isAuthLoading } = useAuth();
-  const { brandData: contextBrandData, setBrandData: setContextBrandData, isLoading: isBrandContextLoading, error: brandContextError } = useBrand();
+  const { brandData: contextBrandData, setBrandData: setContextBrandData, isLoading: isBrandContextLoading, error: brandContextError, sessionLastImageGenerationResult, setSessionLastImageGenerationResult } = useBrand();
   const { toast } = useToast();
 
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
@@ -111,6 +112,8 @@ export default function BrandProfilePage() {
   const [adminFetchProfilesServerState, adminFetchProfilesAction] = useActionState(handleGetAllUserProfilesForAdminAction, initialAdminFetchProfilesState);
   const [isLoadingAdminProfiles, setIsLoadingAdminProfiles] = useState(false);
 
+  const [refineModalOpen, setRefineModalOpen] = useState(false);
+  const [imageToRefine, setImageToRefine] = useState<string | null>(null);
 
   const currentProfileBeingEdited = isAdmin && adminTargetUserId && adminLoadedProfileData ? adminLoadedProfileData : contextBrandData;
   const effectiveUserIdForStorage = isAdmin && adminTargetUserId ? adminTargetUserId : currentUser?.uid;
@@ -515,6 +518,21 @@ export default function BrandProfilePage() {
     }
   };
 
+  const handleOpenRefineModal = (url: string) => {
+    setImageToRefine(url);
+    setRefineModalOpen(true);
+  };
+
+  const handleAcceptRefinement = (originalUrl: string, newUrl: string) => {
+    const currentImages = form.getValues("exampleImages") || [];
+    const updatedImages = currentImages.map(img => img === originalUrl ? newUrl : img);
+    form.setValue('exampleImages', updatedImages);
+    setSessionLastImageGenerationResult({
+        ...sessionLastImageGenerationResult,
+        generatedImages: [newUrl],
+    } as any);
+  };
+
   if (isAuthLoading || (isBrandContextLoading && !currentProfileBeingEdited && !(isAdmin && adminTargetUserId))) {
     return (
       <div data-testid="loading-state" className="flex items-center justify-center h-screen">
@@ -533,359 +551,384 @@ export default function BrandProfilePage() {
     "Brand Profile";
 
   return (
-    <ScrollArea className="h-full">
-      <div className="max-w-3xl mx-auto py-6 px-4">
-        {isAdmin && (
-          <Card className="mb-6 bg-secondary/50 shadow-md">
-            <CardHeader>
-              <CardTitle className="text-xl flex items-center"><ShieldCheck className="w-6 h-6 mr-2 text-primary" />Admin Controls</CardTitle>
-              <CardDescription>Load and edit a specific user&apos;s brand profile.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-2 w-full">
-                <Select
-                  value={adminSelectedUserIdFromDropdown}
-                  onValueChange={(value) => {
-                    setAdminSelectedUserIdFromDropdown(value);
-                  }}
-                  disabled={isLoadingAdminProfiles || isAdminLoadingTargetProfile}
-                >
-                  <SelectTrigger className="flex-grow min-w-0 h-auto min-h-10 [&>span]:whitespace-normal [&>span]:line-clamp-none">
-                    <SelectValue placeholder={isLoadingAdminProfiles ? "Loading users..." : "Select a user to load/edit"} />
-                  </SelectTrigger>
-                  <SelectContent className="w-[var(--radix-select-trigger-width)]">
-                    <SelectGroup>
-                      <SelectLabel>Users</SelectLabel>
-                      {isLoadingAdminProfiles && <SelectItem value="loading" disabled>Loading users...</SelectItem>}
-                      {!isLoadingAdminProfiles && userProfilesForAdmin.length === 0 && <SelectItem value="nousers" disabled>No user profiles found.</SelectItem>}
-                      {userProfilesForAdmin.map(profile => (
-                        <SelectItem key={profile.userId} value={profile.userId}>
-                          <div className="whitespace-normal break-words">
-                            {profile.brandName || "Unnamed Brand"} - ({profile.userEmail || profile.userId.substring(0,8)+"..."})
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-              {adminTargetUserId && (
-                <Button onClick={handleAdminLoadMyProfile} variant="outline" size="sm" className="w-full h-auto whitespace-normal">
-                  Switch to Editing My Own Profile
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        )}
+    <>
+      <RefineImageDialog
+        isOpen={refineModalOpen}
+        onOpenChange={setRefineModalOpen}
+        imageToRefine={imageToRefine}
+        onRefinementAccepted={handleAcceptRefinement}
+      />
+      <ScrollArea className="h-full">
+        <div className="max-w-3xl mx-auto py-6 px-4">
+          {isAdmin && (
+            <Card className="mb-6 bg-secondary/50 shadow-md">
+              <CardHeader>
+                <CardTitle className="text-xl flex items-center"><ShieldCheck className="w-6 h-6 mr-2 text-primary" />Admin Controls</CardTitle>
+                <CardDescription>Load and edit a specific user&apos;s brand profile.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center space-x-2 w-full">
+                  <Select
+                    value={adminSelectedUserIdFromDropdown}
+                    onValueChange={(value) => {
+                      setAdminSelectedUserIdFromDropdown(value);
+                    }}
+                    disabled={isLoadingAdminProfiles || isAdminLoadingTargetProfile}
+                  >
+                    <SelectTrigger className="flex-grow min-w-0 h-auto min-h-10 [&>span]:whitespace-normal [&>span]:line-clamp-none">
+                      <SelectValue placeholder={isLoadingAdminProfiles ? "Loading users..." : "Select a user to load/edit"} />
+                    </SelectTrigger>
+                    <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                      <SelectGroup>
+                        <SelectLabel>Users</SelectLabel>
+                        {isLoadingAdminProfiles && <SelectItem value="loading" disabled>Loading users...</SelectItem>}
+                        {!isLoadingAdminProfiles && userProfilesForAdmin.length === 0 && <SelectItem value="nousers" disabled>No user profiles found.</SelectItem>}
+                        {userProfilesForAdmin.map(profile => (
+                          <SelectItem key={profile.userId} value={profile.userId}>
+                            <div className="whitespace-normal break-words">
+                              {profile.brandName || "Unnamed Brand"} - ({profile.userEmail || profile.userId.substring(0,8)+"..."})
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {adminTargetUserId && (
+                  <Button onClick={handleAdminLoadMyProfile} variant="outline" size="sm" className="w-full h-auto whitespace-normal">
+                    Switch to Editing My Own Profile
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
-        <Card className="shadow-lg">
-          <CardHeader>
-            <div className="grid grid-cols-[auto_1fr] items-center gap-3">
-              <UserCircle className="w-10 h-10 text-primary flex-shrink-0" />
-              <div className="overflow-hidden">
-                <CardTitle className="text-2xl md:text-3xl font-bold break-words">{displayTitleText}</CardTitle>
-                <CardDescription className="text-md md:text-lg break-words">
-                  Define the identity. Fuels AI for content and campaigns.
-                </CardDescription>
+          <Card className="shadow-lg">
+            <CardHeader>
+              <div className="grid grid-cols-[auto_1fr] items-center gap-3">
+                <UserCircle className="w-10 h-10 text-primary flex-shrink-0" />
+                <div className="overflow-hidden">
+                  <CardTitle className="text-2xl md:text-3xl font-bold break-words">{displayTitleText}</CardTitle>
+                  <CardDescription className="text-md md:text-lg break-words">
+                    Define the identity. Fuels AI for content and campaigns.
+                  </CardDescription>
+                </div>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8" id="brandProfileFormReal">
-                <FormField
-                  control={form.control}
-                  name="brandName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center text-base"><UserCircle className="w-5 h-5 mr-2 text-primary"/>Brand Name <span className="text-destructive ml-1">*</span></FormLabel>
-                      <FormControl><Input placeholder="Acme Innovations" {...field} disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="userEmail"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center text-base"><Users className="w-5 h-5 mr-2 text-primary"/>User Email</FormLabel>
-                      <FormControl><Input type="email" placeholder="user@example.com" {...field} disabled={true} /></FormControl>
-                      <FormDescription>User&apos;s email address (read-only).</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="websiteUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center text-base"><LinkIcon className="w-5 h-5 mr-2 text-primary"/>Website URL</FormLabel>
-                      <div className="flex items-center space-x-2">
-                        <div className="flex-grow min-w-0">
-                           <FormControl><Input placeholder="https://example.com" {...field} disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing} /></FormControl>
-                        </div>
-                        <Button type="button" onClick={handleAutoFill} disabled={isExtracting || isBrandContextLoading || isAdminLoadingTargetProfile || !field.value || form.getFieldState("websiteUrl").invalid || isUploading || isGeneratingLogo || isUploadingLogo || isEnhancing} variant="outline" size="sm" title="Auto-fill">
-                          {isExtracting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="w-4 h-4" />}
-                        </Button>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="brandDescription"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center text-base"><FileText className="w-5 h-5 mr-2 text-primary"/>Brand Description <span className="text-destructive ml-1">*</span></FormLabel>
-                      <div className="relative">
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Describe brand, values, audience..." 
-                            rows={5} 
-                            {...field} 
-                            disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing} 
-                            className="pr-12"
-                          />
-                        </FormControl>
-                        <Button 
-                          type="button" 
-                          variant="ghost"
-                          size="icon"
-                          className="absolute bottom-2 right-2 h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
-                          onClick={handleEnhanceDescription}
-                          disabled={isEnhancing || isExtracting || !field.value || field.value.length < 10}
-                          title="Enhance description with AI"
-                        >
-                          {isEnhancing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Wand2 className="h-5 w-5" />}
-                          <span className="sr-only">Enhance description with AI</span>
-                        </Button>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="industry"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center text-base"><Briefcase className="w-5 h-5 mr-2 text-primary"/>Industry</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value ?? '_none_'}
-                        disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing}
-                      >
-                        <FormControl><SelectTrigger><SelectValue placeholder="Select industry" /></SelectTrigger></FormControl>
-                        <SelectContent><SelectGroup><SelectLabel>Industries</SelectLabel>{industries.map(ind => (<SelectItem key={ind.value} value={ind.value}>{ind.label}</SelectItem>))}</SelectGroup></SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="targetKeywords"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center text-base"><Tag className="w-5 h-5 mr-2 text-primary"/>Target Keywords</FormLabel>
-                      <FormControl><Input placeholder="innovation, tech, eco (comma-separated)" {...field} disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing} /></FormControl>
-                      <p className="text-sm text-muted-foreground">Keywords for brand & industry.</p>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                {isAdmin ? (
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8" id="brandProfileFormReal">
                   <FormField
                     control={form.control}
-                    name="plan"
+                    name="brandName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center text-base"><Star className="w-5 h-5 mr-2 text-primary"/>Subscription Plan</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl><SelectTrigger><SelectValue placeholder="Select plan" /></SelectTrigger></FormControl>
-                          <SelectContent><SelectGroup><SelectLabel>Plans</SelectLabel><SelectItem value="free">Free</SelectItem><SelectItem value="premium">Premium</SelectItem></SelectGroup></SelectContent>
-                        </Select>
-                        <FormDescription>Admin can change user plan.</FormDescription>
+                        <FormLabel className="flex items-center text-base"><UserCircle className="w-5 h-5 mr-2 text-primary"/>Brand Name <span className="text-destructive ml-1">*</span></FormLabel>
+                        <FormControl><Input placeholder="Acme Innovations" {...field} disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                ) : (
-                  <FormItem>
-                    <FormLabel className="flex items-center text-base"><Star className="w-5 h-5 mr-2 text-primary"/>Subscription Plan</FormLabel>
-                    <Input
-                      value={`${isPremiumActive ? 'Premium' : 'Free'} ${currentProfileBeingEdited?.subscriptionEndDate ? `(Expires: ${currentProfileBeingEdited.subscriptionEndDate.toDate().toLocaleDateString()})` : ''}`}
-                      disabled
-                      className="capitalize"
-                    />
-                    <FormDescription>Your plan is managed from the Pricing page.</FormDescription>
-                  </FormItem>
-                )}
-
-                <FormItem>
-                  <FormLabel className="flex items-center text-base mb-2"><Sparkles className="w-5 h-5 mr-2 text-primary"/>Brand Logo</FormLabel>
-                  <div className="p-4 border rounded-lg space-y-4">
-                    {/* Logo Shape and Style Selection */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="logoShape"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-medium">Logo Shape</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value ?? 'circle'}
-                              disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select shape" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectGroup>
-                                  <SelectLabel>Shapes</SelectLabel>
-                                  <SelectItem value="circle">Circle</SelectItem>
-                                  <SelectItem value="square">Square</SelectItem>
-                                  <SelectItem value="shield">Shield</SelectItem>
-                                  <SelectItem value="hexagon">Hexagon</SelectItem>
-                                  <SelectItem value="diamond">Diamond</SelectItem>
-                                  <SelectItem value="custom">Custom (Organic Shape)</SelectItem>
-                                </SelectGroup>
-                              </SelectContent>
-                            </Select>
-                            <FormDescription className="text-xs">
-                              {field.value === 'custom'
-                                ? 'Custom: Creates a unique, organic shape that fits the brand identity perfectly - not constrained by geometric boundaries.'
-                                : 'Shape defines the outer boundary/frame for the logo design.'
-                              }
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="logoStyle"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-medium">Logo Style</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value ?? 'modern'}
-                              disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select style" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectGroup>
-                                  <SelectLabel>Styles</SelectLabel>
-                                  <SelectItem value="minimalist">Minimalist</SelectItem>
-                                  <SelectItem value="modern">Modern</SelectItem>
-                                  <SelectItem value="classic">Classic</SelectItem>
-                                  <SelectItem value="playful">Playful</SelectItem>
-                                  <SelectItem value="bold">Bold</SelectItem>
-                                  <SelectItem value="elegant">Elegant</SelectItem>
-                                </SelectGroup>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    {/* Logo Preview and Generation */}
-                    <div className="flex flex-col sm:flex-row items-center gap-4">
-                      <div className="relative w-32 h-32 sm:w-36 sm:h-36 md:w-40 md:h-40 lg:w-44 lg:h-44 border rounded-md flex items-center justify-center bg-muted overflow-hidden flex-shrink-0">
-                        {isGeneratingLogo ? <Loader2 className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 text-primary animate-spin"/> : currentLogoToDisplay ? <NextImage src={currentLogoToDisplay} alt="Brand Logo Preview" fill className="object-contain p-2 sm:p-2.5 md:p-3 lg:p-3" data-ai-hint="brand logo"/> : <ImageIconLucide className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 text-muted-foreground"/>}
-                      </div>
-                      <div className="flex-1 text-center sm:text-left">
-                        <Button type="button" onClick={handleGenerateLogo} disabled={isGeneratingLogo || isUploadingLogo || !form.getValues("brandName") || !form.getValues("brandDescription")} className="w-full sm:w-auto">
-                          {isGeneratingLogo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />} Generate Logo
-                        </Button>
-                        {!currentLogoToDisplay && !isGeneratingLogo && <p className="text-xs text-muted-foreground mt-2">Fill Brand Name & Description for logo.</p>}
-                        {generateLogoState.error && !isGeneratingLogo && <p className="text-xs text-destructive mt-1">{generateLogoState.error}</p>}
-                      </div>
-                    </div>
-                    {isUploadingLogo && logoUploadProgress > 0 && logoUploadProgress < 100 && <Progress value={logoUploadProgress} className="w-full h-2 mt-2" />}
-                    {generatedLogoPreview && <Alert variant="default" className="mt-2"><Sparkles className="h-4 w-4" /><AlertTitle>Logo Generated!</AlertTitle><AlertDescription>New logo generated. Click &quot;Save Brand Profile&quot; to upload and save.</AlertDescription></Alert>}
-                  </div>
-                  <FormField control={form.control} name="brandLogoUrl" render={() => <FormMessage />} />
-                </FormItem>
-                <FormField
-                  control={form.control}
-                  name="imageStyleNotes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center text-base"><Edit className="w-5 h-5 mr-2 text-primary"/>Image Style Notes</FormLabel>
-                      <FormControl><Textarea placeholder="General aesthetic notes for brand images." rows={3} {...field} disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing} /></FormControl>
-                      <FormDescription>General guidance for AI. Specific styles in Content Studio.</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormItem>
-                  <FormLabel className="flex items-center text-base"><UploadCloud className="w-5 h-5 mr-2 text-primary"/>Example Images</FormLabel>
-                  <FormDescription>Plan allows {maxImagesAllowed} images. Current: {(form.getValues("exampleImages")?.length || 0)}/{maxImagesAllowed}.</FormDescription>
-                  <FormControl>
-                    <div className="flex items-center justify-center w-full">
-                      <Label htmlFor="dropzone-file" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer border-border bg-card hover:bg-secondary ${isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing || !canUploadMoreImages ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          {isUploading ? <Loader2 className="w-8 h-8 mb-2 text-muted-foreground animate-spin" /> : <UploadCloud className="w-8 h-8 mb-2 text-muted-foreground" />}
-                          <p className="mb-1 text-sm text-muted-foreground">
-                            {isUploading ? `Uploading ${selectedFileNames.join(', ').substring(0,30)}...` : (selectedFileNames.length > 0 && previewImages.length === selectedFileNames.length ? selectedFileNames.map((name, idx) => name === `Saved image ${idx+1}` ? `Image ${idx+1}` : name).join(', ').substring(0,50) + (selectedFileNames.join(', ').length > 50 ? '...' : '') : (canUploadMoreImages ? <><span className="font-semibold">Click to upload</span> or drag & drop</> : `Max ${maxImagesAllowed} reached.`))}
-                          </p>
-                          {selectedFileNames.length === 0 && !isUploading && canUploadMoreImages && <p className="text-xs text-muted-foreground">Max 5MB per file.</p>}
-                        </div>
-                        <Input id="dropzone-file" type="file" multiple className="hidden" onChange={handleImageFileChange} accept="image/*" disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || !canUploadMoreImages || isGeneratingLogo || isUploadingLogo || isEnhancing} ref={fileInputRef} />
-                      </Label>
-                    </div>
-                  </FormControl>
-                  {isUploading && <Progress value={uploadProgress} className="w-full h-2 mt-2" />}
-                  <FormField control={form.control} name="exampleImages" render={() => <FormMessage />} />
-                  {!canUploadMoreImages && !isUploading && <p className="text-xs text-destructive mt-1">Max {maxImagesAllowed} images for your current plan.</p>}
-                </FormItem>
-                {previewImages.length > 0 && (
-                  <div className="mt-2 space-y-3">
-                    <p className="text-sm text-muted-foreground mb-1">Previews ({previewImages.length}/{maxImagesAllowed}):</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                      {previewImages.map((src, index) => (
-                        <div key={src || index} className="relative group aspect-square">
-                          <NextImage src={src} alt={`Preview ${index + 1}`} fill style={{objectFit: 'contain'}} className="rounded border" data-ai-hint="brand example"/>
-                          <Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDeleteImage(src, index)} disabled={isUploading || isExtracting || isBrandContextLoading || isAdminLoadingTargetProfile || isGeneratingLogo || isUploadingLogo || isEnhancing} title="Delete">
-                            <Trash2 className="h-3 w-3" />
+                   <FormField
+                    control={form.control}
+                    name="userEmail"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center text-base"><Users className="w-5 h-5 mr-2 text-primary"/>User Email</FormLabel>
+                        <FormControl><Input type="email" placeholder="user@example.com" {...field} disabled={true} /></FormControl>
+                        <FormDescription>User&apos;s email address (read-only).</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="websiteUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center text-base"><LinkIcon className="w-5 h-5 mr-2 text-primary"/>Website URL</FormLabel>
+                        <div className="flex items-center space-x-2">
+                          <div className="flex-grow min-w-0">
+                             <FormControl><Input placeholder="https://example.com" {...field} disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing} /></FormControl>
+                          </div>
+                          <Button type="button" onClick={handleAutoFill} disabled={isExtracting || isBrandContextLoading || isAdminLoadingTargetProfile || !field.value || form.getFieldState("websiteUrl").invalid || isUploading || isGeneratingLogo || isUploadingLogo || isEnhancing} variant="outline" size="sm" title="Auto-fill">
+                            {isExtracting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="w-4 h-4" />}
                           </Button>
                         </div>
-                      ))}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="brandDescription"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center text-base"><FileText className="w-5 h-5 mr-2 text-primary"/>Brand Description <span className="text-destructive ml-1">*</span></FormLabel>
+                        <div className="relative">
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Describe brand, values, audience..." 
+                              rows={5} 
+                              {...field} 
+                              disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing} 
+                              className="pr-12"
+                            />
+                          </FormControl>
+                          <Button 
+                            type="button" 
+                            variant="ghost"
+                            size="icon"
+                            className="absolute bottom-2 right-2 h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                            onClick={handleEnhanceDescription}
+                            disabled={isEnhancing || isExtracting || !field.value || field.value.length < 10}
+                            title="Enhance description with AI"
+                          >
+                            {isEnhancing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Wand2 className="h-5 w-5" />}
+                            <span className="sr-only">Enhance description with AI</span>
+                          </Button>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="industry"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center text-base"><Briefcase className="w-5 h-5 mr-2 text-primary"/>Industry</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value ?? '_none_'}
+                          disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing}
+                        >
+                          <FormControl><SelectTrigger><SelectValue placeholder="Select industry" /></SelectTrigger></FormControl>
+                          <SelectContent><SelectGroup><SelectLabel>Industries</SelectLabel>{industries.map(ind => (<SelectItem key={ind.value} value={ind.value}>{ind.label}</SelectItem>))}</SelectGroup></SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="targetKeywords"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center text-base"><Tag className="w-5 h-5 mr-2 text-primary"/>Target Keywords</FormLabel>
+                        <FormControl><Input placeholder="innovation, tech, eco (comma-separated)" {...field} disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing} /></FormControl>
+                        <p className="text-sm text-muted-foreground">Keywords for brand & industry.</p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  {isAdmin ? (
+                    <FormField
+                      control={form.control}
+                      name="plan"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center text-base"><Star className="w-5 h-5 mr-2 text-primary"/>Subscription Plan</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Select plan" /></SelectTrigger></FormControl>
+                            <SelectContent><SelectGroup><SelectLabel>Plans</SelectLabel><SelectItem value="free">Free</SelectItem><SelectItem value="premium">Premium</SelectItem></SelectGroup></SelectContent>
+                          </Select>
+                          <FormDescription>Admin can change user plan.</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : (
+                    <FormItem>
+                      <FormLabel className="flex items-center text-base"><Star className="w-5 h-5 mr-2 text-primary"/>Subscription Plan</FormLabel>
+                      <Input
+                        value={`${isPremiumActive ? 'Premium' : 'Free'} ${currentProfileBeingEdited?.subscriptionEndDate ? `(Expires: ${currentProfileBeingEdited.subscriptionEndDate.toDate().toLocaleDateString()})` : ''}`}
+                        disabled
+                        className="capitalize"
+                      />
+                      <FormDescription>Your plan is managed from the Pricing page.</FormDescription>
+                    </FormItem>
+                  )}
+
+                  <FormItem>
+                    <FormLabel className="flex items-center text-base mb-2"><Sparkles className="w-5 h-5 mr-2 text-primary"/>Brand Logo</FormLabel>
+                    <div className="p-4 border rounded-lg space-y-4">
+                      {/* Logo Shape and Style Selection */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="logoShape"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-sm font-medium">Logo Shape</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value ?? 'circle'}
+                                disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select shape" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectGroup>
+                                    <SelectLabel>Shapes</SelectLabel>
+                                    <SelectItem value="circle">Circle</SelectItem>
+                                    <SelectItem value="square">Square</SelectItem>
+                                    <SelectItem value="shield">Shield</SelectItem>
+                                    <SelectItem value="hexagon">Hexagon</SelectItem>
+                                    <SelectItem value="diamond">Diamond</SelectItem>
+                                    <SelectItem value="custom">Custom (Organic Shape)</SelectItem>
+                                  </SelectGroup>
+                                </SelectContent>
+                              </Select>
+                              <FormDescription className="text-xs">
+                                {field.value === 'custom'
+                                  ? 'Custom: Creates a unique, organic shape that fits the brand identity perfectly - not constrained by geometric boundaries.'
+                                  : 'Shape defines the outer boundary/frame for the logo design.'
+                                }
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="logoStyle"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-sm font-medium">Logo Style</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value ?? 'modern'}
+                                disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select style" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectGroup>
+                                    <SelectLabel>Styles</SelectLabel>
+                                    <SelectItem value="minimalist">Minimalist</SelectItem>
+                                    <SelectItem value="modern">Modern</SelectItem>
+                                    <SelectItem value="classic">Classic</SelectItem>
+                                    <SelectItem value="playful">Playful</SelectItem>
+                                    <SelectItem value="bold">Bold</SelectItem>
+                                    <SelectItem value="elegant">Elegant</SelectItem>
+                                  </SelectGroup>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      {/* Logo Preview and Generation */}
+                      <div className="flex flex-col sm:flex-row items-center gap-4">
+                        <div className="relative w-32 h-32 sm:w-36 sm:h-36 md:w-40 md:h-40 lg:w-44 lg:h-44 border rounded-md flex items-center justify-center bg-muted overflow-hidden flex-shrink-0">
+                          {isGeneratingLogo ? <Loader2 className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 text-primary animate-spin"/> : currentLogoToDisplay ? <NextImage src={currentLogoToDisplay} alt="Brand Logo Preview" fill className="object-contain p-2 sm:p-2.5 md:p-3 lg:p-3" data-ai-hint="brand logo"/> : <ImageIconLucide className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 text-muted-foreground"/>}
+                        </div>
+                        <div className="flex-1 text-center sm:text-left">
+                          <Button type="button" onClick={handleGenerateLogo} disabled={isGeneratingLogo || isUploadingLogo || !form.getValues("brandName") || !form.getValues("brandDescription")} className="w-full sm:w-auto">
+                            {isGeneratingLogo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />} Generate Logo
+                          </Button>
+                          {!currentLogoToDisplay && !isGeneratingLogo && <p className="text-xs text-muted-foreground mt-2">Fill Brand Name & Description for logo.</p>}
+                          {generateLogoState.error && !isGeneratingLogo && <p className="text-xs text-destructive mt-1">{generateLogoState.error}</p>}
+                        </div>
+                      </div>
+                      {isUploadingLogo && logoUploadProgress > 0 && logoUploadProgress < 100 && <Progress value={logoUploadProgress} className="w-full h-2 mt-2" />}
+                      {generatedLogoPreview && <Alert variant="default" className="mt-2"><Sparkles className="h-4 w-4" /><AlertTitle>Logo Generated!</AlertTitle><AlertDescription>New logo generated. Click &quot;Save Brand Profile&quot; to upload and save.</AlertDescription></Alert>}
                     </div>
-                  </div>
-                )}
-              </form>
-            </Form>
-          </CardContent>
-          <CardFooter>
-            <Button
-              type="submit"
-              form="brandProfileFormReal"
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-              size="lg"
-              disabled={isAuthLoading || isBrandContextLoading || isAdminLoadingTargetProfile || form.formState.isSubmitting || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing || isLoadingAdminProfiles}
-            >
-              {(isUploadingLogo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null)}
-              {isUploadingLogo ? 'Uploading & Saving...' : (isUploading ? 'Uploading Image(s)...' : (isAuthLoading || isBrandContextLoading || isAdminLoadingTargetProfile ? 'Loading...' : (form.formState.isSubmitting ? 'Saving...' : (isExtracting ? 'Extracting...' : 'Save Brand Profile'))))}
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    </ScrollArea>
+                    <FormField control={form.control} name="brandLogoUrl" render={() => <FormMessage />} />
+                  </FormItem>
+                  <FormField
+                    control={form.control}
+                    name="imageStyleNotes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center text-base"><Edit className="w-5 h-5 mr-2 text-primary"/>Image Style Notes</FormLabel>
+                        <FormControl><Textarea placeholder="General aesthetic notes for brand images." rows={3} {...field} disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing} /></FormControl>
+                        <FormDescription>General guidance for AI. Specific styles in Content Studio.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormItem>
+                    <FormLabel className="flex items-center text-base"><UploadCloud className="w-5 h-5 mr-2 text-primary"/>Example Images</FormLabel>
+                    <FormDescription>Plan allows {maxImagesAllowed} images. Current: {(form.getValues("exampleImages")?.length || 0)}/{maxImagesAllowed}.</FormDescription>
+                    <FormControl>
+                      <div className="flex items-center justify-center w-full">
+                        <Label htmlFor="dropzone-file" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer border-border bg-card hover:bg-secondary ${isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing || !canUploadMoreImages ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            {isUploading ? <Loader2 className="w-8 h-8 mb-2 text-muted-foreground animate-spin" /> : <UploadCloud className="w-8 h-8 mb-2 text-muted-foreground" />}
+                            <p className="mb-1 text-sm text-muted-foreground">
+                              {isUploading ? `Uploading ${selectedFileNames.join(', ').substring(0,30)}...` : (selectedFileNames.length > 0 && previewImages.length === selectedFileNames.length ? selectedFileNames.map((name, idx) => name === `Saved image ${idx+1}` ? `Image ${idx+1}` : name).join(', ').substring(0,50) + (selectedFileNames.join(', ').length > 50 ? '...' : '') : (canUploadMoreImages ? <><span className="font-semibold">Click to upload</span> or drag & drop</> : `Max ${maxImagesAllowed} reached.`))}
+                            </p>
+                            {selectedFileNames.length === 0 && !isUploading && canUploadMoreImages && <p className="text-xs text-muted-foreground">Max 5MB per file.</p>}
+                          </div>
+                          <Input id="dropzone-file" type="file" multiple className="hidden" onChange={handleImageFileChange} accept="image/*" disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || !canUploadMoreImages || isGeneratingLogo || isUploadingLogo || isEnhancing} ref={fileInputRef} />
+                        </Label>
+                      </div>
+                    </FormControl>
+                    {isUploading && <Progress value={uploadProgress} className="w-full h-2 mt-2" />}
+                    <FormField control={form.control} name="exampleImages" render={() => <FormMessage />} />
+                    {!canUploadMoreImages && !isUploading && <p className="text-xs text-destructive mt-1">Max {maxImagesAllowed} images for your current plan.</p>}
+                  </FormItem>
+                  {previewImages.length > 0 && (
+                    <div className="mt-2 space-y-3">
+                      <p className="text-sm text-muted-foreground mb-1">Previews ({previewImages.length}/{maxImagesAllowed}):</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                        {previewImages.map((src, index) => (
+                          <div key={src || index} className="relative group aspect-square">
+                            <NextImage src={src} alt={`Preview ${index + 1}`} fill style={{objectFit: 'contain'}} className="rounded border" data-ai-hint="brand example"/>
+                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
+                                <Button
+                                  type="button"
+                                  className="btn-gradient-primary h-auto text-xs p-2 w-full"
+                                  onClick={() => handleOpenRefineModal(src)}
+                                >
+                                    <Wand2 className="w-3 h-3 mr-1"/> Refine
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="icon"
+                                    className="absolute top-1 right-1 h-6 w-6"
+                                    onClick={() => handleDeleteImage(src, index)}
+                                    disabled={isUploading || isExtracting || isBrandContextLoading || isAdminLoadingTargetProfile || isGeneratingLogo || isUploadingLogo || isEnhancing}
+                                    title="Delete"
+                                >
+                                    <Trash2 className="h-3 w-3" />
+                                </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </form>
+              </Form>
+            </CardContent>
+            <CardFooter>
+              <Button
+                type="submit"
+                form="brandProfileFormReal"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                size="lg"
+                disabled={isAuthLoading || isBrandContextLoading || isAdminLoadingTargetProfile || form.formState.isSubmitting || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing || isLoadingAdminProfiles}
+              >
+                {(isUploadingLogo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null)}
+                {isUploadingLogo ? 'Uploading & Saving...' : (isUploading ? 'Uploading Image(s)...' : (isAuthLoading || isBrandContextLoading || isAdminLoadingTargetProfile ? 'Loading...' : (form.formState.isSubmitting ? 'Saving...' : (isExtracting ? 'Extracting...' : 'Save Brand Profile'))))}
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      </ScrollArea>
+    </>
   );
 }

@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { handleEditImageAction, handleEnhanceRefinePromptAction } from '@/lib/actions';
 import type { FormState } from '@/lib/actions';
 import type { EditImageOutput, EnhanceRefinePromptOutput } from '@/types';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const initialEditImageState: FormState<EditImageOutput> = { error: undefined, data: undefined };
 const initialEnhancePromptState: FormState<EnhanceRefinePromptOutput> = { error: undefined, data: undefined };
@@ -180,28 +181,44 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
             <h3 className="text-lg font-semibold border-b pb-2">History</h3>
             <div className="flex-1 overflow-y-auto space-y-3 pr-2">
               {refinementHistory.map((versionUrl, index) => (
-                <div
-                  key={index}
-                  className="relative group cursor-pointer"
-                  onClick={() => !isProcessing && handleRevertToVersion(versionUrl)}
-                >
-                  <div className="aspect-square w-full rounded-md overflow-hidden border-2 group-hover:border-primary transition-colors">
-                    <NextImage src={versionUrl} alt={`Version ${index + 1}`} fill className="object-contain"/>
-                  </div>
-                  <Badge
-                    variant={versionUrl === currentImage ? 'default' : 'secondary'}
-                    className="absolute top-2 left-2 z-10"
-                  >
-                    {index === 0 ? 'Original' : `Version ${index}`}
-                  </Badge>
-                  {versionUrl !== currentImage && !isProcessing && (
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-md">
-                      <div className="flex items-center text-white font-semibold">
-                        <RefreshCcw className="w-4 h-4 mr-2"/> Revert
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <AlertDialog key={index}>
+                    <AlertDialogTrigger asChild>
+                        <div className="relative group cursor-pointer">
+                          <div className="aspect-square w-full rounded-md overflow-hidden border-2 group-hover:border-primary transition-colors">
+                            <NextImage src={versionUrl} alt={`Version ${index + 1}`} fill className="object-contain"/>
+                          </div>
+                          <Badge
+                            variant={versionUrl === currentImage ? 'default' : 'secondary'}
+                            className="absolute top-2 left-2 z-10"
+                          >
+                            {index === 0 ? 'Original' : `Version ${index}`}
+                          </Badge>
+                          {versionUrl !== currentImage && !isProcessing && (
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-md">
+                              <div className="flex items-center text-white font-semibold">
+                                <RefreshCcw className="w-4 h-4 mr-2"/> Revert
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                    </AlertDialogTrigger>
+                    {versionUrl !== currentImage && (
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Revert to this version?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                This will discard any changes made after this version. You can always refine again from here.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleRevertToVersion(versionUrl)}>
+                                Yes, Revert
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    )}
+                </AlertDialog>
               ))}
             </div>
           </div>
