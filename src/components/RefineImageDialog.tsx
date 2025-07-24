@@ -37,7 +37,7 @@ function RefineSubmitButton({ isProcessing, children, ...props }: React.Componen
 
 // Helper to convert URL to Data URI
 async function urlToDataUri(url: string): Promise<string> {
-    const response = await fetch(url);
+    const response = await fetch(url, { mode: 'cors' });
     const blob = await response.blob();
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
