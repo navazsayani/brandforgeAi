@@ -11,11 +11,12 @@ import { useRouter } from 'next/navigation';
 interface AuthContextType {
   user: User | null;
   currentUser: User | null;
+  userId: string | null; // Added userId
   isLoading: boolean;
   error: string | null;
   signUp: (email: string, pass: string) => Promise<User | null>;
   logIn: (email: string, pass: string) => Promise<User | null>;
-  signInWithGoogle: () => Promise<User | null>; // Added
+  signInWithGoogle: () => Promise<User | null>;
   logOut: () => Promise<void>;
   setError: Dispatch<SetStateAction<string | null>>;
 }
@@ -123,11 +124,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const contextValue = useMemo(() => ({
     user,
     currentUser,
+    userId: currentUser?.uid || null, // Directly expose the userId
     isLoading,
     error,
     signUp,
     logIn,
-    signInWithGoogle, // Added
+    signInWithGoogle,
     logOut,
     setError
   // eslint-disable-next-line react-hooks/exhaustive-deps

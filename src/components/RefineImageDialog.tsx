@@ -12,7 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Wand2, Sparkles, ArrowLeft, X, Check, RefreshCcw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { handleEditImageAction, handleEnhanceRefinePromptAction, type FormState } from '@/lib/actions';
+import { handleEditImageAction, handleEnhanceRefinePromptAction } from '@/lib/actions';
+import type { FormState } from '@/lib/actions';
 import type { EditImageOutput, EnhanceRefinePromptOutput } from '@/types';
 
 const initialEditImageState: FormState<EditImageOutput> = { error: undefined, data: undefined };
@@ -46,7 +47,7 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
   const [refinementHistory, setRefinementHistory] = useState<string[]>([]);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
 
-  const isEnhancing = enhanceState.data ? false : enhanceState.error ? false : (useFormStatus().pending && enhanceState !== initialEnhancePromptState);
+  const { pending: isEnhancing } = useFormStatus();
 
   useEffect(() => {
     if (imageToRefine) {
@@ -57,8 +58,7 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
       setRefinementHistory([]);
     }
     setInstruction('');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [imageToRefine]); // Only reset when the initial image changes
+  }, [imageToRefine]);
 
   useEffect(() => {
     if (editState.data?.editedImageDataUri) {
@@ -116,7 +116,7 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
     onOpenChange(false);
   };
 
-  const isProcessing = useFormStatus().pending;
+  const { pending: isProcessing } = useFormStatus();
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
