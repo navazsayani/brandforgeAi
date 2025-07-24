@@ -27,11 +27,13 @@ import { getPlansConfig, clearPlansConfigCache } from './plans-config';
 import { DEFAULT_PLANS_CONFIG } from './constants';
 import Razorpay from 'razorpay';
 import admin from 'firebase-admin';
+import { getStorage as getAdminStorage } from 'firebase-admin/storage';
 
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.applicationDefault(),
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   });
 }
 
@@ -709,6 +711,17 @@ export async function handlePopulateAdCampaignFormAction(
   }
 }
 
+async function getSignedUrl(storagePath: string): Promise<string> {
+    const bucket = getAdminStorage().bucket();
+    const file = bucket.file(storagePath);
+
+    const [url] = await file.getSignedUrl({
+        action: 'read',
+        expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+    });
+    return url;
+}
+
 export async function handleEditImageAction(
   prevState: FormState<EditImageOutput>,
   formData: FormData
@@ -721,16 +734,32 @@ export async function handleEditImageAction(
 
     await checkAndIncrementUsage(userId, 'imageGenerations');
 
-    const imageDataUri = formData.get("imageDataUri") as string;
+    let imageDataUri = formData.get("imageDataUri") as string;
     const instruction = formData.get("instruction") as string;
 
     if (!imageDataUri || !instruction) {
       return { error: "Base image and an instruction are required for refinement." };
     }
     
-    // The image data is now always expected to be a data URI from the client
-    if (!imageDataUri.startsWith('data:image')) {
-       return { error: `Invalid image data format. Expected a data URI but received something else.` };
+    // If the image is a Firebase Storage URL, get a signed URL for it.
+    if (imageDataUri.startsWith('https://firebasestorage.googleapis.com/')) {
+        try {
+            console.log(`[Edit Image Action] Received Firebase Storage URL. Creating signed URL...`);
+            // Decode the URL to get the file path
+            const decodedUrl = decodeURIComponent(imageDataUri);
+            const pathRegex = /o\/(.+)\?alt=media/;
+            const match = decodedUrl.match(pathRegex);
+            if (!match || !match[1]) {
+                throw new Error("Could not parse Firebase Storage path from URL.");
+            }
+            const filePath = match[1];
+            
+            imageDataUri = await getSignedUrl(filePath);
+            console.log(`[Edit Image Action] Successfully created signed URL.`);
+        } catch (urlError: any) {
+            console.error("[Edit Image Action] Error creating signed URL:", urlError);
+            return { error: `Could not access storage object: ${urlError.message}` };
+        }
     }
 
     const input: EditImageInput = {
@@ -739,7 +768,15 @@ export async function handleEditImageAction(
     };
     
     const result = await editImage(input);
-    return { data: result, message: "Image refinement successful." };
+    const newImageDataUri = result.editedImageDataUri;
+
+    // Upload the new refined image to storage and get a permanent URL
+    const newFilePath = `users/${userId}/brandProfiles/${userId}/generatedLibraryImages/refined_${Date.now()}.png`;
+    const imageStorageRef = storageRef(storage, newFilePath);
+    const snapshot = await uploadString(imageStorageRef, newImageDataUri, 'data_url');
+    const permanentUrl = await getDownloadURL(snapshot.ref);
+
+    return { data: { editedImageDataUri: permanentUrl }, message: "Image refinement successful." };
   } catch (e: any) {
     console.error("Error in handleEditImageAction:", e);
     return { error: `Failed to refine image: ${e.message || "Unknown error."}` };
