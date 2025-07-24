@@ -709,6 +709,16 @@ export async function handlePopulateAdCampaignFormAction(
   }
 }
 
+async function convertUrlToDataUri(url: string): Promise<string> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`HTTP error fetching media '${url}': ${response.status} ${response.statusText}`);
+  }
+  const blob = await response.blob();
+  const buffer = Buffer.from(await blob.arrayBuffer());
+  return `data:${blob.type};base64,${buffer.toString('base64')}`;
+}
+
 export async function handleEditImageAction(
   prevState: FormState<EditImageOutput>,
   formData: FormData
@@ -719,18 +729,30 @@ export async function handleEditImageAction(
       return { error: "User not authenticated. Cannot refine image." };
     }
 
-    // Every refinement is a new generation, so we check the quota.
     await checkAndIncrementUsage(userId, 'imageGenerations');
 
-    const input: EditImageInput = {
-      imageDataUri: formData.get("imageDataUri") as string,
-      instruction: formData.get("instruction") as string,
-    };
+    let imageDataUri = formData.get("imageDataUri") as string;
+    const instruction = formData.get("instruction") as string;
 
-    if (!input.imageDataUri || !input.instruction) {
+    if (!imageDataUri || !instruction) {
       return { error: "Base image and an instruction are required for refinement." };
     }
 
+    // If the image data is a URL, fetch it on the server and convert to data URI
+    if (imageDataUri.startsWith('http')) {
+      try {
+        imageDataUri = await convertUrlToDataUri(imageDataUri);
+      } catch (e: any) {
+        console.error("Server-side image fetch error:", e);
+        return { error: e.message || "Failed to retrieve image data from URL." };
+      }
+    }
+
+    const input: EditImageInput = {
+      imageDataUri,
+      instruction,
+    };
+    
     const result = await editImage(input);
     return { data: result, message: "Image refinement successful." };
   } catch (e: any) {
