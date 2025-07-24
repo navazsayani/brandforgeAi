@@ -723,11 +723,29 @@ export async function handleEditImageAction(
 
     await checkAndIncrementUsage(userId, 'imageGenerations');
 
-    const imageDataUri = formData.get("imageDataUri") as string;
+    let imageDataUri = formData.get("imageDataUri") as string;
     const instruction = formData.get("instruction") as string;
 
     if (!imageDataUri || !instruction) {
       return { error: "Base image and an instruction are required for refinement." };
+    }
+
+    // If the image is a URL, fetch it on the server and convert to data URI
+    if (imageDataUri.startsWith('http')) {
+        console.log(`[handleEditImageAction] Received URL, fetching image data from: ${imageDataUri}`);
+        try {
+            const response = await fetch(imageDataUri);
+            if (!response.ok) {
+                throw new Error(`HTTP error fetching media '${imageDataUri}': ${response.status} ${response.statusText}`);
+            }
+            const blob = await response.blob();
+            const buffer = Buffer.from(await blob.arrayBuffer());
+            imageDataUri = `data:${blob.type};base64,${buffer.toString('base64')}`;
+            console.log(`[handleEditImageAction] Successfully converted URL to data URI.`);
+        } catch (fetchError: any) {
+            console.error(`[handleEditImageAction] Failed to fetch image from URL:`, fetchError);
+            throw new Error(`Error fetching image data: ${fetchError.message}`);
+        }
     }
     
     const input: EditImageInput = {
@@ -737,18 +755,8 @@ export async function handleEditImageAction(
     
     const result = await editImage(input);
     
-    // The result from editImage is already a data URI.
-    // To save bandwidth and storage, we can upload this directly
-    // and then return a permanent URL.
-    const newImageDataUri = result.editedImageDataUri;
-
-    const newFilePath = `users/${userId}/brandProfiles/${userId}/generatedLibraryImages/refined_${Date.now()}.png`;
-    const imageStorageRef = storageRef(storage, newFilePath);
-    const snapshot = await uploadString(imageStorageRef, newImageDataUri, 'data_url');
-    const permanentUrl = await getDownloadURL(snapshot.ref);
-
-    // Return the permanent URL, not the data URI
-    return { data: { editedImageDataUri: permanentUrl }, message: "Image refinement successful." };
+    // The result from editImage is a data URI. Return it directly.
+    return { data: { editedImageDataUri: result.editedImageDataUri }, message: "Image refinement successful." };
   } catch (e: any) {
     console.error("Error in handleEditImageAction:", e);
     return { error: `Failed to refine image: ${e.message || "Unknown error."}` };

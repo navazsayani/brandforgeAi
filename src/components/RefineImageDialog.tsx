@@ -27,23 +27,6 @@ interface RefineImageDialogProps {
   onRefinementAccepted: (originalUrl: string, newUrl:string) => void;
 }
 
-// Helper to convert URL to Data URI
-async function urlToDataUri(url: string): Promise<string> {
-    const response = await fetch(url);
-
-    if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const blob = await response.blob();
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-    });
-}
-
 export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefinementAccepted }: RefineImageDialogProps) {
   const { userId } = useAuth();
   const { toast } = useToast();
@@ -53,8 +36,7 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
   
   const [isEditing, setIsEditing] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-
+  
   const [instruction, setInstruction] = useState('');
   const [refinementHistory, setRefinementHistory] = useState<string[]>([]);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
@@ -65,13 +47,11 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
     if (imageToRefine && isOpen) {
       setCurrentImage(imageToRefine);
       setRefinementHistory([imageToRefine]);
-      setFetchError(null); // Clear previous errors
     } else if (!isOpen) {
       // Reset state when dialog closes
       setCurrentImage(null);
       setRefinementHistory([]);
       setInstruction('');
-      setFetchError(null);
     }
   }, [imageToRefine, isOpen]);
 
@@ -120,26 +100,14 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
     if (!currentImage || !instruction) return;
     
     setIsEditing(true);
-    setFetchError(null);
-    
-    try {
-        let imageDataUri = currentImage;
-        // If the image is a URL (from Firebase), convert it to a data URI first
-        if (currentImage.startsWith('http')) {
-            imageDataUri = await urlToDataUri(currentImage);
-        }
 
-        const formData = new FormData();
-        formData.append("userId", userId || "");
-        formData.append("imageDataUri", imageDataUri); 
-        formData.append("instruction", instruction);
-        
-        startTransition(() => editAction(formData));
-    } catch (error) {
-        console.error("Error fetching image data:", error);
-        setFetchError("Could not fetch the image data. Please check your network or image permissions.");
-        setIsEditing(false);
-    }
+    const formData = new FormData();
+    formData.append("userId", userId || "");
+    // Pass the URL directly to the server action
+    formData.append("imageDataUri", currentImage); 
+    formData.append("instruction", instruction);
+    
+    startTransition(() => editAction(formData));
   };
 
   const handleRevertToVersion = (versionUrl: string) => {
@@ -205,7 +173,6 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
                   </Button>
                 </div>
               </div>
-               {fetchError && <Alert variant="destructive"><AlertTitle>Image Fetch Error</AlertTitle><AlertDescription>{fetchError}</AlertDescription></Alert>}
               <Button type="submit" className="w-full text-base py-3" disabled={isProcessing || !instruction}>
                  {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
                  {isProcessing ? 'Generating...' : 'Generate Refinement'}
