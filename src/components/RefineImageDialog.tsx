@@ -14,10 +14,22 @@ import { useToast } from '@/hooks/use-toast';
 import { handleEditImageAction, handleEnhanceRefinePromptAction } from '@/lib/actions';
 import type { FormState } from '@/lib/actions';
 import type { EditImageOutput, EnhanceRefinePromptOutput } from '@/types';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const initialEditImageState: FormState<EditImageOutput> = { error: undefined, data: undefined };
 const initialEnhancePromptState: FormState<EnhanceRefinePromptOutput> = { error: undefined, data: undefined };
+
+// Helper to convert URL to Data URI
+async function urlToDataUri(url: string): Promise<string> {
+    const response = await fetch(url, { mode: 'cors' });
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
 
 interface RefineImageDialogProps {
   isOpen: boolean;
@@ -110,14 +122,36 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
     if (!currentImage || !instruction) return;
     
     setIsEditing(true);
+
+    try {
+        let imageDataForAction = currentImage;
+
+        // If the image is a URL (from Firebase Storage), convert it to data URI first
+        if (currentImage.startsWith('http')) {
+            try {
+                imageDataForAction = await urlToDataUri(currentImage);
+            } catch (conversionError: any) {
+                toast({
+                    title: "Image Fetch Error",
+                    description: "Could not fetch the image data. Please check your network or image permissions.",
+                    variant: "destructive"
+                });
+                setIsEditing(false);
+                return;
+            }
+        }
     
-    const formData = new FormData();
-    formData.append("userId", userId || "");
-    // The image data can be a data URI or a Firebase Storage URL. The server action will handle it.
-    formData.append("imageDataUri", currentImage); 
-    formData.append("instruction", instruction);
-    
-    startTransition(() => editAction(formData));
+        const formData = new FormData();
+        formData.append("userId", userId || "");
+        formData.append("imageDataUri", imageDataForAction); 
+        formData.append("instruction", instruction);
+        
+        startTransition(() => editAction(formData));
+    } catch (err: any) {
+        console.error("Error preparing refinement:", err);
+        toast({ title: "Error", description: err.message || "An unexpected error occurred.", variant: "destructive" });
+        setIsEditing(false);
+    }
   };
 
   const handleRevertToVersion = (versionUrl: string) => {
