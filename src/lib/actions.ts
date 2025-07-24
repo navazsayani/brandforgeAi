@@ -711,17 +711,6 @@ export async function handlePopulateAdCampaignFormAction(
   }
 }
 
-async function getSignedUrl(storagePath: string): Promise<string> {
-    const bucket = getAdminStorage().bucket();
-    const file = bucket.file(storagePath);
-
-    const [url] = await file.getSignedUrl({
-        action: 'read',
-        expires: Date.now() + 15 * 60 * 1000, // 15 minutes
-    });
-    return url;
-}
-
 export async function handleEditImageAction(
   prevState: FormState<EditImageOutput>,
   formData: FormData
@@ -734,48 +723,31 @@ export async function handleEditImageAction(
 
     await checkAndIncrementUsage(userId, 'imageGenerations');
 
-    let imageDataUri = formData.get("imageDataUri") as string;
+    const imageDataUri = formData.get("imageDataUri") as string;
     const instruction = formData.get("instruction") as string;
 
     if (!imageDataUri || !instruction) {
       return { error: "Base image and an instruction are required for refinement." };
     }
     
-    // If the image is a Firebase Storage URL, get a signed URL for it.
-    if (imageDataUri.startsWith('https://firebasestorage.googleapis.com/')) {
-        try {
-            console.log(`[Edit Image Action] Received Firebase Storage URL. Creating signed URL...`);
-            // Decode the URL to get the file path
-            const decodedUrl = decodeURIComponent(imageDataUri);
-            const pathRegex = /o\/(.+)\?alt=media/;
-            const match = decodedUrl.match(pathRegex);
-            if (!match || !match[1]) {
-                throw new Error("Could not parse Firebase Storage path from URL.");
-            }
-            const filePath = match[1];
-            
-            imageDataUri = await getSignedUrl(filePath);
-            console.log(`[Edit Image Action] Successfully created signed URL.`);
-        } catch (urlError: any) {
-            console.error("[Edit Image Action] Error creating signed URL:", urlError);
-            return { error: `Could not access storage object: ${urlError.message}` };
-        }
-    }
-
     const input: EditImageInput = {
       imageDataUri,
       instruction,
     };
     
     const result = await editImage(input);
+    
+    // The result from editImage is already a data URI.
+    // To save bandwidth and storage, we can upload this directly
+    // and then return a permanent URL.
     const newImageDataUri = result.editedImageDataUri;
 
-    // Upload the new refined image to storage and get a permanent URL
     const newFilePath = `users/${userId}/brandProfiles/${userId}/generatedLibraryImages/refined_${Date.now()}.png`;
     const imageStorageRef = storageRef(storage, newFilePath);
     const snapshot = await uploadString(imageStorageRef, newImageDataUri, 'data_url');
     const permanentUrl = await getDownloadURL(snapshot.ref);
 
+    // Return the permanent URL, not the data URI
     return { data: { editedImageDataUri: permanentUrl }, message: "Image refinement successful." };
   } catch (e: any) {
     console.error("Error in handleEditImageAction:", e);

@@ -14,7 +14,8 @@ import { useToast } from '@/hooks/use-toast';
 import { handleEditImageAction, handleEnhanceRefinePromptAction } from '@/lib/actions';
 import type { FormState } from '@/lib/actions';
 import type { EditImageOutput, EnhanceRefinePromptOutput } from '@/types';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const initialEditImageState: FormState<EditImageOutput> = { error: undefined, data: undefined };
 const initialEnhancePromptState: FormState<EnhanceRefinePromptOutput> = { error: undefined, data: undefined };
@@ -23,16 +24,24 @@ interface RefineImageDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   imageToRefine: string | null;
-  onRefinementAccepted: (originalUrl: string, newUrl: string) => void;
+  onRefinementAccepted: (originalUrl: string, newUrl:string) => void;
 }
 
-function RefineSubmitButton({ isProcessing, children, ...props }: React.ComponentProps<typeof Button> & { isProcessing: boolean }) {
-    return (
-      <Button type="submit" {...props} disabled={isProcessing || props.disabled}>
-        {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-        {isProcessing ? 'Generating...' : children}
-      </Button>
-    );
+// Helper to convert URL to Data URI
+async function urlToDataUri(url: string): Promise<string> {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
 }
 
 export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefinementAccepted }: RefineImageDialogProps) {
@@ -44,6 +53,7 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
   
   const [isEditing, setIsEditing] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const [instruction, setInstruction] = useState('');
   const [refinementHistory, setRefinementHistory] = useState<string[]>([]);
@@ -55,11 +65,13 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
     if (imageToRefine && isOpen) {
       setCurrentImage(imageToRefine);
       setRefinementHistory([imageToRefine]);
+      setFetchError(null); // Clear previous errors
     } else if (!isOpen) {
       // Reset state when dialog closes
       setCurrentImage(null);
       setRefinementHistory([]);
       setInstruction('');
+      setFetchError(null);
     }
   }, [imageToRefine, isOpen]);
 
@@ -77,8 +89,7 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
     if (editState.error) {
       toast({ title: "Refinement Failed", description: editState.error, variant: "destructive" });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editState]);
+  }, [editState, toast]);
 
   useEffect(() => {
     if (enhanceState.data || enhanceState.error) {
@@ -91,8 +102,7 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
     if (enhanceState.error) {
       toast({ title: "Enhancement Failed", description: enhanceState.error, variant: "destructive" });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enhanceState]);
+  }, [enhanceState, toast]);
 
   const handleEnhancePrompt = () => {
     if (instruction.trim().length < 3) {
@@ -110,19 +120,30 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
     if (!currentImage || !instruction) return;
     
     setIsEditing(true);
+    setFetchError(null);
     
-    const formData = new FormData();
-    formData.append("userId", userId || "");
-    // Pass the URL directly. The server action will handle it.
-    formData.append("imageDataUri", currentImage); 
-    formData.append("instruction", instruction);
-    
-    startTransition(() => editAction(formData));
+    try {
+        let imageDataUri = currentImage;
+        // If the image is a URL (from Firebase), convert it to a data URI first
+        if (currentImage.startsWith('http')) {
+            imageDataUri = await urlToDataUri(currentImage);
+        }
+
+        const formData = new FormData();
+        formData.append("userId", userId || "");
+        formData.append("imageDataUri", imageDataUri); 
+        formData.append("instruction", instruction);
+        
+        startTransition(() => editAction(formData));
+    } catch (error) {
+        console.error("Error fetching image data:", error);
+        setFetchError("Could not fetch the image data. Please check your network or image permissions.");
+        setIsEditing(false);
+    }
   };
 
   const handleRevertToVersion = (versionUrl: string) => {
     setCurrentImage(versionUrl);
-    // Prune history to the selected version
     const versionIndex = refinementHistory.indexOf(versionUrl);
     setRefinementHistory(prev => prev.slice(0, versionIndex + 1));
   };
@@ -135,10 +156,10 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!isProcessing) onOpenChange(open); }}>
       <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0">
         <DialogHeader className="p-6 pb-2 border-b">
-          <DialogTitle className="flex items-center gap-2 text-2xl"><Wand2 className="w-7 h-7 text-primary"/> AI Image Refinement Studio</DialogTitle>
+          <DialogTitle className="flex items-center gap-2 text-2xl"><Wand2 className="w-7 h-7 text-primary"/>AI Image Refinement Studio</DialogTitle>
           <DialogDescription>Iteratively refine your image with AI instructions. Each refinement generates a new version.</DialogDescription>
         </DialogHeader>
         
@@ -184,9 +205,11 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
                   </Button>
                 </div>
               </div>
-              <RefineSubmitButton className="w-full text-base py-3" isProcessing={isEditing} disabled={isProcessing || !instruction}>
-                Generate Refinement
-              </RefineSubmitButton>
+               {fetchError && <Alert variant="destructive"><AlertTitle>Image Fetch Error</AlertTitle><AlertDescription>{fetchError}</AlertDescription></Alert>}
+              <Button type="submit" className="w-full text-base py-3" disabled={isProcessing || !instruction}>
+                 {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+                 {isProcessing ? 'Generating...' : 'Generate Refinement'}
+              </Button>
               {editState.error && <p className="text-sm text-destructive text-center">{editState.error}</p>}
             </form>
           </div>
