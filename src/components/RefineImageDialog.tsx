@@ -35,6 +35,19 @@ function RefineSubmitButton({ isProcessing, children, ...props }: React.Componen
     );
 }
 
+// Helper to convert URL to Data URI
+async function urlToDataUri(url: string): Promise<string> {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+
 export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefinementAccepted }: RefineImageDialogProps) {
   const { userId } = useAuth();
   const { toast } = useToast();
@@ -48,6 +61,7 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
   const [instruction, setInstruction] = useState('');
   const [refinementHistory, setRefinementHistory] = useState<string[]>([]);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
+  const [isLoadingImage, setIsLoadingImage] = useState(false);
   
   const isProcessing = isEditing || isEnhancing;
 
@@ -60,6 +74,7 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
       setCurrentImage(null);
       setRefinementHistory([]);
       setInstruction('');
+      setIsLoadingImage(false);
     }
   }, [imageToRefine, isOpen]);
 
@@ -105,15 +120,38 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
     startTransition(() => enhanceAction(formData));
   };
   
-  const handleRefineSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleRefineSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!currentImage || !instruction) return;
+    
     setIsEditing(true);
-    const formData = new FormData();
-    formData.append("userId", userId || "");
-    formData.append("imageDataUri", currentImage);
-    formData.append("instruction", instruction);
-    startTransition(() => editAction(formData));
+    
+    try {
+        let imageAsDataUri = currentImage;
+        // If the image is a URL (from Firebase), convert it to a data URI first.
+        if (currentImage.startsWith('https://')) {
+            setIsLoadingImage(true);
+            imageAsDataUri = await urlToDataUri(currentImage);
+            setIsLoadingImage(false);
+        }
+
+        const formData = new FormData();
+        formData.append("userId", userId || "");
+        formData.append("imageDataUri", imageAsDataUri);
+        formData.append("instruction", instruction);
+        
+        startTransition(() => editAction(formData));
+
+    } catch (error: any) {
+        console.error("Error converting image to data URI:", error);
+        toast({
+            title: "Image Processing Error",
+            description: `Could not process the image before sending: ${error.message}`,
+            variant: "destructive",
+        });
+        setIsEditing(false);
+        setIsLoadingImage(false);
+    }
   };
 
   const handleRevertToVersion = (versionUrl: string) => {
@@ -142,10 +180,10 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
           {/* Main Content Area */}
           <div className="flex flex-col gap-6">
             <div className="relative aspect-square w-full bg-muted rounded-lg overflow-hidden border-2 border-dashed flex items-center justify-center">
-              {isEditing ? (
+              {isEditing || isLoadingImage ? (
                 <div className="flex flex-col items-center justify-center text-muted-foreground">
                   <Loader2 className="w-12 h-12 animate-spin text-primary mb-4"/>
-                  <p className="font-semibold">Generating refinement...</p>
+                  <p className="font-semibold">{isLoadingImage ? 'Preparing Image...' : 'Generating refinement...'}</p>
                 </div>
               ) : currentImage ? (
                 <NextImage src={currentImage} alt="Image to refine" fill className="object-contain p-2"/>
