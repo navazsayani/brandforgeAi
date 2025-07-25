@@ -5,14 +5,15 @@ import { getPostBySlug, getBlogPosts } from '@/lib/blog';
 import BlogPostPageClient from './BlogPostPageClient';
 
 type BlogPostPageProps = {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 };
 
 // Generate metadata on the server
 export async function generateMetadata({ params }: BlogPostPageProps): Promise<Metadata> {
-  const post = getPostBySlug(params.slug);
+  const resolvedParams = await params;
+  const post = getPostBySlug(resolvedParams.slug);
 
   if (!post) {
     return {
@@ -59,8 +60,9 @@ export async function generateStaticParams() {
 }
 
 // This is now a Server Component
-export default function BlogPostPage({ params }: BlogPostPageProps) {
-  const post = getPostBySlug(params.slug);
+export default async function BlogPostPage({ params }: BlogPostPageProps) {
+  const resolvedParams = await params;
+  const post = getPostBySlug(resolvedParams.slug);
 
   if (!post) {
     notFound();

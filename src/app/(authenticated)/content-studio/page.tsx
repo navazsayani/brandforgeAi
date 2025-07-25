@@ -1413,11 +1413,13 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
   const handleAcceptRefinement = (originalUrl: string, newUrl: string) => {
     // This is for the Content Studio. It just replaces the image in the current generation results.
     // It does not interact with the library or profile directly.
-    setSessionLastImageGenerationResult(prev => {
-        if (!prev) return null;
-        const updatedImages = prev.generatedImages.map(url => url === originalUrl ? newUrl : url);
-        return { ...prev, generatedImages: updatedImages };
-    });
+    if (sessionLastImageGenerationResult) {
+        const updatedImages = sessionLastImageGenerationResult.generatedImages.map((url: string) => url === originalUrl ? newUrl : url);
+        setSessionLastImageGenerationResult({
+            ...sessionLastImageGenerationResult,
+            generatedImages: updatedImages
+        });
+    }
     toast({
         title: "Image Updated",
         description: "The refined image has replaced the original in this session. You can now save it to your library.",
