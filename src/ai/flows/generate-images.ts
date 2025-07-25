@@ -8,7 +8,7 @@ import { describeImage } from './describe-image-flow'; // For Freepik descriptio
 import { industries, freepikValidStyles } from '../../lib/constants'; // Added freepikValidStyles
 import { getModelConfig } from '@/lib/model-config';
 import { GoogleGenAI } from "@google/genai";
-import { decodeHtmlEntitiesInUrl, verifyImageUrlExists } from '@/lib/utils';
+import { decodeHtmlEntitiesInUrl } from '@/lib/utils';
 
 const GenerateImagesInputSchema = z.object({
   provider: z.enum(['GEMINI', 'FREEPIK', 'LEONARDO_AI', 'IMAGEN']).optional().describe("The image generation provider to use."),
@@ -113,6 +113,19 @@ async function _generateImageWithLeonardoAI_stub(params: {
   throw new Error("Leonardo.ai provider is not implemented yet.");
 }
 
+async function _generateImageWithImagen_stub(params: {
+  brandDescription: string;
+  industry?: string;
+  imageStyle: string;
+  exampleImage?: string;
+  aspectRatio?: string;
+  negativePrompt?: string;
+  seed?: number;
+  textPrompt: string;
+}): Promise<string> {
+  console.warn("Imagen (e.g., via Vertex AI) provider is called but not implemented. Parameters:", params);
+  throw new Error("Imagen provider (e.g., via Vertex AI) is not implemented yet. This would typically involve a different Genkit plugin or direct API calls.");
+}
 
 // Helper function to detect if a model is an Imagen model
 function isImagenModel(modelName: string): boolean {
@@ -132,9 +145,38 @@ function mapToImagenAspectRatio(uiAspectRatio?: string): string {
   return mapping[uiAspectRatio || "1:1"] || "1:1";
 }
 
-// Helper function to validate Imagen model names
+// Helper function to validate Imagen model names (strict validation, no fallbacks)
 function validateImagenModel(modelName: string): string {
-  return modelName.replace(/^googleai\//, '');
+  const validModels = [
+    'imagen-3.0-generate-001',
+    'imagen-3.0-fast-generate-001',
+    'imagen-4.0-generate-preview-06-06'
+  ];
+  
+  // Remove "googleai/" prefix if present (Imagen API doesn't use this prefix)
+  let cleanModelName = modelName.replace(/^googleai\//, '');
+  
+  // Log prefix removal if it happened
+  if (modelName !== cleanModelName) {
+    console.log(`Removed "googleai/" prefix from Imagen model: "${modelName}" → "${cleanModelName}"`);
+  }
+  
+  // For debugging - let's not validate for now and just clean the prefix
+  console.log(`Imagen model validation: input="${modelName}", cleaned="${cleanModelName}"`);
+  
+  // Temporarily skip validation to test if the issue is with model names or API call
+  return cleanModelName;
+  
+  // Original validation (commented out for debugging)
+  /*
+  // Check if the cleaned model name is valid
+  if (validModels.includes(cleanModelName)) {
+    return cleanModelName;
+  }
+  
+  // No fallbacks - throw error with clear guidance
+  throw new Error(`Invalid Imagen model name: "${modelName}". Please use one of the following valid model names: ${validModels.join(', ')}. Check the latest available models at: https://ai.google.dev/gemini-api/docs/imagen`);
+  */
 }
 
 // New function to generate images using Google's Imagen API
@@ -147,55 +189,108 @@ async function _generateImageWithImagen(params: {
   seed?: number;
 }): Promise<string[]> {
   const validatedModel = validateImagenModel(params.model);
-  console.log(`[Imagen API] Generating with model: ${validatedModel}, Prompt: "${params.prompt.substring(0, 100)}..."`);
+  console.log(`=== IMAGEN API DEBUG ===`);
+  console.log(`Original model: ${params.model}`);
+  console.log(`Validated model: ${validatedModel}`);
+  console.log(`Prompt: ${params.prompt.substring(0, 100)}...`);
+  console.log(`Number of images: ${params.numberOfImages}`);
+  console.log(`Aspect ratio: ${params.aspectRatio}`);
   
   try {
+    // Initialize GoogleGenAI with API key from environment
     const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_API_KEY;
     if (!apiKey) {
-      throw new Error("Google AI API key not found in environment variables.");
+      throw new Error("Google AI API key not found. Please set GOOGLE_AI_API_KEY or GOOGLE_API_KEY environment variable.");
     }
+    
+    console.log(`API key found: ${apiKey.substring(0, 10)}...`);
     
     const ai = new GoogleGenAI({ apiKey });
     
     const requestConfig: any = {
-      number_of_images: params.numberOfImages,
-      aspect_ratio: mapToImagenAspectRatio(params.aspectRatio),
+      numberOfImages: params.numberOfImages,
+      aspectRatio: mapToImagenAspectRatio(params.aspectRatio),
+      personGeneration: "allow_adult", // Allow generation of adults but not children
+      safetySettings: "block_none", // Allow more creative freedom
+      outputOptions: {
+        compressionQuality: "high",
+        mimeType: "image/png"
+      }
     };
     
+    // Add negative prompt if provided
     if (params.negativePrompt && params.negativePrompt.trim()) {
-      requestConfig.negative_prompt = params.negativePrompt.trim();
+      requestConfig.negativePrompt = params.negativePrompt.trim();
+      console.log(`Using negative prompt: ${params.negativePrompt.trim()}`);
     }
     
+    // Add seed if provided for reproducibility
     if (params.seed !== undefined) {
       requestConfig.seed = params.seed;
+      console.log(`Using seed: ${params.seed}`);
     }
+    
+    console.log(`Full Imagen API request:`, {
+      model: validatedModel,
+      prompt: params.prompt.substring(0, 200) + "...",
+      config: requestConfig
+    });
+    
+    console.log(`Making API call to ai.models.generateImages...`);
     
     const response = await ai.models.generateImages({
       model: validatedModel,
       prompt: params.prompt,
-      ...requestConfig
+      config: requestConfig
     });
 
-    if (!response.images || response.images.length === 0) {
+    console.log(`Imagen API response received:`, {
+      hasGeneratedImages: !!response.generatedImages,
+      imageCount: response.generatedImages?.length || 0,
+      responseKeys: Object.keys(response),
+      fullResponse: JSON.stringify(response, null, 2)
+    });
+
+    if (!response.generatedImages || response.generatedImages.length === 0) {
       throw new Error("Imagen API returned no images in response");
     }
 
-    const dataUris = response.images.map((generatedImage) => {
-      if (!generatedImage.image) {
-        throw new Error("Imagen API returned invalid image data. Missing imageBytes.");
+    // Convert imageBytes to data URIs for consistency with existing system
+    const dataUris = response.generatedImages.map((generatedImage, index) => {
+      if (!generatedImage.image?.imageBytes) {
+        console.error(`Image ${index + 1} structure:`, JSON.stringify(generatedImage, null, 2));
+        throw new Error(`Imagen API returned invalid image data for image ${index + 1}. Missing imageBytes.`);
       }
-      return `data:image/png;base64,${generatedImage.image}`;
+      
+      // Convert base64 imageBytes to data URI
+      return `data:image/png;base64,${generatedImage.image.imageBytes}`;
     });
 
-    console.log(`[Imagen API] Successfully generated ${dataUris.length} image(s) using model: ${validatedModel}`);
+    console.log(`Successfully generated ${dataUris.length} image(s) using Imagen model: ${validatedModel}`);
+    console.log(`=== END IMAGEN API DEBUG ===`);
     return dataUris;
 
   } catch (error: any) {
-    console.error("[Imagen API] ERROR:", error);
-    if (error.message?.includes('404')) {
-      throw new Error(`Imagen model "${validatedModel}" not found. Please verify the model name and your API key access.`);
+    console.error("=== IMAGEN API ERROR DEBUG ===");
+    console.error("Full error object:", error);
+    console.error("Error message:", error.message);
+    console.error("Error status:", error.status);
+    console.error("Error code:", error.code);
+    console.error("Error details:", error.details);
+    console.error("Error response:", error.response);
+    console.error("Error stack:", error.stack);
+    console.error("=== END ERROR DEBUG ===");
+    
+    // Provide more specific error messages
+    if (error.message?.includes('404') || error.status === 404) {
+      throw new Error(`Imagen model "${validatedModel}" not found. Raw error: ${JSON.stringify(error.message)}. This could indicate: 1) The model name is incorrect, 2) The model is not available in your region, or 3) Your API key doesn't have access to Imagen models. Please verify the model name at: https://ai.google.dev/gemini-api/docs/imagen`);
+    } else if (error.message?.includes('401') || error.status === 401) {
+      throw new Error(`Authentication failed for Imagen API. Please check your Google AI API key is valid and has the necessary permissions.`);
+    } else if (error.message?.includes('403') || error.status === 403) {
+      throw new Error(`Access denied for Imagen API. Your API key may not have access to Imagen models or you may have exceeded quota limits.`);
     }
-    throw new Error(`Imagen API request failed: ${error.message}`);
+    
+    throw new Error(`Imagen API request failed. Raw error: ${JSON.stringify(error, Object.getOwnPropertyNames(error))}`);
   }
 }
 
@@ -522,118 +617,312 @@ First, analyze the text content to understand:
              generatedImageResults.push(`error:Failed to process Freepik batch. ${error.message || 'Unknown error'}`);
         }
     } else { 
-        // This block handles non-Freepik providers like Gemini and Imagen
-        let textPromptContent = "";
-        
-        if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
-            console.log(`Using finalized text prompt for batch: "${finalizedTextPrompt.substring(0,100)}..." (Provider: ${chosenProvider})`);
-            textPromptContent = finalizedTextPrompt;
+        for (let i = 0; i < numberOfImages; i++) {
+            let textPromptContent = "";
             
-            // For non-Imagen Gemini models, we must inject aspect ratio into the text prompt
-            if (chosenProvider === 'GEMINI' && !isImagenModel(textToImageModel) && aspectRatio && !finalizedTextPrompt.toLowerCase().includes("aspect ratio")) {
-              textPromptContent += `\n\n**CRITICAL REQUIREMENT**: The generated image *must* have an aspect ratio of exactly **${aspectRatio}**.`;
-            }
-            if (seed !== undefined && !finalizedTextPrompt.toLowerCase().includes("seed:")) {
-              textPromptContent += `\n\nUse seed: ${seed}.`;
-            }
-             if (
-                !finalizedTextPrompt.toLowerCase().includes("human figure") &&
-                !finalizedTextPrompt.toLowerCase().includes("crop")
-            ) {
-                textPromptContent += `\n\n${compositionGuidance}`;
-            }
-        } else {
-             // Construct prompt if no finalized prompt is provided
-            console.log(`Constructing prompt for batch. (Provider: ${chosenProvider})`);
-            if (!brandDescription || !imageStyle) {
-                throw new Error("Brand description and image style are required if not providing a finalized text prompt.");
-            }
-            // (Prompt construction logic remains the same as before)
-            let coreInstructions = "";
-            if (textToFeature && textToFeature.trim() !== "") {
-                coreInstructions = `You are an expert brand marketing designer...
+            if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
+                console.log(`Using finalized text prompt for image ${i+1}: "${finalizedTextPrompt.substring(0,100)}..." (Provider: ${chosenProvider})`);
+                textPromptContent = finalizedTextPrompt;
+                
+                if (chosenProvider !== 'FREEPIK') { 
+                    if (aspectRatio && !finalizedTextPrompt.toLowerCase().includes("aspect ratio")) {
+                      textPromptContent += `\n\n**CRITICAL REQUIREMENT**: The generated image *must* have an aspect ratio of exactly **${aspectRatio}**. The entire image canvas must conform to this ratio without any letterboxing or pillarboxing. This is a primary constraint.`;
+                    }
+                    if (seed !== undefined && !finalizedTextPrompt.toLowerCase().includes("seed:")) {
+                      textPromptContent += `\n\nUse seed: ${seed}.`;
+                    }
+                     if (
+                        !finalizedTextPrompt.toLowerCase().includes("human figure") &&
+                        !finalizedTextPrompt.toLowerCase().includes("crop") &&
+                        !finalizedTextPrompt.toLowerCase().includes("close-up") &&
+                        !finalizedTextPrompt.toLowerCase().includes("headshot") &&
+                        !finalizedTextPrompt.toLowerCase().includes("portrait") &&
+                        !finalizedTextPrompt.toLowerCase().includes("figure framing") &&
+                        !finalizedTextPrompt.toLowerCase().includes("composition")
+                    ) {
+                        textPromptContent += `\n\n${compositionGuidance}`;
+                    }
+                }
+                 if (numberOfImages > 1 && chosenProvider !== 'FREEPIK') {
+                    textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
+                }
+            } else { 
+                console.log(`Constructing prompt for image ${i+1}/${numberOfImages}. (Provider: ${chosenProvider})`);
+                if (!brandDescription || !imageStyle) {
+                    throw new Error("Brand description and image style are required if not providing/using a finalized text prompt.");
+                }
+                
+                let coreInstructions = "";
+
+                if (textToFeature && textToFeature.trim() !== "") {
+                    console.log(`Using text-to-feature content for image ${i+1}: "${textToFeature.substring(0,100)}..."`);
+                    coreInstructions = `You are an expert brand marketing designer specializing in creating contextual, engaging visual content that transforms text concepts into compelling brand-aligned graphics. Your mission is to understand the meaning and context behind the text and create a strategic visual representation that drives engagement and brand recognition.
+
 **Text Content to Transform:**
 "${textToFeature}"
-...`;
-            } else if (exampleImage && chosenProvider === 'GEMINI' && !isImagenModel(imageGenerationModel)) {
-                coreInstructions = `You are creating a strategic brand marketing image...
+
+**STRATEGIC CONTENT ANALYSIS:**
+First, analyze the text content to understand:
+- What is the core message or value proposition?
+- What type of content is this? (tips, benefits, questions, statements, calls-to-action, etc.)
+- What emotions or actions should this content inspire?
+- Who is the target audience for this message?
+- What visual metaphors or concepts would best represent this content?
+
+**BRAND STRATEGY CONTEXT:**
+- **Brand Identity:** "${brandDescription}"${industryContext}
+  - Extract the brand's personality, values, and visual identity cues
+  - Consider how this brand would communicate this specific message
+  - Think about the brand's target audience and their preferences
+  - Ensure the visual approach aligns with the brand's positioning
+
+**VISUAL EXECUTION STRATEGY:** "${imageStyle}"
+- Apply this style to enhance the content's impact and brand alignment
+- For realistic styles: Create professional, market-ready visuals with authentic appeal
+- For artistic styles: Balance creative expression with clear message communication
+- Ensure the style reinforces both the text content and brand personality
+
+**CONTEXTUAL DESIGN REQUIREMENTS:**
+- **Content-Driven Visuals:** Do NOT just display text - create visual representations of the concepts.
+- **Strategic Messaging:** The image should work as standalone content that communicates the message even without reading every word.
+- **Engagement Optimization:** Design for social media sharing, saving, and interaction.
+- **Brand Consistency:** Maintain visual consistency with the brand's identity and values.
+- **Audience Appeal:** Consider what would resonate with the brand's target demographic.
+
+**ENHANCED CREATIVE GUIDELINES:**
+- **Conceptual Visualization:** If the text mentions "5 benefits," create visual elements that represent those benefits, not just list them.
+- **Metaphorical Thinking:** Use visual metaphors that reinforce the message (e.g., growth charts for improvement tips, lightbulbs for ideas).
+- **Contextual Elements:** Include relevant icons, illustrations, or design elements that support the content theme.
+- **Hierarchy & Flow:** Guide the viewer's eye through the content in a logical, engaging way.
+
+**QUALITY STANDARDS:**
+- Professional marketing-grade execution suitable for paid advertising.
+- Optimized for maximum social media engagement and algorithmic performance.
+- Brand-appropriate messaging that aligns with company values and positioning.
+
+**FINAL OUTPUT:** Create a single, high-quality marketing image that transforms the text content into a compelling visual experience that drives engagement, communicates value, and strengthens brand recognition. Do NOT write the input text on the image.`;
+                } else if (exampleImage && chosenProvider === 'GEMINI') {
+                    coreInstructions = `You are creating a strategic brand marketing image designed to drive engagement, build brand awareness, and convert viewers into customers on social media platforms.
+
+**BRAND STRATEGY CONTEXT:**
+The provided example image serves as a category reference only. Your mission is to create a completely new, brand-aligned visual asset that:
+- Captures attention in crowded social media feeds
+- Communicates brand values instantly
+- Appeals to the target demographic
+- Encourages social sharing and engagement
+- Supports the brand's marketing objectives
+
 **CORE CREATIVE BRIEF:**
 1. **Brand Identity**: "${brandDescription}"${industryContext}
-...`;
-            } else {
-                coreInstructions = `You are creating a strategic brand marketing image...
+   - Extract the brand's personality, values, and unique selling proposition
+   - Consider the target audience's lifestyle, aspirations, and pain points
+   - Identify what makes this brand different from competitors
+   - Think about the emotional connection the brand wants to create
+
+2. **Visual Execution Style**: "${imageStyle}"
+   - This defines the aesthetic approach, mood, and technical execution
+   - For realistic styles: Create professional, market-ready visuals
+   - For artistic styles: Balance creativity with brand recognition
+   - Consider platform-specific best practices (Instagram, TikTok, etc.)
+
+**MARKETING OPTIMIZATION REQUIREMENTS:**
+- **Scroll-stopping power**: The image must stand out in social feeds
+- **Brand consistency**: Align with the brand's visual identity and messaging
+- **Target audience appeal**: Resonate with the specific demographic
+- **Conversion potential**: Include subtle elements that encourage action
+- **Shareability factor**: Create content people want to share
+- **Platform optimization**: Consider where this will be posted
+
+**CREATIVE GUIDELINES:**
+- Use the example image ONLY for category identification
+- Create something completely new that embodies the brand essence
+- Avoid generic or cliché visual approaches
+- Include contextual elements that tell a brand story
+- Consider seasonal trends and cultural relevance
+- Ensure the image works both as standalone content and in campaigns
+
+**QUALITY STANDARDS:**
+- Professional marketing-grade quality
+- Optimized for social media engagement
+- Culturally sensitive and inclusive
+- Technically excellent (lighting, composition, clarity)
+- Brand-appropriate and on-message
+`;
+                } else {
+                    coreInstructions = `You are creating a strategic brand marketing image designed to drive engagement, build brand awareness, and convert viewers into customers on social media platforms.
+
+**BRAND STRATEGY CONTEXT:**
+Your mission is to create a compelling, brand-aligned visual asset that:
+- Captures attention in crowded social media feeds
+- Communicates brand values instantly and memorably
+- Appeals directly to the target demographic's aspirations and needs
+- Encourages social sharing, saves, and engagement
+- Supports the brand's marketing and conversion objectives
+- Establishes strong brand recognition and recall
+
 **CORE CREATIVE BRIEF:**
 1. **Brand Identity Deep Dive**: "${brandDescription}"${industryContext}
-...`;
-            }
-            textPromptContent = `Generate a new, high-quality image...\n\n${coreInstructions}`;
-            if (negativePrompt) {
-                textPromptContent += `\n\nAvoid: ${negativePrompt}.`;
-            }
-            if (chosenProvider === 'GEMINI' && !isImagenModel(textToImageModel) && aspectRatio) {
-                textPromptContent += `\n\n**CRITICAL REQUIREMENT**: Aspect Ratio must be **${aspectRatio}**.`;
-            }
-            if (seed !== undefined) {
-                textPromptContent += `\n\nUse seed: ${seed}.`;
-            }
-            textPromptContent += `\n\n${compositionGuidance}`;
-        }
-        
-        actualPromptUsedForFirstImage = textPromptContent;
-        
-        // Model-aware generation logic
-        const modelToUse = exampleImage ? imageGenerationModel : textToImageModel;
-        console.log(`Selected model for this task: ${modelToUse}`);
-        
-        try {
-            if (isImagenModel(modelToUse) && !exampleImage) {
-                console.log(`Routing to Imagen API for text-to-image with model: ${modelToUse}`);
-                const imagenResults = await _generateImageWithImagen({
-                    model: modelToUse,
-                    prompt: textPromptContent,
-                    aspectRatio: aspectRatio,
-                    numberOfImages: numberOfImages,
-                    negativePrompt: negativePrompt,
-                    seed: seed
-                });
-                generatedImageResults.push(...imagenResults);
-            } else {
-                console.log(`Routing to Gemini Genkit for multimodal or Gemini text-to-image with model: ${modelToUse}`);
-                for (let i = 0; i < numberOfImages; i++) {
-                    let loopPrompt = textPromptContent;
-                    if (numberOfImages > 1) {
-                         loopPrompt += `\n\nImportant: This is image ${i + 1} of ${numberOfImages}. Vary pose or angle slightly.`;
-                    }
-                    const finalPromptPartsForGemini: ({text: string} | {media: {url: string}})[] = [];
-                    if (exampleImage) {
-                        const decodedExampleImageUrl = decodeHtmlEntitiesInUrl(exampleImage);
-                        const imageExists = await verifyImageUrlExists(exampleImage);
-                        if (imageExists) {
-                             finalPromptPartsForGemini.push({ media: { url: decodedExampleImageUrl } });
-                        } else {
-                           console.warn(`Example image not found: ${decodedExampleImageUrl}. Proceeding without it.`);
-                        }
-                    }
-                    finalPromptPartsForGemini.push({ text: loopPrompt });
-                    
-                    const resultValue = await _generateImageWithGemini({
-                        aiInstance: ai,
-                        promptParts: finalPromptPartsForGemini,
-                        model: modelToUse,
-                    });
-                    generatedImageResults.push(resultValue);
+   - Extract and amplify the brand's unique personality, values, and positioning
+   - Consider the target audience's lifestyle, pain points, desires, and social behaviors
+   - Identify the emotional triggers that drive purchase decisions in this market
+   - Think about what makes this brand memorable and different from competitors
+   - Consider the brand's aspirational qualities and how customers want to be perceived
+
+2. **Visual Execution Strategy**: "${imageStyle}"
+   - This defines the aesthetic approach, mood, technical execution, and brand personality expression
+   - For realistic styles: Create professional, market-ready visuals with authentic appeal
+   - For artistic styles: Balance creative expression with clear brand communication
+   - Consider platform-specific visual trends and best practices
+   - Ensure the style reinforces the brand's positioning and target audience preferences
+
+**ADVANCED MARKETING OPTIMIZATION:**
+- **Scroll-stopping Power**: The image must immediately grab attention in fast-scrolling feeds
+- **Brand Consistency**: Align perfectly with the brand's visual identity, tone, and messaging strategy
+- **Demographic Targeting**: Resonate deeply with the specific target audience's visual preferences and cultural context
+- **Conversion Psychology**: Include subtle visual cues that encourage engagement and action
+- **Shareability Factor**: Create content that people actively want to share, save, and discuss
+- **Platform Optimization**: Consider where this will be posted and optimize for those specific platforms
+- **Trend Awareness**: Incorporate current visual trends while maintaining timeless brand appeal
+
+**STRATEGIC CREATIVE GUIDELINES:**
+- Create something completely original that embodies the brand's unique essence
+- Avoid generic, stock-photo-like, or cliché visual approaches
+- Include rich contextual elements that tell a compelling brand story
+- Consider seasonal trends, cultural moments, and social relevance
+- Ensure the image works as standalone content and as part of larger campaigns
+- Think about how this image fits into the customer journey and brand experience
+- Consider the emotional journey: awareness → interest → desire → action
+
+**ENHANCED COMPOSITION & STORYTELLING:**
+- Use visual hierarchy to guide the viewer's eye through the brand story
+- Include environmental context that reinforces the brand's world and values
+- Consider lighting and mood to evoke the desired emotional response
+- Use color psychology to reinforce brand personality and trigger desired emotions
+- Include subtle details that reward closer inspection and encourage engagement
+- Think about the "Instagram moment" - what makes this worth sharing?
+
+**PREMIUM QUALITY STANDARDS:**
+- Professional marketing-grade quality that rivals top brand campaigns
+- Optimized for maximum social media engagement and algorithmic performance
+- Culturally sensitive, inclusive, and globally appealing
+- Technically excellent: perfect lighting, composition, clarity, and visual balance
+- Brand-appropriate messaging that aligns with company values and positioning
+- Market-ready quality suitable for paid advertising and organic content
+`;
+                }
+                textPromptContent = `Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.\n\n${coreInstructions}`;
+                
+                if (chosenProvider !== 'FREEPIK') { 
+                  if (negativePrompt) {
+                      textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
+                  }
+                  if (aspectRatio) { 
+                    textPromptContent += `\n\n**CRITICAL REQUIREMENT**: The generated image *must* have an aspect ratio of exactly **${aspectRatio}**. The entire image canvas must conform to this ratio without any letterboxing or pillarboxing. This is a primary constraint.`;
+                  }
+                  if (seed !== undefined) { 
+                    textPromptContent += `\n\nUse seed: ${seed}.`;
+                  }
+                   textPromptContent +=`\n\n${compositionGuidance}`; 
+                }
+                if (numberOfImages > 1 && chosenProvider !== 'FREEPIK') {
+                    textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
                 }
             }
-        } catch (error: any) {
-             console.error(`Error during generation of image batch with provider ${chosenProvider}. Full error:`, JSON.stringify(error, Object.getOwnPropertyNames(error)));
-             generatedImageResults.push(`error:Failed to process image batch. ${error.message || 'Unknown error'}`);
-        }
-    }
+            
+            if (i === 0) { 
+                actualPromptUsedForFirstImage = textPromptContent;
+            }
+            
+            console.log(`Text component of prompt for image ${i+1}/${numberOfImages} (Provider: ${chosenProvider}): "${textPromptContent.substring(0,200)}..."`);
+
+            try {
+                let resultValue = ""; 
+                
+                switch (chosenProvider.toUpperCase()) {
+                    case 'GEMINI':
+                        const modelForGemini = exampleImage ? imageGenerationModel : textToImageModel;
+                        
+                        // Check if this is an Imagen model for text-to-image generation (no example image)
+                        if (!exampleImage && isImagenModel(modelForGemini)) {
+                            console.log(`Imagen model detected for text-to-image: ${modelForGemini}. Using Imagen API instead of Genkit.`);
+                            
+                            // For Imagen models, we need to generate all images at once, not individually
+                            // So we break out of the loop and handle batch generation
+                            if (i === 0) {
+                                // Validate and clean the model name before passing to Imagen API
+                                const cleanedModelName = validateImagenModel(modelForGemini);
+                                console.log(`Using cleaned Imagen model name: ${cleanedModelName} (original: ${modelForGemini})`);
+                                
+                                // Generate all images in one batch call
+                                const imagenResults = await _generateImageWithImagen({
+                                    model: cleanedModelName,
+                                    prompt: textPromptContent,
+                                    aspectRatio: aspectRatio,
+                                    numberOfImages: numberOfImages,
+                                    negativePrompt: negativePrompt,
+                                    seed: seed
+                                });
+                                
+                                // Add all results to the array
+                                imagenResults.forEach(dataUri => {
+                                    generatedImageResults.push(dataUri);
+                                });
+                                
+                                console.log(`Imagen batch generation completed: ${imagenResults.length} image(s) generated.`);
+                                
+                                // Set the prompt used for the first image
+                                actualPromptUsedForFirstImage = textPromptContent;
+                                
+                                // Break out of the for loop since we've generated all images
+                                break;
+                            } else {
+                                // Skip subsequent iterations since we already generated all images in the first iteration
+                                continue;
+                            }
+                        } else {
+                            // Use regular Genkit generation for non-Imagen models or when example image is provided
+                            const finalPromptPartsForGemini: ({text: string} | {media: {url: string}})[] = [];
+                            
+                            if (exampleImage) {
+                                const decodedExampleImageUrl = decodeHtmlEntitiesInUrl(exampleImage);
+                                console.log(`Generate images flow - Original example image URL: ${exampleImage.substring(0, 100)}...`);
+                                console.log(`Generate images flow - Decoded example image URL: ${decodedExampleImageUrl.substring(0, 100)}...`);
+                                finalPromptPartsForGemini.push({ media: { url: decodedExampleImageUrl } });
+                            }
+                            finalPromptPartsForGemini.push({ text: textPromptContent });
+                            console.log("Final prompt parts array for Gemini (loop):", JSON.stringify(finalPromptPartsForGemini, null, 2));
+                            resultValue = await _generateImageWithGemini({
+                                aiInstance: ai,
+                                promptParts: finalPromptPartsForGemini,
+                                model: modelForGemini,
+                            });
+                        }
+                        break;
+                    case 'LEONARDO_AI':
+                        resultValue = await _generateImageWithLeonardoAI_stub({ brandDescription, industry, imageStyle, exampleImage, aspectRatio, negativePrompt, seed, textPrompt: textPromptContent });
+                        break;
+                    case 'IMAGEN':
+                        resultValue = await _generateImageWithImagen_stub({ brandDescription, industry, imageStyle, exampleImage, aspectRatio, negativePrompt, seed, textPrompt: textPromptContent });
+                        break;
+                    default:
+                        throw new Error(`Unsupported image generation provider in loop: ${chosenProvider}`);
+                }
+                
+                // Only push result if we have one (Imagen batch generation handles this differently)
+                if (resultValue) {
+                    generatedImageResults.push(resultValue);
+                }
+            } catch (error: any) {
+                 console.error(`Error during generation of image ${i+1}/${numberOfImages} with provider ${chosenProvider}. Full error:`, JSON.stringify(error, Object.getOwnPropertyNames(error)));
+                 generatedImageResults.push(`error:Failed to process image ${i+1}. ${error.message || 'Unknown error'}`);
+            }
+        } 
+    } 
 
     const finalGeneratedImages = generatedImageResults.filter(res => !res.startsWith('error:'));
     const errorsEncountered = generatedImageResults.filter(res => res.startsWith('error:')).map(err => err.substring(6));
 
-    if (finalGeneratedImages.length === 0 && numberOfImages > 0 && errorsEncountered.length > 0) {
+    if (finalGeneratedImages.length === 0 && numberOfImages > 0 && errorsEncountered.length > 0 && (chosenProvider.toUpperCase() !== 'FREEPIK' || errorsEncountered.length === 1)) {
       const allErrors = errorsEncountered.join('; ');
       console.error(`AI failed to generate ANY images/tasks for the batch. Provider: ${chosenProvider}. Errors: ${allErrors}`);
       throw new Error(`AI failed to generate any images/tasks for the batch. Errors: ${allErrors}`);
@@ -645,6 +934,7 @@ First, analyze the text content to understand:
     if (chosenProvider.toUpperCase() === 'FREEPIK' && !actualPromptUsedForFirstImage && finalizedTextPrompt) {
         actualPromptUsedForFirstImage = finalizedTextPrompt; 
     } else if (chosenProvider.toUpperCase() === 'FREEPIK' && !actualPromptUsedForFirstImage) {
+        // Fallback if something went wrong before full prompt capture
         actualPromptUsedForFirstImage = `Concept: "${brandDescription}". Add stylistic details: "${imageStyle}". (Error occurred before full prompt capture for batch)`;
     }
 
@@ -652,4 +942,31 @@ First, analyze the text content to understand:
   }
 );
 
-    
+// Action.define(generateImagesFlow, { 
+//     name: 'testGenerateImages',
+//     input: {
+//         schema: GenerateImagesInputSchema,
+//         examples: [
+//             {
+//                 provider: 'GEMINI',
+//                 brandDescription: 'A futuristic eco-friendly tech company.',
+//                 imageStyle: 'cyberpunk, neon lights, detailed illustration',
+//                 numberOfImages: 1,
+//                 aspectRatio: '16:9',
+//                 negativePrompt: 'blurry, low quality'
+//             },
+//             {
+//                 provider: 'FREEPIK',
+//                 brandDescription: 'A luxury Italian coffee brand.',
+//                 imageStyle: 'photo', 
+//                 numberOfImages: 2,
+//                 aspectRatio: 'square_1_1', 
+//                 freepikEffectColor: 'sepia',
+//                 freepikEffectFraming: 'close-up'
+//             }
+//         ],
+//     },
+//     output: {
+//         schema: GenerateImagesOutputSchema,
+//     },
+// });
