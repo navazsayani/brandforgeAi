@@ -194,3 +194,24 @@ export const EnhanceRefinePromptOutputSchema = z.object({
   enhancedInstruction: z.string().describe('The AI-enhanced, more detailed instruction for the image editing model.'),
 });
 export type EnhanceRefinePromptOutput = z.infer<typeof EnhanceRefinePromptOutputSchema>;
+
+// Types for admin orphaned images cleanup
+export interface OrphanedBrandImage {
+  userId: string;
+  userEmail?: string;
+  imageUrl: string;
+}
+
+export interface OrphanedLibraryImage {
+  userId: string;
+  userEmail?: string;
+  imageId: string;
+  imageUrl: string;
+}
+
+export interface OrphanedImageScanResult {
+  orphanedBrandImages: OrphanedBrandImage[];
+  orphanedLibraryImages: OrphanedLibraryImage[];
+  totalScanned: number;
+  scanTimestamp: string;
+}

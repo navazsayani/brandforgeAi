@@ -11,6 +11,7 @@
 import {ai} from '@/ai/genkit';
 import { getModelConfig } from '@/lib/model-config';
 import { EditImageInputSchema, EditImageOutputSchema, type EditImageInput, type EditImageOutput } from '@/types';
+import { decodeHtmlEntitiesInUrl, verifyImageUrlExists } from '@/lib/utils';
 
 export type { EditImageInput, EditImageOutput };
 
@@ -34,9 +35,22 @@ const editImageFlow = ai.defineFlow(
     // Check if the input is a URL and fetch it on the server if necessary
     let imageDataUri = input.imageDataUri;
     if (imageDataUri.startsWith('http')) {
-      console.log(`[editImageFlow] Detected URL, fetching image data from: ${imageDataUri}`);
+      // Decode HTML entities that might be present in the URL (e.g., &amp; -> &)
+      const decodedUrl = decodeHtmlEntitiesInUrl(imageDataUri);
+      
+      console.log(`[editImageFlow] Detected URL, fetching image data from: ${decodedUrl}`);
+      if (decodedUrl !== imageDataUri) {
+        console.log(`[editImageFlow] URL was HTML-encoded, decoded from: ${imageDataUri}`);
+      }
+      
+      // First verify the image exists
+      const imageExists = await verifyImageUrlExists(imageDataUri);
+      if (!imageExists) {
+        throw new Error(`Image not found or inaccessible: ${decodedUrl.substring(0, 100)}... This could indicate the image was deleted from Firebase Storage or the URL is invalid.`);
+      }
+      
       try {
-        const response = await fetch(imageDataUri);
+        const response = await fetch(decodedUrl);
         if (!response.ok) {
           throw new Error(`HTTP error fetching media '${imageDataUri}': ${response.status} ${response.statusText}`);
         }

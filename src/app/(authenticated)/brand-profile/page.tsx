@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState, useRef, useActionState, startTransition, useMemo } from 'react';
 import NextImage from 'next/image';
+import { BrandProfileImage } from '@/components/SafeImage';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -32,6 +33,7 @@ import { industries } from '@/lib/constants';
 import type { BrandData, UserProfileSelectItem } from '@/types';
 import { cn } from '@/lib/utils';
 import { RefineImageDialog } from '@/components/RefineImageDialog';
+import { checkFirebaseStorageUrl } from '@/lib/cleanup-orphaned-images';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -434,6 +436,26 @@ export default function BrandProfilePage() {
   const handleDeleteImage = async (imageUrlToDelete: string, indexToDelete: number) => {
     const currentImages = form.getValues("exampleImages") || [];
     const updatedFormImages = currentImages.filter((_, index) => index !== indexToDelete);
+    
+    // First check if the image actually exists in storage
+    if (imageUrlToDelete.includes("firebasestorage.googleapis.com")) {
+      const imageExists = await checkFirebaseStorageUrl(imageUrlToDelete);
+      
+      if (!imageExists) {
+        // Image is orphaned - just remove from Firestore
+        form.setValue("exampleImages", updatedFormImages, { shouldValidate: true });
+        setPreviewImages(updatedFormImages);
+        setSelectedFileNames(prev => prev.filter((_, index) => index !== indexToDelete));
+        toast({
+          title: "Orphaned Image Removed",
+          description: "Image reference was outdated and has been cleaned up. Save profile to finalize.",
+          variant: "default"
+        });
+        return;
+      }
+    }
+    
+    // Update UI optimistically
     form.setValue("exampleImages", updatedFormImages, { shouldValidate: true });
     setPreviewImages(updatedFormImages);
     setSelectedFileNames(prev => prev.filter((_, index) => index !== indexToDelete));
@@ -443,10 +465,11 @@ export default function BrandProfilePage() {
         const imageRef = storageRef(storage, imageUrlToDelete);
         await deleteObject(imageRef);
       }
-      toast({ title: "Image Deleted", description: "Image removed. Save profile." });
+      toast({ title: "Image Deleted", description: "Image removed from storage. Save profile to finalize." });
     } catch (error: any) {
+      // If deletion fails, revert the UI changes
       toast({ title: "Deletion Error", description: `Failed to delete from storage: ${error.message}. Reverting.`, variant: "destructive" });
-      form.setValue("exampleImages", currentImages, { shouldValidate: true }); 
+      form.setValue("exampleImages", currentImages, { shouldValidate: true });
       setPreviewImages(currentImages);
       setSelectedFileNames(currentImages.map((_,i) => `Saved image ${i+1}`));
     }
@@ -940,7 +963,7 @@ export default function BrandProfilePage() {
                       {/* Logo Preview and Generation */}
                       <div className="flex flex-col sm:flex-row items-center gap-4">
                         <div className="relative w-32 h-32 sm:w-36 sm:h-36 md:w-40 md:h-40 lg:w-44 lg:h-44 border rounded-md flex items-center justify-center bg-muted overflow-hidden flex-shrink-0">
-                          {isGeneratingLogo ? <Loader2 className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 text-primary animate-spin"/> : currentLogoToDisplay ? <NextImage src={currentLogoToDisplay} alt="Brand Logo Preview" fill className="object-contain p-2 sm:p-2.5 md:p-3 lg:p-3" data-ai-hint="brand logo"/> : <ImageIconLucide className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 text-muted-foreground"/>}
+                          {isGeneratingLogo ? <Loader2 className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 text-primary animate-spin"/> : currentLogoToDisplay ? <BrandProfileImage src={currentLogoToDisplay} alt="Brand Logo Preview" fill className="object-contain p-2 sm:p-2.5 md:p-3 lg:p-3" data-ai-hint="brand logo"/> : <ImageIconLucide className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 text-muted-foreground"/>}
                         </div>
                         <div className="flex-1 text-center sm:text-left">
                           <Button type="button" onClick={handleGenerateLogo} disabled={isGeneratingLogo || isUploadingLogo || !form.getValues("brandName") || !form.getValues("brandDescription")} className="w-full sm:w-auto">
@@ -994,7 +1017,7 @@ export default function BrandProfilePage() {
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {previewImages.map((src, index) => (
                           <div key={src || index} className="relative group aspect-square">
-                            <NextImage src={src} alt={`Preview ${index + 1}`} fill style={{objectFit: 'contain'}} className="rounded border" data-ai-hint="brand example"/>
+                            <BrandProfileImage src={src} alt={`Preview ${index + 1}`} fill style={{objectFit: 'contain'}} className="rounded border" data-ai-hint="brand example"/>
                             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
                                 <Button
                                   type="button"

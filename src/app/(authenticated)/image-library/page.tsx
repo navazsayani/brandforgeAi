@@ -4,6 +4,7 @@
 import React, { useActionState, useEffect, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import NextImage from 'next/image';
+import { BrandProfileImage, LibraryImage } from '@/components/SafeImage';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { db } from '@/lib/firebaseConfig';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
@@ -19,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { handleDeleteSavedImageAction } from '@/lib/actions';
 import type { FormState as DeleteFormState } from '@/lib/actions';
 import { RefineImageDialog } from '@/components/RefineImageDialog';
+import { checkFirebaseStorageUrl } from '@/lib/cleanup-orphaned-images';
 
 
 const fetchSavedLibraryImages = async (userId: string): Promise<SavedGeneratedImage[]> => {
@@ -58,6 +60,7 @@ function SavedImageCard({ image, userId, onRefineClick }: { image: SavedGenerate
     const queryClient = useQueryClient();
     const formRef = useRef<HTMLFormElement>(null);
     const initialDeleteState: DeleteFormState<{ success: boolean }> = { error: undefined, data: undefined };
+    const [isCheckingOrphan, setIsCheckingOrphan] = useState(false);
 
     const [state, formAction] = useActionState(handleDeleteSavedImageAction, initialDeleteState);
 
@@ -71,10 +74,43 @@ function SavedImageCard({ image, userId, onRefineClick }: { image: SavedGenerate
         }
     }, [state, toast, queryClient, userId]);
 
+    const handleEnhancedDelete = async () => {
+        setIsCheckingOrphan(true);
+        
+        try {
+            // Check if the image actually exists in storage
+            const imageExists = await checkFirebaseStorageUrl(image.storageUrl);
+            
+            if (!imageExists) {
+                // Image is orphaned - show special message and proceed with deletion
+                toast({
+                    title: "Orphaned Image Detected",
+                    description: "This image reference is outdated. Cleaning up...",
+                    variant: "default"
+                });
+            }
+            
+            // Proceed with normal deletion (which will handle both cases)
+            if (formRef.current) {
+                const formData = new FormData(formRef.current);
+                formAction(formData);
+            }
+        } catch (error) {
+            console.warn('Error checking image existence:', error);
+            // If check fails, proceed with normal deletion
+            if (formRef.current) {
+                const formData = new FormData(formRef.current);
+                formAction(formData);
+            }
+        } finally {
+            setIsCheckingOrphan(false);
+        }
+    };
+
     return (
         <Card className="overflow-hidden shadow-md hover:shadow-xl transition-shadow group flex flex-col">
             <div className="relative w-full aspect-square bg-muted overflow-hidden">
-                <NextImage
+                <LibraryImage
                     src={image.storageUrl}
                     alt={`Saved image generated with prompt: ${image.prompt.substring(0, 50)}...`}
                     fill
@@ -82,11 +118,21 @@ function SavedImageCard({ image, userId, onRefineClick }: { image: SavedGenerate
                     className="transition-transform duration-300 group-hover:scale-105"
                     data-ai-hint="library image"
                 />
-                <form action={formAction} ref={formRef}>
+                <form ref={formRef}>
                     <input type="hidden" name="userId" value={userId} />
                     <input type="hidden" name="imageId" value={image.id} />
                     <input type="hidden" name="storageUrl" value={image.storageUrl} />
-                    <DeleteButton />
+                    <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        disabled={isCheckingOrphan}
+                        title="Delete image"
+                        onClick={handleEnhancedDelete}
+                    >
+                        {isCheckingOrphan ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                    </Button>
                 </form>
             </div>
             <CardContent className="p-3 space-y-2 flex-grow flex flex-col">
@@ -214,7 +260,7 @@ export default function ImageLibraryPage() {
             {brandProfileImages.map((imageUrl, index) => (
               <Card key={`brand-img-${index}`} className="overflow-hidden shadow-md hover:shadow-xl transition-shadow group flex flex-col">
                 <div className="relative w-full aspect-square bg-muted overflow-hidden">
-                  <NextImage
+                  <BrandProfileImage
                     src={imageUrl}
                     alt={`Brand profile example image ${index + 1}`}
                     fill

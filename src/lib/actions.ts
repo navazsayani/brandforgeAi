@@ -21,10 +21,12 @@ import { enhanceRefinePrompt, type EnhanceRefinePromptInput, type EnhanceRefineP
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where, collectionGroup, deleteDoc, runTransaction } from 'firebase/firestore';
-import type { UserProfileSelectItem, BrandData, ModelConfig, PlansConfig, MonthlyUsage, AdminUserUsage, ConnectedAccountsStatus, InstagramAccount } from '@/types';
+import type { UserProfileSelectItem, BrandData, ModelConfig, PlansConfig, MonthlyUsage, AdminUserUsage, ConnectedAccountsStatus, InstagramAccount, OrphanedImageScanResult } from '@/types';
 import { getModelConfig, clearModelConfigCache } from './model-config';
 import { getPlansConfig, clearPlansConfigCache } from './plans-config';
 import { DEFAULT_PLANS_CONFIG } from './constants';
+import { decodeHtmlEntitiesInUrl, verifyImageUrlExists } from './utils';
+import { scanAllOrphanedImages, cleanupAllOrphanedImages } from './cleanup-orphaned-images';
 import Razorpay from 'razorpay';
 import admin from 'firebase-admin';
 import { getStorage as getAdminStorage } from 'firebase-admin/storage';
@@ -228,8 +230,19 @@ export async function handleGenerateImagesAction(
 
     if (chosenProvider.toUpperCase() === 'FREEPIK' && exampleImageUrl && exampleImageUrl.trim() !== "") {
       try {
-        const descriptionOutput = await describeImage({ imageDataUri: exampleImageUrl });
-        aiGeneratedDesc = descriptionOutput.description;
+        const decodedExampleImageUrl = decodeHtmlEntitiesInUrl(exampleImageUrl);
+        console.log(`Generate images action - Original example image URL: ${exampleImageUrl.substring(0, 100)}...`);
+        console.log(`Generate images action - Decoded example image URL: ${decodedExampleImageUrl.substring(0, 100)}...`);
+        
+        // Verify the example image exists before trying to describe it
+        const imageExists = await verifyImageUrlExists(exampleImageUrl);
+        if (!imageExists) {
+          console.warn(`Example image not found or inaccessible: ${decodedExampleImageUrl.substring(0, 100)}... Proceeding without description.`);
+          aiGeneratedDesc = undefined;
+        } else {
+          const descriptionOutput = await describeImage({ imageDataUri: decodedExampleImageUrl });
+          aiGeneratedDesc = descriptionOutput.description;
+        }
         
         if (finalizedTextPromptValue && finalizedTextPromptValue.includes(placeholderToReplace)) {
           const replacementText = `The user provided an example image which is described as: "${aiGeneratedDesc || "No specific description available for the example image"}". Using that description as primary inspiration for the subject and main visual elements, continue with the rest of the prompt instructions which should guide the concept and style for the new image.`;
@@ -245,7 +258,7 @@ export async function handleGenerateImagesAction(
       brandDescription: formData.get("brandDescription") as string,
       industry: formData.get("industry") as string | undefined,
       imageStyle: formData.get("imageStyle") as string,
-      exampleImage: exampleImageUrl && exampleImageUrl.trim() !== "" ? exampleImageUrl : undefined,
+      exampleImage: exampleImageUrl && exampleImageUrl.trim() !== "" ? decodeHtmlEntitiesInUrl(exampleImageUrl) : undefined,
       exampleImageDescription: aiGeneratedDesc,
       aspectRatio: formData.get("aspectRatio") as string | undefined,
       numberOfImages: numberOfImages,
@@ -732,11 +745,18 @@ export async function handleEditImageAction(
 
     // If the image is a URL, fetch it on the server and convert to data URI
     if (imageDataUri.startsWith('http')) {
-        console.log(`[handleEditImageAction] Received URL, fetching image data from: ${imageDataUri}`);
+        // Decode HTML entities that might be present in the URL (e.g., &amp; -> &)
+        const decodedUrl = decodeHtmlEntitiesInUrl(imageDataUri);
+        
+        console.log(`[handleEditImageAction] Received URL, fetching image data from: ${decodedUrl}`);
+        if (decodedUrl !== imageDataUri) {
+          console.log(`[handleEditImageAction] URL was HTML-encoded, decoded from: ${imageDataUri}`);
+        }
+        
         try {
-            const response = await fetch(imageDataUri);
+            const response = await fetch(decodedUrl);
             if (!response.ok) {
-                throw new Error(`HTTP error fetching media '${imageDataUri}': ${response.status} ${response.statusText}`);
+                throw new Error(`HTTP error fetching media '${decodedUrl}': ${response.status} ${response.statusText}`);
             }
             const blob = await response.blob();
             const buffer = Buffer.from(await blob.arrayBuffer());
@@ -2312,5 +2332,58 @@ export async function handleTestInstagramPermissionsAction(
   } catch (e: any) {
     console.error(`[Test Instagram Permissions:${requestId}] === ERROR ===`, e);
     return { error: `Failed to test Instagram permissions: ${e.message}` };
+  }
+}
+
+export async function handleAdminScanOrphanedImagesAction(
+  prevState: FormState<OrphanedImageScanResult>,
+  formData: FormData
+): Promise<FormState<OrphanedImageScanResult>> {
+  const adminRequesterEmail = formData.get('adminRequesterEmail') as string;
+
+  if (adminRequesterEmail !== 'admin@brandforge.ai') {
+    return { error: "Unauthorized: You do not have permission to perform this action." };
+  }
+
+  try {
+    console.log('[Admin Scan Orphaned Images] Starting system-wide orphaned images scan...');
+    const scanResult = await scanAllOrphanedImages();
+    
+    const totalOrphans = scanResult.orphanedBrandImages.length + scanResult.orphanedLibraryImages.length;
+    console.log(`[Admin Scan Orphaned Images] Scan completed. Found ${totalOrphans} orphaned images.`);
+    
+    return {
+      data: scanResult,
+      message: `Scan completed. Found ${totalOrphans} orphaned image references across ${scanResult.totalScanned} users.`
+    };
+  } catch (e: any) {
+    console.error('Error in handleAdminScanOrphanedImagesAction:', e);
+    return { error: `Failed to scan orphaned images: ${e.message || "Unknown error."}` };
+  }
+}
+
+export async function handleAdminCleanupOrphanedImagesAction(
+  prevState: FormState<{ success: boolean; deletedCount: number }>,
+  formData: FormData
+): Promise<FormState<{ success: boolean; deletedCount: number }>> {
+  const adminRequesterEmail = formData.get('adminRequesterEmail') as string;
+
+  if (adminRequesterEmail !== 'admin@brandforge.ai') {
+    return { error: "Unauthorized: You do not have permission to perform this action." };
+  }
+
+  try {
+    console.log('[Admin Cleanup Orphaned Images] Starting system-wide orphaned images cleanup...');
+    const cleanupResult = await cleanupAllOrphanedImages();
+    
+    console.log(`[Admin Cleanup Orphaned Images] Cleanup completed. Deleted ${cleanupResult.deletedCount} orphaned references.`);
+    
+    return {
+      data: { success: true, deletedCount: cleanupResult.deletedCount },
+      message: `Successfully cleaned up ${cleanupResult.deletedCount} orphaned image references.`
+    };
+  } catch (e: any) {
+    console.error('Error in handleAdminCleanupOrphanedImagesAction:', e);
+    return { error: `Failed to cleanup orphaned images: ${e.message || "Unknown error."}` };
   }
 }
