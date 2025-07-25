@@ -8,7 +8,7 @@ import { describeImage } from './describe-image-flow'; // For Freepik descriptio
 import { industries, freepikValidStyles } from '../../lib/constants'; // Added freepikValidStyles
 import { getModelConfig } from '@/lib/model-config';
 import { GoogleGenAI } from "@google/genai";
-import { decodeHtmlEntitiesInUrl } from '@/lib/utils';
+import { decodeHtmlEntitiesInUrl, verifyImageUrlExists } from '@/lib/utils';
 
 const GenerateImagesInputSchema = z.object({
   provider: z.enum(['GEMINI', 'FREEPIK', 'LEONARDO_AI', 'IMAGEN']).optional().describe("The image generation provider to use."),
@@ -884,6 +884,12 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                             const finalPromptPartsForGemini: ({text: string} | {media: {url: string}})[] = [];
                             
                             if (exampleImage) {
+                                // First verify the image exists
+                                const imageExists = await verifyImageUrlExists(exampleImage);
+                                if (!imageExists) {
+                                    throw new Error(`Example image not found or inaccessible: ${exampleImage.substring(0, 100)}... This could indicate the image was deleted from Firebase Storage or the URL is invalid.`);
+                                }
+                                
                                 const decodedExampleImageUrl = decodeHtmlEntitiesInUrl(exampleImage);
                                 console.log(`Generate images flow - Original example image URL: ${exampleImage.substring(0, 100)}...`);
                                 console.log(`Generate images flow - Decoded example image URL: ${decodedExampleImageUrl.substring(0, 100)}...`);
