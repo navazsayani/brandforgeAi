@@ -260,14 +260,16 @@ export default function ImageLibraryPage() {
             {brandProfileImages.map((imageUrl, index) => (
               <Card key={`brand-img-${index}`} className="overflow-hidden shadow-md hover:shadow-xl transition-shadow group flex flex-col">
                 <div className="relative w-full aspect-square bg-muted overflow-hidden">
-                  <BrandProfileImage
-                    src={imageUrl}
-                    alt={`Brand profile example image ${index + 1}`}
-                    fill
-                    style={{ objectFit: "contain" }}
-                    className="transition-transform duration-300 group-hover:scale-105"
-                    data-ai-hint="brand example"
-                  />
+                   <div className="relative w-full h-full">
+                      <BrandProfileImage
+                        src={imageUrl}
+                        alt={`Brand profile example image ${index + 1}`}
+                        fill
+                        style={{ objectFit: "contain" }}
+                        className="transition-transform duration-300 group-hover:scale-105"
+                        data-ai-hint="brand example"
+                      />
+                   </div>
                 </div>
                 <CardContent className="p-3 flex flex-col flex-grow">
                     <p className="text-xs text-muted-foreground truncate flex-grow">Profile Image {index + 1}</p>

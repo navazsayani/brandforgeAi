@@ -141,7 +141,9 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
                   <p className="font-semibold">Generating refinement...</p>
                 </div>
               ) : currentImage ? (
-                <NextImage src={currentImage} alt="Image to refine" fill className="object-contain p-2"/>
+                <div className="relative w-full h-full">
+                  <NextImage src={currentImage} alt="Image to refine" fill className="object-contain p-2"/>
+                </div>
               ) : (
                  <div className="text-muted-foreground">No Image Loaded</div>
               )}
@@ -189,7 +191,7 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
                 <AlertDialog key={index}>
                     <AlertDialogTrigger asChild>
                         <div className="relative group cursor-pointer">
-                          <div className="aspect-square w-full rounded-md overflow-hidden border-2 group-hover:border-primary transition-colors">
+                          <div className="relative aspect-square w-full rounded-md overflow-hidden border-2 group-hover:border-primary transition-colors">
                             <NextImage src={versionUrl} alt={`Version ${index + 1}`} fill className="object-contain"/>
                           </div>
                           <Badge

@@ -963,7 +963,15 @@ export default function BrandProfilePage() {
                       {/* Logo Preview and Generation */}
                       <div className="flex flex-col sm:flex-row items-center gap-4">
                         <div className="relative w-32 h-32 sm:w-36 sm:h-36 md:w-40 md:h-40 lg:w-44 lg:h-44 border rounded-md flex items-center justify-center bg-muted overflow-hidden flex-shrink-0">
-                          {isGeneratingLogo ? <Loader2 className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 text-primary animate-spin"/> : currentLogoToDisplay ? <BrandProfileImage src={currentLogoToDisplay} alt="Brand Logo Preview" fill className="object-contain p-2 sm:p-2.5 md:p-3 lg:p-3" data-ai-hint="brand logo"/> : <ImageIconLucide className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 text-muted-foreground"/>}
+                          {isGeneratingLogo ? (
+                            <Loader2 className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 text-primary animate-spin" />
+                          ) : currentLogoToDisplay ? (
+                            <div className="relative w-full h-full">
+                                <BrandProfileImage src={currentLogoToDisplay} alt="Brand Logo Preview" fill className="object-contain p-2 sm:p-2.5 md:p-3 lg:p-3" data-ai-hint="brand logo"/>
+                            </div>
+                          ) : (
+                            <ImageIconLucide className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 text-muted-foreground" />
+                          )}
                         </div>
                         <div className="flex-1 text-center sm:text-left">
                           <Button type="button" onClick={handleGenerateLogo} disabled={isGeneratingLogo || isUploadingLogo || !form.getValues("brandName") || !form.getValues("brandDescription")} className="w-full sm:w-auto">
