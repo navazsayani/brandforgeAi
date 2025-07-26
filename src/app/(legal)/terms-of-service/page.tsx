@@ -63,7 +63,7 @@ export default function TermsOfServicePage() {
 
         <h2>7. Governing Law</h2>
         <p>
-            These Terms shall be governed by the laws of the State of Delaware, USA, without regard to its conflict of law provisions. (Note: This is a placeholder and should be updated to your actual legal jurisdiction).
+            These Terms shall be governed and construed in accordance with the laws of India, with the exclusive jurisdiction of the courts in Mumbai, Maharashtra.
         </p>
         
         <h2>8. Changes to Terms</h2>
