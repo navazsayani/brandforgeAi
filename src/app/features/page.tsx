@@ -8,7 +8,7 @@ import { UserCircle, Paintbrush, Send, Rocket, ArrowRight, CheckCircle, Wand2 } 
 import PublicHeader from '@/components/PublicHeader';
 
 
-const FeatureDetailCard = ({ id, icon: Icon, title, description, benefits }: { id: string; icon: React.ElementType; title: string; description: string; benefits: { text: string; icon: React.ElementType }[] }) => (
+const FeatureDetailCard = ({ id, icon: Icon, title, description, benefits }: { id: string; icon: React.ElementType; title: string; description: string; benefits: { text: string; icon: React.ElementType, highlighted?: boolean }[] }) => (
     <Card id={id} className="card-enhanced w-full scroll-mt-24">
         <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 text-center sm:text-left">
@@ -24,9 +24,9 @@ const FeatureDetailCard = ({ id, icon: Icon, title, description, benefits }: { i
         <CardContent>
             <ul className="space-y-3 mt-4">
                 {benefits.map((benefit, index) => (
-                    <li key={index} className="flex items-start">
-                        <benefit.icon className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                        <span className="text-muted-foreground">{benefit.text}</span>
+                    <li key={index} className={`flex items-start p-3 rounded-lg transition-colors ${benefit.highlighted ? 'bg-primary/10 border border-primary/20' : ''}`}>
+                        <benefit.icon className={`w-5 h-5 mr-3 mt-0.5 flex-shrink-0 ${benefit.highlighted ? 'text-primary' : 'text-green-500'}`} />
+                        <span className={`text-muted-foreground ${benefit.highlighted ? 'font-semibold text-primary-foreground/90' : ''}`}>{benefit.text}</span>
                     </li>
                 ))}
             </ul>
@@ -85,7 +85,7 @@ export default function FeaturesPage() {
                         description="Your central hub for all AI-powered content creation."
                         benefits={[
                             { text: "Generate stunning, commercially-licensed images for marketing, social media, and blogs.", icon: CheckCircle },
-                            { text: "Refine any generated or uploaded image with simple text instructions to get the perfect shot.", icon: Wand2 },
+                            { text: "Refine any generated or uploaded image with simple text instructions to get the perfect shot.", icon: Wand2, highlighted: true },
                             { text: "Create engaging, platform-aware social media posts for Instagram, X, and more.", icon: CheckCircle },
                             { text: "Produce long-form, SEO-optimized blog articles, from outline to finished draft.", icon: CheckCircle },
                             { text: "Use AI to populate entire content forms from a single sentence, kickstarting your creative process.", icon: CheckCircle }

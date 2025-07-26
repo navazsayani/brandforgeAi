@@ -250,6 +250,28 @@ export default function LandingPage() {
             </div>
         </section>
 
+        {/* Refinement Highlight Section */}
+        <section className="section-spacing bg-background">
+            <div className="container-responsive">
+                <div className="text-center max-w-2xl mx-auto">
+                    <div className="inline-block p-4 bg-primary/10 rounded-2xl mb-6">
+                        <Wand2 className="h-10 w-10 text-primary" />
+                    </div>
+                    <h2 className="text-3xl md:text-4xl font-bold text-balance">
+                        Never Settle for 'Good Enough'—<span className="text-gradient-brand">Refine to Perfection</span>
+                    </h2>
+                    <p className="mt-4 text-lg text-muted-foreground text-balance">
+                        Your first AI generation is just the starting point. Our unique Refinement Studio lets you iteratively edit any image with simple text commands. Change backgrounds, add objects, or alter styles until it's exactly right.
+                    </p>
+                    <div className="mt-8">
+                        <Button size="lg" variant="outline" asChild>
+                            <Link href="/features#content-studio">Learn More About the Content Studio</Link>
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         {/* Final CTA Section */}
         <section className="section-spacing bg-gradient-to-tr from-primary/90 to-accent/90 text-primary-foreground">
              <div className="container-responsive text-center">
