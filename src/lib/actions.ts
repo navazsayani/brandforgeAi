@@ -19,6 +19,7 @@ import { populateBlogForm, type PopulateBlogFormInput, type PopulateBlogFormOutp
 import { populateAdCampaignForm, type PopulateAdCampaignFormInput, type PopulateAdCampaignFormOutput } from '@/ai/flows/populate-ad-campaign-form-flow';
 import { editImage, type EditImageInput, type EditImageOutput } from '@/ai/flows/edit-image-flow';
 import { enhanceRefinePrompt, type EnhanceRefinePromptInput, type EnhanceRefinePromptOutput } from '@/ai/flows/enhance-refine-prompt-flow';
+import { enhanceTextToFeature, type EnhanceTextToFeatureInput, type EnhanceTextToFeatureOutput } from '@/ai/flows/enhance-text-to-feature-flow';
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where, collectionGroup, deleteDoc, runTransaction } from 'firebase/firestore';
@@ -262,6 +263,7 @@ export async function handleGenerateImagesAction(
       brandDescription: formData.get("brandDescription") as string,
       industry: formData.get("industry") as string | undefined,
       imageStyle: formData.get("imageStyle") as string,
+      textToFeature: formData.get("textToFeature") as string | undefined,
       exampleImage: exampleImageUrl && exampleImageUrl.trim() !== "" ? decodeHtmlEntitiesInUrl(exampleImageUrl) : undefined,
       exampleImageDescription: aiGeneratedDesc,
       aspectRatio: formData.get("aspectRatio") as string | undefined,
@@ -804,6 +806,27 @@ export async function handleEnhanceRefinePromptAction(
     return { data: result, message: "Refinement prompt enhanced." };
   } catch (e: any) {
     console.error("Error in handleEnhanceRefinePromptAction:", e);
+    return { error: `Failed to enhance prompt: ${e.message || "Unknown error."}` };
+  }
+}
+
+export async function handleEnhanceTextToFeatureAction(
+  prevState: FormState<EnhanceTextToFeatureOutput>,
+  formData: FormData
+): Promise<FormState<EnhanceTextToFeatureOutput>> {
+  try {
+    const input: EnhanceTextToFeatureInput = {
+      textToFeature: formData.get("textToFeature") as string,
+    };
+
+    if (!input.textToFeature) {
+      return { error: "Text to feature is required to enhance the prompt." };
+    }
+
+    const result = await enhanceTextToFeature(input);
+    return { data: result, message: "Text-to-Feature prompt enhanced." };
+  } catch (e: any) {
+    console.error("Error in handleEnhanceTextToFeatureAction:", e);
     return { error: `Failed to enhance prompt: ${e.message || "Unknown error."}` };
   }
 }
@@ -1516,53 +1539,6 @@ export async function handleGetPlansConfigAction(
   }
 }
 
-export async function handleUpdatePlansConfigAction(
-  prevState: FormState<PlansConfig>,
-  formData: FormData
-): Promise<FormState<PlansConfig>> {
-  const adminRequesterEmail = formData.get('adminRequesterEmail') as string;
-  if (adminRequesterEmail !== 'admin@brandforge.ai') {
-    return { error: "Unauthorized: You do not have permission to perform this action." };
-  }
-
-  try {
-    const currentConfig = await getPlansConfig(true); // Get the latest config to merge with
-    
-    const updatedConfig: PlansConfig = JSON.parse(JSON.stringify(currentConfig)); // Deep copy
-
-    // Update USD Pro Plan
-    updatedConfig.USD.pro.price.amount = formData.get('usd_pro_price') as string;
-    updatedConfig.USD.pro.price.originalAmount = formData.get('usd_pro_original_price') as string || undefined;
-    updatedConfig.USD.pro.quotas.imageGenerations = Number(formData.get('pro_images_quota'));
-    updatedConfig.USD.pro.quotas.socialPosts = Number(formData.get('pro_social_quota'));
-    updatedConfig.USD.pro.quotas.blogPosts = Number(formData.get('pro_blogs_quota'));
-    
-    // Update INR Pro Plan
-    updatedConfig.INR.pro.price.amount = formData.get('inr_pro_price') as string;
-    updatedConfig.INR.pro.price.originalAmount = formData.get('inr_pro_original_price') as string || undefined;
-    updatedConfig.INR.pro.quotas.imageGenerations = Number(formData.get('pro_images_quota'));
-    updatedConfig.INR.pro.quotas.socialPosts = Number(formData.get('pro_social_quota'));
-    updatedConfig.INR.pro.quotas.blogPosts = Number(formData.get('pro_blogs_quota'));
-
-    // Update Free Plan (quotas are the same across currencies)
-    updatedConfig.USD.free.quotas.imageGenerations = Number(formData.get('free_images_quota'));
-    updatedConfig.USD.free.quotas.socialPosts = Number(formData.get('free_social_quota'));
-    updatedConfig.USD.free.quotas.blogPosts = Number(formData.get('free_blogs_quota'));
-    updatedConfig.INR.free.quotas.imageGenerations = Number(formData.get('free_images_quota'));
-    updatedConfig.INR.free.quotas.socialPosts = Number(formData.get('free_social_quota'));
-    updatedConfig.INR.free.quotas.blogPosts = Number(formData.get('free_blogs_quota'));
-
-    const configDocRef = doc(db, 'configuration', 'plans');
-    await setDoc(configDocRef, updatedConfig);
-    clearPlansConfigCache();
-
-    return { data: updatedConfig, message: "Plans configuration updated successfully." };
-  } catch (e: any) {
-    console.error("Error in handleUpdatePlansConfigAction:", e);
-    return { error: `Failed to update plans configuration: ${e.message || "Unknown error."}` };
-  }
-}
-
 
 export async function handleUpdateContentStatusAction(
   prevState: FormState<{ success: boolean }>,
@@ -1904,7 +1880,7 @@ export async function handleGetConnectedAccountsStatusAction(
             }
           }
         }
-       } else {
+      } else {
         // No expiration date, assume long-lived token, still test it
         try {
           const testUrl = `https://graph.facebook.com/v19.0/me?access_token=${data.meta.accessToken}&fields=id`;

@@ -22,9 +22,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download, Library, Star, Lock, Sparkles as SparklesIcon, ChevronRight, Target, Users, Check } from 'lucide-react';
-import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, handlePopulateImageFormAction, handlePopulateSocialFormAction, handlePopulateBlogFormAction, getPaymentMode, handleGetPlansConfigAction, handleEditImageAction, handleEnhanceRefinePromptAction, type FormState } from '@/lib/actions';
+import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, handlePopulateImageFormAction, handlePopulateSocialFormAction, handlePopulateBlogFormAction, getPaymentMode, handleGetPlansConfigAction, handleEditImageAction, handleEnhanceRefinePromptAction, handleEnhanceTextToFeatureAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
-import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage, PlansConfig } from '@/types';
+import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage, PlansConfig, EnhanceTextToFeatureOutput } from '@/types';
 import type { DescribeImageOutput } from "@/ai/flows/describe-image-flow";
 import type { GenerateBlogOutlineOutput } from "@/ai/flows/generate-blog-outline-flow";
 import type { GenerateImagesInput } from '@/ai/flows/generate-images';
@@ -229,6 +229,7 @@ const initialPopulateSocialFormState: FormState<PopulateSocialFormOutput> = { er
 const initialPopulateBlogFormState: FormState<PopulateBlogFormOutput> = { error: undefined, data: undefined, message: undefined };
 const initialFreepikTaskStatusState: FormState<{ status: string; images: string[] | null; taskId: string;}> = { error: undefined, data: undefined, message: undefined, taskId: "" };
 const initialPlansState: FormState<PlansConfig> = { data: undefined, error: undefined, message: undefined };
+const initialEnhanceTextToFeatureState: FormState<EnhanceTextToFeatureOutput> = { error: undefined, data: undefined, message: undefined };
 
 
 type SocialImageChoice = 'generated' | 'profile' | 'library' | null;
@@ -363,6 +364,11 @@ export default function ContentStudioPage() {
   // State for image refinement
   const [refineModalOpen, setRefineModalOpen] = useState(false);
   const [imageToRefine, setImageToRefine] = useState<string | null>(null);
+  
+  // State for enhancing Text-to-Feature
+  const [enhanceTextToFeatureState, enhanceTextToFeatureAction] = useActionState(handleEnhanceTextToFeatureAction, initialEnhanceTextToFeatureState);
+  const [isEnhancingTextToFeature, setIsEnhancingTextToFeature] = useState(false);
+
 
   const isPremiumActive = useMemo(() => {
     if (!brandData) return false;
@@ -764,6 +770,17 @@ export default function ContentStudioPage() {
         }
     }, [populateBlogFormState, toast]);
 
+    useEffect(() => {
+        setIsEnhancingTextToFeature(false);
+        if (enhanceTextToFeatureState.data?.enhancedTextToFeature) {
+            setImageGenTextToFeature(enhanceTextToFeatureState.data.enhancedTextToFeature);
+            toast({ title: "Prompt Enhanced!", description: "Your Text-to-Feature idea has been enhanced by AI." });
+        }
+        if (enhanceTextToFeatureState.error) {
+            toast({ title: "Enhancement Error", description: enhanceTextToFeatureState.error, variant: "destructive" });
+        }
+    }, [enhanceTextToFeatureState, toast]);
+
   const copyToClipboard = (text: string, type: string) => {
     navigator.clipboard.writeText(text);
     toast({ title: `${type} Copied!`, description: "Content copied to clipboard." });
@@ -959,39 +976,21 @@ First, analyze the text content to understand:
 - Ensure the style reinforces both the text content and brand personality
 
 **CONTEXTUAL DESIGN REQUIREMENTS:**
-- **Content-Driven Visuals:** Don't just display text - create visual representations of the concepts
-- **Strategic Messaging:** The image should work as standalone content that communicates the message even without reading every word
-- **Engagement Optimization:** Design for social media sharing, saving, and interaction
-- **Brand Consistency:** Maintain visual consistency with the brand's identity and values
-- **Audience Appeal:** Consider what would resonate with the brand's target demographic
+- **CRITICAL:** Create a visual representation of the concept. DO NOT write the input text on the image. For example, if the text is "5 Ways to Improve SEO", create an infographic or a conceptual image with 5 elements related to SEO, not the literal text.
+- **Strategic Messaging:** The image should work as standalone content that communicates the message even without reading every word.
+- **Engagement Optimization:** Design for social media sharing, saving, and interaction.
+- **Brand Consistency:** Maintain visual consistency with the brand's identity and values.
 
 **ENHANCED CREATIVE GUIDELINES:**
-- **Conceptual Visualization:** If the text mentions "5 benefits," create visual elements that represent those benefits, not just list them
-- **Metaphorical Thinking:** Use visual metaphors that reinforce the message (e.g., growth charts for improvement tips, lightbulbs for ideas)
-- **Contextual Elements:** Include relevant icons, illustrations, or design elements that support the content theme
-- **Hierarchy & Flow:** Guide the viewer's eye through the content in a logical, engaging way
-- **Brand Storytelling:** Make the image tell a story that aligns with both the text content and brand narrative
-
-**CONTENT-SPECIFIC ADAPTATIONS:**
-- For lists/tips: Create visually appealing infographic-style layouts with icons and visual separators
-- For questions: Design thought-provoking visuals that encourage engagement and responses
-- For benefits/features: Use visual metaphors and compelling graphics that illustrate value
-- For calls-to-action: Create urgency and appeal through strategic design and visual cues
-- For educational content: Design clear, informative layouts that enhance learning and retention
-
-**MARKETING OPTIMIZATION:**
-- **Scroll-Stopping Power:** The image must immediately grab attention in social feeds
-- **Message Clarity:** The core message should be instantly understandable
-- **Shareability Factor:** Create content people want to save, share, and discuss
-- **Brand Recognition:** Ensure the image reinforces brand identity and recall
-- **Platform Optimization:** Consider where this will be posted and optimize accordingly
+- **Conceptual Visualization:** If the text mentions a list, create visual elements that represent those items, not just text.
+- **Metaphorical Thinking:** Use visual metaphors that reinforce the message (e.g., a rocket for "growth", a lightbulb for "ideas").
+- **Contextual Elements:** Include relevant icons, illustrations, or design elements that support the content theme.
+- **Hierarchy & Flow:** Guide the viewer's eye through the content in a logical, engaging way.
 
 **QUALITY STANDARDS:**
-- Professional marketing-grade execution suitable for paid advertising
-- Optimized for maximum social media engagement and algorithmic performance
-- Culturally sensitive, inclusive, and globally appealing
-- Technically excellent: perfect typography, composition, color harmony, and visual balance
-- Brand-appropriate messaging that aligns with company values and positioning
+- Professional marketing-grade execution suitable for paid advertising.
+- Optimized for maximum social media engagement and algorithmic performance.
+- Brand-appropriate messaging that aligns with company values and positioning.
 
 **FINAL OUTPUT:** Create a single, high-quality marketing image that transforms the text content into a compelling visual experience that drives engagement, communicates value, and strengthens brand recognition.`;
     } else if (selectedImageProvider === 'FREEPIK') {
@@ -1298,6 +1297,17 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
         });
     };
 
+    const handleEnhanceTextToFeature = () => {
+        if (imageGenTextToFeature.trim().length < 3) {
+            toast({ title: "Text too short", description: "Please provide a longer idea to enhance.", variant: "default" });
+            return;
+        }
+        setIsEnhancingTextToFeature(true);
+        const formData = new FormData();
+        formData.append("textToFeature", imageGenTextToFeature);
+        startTransition(() => enhanceTextToFeatureAction(formData));
+    };
+
   const handleSocialSubmit = async (formData: FormData) => {
     let imageSrc = formData.get("selectedImageSrcForSocialPost") as string | null;
 
@@ -1588,7 +1598,20 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                   </div>
 
                    <div>
-                    <Label htmlFor="imageGenTextToFeature" className="flex items-center mb-1"><Type className="w-4 h-4 mr-2 text-primary" />Text to Feature in Image (Optional)</Label>
+                    <div className="flex items-center justify-between mb-1">
+                        <Label htmlFor="imageGenTextToFeature" className="flex items-center"><Type className="w-4 h-4 mr-2 text-primary" />Text to Feature in Image (Optional)</Label>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleEnhanceTextToFeature}
+                            disabled={isEnhancingTextToFeature || imageGenTextToFeature.length < 3 || (useExampleImageForGen && selectedExampleImageUrl.trim() !== "")}
+                            className="text-xs h-auto py-1 px-2"
+                        >
+                            {isEnhancingTextToFeature ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                            <span className="ml-1">Enhance</span>
+                        </Button>
+                    </div>
                     <Textarea
                       id="imageGenTextToFeature"
                       name="textToFeature"
