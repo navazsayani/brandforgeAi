@@ -11,9 +11,9 @@ import { Loader2, UserCircle, Rocket, Paintbrush, Send, ArrowRight, Wand2, Layer
 import PublicHeader from '@/components/PublicHeader';
 
 
-const FeatureCard = ({ icon: Icon, title, description }: { icon: React.ElementType, title: string, description: string }) => (
-    <div className="card-compact text-center p-6 md:p-8 h-full flex flex-col group">
-        <div className="p-4 bg-primary/10 rounded-xl w-fit mx-auto mb-6 shadow-sm group-hover:scale-110 transition-transform duration-300">
+const FeatureCard = ({ icon: Icon, title, description, id }: { icon: React.ElementType, title: string, description: string, id: string }) => (
+    <div id={id} className="card-compact text-left p-6 md:p-8 h-full flex flex-col group border-primary/20 hover:border-primary/50">
+        <div className="p-4 bg-primary/10 rounded-xl w-fit mb-6 shadow-sm group-hover:scale-110 transition-transform duration-300">
             <Icon className="h-10 w-10 text-primary" />
         </div>
         <h3 className="text-xl font-bold mb-3 text-break">{title}</h3>
@@ -197,23 +197,26 @@ export default function LandingPage() {
         <section className="section-spacing bg-secondary/30">
           <div className="container-responsive">
             <div className="text-center max-w-3xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-bold text-balance">Find Your Fit: AI for Every Stage of Your Brand's Journey</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-balance">AI for Every Stage of Your Brand's Journey</h2>
               <p className="mt-4 text-lg text-muted-foreground text-balance">
-                Whether you're just starting out or scaling to new heights, BrandForge AI adapts to your needs.
+                Whether you're just starting, scaling up, or optimizing for growth, BrandForge AI adapts to your specific needs.
               </p>
             </div>
-            <div className="grid-responsive mt-16 max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-16 max-w-6xl mx-auto">
               <FeatureCard 
+                id="new-brand"
                 icon={Rocket}
                 title="For the New Brand: From Spark to Identity"
                 description="Have a great idea but no brand? Instantly generate a logo, extract key messaging from your site, and create your foundational brand profile in minutes. Launch professionally from day one."
               />
               <FeatureCard 
+                id="growing-brand"
                 icon={Layers}
                 title="For the Growing Brand: From Presence to Power"
                 description="Struggling to keep up with content demands? Use your established brand identity to generate a consistent stream of on-brand social posts, blog articles, and stunning visuals. Scale your content, not your team."
               />
                <FeatureCard 
+                id="established-brand"
                 icon={Target}
                 title="For the Established Brand: From Reach to ROI"
                 description="Ready to optimize? Turn your best content into high-performing ad campaigns. Generate creative variations for A/B testing and get strategic guidance for platforms like Google and Meta."
