@@ -36,6 +36,9 @@ export default function PrivacyPolicyPage() {
             <li>
                 <strong>Generated Content:</strong> We store the content generated for you through our service—including images, social media posts, blog articles, and ad campaigns—to make it accessible to you within the application's Deployment Hub and Image Library.
             </li>
+             <li>
+                <strong>Social Media Connection Data:</strong> If you choose to connect your social media accounts (e.g., Meta for Facebook and Instagram), we will store authentication tokens necessary to manage content on your behalf. We do not store your passwords.
+            </li>
             <li>
                 <strong>Usage Data:</strong> We collect data on your use of the service, such as the number of images, social posts, and blog articles you generate, to manage your plan's quotas.
             </li>
@@ -49,6 +52,7 @@ export default function PrivacyPolicyPage() {
         <ul>
             <li>Create and manage your account and subscription plan.</li>
             <li>Provide the core functionality of the app, which involves passing your Brand Data to third-party AI models (e.g., Google AI's Gemini and Imagen) to generate content tailored to your brand.</li>
+            <li>Deploy generated content to your connected social media accounts (e.g., Instagram) upon your request.</li>
             <li>Operate, maintain, and improve our application and services.</li>
             <li>Monitor and analyze usage and trends to improve your experience.</li>
             <li>Process payments and prevent fraudulent transactions.</li>
@@ -62,7 +66,10 @@ export default function PrivacyPolicyPage() {
                 <strong>By Law or to Protect Rights:</strong> If we believe the release of information about you is necessary to respond to legal process, to investigate or remedy potential violations of our policies, or to protect the rights, property, and safety of others.
             </li>
             <li>
-                <strong>Third-Party Service Providers:</strong> We share your brand information and prompts with our AI model providers (e.g., Google AI) to generate content. We use Firebase for backend services including database (Firestore), file storage (Cloud Storage), and authentication. For payments, we use Razorpay to process transactions securely. We do not control how these third parties use the information required to provide their service, and we encourage you to review their respective privacy policies.
+                <strong>Third-Party Service Providers:</strong> We share your brand information and prompts with our AI model providers (e.g., Google AI) to generate content. We use Firebase for backend services including database (Firestore), file storage (Cloud Storage), and authentication. For payments, we use Razorpay to process transactions securely.
+            </li>
+             <li>
+                <strong>Social Media APIs:</strong> When you connect your social media accounts and initiate a deployment, we interact with the respective platform's API (e.g., Meta for Instagram and Facebook). We only share the content you've chosen to publish. Your account credentials are not shared.
             </li>
         </ul>
         
@@ -78,7 +85,7 @@ export default function PrivacyPolicyPage() {
 
         <h2>7. Contact Us</h2>
         <p>
-            If you have questions or comments about this Privacy Policy, please contact us at: support@brandforge.ai
+            If you have questions or comments about this Privacy Policy, please contact us at: navaz@brandforge.me
         </p>
       </CardContent>
     </Card>

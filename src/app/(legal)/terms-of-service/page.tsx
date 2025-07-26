@@ -73,7 +73,7 @@ export default function TermsOfServicePage() {
 
         <h2>9. Contact Us</h2>
         <p>
-            If you have any questions about these Terms, please contact us at: support@brandforge.ai
+            If you have any questions about these Terms, please contact us at: navaz@brandforge.me
         </p>
       </CardContent>
     </Card>
