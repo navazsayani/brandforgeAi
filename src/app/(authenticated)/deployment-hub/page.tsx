@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Send, Image as ImageIconLucide, MessageSquareText, Newspaper, Briefcase, AlertCircle, RefreshCw, Layers, CheckCircle, Loader2, Copy, Rocket, Facebook, Edit, Download, Trash2, Instagram, ExternalLink } from 'lucide-react';
+import { Send, Image as ImageIconLucide, MessageSquareText, Newspaper, Briefcase, AlertCircle, RefreshCw, Layers, CheckCircle, Loader2, Copy, Rocket, Facebook, Edit, Download, Trash2, Instagram, ExternalLink, Monitor } from 'lucide-react';
 import type { GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign, InstagramAccount, ModelConfig } from '@/types';
 import { cn } from '@/lib/utils';
 import { handleDeleteContentAction, handleUpdateContentStatusAction, handleSimulatedDeployAction, handleUpdateContentAction, handleGetInstagramAccountsAction, handleGetSettingsAction, type FormState } from '@/lib/actions';
@@ -276,15 +276,18 @@ function ContentCard({ item, brandData }: { item: DeployableContent; brandData: 
             </CardContent>
             <CardFooter className="pt-4 mt-auto border-t">
                 <div className="flex flex-col gap-2 w-full">
-                    {/* View Details button - always full width first row */}
-                    <ContentDetailsDialog item={item} brandData={brandData} />
+                    {/* First row of buttons */}
+                    <div className="flex gap-2 w-full">
+                        {item.type === 'social' && <SocialPreviewDialog item={item} brandData={brandData} />}
+                        <ContentDetailsDialog item={item} brandData={brandData} />
+                    </div>
                     
-                    {/* Action buttons - always full width second row */}
+                    {/* Second row of buttons */}
                     {isDeployed ? (
                         <form action={formAction} className="w-full">
                             <input type="hidden" name="userId" value={currentUser?.uid || ''} />
                             <input type="hidden" name="docPath" value={item.docPath} />
-                            <StatusButton newStatus="draft" text="Revert" icon={<RefreshCw className="w-4 h-4 mr-2 flex-shrink-0" />} variant="secondary" />
+                            <StatusButton newStatus="draft" text="Revert to Draft" icon={<RefreshCw className="w-4 h-4 mr-2 flex-shrink-0" />} variant="secondary" />
                         </form>
                     ) : (
                         <div className="flex gap-2 w-full">
@@ -306,6 +309,35 @@ function StatusButton({ newStatus, text, icon, variant = "default", ...props }: 
             <span className="truncate">{pending ? `Updating...` : text}</span>
         </Button>
     );
+}
+
+function SocialPreviewDialog({ item, brandData }: { item: DeployableContent; brandData: any }) {
+    if (item.type !== 'social') return null;
+    
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="outline" className="flex-1 min-w-0">
+                    <Monitor className="w-4 h-4 mr-2 flex-shrink-0" />
+                    <span className="truncate">Preview</span>
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle>Social Media Preview</DialogTitle>
+                </DialogHeader>
+                <div className="mt-4">
+                    <SocialMediaPreviews
+                        caption={item.caption || ''}
+                        hashtags={item.hashtags || ''}
+                        imageSrc={item.imageSrc}
+                        brandName={brandData?.brandName || "YourBrand"}
+                        brandLogoUrl={brandData?.brandLogoUrl || null}
+                    />
+                </div>
+            </DialogContent>
+        </Dialog>
+    )
 }
 
 function DeployDialog({ item }: { item: DeployableContent }) {
@@ -809,17 +841,6 @@ function ContentDetailsDialog({ item, brandData }: { item: DeployableContent; br
                     <DetailItem label="Hashtags" isBlock>{item.hashtags}</DetailItem>
                     <DetailItem label="Tone">{item.tone}</DetailItem>
                     <DetailItem label="Goal">{item.postGoal}</DetailItem>
-                    
-                    {/* Social Media Previews */}
-                    <div className="pt-4 border-t border-gray-200">
-                        <SocialMediaPreviews
-                            caption={item.caption}
-                            hashtags={item.hashtags}
-                            imageSrc={item.imageSrc}
-                            brandName={brandData?.brandName || "YourBrand"}
-                            brandLogoUrl={brandData?.brandLogoUrl || null}
-                        />
-                    </div>
                 </div>
             );
             break;
@@ -865,7 +886,7 @@ function ContentDetailsDialog({ item, brandData }: { item: DeployableContent; br
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant="outline" className="w-full h-full min-w-0">
+                <Button variant="outline" className="w-full h-full min-w-0 flex-1">
                     <span className="truncate">View Details</span>
                 </Button>
             </DialogTrigger>
