@@ -349,11 +349,10 @@ function DeployDialog({ item }: { item: DeployableContent }) {
     const [selectedAccountId, setSelectedAccountId] = React.useState<string | null>(null);
     const [requestId, setRequestId] = React.useState<string>('');
 
-    // Fetch model configuration to check if social media connections are enabled
-    const { data: modelConfig } = useQuery({
+    const { data: modelConfig, isLoading: isLoadingConfig } = useQuery({
         queryKey: ['modelConfig'],
         queryFn: () => getModelConfig(),
-        staleTime: 5 * 60 * 1000, // 5 minutes
+        staleTime: 5 * 60 * 1000, 
     });
 
     const initialFetchState: FormState<{ accounts: InstagramAccount[] }> = { data: undefined, error: undefined, message: undefined };
@@ -362,7 +361,6 @@ function DeployDialog({ item }: { item: DeployableContent }) {
     const initialDeployState: FormState<{ success: boolean }> = { data: undefined, error: undefined, message: undefined };
     const [deployState, deployAction] = useActionState(handleSimulatedDeployAction, initialDeployState);
 
-    // Generate unique request ID for tracking
     useEffect(() => {
         if (open) {
             const newRequestId = `deploy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -372,17 +370,16 @@ function DeployDialog({ item }: { item: DeployableContent }) {
     }, [open, item.type, item.id]);
 
     useEffect(() => {
-        if (open && currentUser?.uid) {
+        if (open && currentUser?.uid && modelConfig?.socialMediaConnectionsEnabled) {
             console.log(`[DEPLOY_FLOW] ${requestId}: Fetching Instagram accounts for user: ${currentUser.uid}`);
             const formData = new FormData();
             formData.append('userId', currentUser.uid);
-            formData.append('requestId', requestId); // Pass request ID for tracking
+            formData.append('requestId', requestId);
             startTransition(() => {
                 fetchAccountsAction(formData);
             });
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open, currentUser?.uid, requestId]);
+    }, [open, currentUser?.uid, requestId, modelConfig, fetchAccountsAction]);
 
     useEffect(() => {
         if (fetchState.data) {
@@ -391,8 +388,6 @@ function DeployDialog({ item }: { item: DeployableContent }) {
         }
         if (fetchState.error) {
             console.error(`[DEPLOY_FLOW] ${requestId}: Failed to fetch Instagram accounts:`, fetchState.error);
-            
-            // Enhanced error handling with categorization
             let errorTitle = "Could Not Fetch Accounts";
             let errorDescription = fetchState.error;
             let actionableGuidance = "";
@@ -424,12 +419,9 @@ function DeployDialog({ item }: { item: DeployableContent }) {
             console.log(`[DEPLOY_FLOW] ${requestId}: Deployment successful for content ID: ${item.id}`);
             setOpen(false);
             toast({ title: "Deployment Submitted", description: deployState.message });
-            // You might want to invalidate queries here if status changes upon deployment
         }
         if (deployState.error) {
             console.error(`[DEPLOY_FLOW] ${requestId}: Deployment failed for content ID: ${item.id}:`, deployState.error);
-            
-            // Enhanced deployment error handling
             let errorTitle = "Deployment Failed";
             let errorDescription = deployState.error;
             let actionableGuidance = "";
@@ -458,24 +450,20 @@ function DeployDialog({ item }: { item: DeployableContent }) {
     
     const handleDeploy = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        
         console.log(`[DEPLOY_FLOW] ${requestId}: Starting deployment process`);
-        
-        // Check if social media connections are enabled for social content
+
         const isSocialMediaEnabled = modelConfig?.socialMediaConnectionsEnabled !== false;
         const isSocialContent = item.type === 'social';
-        
-        // If social media connections are disabled and this is social content, show mock deployment
+
         if (isSocialContent && !isSocialMediaEnabled) {
             console.log(`[DEPLOY_FLOW] ${requestId}: Social media connections disabled, performing mock deployment`);
             
             toast({
                 title: "Mock Deployment",
-                description: "Social media connections are disabled. This is a simulated deployment for testing purposes.",
+                description: "Social media connections are disabled. This is a simulated deployment.",
             });
             
             try {
-                // Update content status to deployed for UI purposes
                 const formData = new FormData();
                 formData.append('userId', currentUser?.uid || '');
                 formData.append('docPath', item.docPath);
@@ -488,22 +476,21 @@ function DeployDialog({ item }: { item: DeployableContent }) {
                 
                 if (result.data?.success) {
                     setOpen(false);
-                    // Refresh the data
                     queryClient.invalidateQueries({ queryKey: ['socialPosts', currentUser?.uid] });
                     queryClient.invalidateQueries({ queryKey: ['blogPosts', currentUser?.uid] });
                     queryClient.invalidateQueries({ queryKey: ['adCampaigns', currentUser?.uid] });
                 } else {
                     toast({
                         title: "Mock Deployment Failed",
-                        description: result.error || result.message || "Failed to update content status",
+                        description: result.error || "Failed to update content status.",
                         variant: "destructive",
                     });
                 }
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Mock deployment error:', error);
                 toast({
                     title: "Mock Deployment Error",
-                    description: "An error occurred during mock deployment.",
+                    description: error.message || "An error occurred during mock deployment.",
                     variant: "destructive",
                 });
             }
@@ -517,23 +504,15 @@ function DeployDialog({ item }: { item: DeployableContent }) {
             return;
         }
 
-        const selectedAccount = accounts.find(acc => acc.id === selectedAccountId);
-        console.log(`[DEPLOY_FLOW] ${requestId}: Deploying to account: ${selectedAccount?.username || selectedAccountId}`);
-        console.log(`[DEPLOY_FLOW] ${requestId}: Content details:`, {
-            type: item.type,
-            id: item.id,
-            hasImage: item.type === 'social' && !!(item as any).imageSrc,
-            contentLength: item.type === 'social' ? (item as any).caption?.length :
-                          item.type === 'blog' ? (item as any).content?.length :
-                          (item as any).campaignConcept?.length
-        });
-
         const formData = new FormData(event.currentTarget);
         formData.append('selectedAccountId', selectedAccountId);
-        formData.append('requestId', requestId); // Pass request ID for tracking
+        formData.append('requestId', requestId);
         
         deployAction(formData);
     };
+    
+    const isSocialMediaEnabled = modelConfig?.socialMediaConnectionsEnabled !== false;
+    const isSocialContent = item.type === 'social';
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -547,61 +526,80 @@ function DeployDialog({ item }: { item: DeployableContent }) {
                 <DialogHeader>
                     <DialogTitle>Deploy Content</DialogTitle>
                     <DialogDescription>
-                        Choose which connected account to publish this content to.
+                         {isSocialContent && !isSocialMediaEnabled 
+                            ? "Social media deployment is currently disabled by the administrator." 
+                            : "Choose which connected account to publish this content to."}
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleDeploy} className="space-y-4 py-4">
                     <input type="hidden" name="userId" value={currentUser?.uid || ''} />
                     <input type="hidden" name="docPath" value={item.docPath} />
 
-                    {fetchState.error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{fetchState.error}</AlertDescription></Alert>}
-                    
-                    {fetchState.data?.accounts.length === 0 && !fetchState.error && (
+                    {isSocialContent && !isSocialMediaEnabled ? (
                         <Alert>
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>No Instagram Business Accounts Found</AlertTitle>
-                            <AlertDescription>
-                                <p className="mb-2">To deploy content, Meta requires an Instagram Business account linked to a Facebook Page. We couldn&apos;t find any associated with your connected Meta profile.</p>
-                                <p className="font-semibold">How to fix this:</p>
-                                <ul className="list-decimal text-xs space-y-1 pl-4 mt-1">
-                                    <li>Ensure you have converted your Instagram account to a <a href="https://help.instagram.com/502981923235522" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-primary">Business or Creator account</a>.</li>
-                                    <li>Make sure your Instagram account is <a href="https://help.instagram.com/399237273466453" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-primary">linked to a Facebook Page</a> you manage.</li>
-                                </ul>
-                                <Button variant="link" asChild className="p-0 h-auto text-xs mt-2"><Link href="/settings">Reconnect your Meta account after making changes <ExternalLink className="w-3 h-3 ml-1" /></Link></Button>
-                            </AlertDescription>
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertTitle>Deployment Disabled</AlertTitle>
+                          <AlertDescription>
+                            This is a simulated deployment. Clicking &quot;Deploy&quot; will mark the content as deployed for tracking purposes only.
+                          </AlertDescription>
                         </Alert>
-                    )}
+                    ) : (
+                      <>
+                        {isLoadingConfig && <div className="flex items-center justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}
+                        {!isLoadingConfig && fetchState.error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{fetchState.error}</AlertDescription></Alert>}
+                        
+                        {!isLoadingConfig && fetchState.data?.accounts.length === 0 && !fetchState.error && (
+                            <Alert>
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertTitle>No Instagram Business Accounts Found</AlertTitle>
+                                <AlertDescription>
+                                    <p className="mb-2">To deploy content, Meta requires an Instagram Business account linked to a Facebook Page. We couldn&apos;t find any associated with your connected Meta profile.</p>
+                                    <p className="font-semibold">How to fix this:</p>
+                                    <ul className="list-decimal text-xs space-y-1 pl-4 mt-1">
+                                        <li>Ensure you have converted your Instagram account to a <a href="https://help.instagram.com/502981923235522" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-primary">Business or Creator account</a>.</li>
+                                        <li>Make sure your Instagram account is <a href="https://help.instagram.com/399237273466453" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-primary">linked to a Facebook Page</a> you manage.</li>
+                                    </ul>
+                                    <Button variant="link" asChild className="p-0 h-auto text-xs mt-2"><Link href="/settings">Reconnect your Meta account after making changes <ExternalLink className="w-3 h-3 ml-1" /></Link></Button>
+                                </AlertDescription>
+                            </Alert>
+                        )}
 
 
-                    {fetchState.data && fetchState.data.accounts.length > 0 && (
-                        <RadioGroup onValueChange={setSelectedAccountId} value={selectedAccountId || ""}>
-                            <Label>Select an Instagram Account</Label>
-                            <div className="p-4 border rounded-lg bg-secondary/50 space-y-3 max-h-60 overflow-y-auto">
-                                {fetchState.data.accounts.map(acc => (
-                                    <Label key={acc.id} htmlFor={acc.id} className="flex items-center space-x-3 p-3 rounded-md border bg-background hover:bg-accent/50 has-[:checked]:bg-primary/10 has-[:checked]:border-primary cursor-pointer transition-colors">
-                                        <RadioGroupItem value={acc.id} id={acc.id} />
-                                        <div className="flex items-center gap-2">
-                                            <Instagram className="w-5 h-5" />
-                                            <span>{acc.username}</span>
-                                        </div>
-                                    </Label>
-                                ))}
+                        {!isLoadingConfig && fetchState.data && fetchState.data.accounts.length > 0 && (
+                            <RadioGroup onValueChange={setSelectedAccountId} value={selectedAccountId || ""}>
+                                <Label>Select an Instagram Account</Label>
+                                <div className="p-4 border rounded-lg bg-secondary/50 space-y-3 max-h-60 overflow-y-auto">
+                                    {fetchState.data.accounts.map(acc => (
+                                        <Label key={acc.id} htmlFor={acc.id} className="flex items-center space-x-3 p-3 rounded-md border bg-background hover:bg-accent/50 has-[:checked]:bg-primary/10 has-[:checked]:border-primary cursor-pointer transition-colors">
+                                            <RadioGroupItem value={acc.id} id={acc.id} />
+                                            <div className="flex items-center gap-2">
+                                                <Instagram className="w-5 h-5" />
+                                                <span>{acc.username}</span>
+                                            </div>
+                                        </Label>
+                                    ))}
+                                </div>
+                            </RadioGroup>
+                        )}
+
+                        {!isLoadingConfig && fetchState.data === undefined && !fetchState.error && (
+                            <div className="flex items-center justify-center p-8">
+                                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                                <p className="ml-3">Fetching your accounts...</p>
                             </div>
-                        </RadioGroup>
-                    )}
-
-                    {fetchState.data === undefined && !fetchState.error && (
-                        <div className="flex items-center justify-center p-8">
-                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                            <p className="ml-3">Fetching your accounts...</p>
-                        </div>
+                        )}
+                      </>
                     )}
 
                     <DialogFooter>
                         <DialogClose asChild><Button type="button" variant="ghost">Cancel</Button></DialogClose>
-                        <SubmitButton loadingText="Deploying..." disabled={!selectedAccountId}>
-                            Publish to Instagram
-                        </SubmitButton>
+                        {isSocialContent && !isSocialMediaEnabled ? (
+                            <SubmitButton loadingText="Deploying...">Deploy (Simulated)</SubmitButton>
+                        ) : (
+                            <SubmitButton loadingText="Deploying..." disabled={!selectedAccountId}>
+                                Publish to Instagram
+                            </SubmitButton>
+                        )}
                     </DialogFooter>
                 </form>
             </DialogContent>
