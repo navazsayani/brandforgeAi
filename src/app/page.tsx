@@ -7,22 +7,20 @@ import Link from 'next/link';
 import NextImage from 'next/image';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, UserCircle, Rocket, Paintbrush, Send, ArrowRight, Wand2 } from 'lucide-react';
+import { Loader2, UserCircle, Rocket, Paintbrush, Send, ArrowRight, Wand2, Layers, Target } from 'lucide-react';
 import PublicHeader from '@/components/PublicHeader';
 
 
-const FeatureCard = ({ icon: Icon, title, description, href }: { icon: React.ElementType, title: string, description: string, href: string }) => (
-    <Link href={href} className="group">
-        <div className="card-compact text-center p-6 md:p-8 h-full flex flex-col">
-            <div className="p-4 bg-primary/10 rounded-xl w-fit mx-auto mb-6 shadow-sm group-hover:scale-110 transition-transform duration-300">
-                <Icon className="h-10 w-10 text-primary" />
-            </div>
-            <h3 className="text-xl font-bold mb-3 text-break">{title}</h3>
-            <p className="text-base text-muted-foreground text-balance flex-grow">
-                {description}
-            </p>
+const FeatureCard = ({ icon: Icon, title, description }: { icon: React.ElementType, title: string, description: string }) => (
+    <div className="card-compact text-center p-6 md:p-8 h-full flex flex-col">
+        <div className="p-4 bg-primary/10 rounded-xl w-fit mx-auto mb-6 shadow-sm group-hover:scale-110 transition-transform duration-300">
+            <Icon className="h-10 w-10 text-primary" />
         </div>
-    </Link>
+        <h3 className="text-xl font-bold mb-3 text-break">{title}</h3>
+        <p className="text-base text-muted-foreground text-balance flex-grow">
+            {description}
+        </p>
+    </div>
 );
 
 const HowItWorksStep = ({ number, title, description }: { number: string, title: string, description: string }) => (
@@ -195,39 +193,33 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Features Section */}
+        {/* Brand Journey Section */}
         <section className="section-spacing bg-secondary/50">
           <div className="container-responsive">
-            <div className="text-center max-w-2xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-bold text-balance">One Platform, Infinite Possibilities</h2>
+            <div className="text-center max-w-3xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-bold text-balance">Find Your Fit: AI for Every Stage of Your Brand's Journey</h2>
               <p className="mt-4 text-lg text-muted-foreground text-balance">
-                Everything you need to streamline your brand's content and marketing workflow.
+                Whether you're just starting out or scaling to new heights, BrandForge AI adapts to your needs.
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 sm:gap-8 mt-12 max-w-5xl mx-auto">
+            <div className="grid-responsive mt-16 max-w-6xl mx-auto">
               <FeatureCard 
                 href="/features#brand-identity"
-                icon={UserCircle}
-                title="AI Brand Identity"
-                description="Input your website URL and let our AI extract key brand information, descriptions, and keywords. Generate a unique logo and build your foundational profile in minutes."
+                icon={Rocket}
+                title="For the New Brand: From Spark to Identity"
+                description="Have a great idea but no brand? Instantly generate a logo, extract key messaging from your site, and create your foundational brand profile in minutes. Launch professionally from day one."
               />
               <FeatureCard 
                 href="/features#content-studio"
-                icon={Paintbrush}
-                title="Content Studio"
-                description="Instantly generate blog articles and social posts. Create unique marketing images, then perfect them with our powerful AI Refinement tool to get the exact look you want."
-              />
-              <FeatureCard 
-                href="/features#campaign-manager"
-                icon={Send}
-                title="Campaign Manager"
-                description="Turn your generated content into high-performing ads. Our AI crafts compelling ad copy and creative variations for Google and Meta campaigns, all guided by your unique brand data."
+                icon={Layers}
+                title="For the Growing Brand: From Presence to Power"
+                description="Struggling to keep up with content demands? Use your established brand identity to generate a consistent stream of on-brand social posts, blog articles, and stunning visuals. Scale your content, not your team."
               />
                <FeatureCard 
-                href="/features#deployment-hub"
-                icon={Rocket}
-                title="Deployment Hub"
-                description="Organize your content workflow. Review, manage status, and (soon) deploy all your generated social posts, blog articles, and ad campaigns directly to your connected platforms."
+                href="/features#campaign-manager"
+                icon={Target}
+                title="For the Established Brand: From Reach to ROI"
+                description="Ready to optimize? Turn your best content into high-performing ad campaigns. Generate creative variations for A/B testing and get strategic guidance for platforms like Google and Meta."
               />
             </div>
           </div>
