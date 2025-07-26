@@ -24,9 +24,9 @@ const FeatureDetailCard = ({ id, icon: Icon, title, description, benefits }: { i
         <CardContent>
             <ul className="space-y-3 mt-4">
                 {benefits.map((benefit, index) => (
-                    <li key={index} className={`flex items-start p-3 rounded-lg transition-colors ${benefit.highlighted ? 'bg-primary/10 border border-primary/20' : ''}`}>
+                    <li key={index} className="flex items-start p-3 rounded-lg transition-colors">
                         <benefit.icon className={`w-5 h-5 mr-3 mt-0.5 flex-shrink-0 ${benefit.highlighted ? 'text-primary' : 'text-green-500'}`} />
-                        <span className={`text-muted-foreground ${benefit.highlighted ? 'font-semibold text-primary-foreground/90' : ''}`}>{benefit.text}</span>
+                        <span className={`text-muted-foreground ${benefit.highlighted ? 'font-semibold text-primary' : ''}`}>{benefit.text}</span>
                     </li>
                 ))}
             </ul>
