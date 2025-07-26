@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { UserCircle, Paintbrush, Send, Rocket, ArrowRight, CheckCircle } from 'lucide-react';
+import { UserCircle, Paintbrush, Send, Rocket, ArrowRight, CheckCircle, Wand2 } from 'lucide-react';
 import PublicHeader from '@/components/PublicHeader';
 
 
@@ -85,6 +85,7 @@ export default function FeaturesPage() {
                         description="Your central hub for all AI-powered content creation."
                         benefits={[
                             "Generate stunning, commercially-licensed images for marketing, social media, and blogs.",
+                            "Refine any generated or uploaded image with simple text instructions to get the perfect shot.",
                             "Create engaging, platform-aware social media posts for Instagram, X, and more.",
                             "Produce long-form, SEO-optimized blog articles, from outline to finished draft.",
                             "Use AI to populate entire content forms from a single sentence, kickstarting your creative process."
