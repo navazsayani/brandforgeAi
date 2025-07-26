@@ -215,7 +215,7 @@ export default function LandingPage() {
                 href="/features#content-studio"
                 icon={Paintbrush}
                 title="Content Studio"
-                description="Instantly generate SEO-optimized blog articles, create viral social media posts, design unique marketing images, and refine existing assets with simple text prompts."
+                description="Instantly generate blog articles and social posts. Create unique marketing images, then perfect them with our powerful AI Refinement tool to get the exact look you want."
               />
               <FeatureCard 
                 href="/features#campaign-manager"
@@ -244,7 +244,7 @@ export default function LandingPage() {
                 </div>
                 <div className="relative grid md:grid-cols-3 gap-12 md:gap-8 mt-16">
                     <HowItWorksStep number="1" title="Define" description="Create your brand profile by providing your URL, description, and keywords. AI helps fill in the gaps." />
-                    <HowItWorksStep number="2" title="Generate & Refine" description="Use the Content Studio to instantly create images, social posts, and blog articles. Refine any asset with simple text commands." />
+                    <HowItWorksStep number="2" title="Generate & Refine" description="Use the Content Studio to instantly create images and text. Perfect your visuals with the AI Refinement tool using simple commands." />
                     <HowItWorksStep number="3" title="Deploy" description="Review all your creations in the Deployment Hub and get them ready for launch." />
                 </div>
             </div>

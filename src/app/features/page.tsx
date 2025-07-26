@@ -8,7 +8,7 @@ import { UserCircle, Paintbrush, Send, Rocket, ArrowRight, CheckCircle, Wand2 } 
 import PublicHeader from '@/components/PublicHeader';
 
 
-const FeatureDetailCard = ({ id, icon: Icon, title, description, benefits }: { id: string; icon: React.ElementType; title: string; description: string; benefits: string[] }) => (
+const FeatureDetailCard = ({ id, icon: Icon, title, description, benefits }: { id: string; icon: React.ElementType; title: string; description: string; benefits: { text: string; icon: React.ElementType }[] }) => (
     <Card id={id} className="card-enhanced w-full scroll-mt-24">
         <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 text-center sm:text-left">
@@ -25,8 +25,8 @@ const FeatureDetailCard = ({ id, icon: Icon, title, description, benefits }: { i
             <ul className="space-y-3 mt-4">
                 {benefits.map((benefit, index) => (
                     <li key={index} className="flex items-start">
-                        <CheckCircle className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                        <span className="text-muted-foreground">{benefit}</span>
+                        <benefit.icon className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                        <span className="text-muted-foreground">{benefit.text}</span>
                     </li>
                 ))}
             </ul>
@@ -72,10 +72,10 @@ export default function FeaturesPage() {
                         title="AI Brand Identity Suite"
                         description="Build a strong foundation for your brand in minutes."
                         benefits={[
-                            "Auto-fill brand descriptions and keywords by simply providing your website URL.",
-                            "Get AI-powered suggestions to enhance and refine your brand's core message.",
-                            "Generate a unique, professional logo that matches your brand's style and industry.",
-                            "Store all your core brand assets in one place to ensure consistency across all generated content."
+                            { text: "Auto-fill brand descriptions and keywords by simply providing your website URL.", icon: CheckCircle },
+                            { text: "Get AI-powered suggestions to enhance and refine your brand's core message.", icon: CheckCircle },
+                            { text: "Generate a unique, professional logo that matches your brand's style and industry.", icon: CheckCircle },
+                            { text: "Store all your core brand assets in one place to ensure consistency across all generated content.", icon: CheckCircle }
                         ]}
                      />
                      <FeatureDetailCard 
@@ -84,11 +84,11 @@ export default function FeaturesPage() {
                         title="Unified Content Studio"
                         description="Your central hub for all AI-powered content creation."
                         benefits={[
-                            "Generate stunning, commercially-licensed images for marketing, social media, and blogs.",
-                            "Refine any generated or uploaded image with simple text instructions to get the perfect shot.",
-                            "Create engaging, platform-aware social media posts for Instagram, X, and more.",
-                            "Produce long-form, SEO-optimized blog articles, from outline to finished draft.",
-                            "Use AI to populate entire content forms from a single sentence, kickstarting your creative process."
+                            { text: "Generate stunning, commercially-licensed images for marketing, social media, and blogs.", icon: CheckCircle },
+                            { text: "Refine any generated or uploaded image with simple text instructions to get the perfect shot.", icon: Wand2 },
+                            { text: "Create engaging, platform-aware social media posts for Instagram, X, and more.", icon: CheckCircle },
+                            { text: "Produce long-form, SEO-optimized blog articles, from outline to finished draft.", icon: CheckCircle },
+                            { text: "Use AI to populate entire content forms from a single sentence, kickstarting your creative process.", icon: CheckCircle }
                         ]}
                      />
                       <FeatureDetailCard 
@@ -97,10 +97,10 @@ export default function FeaturesPage() {
                         title="Ad Campaign Manager"
                         description="Craft high-performing ad creatives with AI precision."
                         benefits={[
-                            "Turn existing content like blog snippets or social posts into compelling ad copy.",
-                            "Generate multiple headline and body text variations for effective A/B testing.",
-                            "Receive AI-driven guidance on how to best use your creatives on Google and Meta platforms.",
-                            "Align ad campaigns with specific goals, from brand awareness to sales conversion."
+                            { text: "Turn existing content like blog snippets or social posts into compelling ad copy.", icon: CheckCircle },
+                            { text: "Generate multiple headline and body text variations for effective A/B testing.", icon: CheckCircle },
+                            { text: "Receive AI-driven guidance on how to best use your creatives on Google and Meta platforms.", icon: CheckCircle },
+                            { text: "Align ad campaigns with specific goals, from brand awareness to sales conversion.", icon: CheckCircle }
                         ]}
                      />
                      <FeatureDetailCard 
@@ -109,10 +109,10 @@ export default function FeaturesPage() {
                         title="Deployment & Management Hub"
                         description="Organize, manage, and deploy your content pipeline."
                         benefits={[
-                            "View all your generated social posts, blog articles, and ad campaigns in one place.",
-                            "Manage the status of each piece of content: draft, scheduled, or deployed.",
-                            "Simulate deployment to popular platforms to visualize your content calendar.",
-                            "Edit and refine any generated content before it goes live."
+                            { text: "View all your generated social posts, blog articles, and ad campaigns in one place.", icon: CheckCircle },
+                            { text: "Manage the status of each piece of content: draft, scheduled, or deployed.", icon: CheckCircle },
+                            { text: "Simulate deployment to popular platforms to visualize your content calendar.", icon: CheckCircle },
+                            { text: "Edit and refine any generated content before it goes live.", icon: CheckCircle }
                         ]}
                      />
                 </div>
