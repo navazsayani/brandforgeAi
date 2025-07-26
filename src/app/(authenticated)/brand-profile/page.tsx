@@ -1017,7 +1017,9 @@ export default function BrandProfilePage() {
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {previewImages.map((src, index) => (
                           <div key={src || index} className="relative group aspect-square">
-                            <BrandProfileImage src={src} alt={`Preview ${index + 1}`} fill style={{objectFit: 'contain'}} className="rounded border" data-ai-hint="brand example"/>
+                            <div className="relative w-full h-full">
+                                <BrandProfileImage src={src} alt={`Preview ${index + 1}`} fill style={{objectFit: 'contain'}} className="rounded border" data-ai-hint="brand example"/>
+                            </div>
                             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
                                 <Button
                                   type="button"

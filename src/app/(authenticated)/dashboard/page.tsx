@@ -21,6 +21,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { getPaymentMode } from '@/lib/actions';
 import { format } from 'date-fns';
 import SocialMediaPreviews from '@/components/SocialMediaPreviews';
+import { SafeImage } from '@/components/SafeImage';
 
 type RecentItem = {
   id: string;
@@ -238,7 +239,7 @@ function GreetingCard({ isLoading, brandData, paymentMode }: { isLoading: boolea
                     <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6 w-full">
                         <div className="relative w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 lg:w-40 lg:h-40 rounded-full flex-shrink-0 bg-primary/10 flex items-center justify-center border-2 border-primary/20">
                             {brandData?.brandLogoUrl ? (
-                                <NextImage
+                                <SafeImage
                                     src={brandData.brandLogoUrl}
                                     alt={`${brandName || 'Brand'} Logo`}
                                     fill
@@ -544,7 +545,7 @@ function RecentItemCard({ item, brandData }: { item: RecentItem; brandData: Bran
         return (
             <Card className="overflow-hidden group hover:shadow-xl transition-shadow duration-300 flex flex-col">
                 <div className="relative w-full bg-muted aspect-video overflow-hidden">
-                    <NextImage 
+                    <SafeImage 
                         src={item.imageUrl} 
                         alt={`Recent ${item.type}`} 
                         fill 
