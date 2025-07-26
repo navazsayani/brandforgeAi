@@ -7,7 +7,7 @@ import { ImageIcon, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SafeImageProps {
-  src: string;
+  src?: string | null; // Made optional to handle cases where it might be missing
   alt: string;
   fill?: boolean;
   width?: number;
@@ -47,8 +47,12 @@ export function SafeImage({
   unoptimized,
   ...props
 }: SafeImageProps) {
-  const [hasError, setHasError] = useState(false);
+  const [hasError, setHasError] = useState(!src);
   const [isLoading, setIsLoading] = useState(true);
+
+  React.useEffect(() => {
+    setHasError(!src);
+  }, [src]);
 
   const handleError = () => {
     setHasError(true);
@@ -61,7 +65,6 @@ export function SafeImage({
     onLoad?.();
   };
 
-  // If there's an error, show fallback
   if (hasError) {
     return (
       <div 
@@ -89,29 +92,10 @@ export function SafeImage({
     );
   }
 
-  // Show loading state if needed
-  if (isLoading && showErrorMessage) {
-    return (
-      <div 
-        className={cn(
-          "flex items-center justify-center bg-muted text-muted-foreground",
-          fill ? "absolute inset-0" : "",
-          className
-        )}
-        style={style}
-        {...props}
-      >
-        <div className="animate-pulse">
-          <ImageIcon className="w-8 h-8" />
-        </div>
-      </div>
-    );
-  }
-
   // Render the actual image
   return (
     <NextImage
-      src={src}
+      src={src!}
       alt={alt}
       fill={fill}
       width={fill ? undefined : width}
@@ -135,7 +119,7 @@ export function SafeImage({
 export function BrandProfileImage(props: SafeImageProps) {
   return (
     <SafeImage
-      {...props} // Pass all props, including src, to the base component
+      {...props} // Pass all props, including the crucial 'src' prop
       fallbackIcon={
         <div className="text-center">
           <ImageIcon className="w-8 h-8 mb-2 mx-auto" />
@@ -151,7 +135,7 @@ export function BrandProfileImage(props: SafeImageProps) {
 export function LibraryImage(props: SafeImageProps) {
   return (
     <SafeImage
-      {...props} // Pass all props, including src, to the base component
+      {...props} // Pass all props, including the crucial 'src' prop
       fallbackIcon={
         <div className="text-center">
           <ImageIcon className="w-8 h-8 mb-2 mx-auto" />
