@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from 'react';
@@ -113,8 +114,8 @@ export function SafeImage({
       src={src}
       alt={alt}
       fill={fill}
-      width={width}
-      height={height}
+      width={fill ? undefined : width}
+      height={fill ? undefined : height}
       className={className}
       style={style}
       onError={handleError}
@@ -131,17 +132,10 @@ export function SafeImage({
 }
 
 // Specialized version for brand profile images
-export function BrandProfileImage({
-  src,
-  alt,
-  className,
-  ...props
-}: Omit<SafeImageProps, 'fallbackIcon' | 'showErrorMessage'>) {
+export function BrandProfileImage(props: Omit<SafeImageProps, 'fallbackIcon' | 'showErrorMessage'>) {
   return (
     <SafeImage
-      src={src}
-      alt={alt}
-      className={className}
+      {...props}
       fallbackIcon={
         <div className="text-center">
           <ImageIcon className="w-8 h-8 mb-2 mx-auto" />
@@ -149,23 +143,15 @@ export function BrandProfileImage({
         </div>
       }
       showErrorMessage={true}
-      {...props}
     />
   );
 }
 
 // Specialized version for library images
-export function LibraryImage({
-  src,
-  alt,
-  className,
-  ...props
-}: Omit<SafeImageProps, 'fallbackIcon' | 'showErrorMessage'>) {
+export function LibraryImage(props: Omit<SafeImageProps, 'fallbackIcon' | 'showErrorMessage'>) {
   return (
     <SafeImage
-      src={src}
-      alt={alt}
-      className={className}
+      {...props}
       fallbackIcon={
         <div className="text-center">
           <ImageIcon className="w-8 h-8 mb-2 mx-auto" />
@@ -173,7 +159,6 @@ export function LibraryImage({
         </div>
       }
       showErrorMessage={true}
-      {...props}
     />
   );
 }
