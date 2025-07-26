@@ -1483,13 +1483,17 @@ export async function handleVerifyPaymentAction(
   }
 }
 
-export async function getPaymentMode(): Promise<{ paymentMode: 'live' | 'test', freepikEnabled: boolean, error?: string }> {
+export async function getPaymentMode(): Promise<{ paymentMode: 'live' | 'test', freepikEnabled: boolean, socialMediaConnectionsEnabled: boolean, error?: string }> {
   try {
-    const { paymentMode, freepikEnabled } = await getModelConfig();
-    return { paymentMode: paymentMode || 'test', freepikEnabled: freepikEnabled || false };
+    const { paymentMode, freepikEnabled, socialMediaConnectionsEnabled } = await getModelConfig();
+    return { 
+      paymentMode: paymentMode || 'test', 
+      freepikEnabled: freepikEnabled || false,
+      socialMediaConnectionsEnabled: socialMediaConnectionsEnabled !== false // default to true if undefined
+    };
   } catch (e: any) {
     console.error("Error fetching payment mode:", e);
-    return { paymentMode: 'test', freepikEnabled: false, error: `Could not retrieve payment mode configuration.` };
+    return { paymentMode: 'test', freepikEnabled: false, socialMediaConnectionsEnabled: true, error: `Could not retrieve payment mode configuration.` };
   }
 }
 
@@ -2043,9 +2047,15 @@ export async function handleGetInstagramAccountsAction(
   formData: FormData
 ): Promise<FormState<{ accounts: InstagramAccount[] }>> {
   let userId = formData.get('userId') as string;
-  const requestId = Math.random().toString(36).substring(2, 10);
+  const requestId = formData.get('requestId') as string || Math.random().toString(36).substring(2, 10);
 
   console.log(`[Instagram Accounts:${requestId}] === FETCHING INSTAGRAM ACCOUNTS ===`);
+  
+  const config = await getModelConfig();
+  if (config.socialMediaConnectionsEnabled === false) {
+    console.warn(`[Instagram Accounts:${requestId}] Social media connections are disabled. Aborting.`);
+    return { data: { accounts: [] }, message: "Social media connections are disabled by the administrator." };
+  }
 
   if (!userId) {
     const sessionCookie = formData.get('__session') as string;

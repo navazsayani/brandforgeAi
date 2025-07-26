@@ -11,11 +11,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
-import { handleGetSettingsAction, handleUpdateSettingsAction, handleGetPlansConfigAction, handleUpdatePlansConfigAction, handleInitiateOAuthAction, handleGetConnectedAccountsStatusAction, handleDisconnectAccountAction, handleTestInstagramPermissionsAction, type FormState } from '@/lib/actions';
+import { handleGetSettingsAction, handleUpdateSettingsAction, handleGetPlansConfigAction, handleUpdatePlansConfigAction, handleInitiateOAuthAction, handleGetConnectedAccountsStatusAction, handleDisconnectAccountAction, handleTestInstagramPermissionsAction, type FormState, getPaymentMode as getConfigFromServer } from '@/lib/actions';
 import { SubmitButton } from '@/components/SubmitButton';
 import { DEFAULT_MODEL_CONFIG } from '@/lib/model-config';
 import { DEFAULT_PLANS_CONFIG } from '@/lib/constants';
-import type { ModelConfig, PlansConfig, ConnectedAccountsStatus } from '@/types';
+import type { ModelConfig, PlansConfig, ConnectedAccountsStatus, InstagramAccount } from '@/types';
 import { Settings, Loader2, ExternalLink, TestTube, ShoppingCart, Power, CreditCard, BarChart, Facebook, Network, CheckCircle, Link2, Unlink, Palette, AlertTriangle, Clock, RefreshCw, XCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -24,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 
 const modelSettingsSchema = z.object({
   imageGenerationModel: z.string().min(1, "Image generation model name cannot be empty."),
@@ -83,8 +84,22 @@ function SettingsPageContent() {
 
   const [isLoadingConnections, setIsLoadingConnections] = useState(true);
   const [isTestingPermissions, setIsTestingPermissions] = useState(false);
+  const [socialConnectionsEnabled, setSocialConnectionsEnabled] = useState(true);
+
 
   useEffect(() => {
+    // Fetch global settings like feature flags for all users
+    async function fetchGlobalConfig() {
+      const config = await getConfigFromServer();
+      if (!config.error) {
+        setSocialConnectionsEnabled(config.socialMediaConnectionsEnabled);
+      } else {
+        toast({ title: "Config Error", description: config.error, variant: "destructive" });
+      }
+    }
+    
+    fetchGlobalConfig();
+
     if (currentUser?.uid) {
       setIsLoadingConnections(true);
       const formData = new FormData();
@@ -93,7 +108,8 @@ function SettingsPageContent() {
         connectionStatusAction(formData);
       });
     }
-  }, [currentUser?.uid, connectionStatusAction]);
+  }, [currentUser?.uid, connectionStatusAction, toast]);
+
 
   useEffect(() => {
     if (connectionStatusState.data || connectionStatusState.error) {
@@ -227,14 +243,18 @@ function SettingsPageContent() {
   });
 
   useEffect(() => {
-      const formData = new FormData();
-      if (isAdmin && currentUser?.email) {
-        formData.append('adminRequesterEmail', currentUser.email);
+      if (isAdmin) {
+        const formData = new FormData();
+        if (currentUser?.email) {
+          formData.append('adminRequesterEmail', currentUser.email);
+        }
+        startTransition(() => {
+          getModelAction(formData);
+          getPlansAction();
+        });
+      } else {
+        setIsPageLoading(false);
       }
-      startTransition(() => {
-        getModelAction(formData);
-        getPlansAction();
-      });
   }, [isAdmin, currentUser, getModelAction, getPlansAction]);
 
   useEffect(() => {
@@ -258,8 +278,10 @@ function SettingsPageContent() {
         });
     }
 
-    if ((getModelState.data || getModelState.error) && (getPlansState.data || getPlansState.error)) {
+    if (isAdmin) {
+      if ((getModelState.data || getModelState.error) && (getPlansState.data || getPlansState.error)) {
         setIsPageLoading(false);
+      }
     }
     
     if (getModelState.error) {
@@ -269,7 +291,7 @@ function SettingsPageContent() {
         toast({ title: "Error Loading Plan Settings", description: getPlansState.error, variant: "destructive" });
     }
     
-  }, [getModelState, getPlansState, modelForm, plansForm, toast]);
+  }, [getModelState, getPlansState, modelForm, plansForm, toast, isAdmin]);
   
   useEffect(() => {
     if (updateModelState.message && !updateModelState.error) {
@@ -376,7 +398,7 @@ function SettingsPageContent() {
                         <div className="space-y-1">
                             <div className="flex items-center gap-2">
                                 <p className="font-semibold">Meta (Facebook & Instagram)</p>
-                                {connectionStatusState.data?.meta && getModelState.data?.socialMediaConnectionsEnabled !== false && (
+                                {connectionStatusState.data?.meta && socialConnectionsEnabled && (
                                     <>
                                         {connectionStatusState.data.metaHealth === 'healthy' && (
                                             <Badge variant="secondary" className="text-green-600 bg-green-50 border-green-200">
@@ -407,7 +429,7 @@ function SettingsPageContent() {
                             </div>
                             <div className="space-y-1">
                                 <p className="text-sm text-muted-foreground">
-                                    {getModelState.data?.socialMediaConnectionsEnabled === false ? (
+                                    {!socialConnectionsEnabled ? (
                                         "Social media connections are currently disabled by admin."
                                     ) : connectionStatusState.data?.meta ? (
                                         connectionStatusState.data.metaHealth === 'healthy' ?
@@ -419,12 +441,12 @@ function SettingsPageContent() {
                                             "Connection status could not be verified."
                                     ) : "Directly deploy posts to your accounts."}
                                 </p>
-                                {connectionStatusState.data?.meta && connectionStatusState.data.metaExpiresAt && getModelState.data?.socialMediaConnectionsEnabled !== false && (
+                                {connectionStatusState.data?.meta && connectionStatusState.data.metaExpiresAt && socialConnectionsEnabled && (
                                     <p className="text-xs text-muted-foreground">
                                         Expires: {new Date(connectionStatusState.data.metaExpiresAt).toLocaleDateString()} at {new Date(connectionStatusState.data.metaExpiresAt).toLocaleTimeString()}
                                     </p>
                                 )}
-                                {connectionStatusState.data?.meta && connectionStatusState.data.metaLastValidated && getModelState.data?.socialMediaConnectionsEnabled !== false && (
+                                {connectionStatusState.data?.meta && connectionStatusState.data.metaLastValidated && socialConnectionsEnabled && (
                                     <p className="text-xs text-muted-foreground">
                                         Last validated: {new Date(connectionStatusState.data.metaLastValidated).toLocaleDateString()} at {new Date(connectionStatusState.data.metaLastValidated).toLocaleTimeString()}
                                     </p>
@@ -433,7 +455,7 @@ function SettingsPageContent() {
                         </div>
                     </div>
                     <div className="flex flex-col gap-2">
-                        {getModelState.data?.socialMediaConnectionsEnabled === false ? (
+                        {!socialConnectionsEnabled ? (
                             <Button variant="outline" disabled>
                                 Coming Soon
                             </Button>
@@ -513,7 +535,7 @@ function SettingsPageContent() {
                         <div className="space-y-1">
                             <p className="font-semibold">X (Twitter)</p>
                              <p className="text-sm text-muted-foreground">
-                                {getModelState.data?.socialMediaConnectionsEnabled === false ?
+                                {!socialConnectionsEnabled ?
                                     "Social media connections are currently disabled by admin." :
                                     connectionStatusState.data?.x ? "Account connected." : "Deployment to X is coming soon."
                                 }
