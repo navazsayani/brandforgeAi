@@ -227,49 +227,49 @@ function SettingsPageContent() {
   });
 
   useEffect(() => {
-    if (isAdmin && currentUser?.email) {
       const formData = new FormData();
-      formData.append('adminRequesterEmail', currentUser.email);
+      if (isAdmin && currentUser?.email) {
+        formData.append('adminRequesterEmail', currentUser.email);
+      }
       startTransition(() => {
         getModelAction(formData);
         getPlansAction();
       });
-    } else {
-        setIsPageLoading(false);
-    }
   }, [isAdmin, currentUser, getModelAction, getPlansAction]);
 
   useEffect(() => {
-    if (isAdmin) {
-        if (getModelState.data) {
-          modelForm.reset(getModelState.data);
-        }
-        if (getPlansState.data) {
-            const config = getPlansState.data;
-            plansForm.reset({
-                usd_pro_price: config.USD.pro.price.amount,
-                usd_pro_original_price: config.USD.pro.price.originalAmount,
-                inr_pro_price: config.INR.pro.price.amount,
-                inr_pro_original_price: config.INR.pro.price.originalAmount,
-                free_images_quota: config.USD.free.quotas.imageGenerations,
-                free_social_quota: config.USD.free.quotas.socialPosts,
-                free_blogs_quota: config.USD.free.quotas.blogPosts,
-                pro_images_quota: config.USD.pro.quotas.imageGenerations,
-                pro_social_quota: config.USD.pro.quotas.socialPosts,
-                pro_blogs_quota: config.USD.pro.quotas.blogPosts,
-            });
-        }
-        if ((getModelState.data || getModelState.error) && (getPlansState.data || getPlansState.error)) {
-            setIsPageLoading(false);
-        }
-        if (getModelState.error) {
-            toast({ title: "Error Loading Model Settings", description: getModelState.error, variant: "destructive" });
-        }
-        if (getPlansState.error) {
-            toast({ title: "Error Loading Plan Settings", description: getPlansState.error, variant: "destructive" });
-        }
+    
+    if (getModelState.data) {
+        modelForm.reset(getModelState.data);
     }
-  }, [getModelState, getPlansState, isAdmin, modelForm, plansForm, toast]);
+    if (getPlansState.data) {
+        const config = getPlansState.data;
+        plansForm.reset({
+            usd_pro_price: config.USD.pro.price.amount,
+            usd_pro_original_price: config.USD.pro.price.originalAmount,
+            inr_pro_price: config.INR.pro.price.amount,
+            inr_pro_original_price: config.INR.pro.price.originalAmount,
+            free_images_quota: config.USD.free.quotas.imageGenerations,
+            free_social_quota: config.USD.free.quotas.socialPosts,
+            free_blogs_quota: config.USD.free.quotas.blogPosts,
+            pro_images_quota: config.USD.pro.quotas.imageGenerations,
+            pro_social_quota: config.USD.pro.quotas.socialPosts,
+            pro_blogs_quota: config.USD.pro.quotas.blogPosts,
+        });
+    }
+
+    if ((getModelState.data || getModelState.error) && (getPlansState.data || getPlansState.error)) {
+        setIsPageLoading(false);
+    }
+    
+    if (getModelState.error) {
+        toast({ title: "Error Loading Model Settings", description: getModelState.error, variant: "destructive" });
+    }
+    if (getPlansState.error) {
+        toast({ title: "Error Loading Plan Settings", description: getPlansState.error, variant: "destructive" });
+    }
+    
+  }, [getModelState, getPlansState, modelForm, plansForm, toast]);
   
   useEffect(() => {
     if (updateModelState.message && !updateModelState.error) {
