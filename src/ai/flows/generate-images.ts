@@ -1,4 +1,3 @@
-
 'use server';
 
 import {ai} from '@/ai/genkit';
@@ -683,15 +682,14 @@ First, analyze the text content to understand:
 - Ensure the style reinforces both the text content and brand personality
 
 **CONTEXTUAL DESIGN REQUIREMENTS:**
-- **Content-Driven Visuals:** Do NOT just display text - create visual representations of the concepts.
+- **CRITICAL:** Create a visual representation of the concept. DO NOT write the input text on the image. For example, if the text is "5 Ways to Improve SEO", create an infographic or a conceptual image with 5 elements related to SEO, not the literal text.
 - **Strategic Messaging:** The image should work as standalone content that communicates the message even without reading every word.
 - **Engagement Optimization:** Design for social media sharing, saving, and interaction.
 - **Brand Consistency:** Maintain visual consistency with the brand's identity and values.
-- **Audience Appeal:** Consider what would resonate with the brand's target demographic.
 
 **ENHANCED CREATIVE GUIDELINES:**
-- **Conceptual Visualization:** If the text mentions "5 benefits," create visual elements that represent those benefits, not just list them.
-- **Metaphorical Thinking:** Use visual metaphors that reinforce the message (e.g., growth charts for improvement tips, lightbulbs for ideas).
+- **Conceptual Visualization:** If the text mentions a list, create visual elements that represent those items, not just text.
+- **Metaphorical Thinking:** Use visual metaphors that reinforce the message (e.g., a rocket for "growth", a lightbulb for "ideas").
 - **Contextual Elements:** Include relevant icons, illustrations, or design elements that support the content theme.
 - **Hierarchy & Flow:** Guide the viewer's eye through the content in a logical, engaging way.
 
@@ -700,7 +698,7 @@ First, analyze the text content to understand:
 - Optimized for maximum social media engagement and algorithmic performance.
 - Brand-appropriate messaging that aligns with company values and positioning.
 
-**FINAL OUTPUT:** Create a single, high-quality marketing image that transforms the text content into a compelling visual experience that drives engagement, communicates value, and strengthens brand recognition. Do NOT write the input text on the image.`;
+**FINAL OUTPUT:** Create a single, high-quality marketing image that transforms the text content into a compelling visual experience that drives engagement, communicates value, and strengthens brand recognition.`;
                 } else if (exampleImage && chosenProvider === 'GEMINI') {
                     coreInstructions = `You are creating a strategic brand marketing image designed to drive engagement, build brand awareness, and convert viewers into customers on social media platforms.
 
@@ -976,3 +974,4 @@ Your mission is to create a compelling, brand-aligned visual asset that:
 //         schema: GenerateImagesOutputSchema,
 //     },
 // });
+
