@@ -6,8 +6,13 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import NextImage from 'next/image';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, UserCircle, Rocket, Paintbrush, Send, ArrowRight, Wand2, Layers, Target } from 'lucide-react';
+import { Loader2, UserCircle, Rocket, Paintbrush, Send, ArrowRight, Wand2, Layers, Target, CheckCircle, TrendingUp, Users, Clock, Star, X, Lightbulb, Zap, Building } from 'lucide-react';
 import PublicHeader from '@/components/PublicHeader';
 
 
@@ -22,6 +27,403 @@ const FeatureCard = ({ icon: Icon, title, description, id }: { icon: React.Eleme
         </p>
     </div>
 );
+
+// Enhanced Brand Journey Components
+const BrandStoryCard = ({
+  icon: Icon,
+  stage,
+  title,
+  characterStory,
+  beforeAfter,
+  metrics,
+  index,
+  isActive,
+  onHover
+}: {
+  icon: React.ElementType;
+  stage: string;
+  title: string;
+  characterStory: string;
+  beforeAfter: { before: string; after: string };
+  metrics: string;
+  index: number;
+  isActive: boolean;
+  onHover: (index: number | null) => void;
+}) => (
+  <div
+    className={`relative group cursor-pointer transition-all duration-500 ${
+      isActive ? 'scale-105 z-10' : 'hover:scale-102'
+    }`}
+    onMouseEnter={() => onHover(index)}
+    onMouseLeave={() => onHover(null)}
+  >
+    {/* Connection Line */}
+    {index < 2 && (
+      <div className="absolute top-20 left-full w-full h-1 bg-gradient-to-r from-primary/60 to-accent/60 hidden lg:block z-0 group-hover:from-primary group-hover:to-accent transition-all duration-300" />
+    )}
+    
+    {/* Main Card */}
+    <div className={`relative bg-gradient-to-br from-card via-card/95 to-card/90 border-2 rounded-2xl p-8 h-full flex flex-col shadow-lg transition-all duration-500 ${
+      isActive
+        ? 'border-primary/60 shadow-2xl shadow-primary/20'
+        : 'border-border/30 hover:border-primary/40 hover:shadow-xl'
+    }`}>
+      
+      {/* Stage Badge */}
+      <div className="absolute -top-3 left-6 px-4 py-1 bg-gradient-to-r from-primary to-accent text-primary-foreground text-sm font-semibold rounded-full shadow-md">
+        {stage}
+      </div>
+      
+      {/* Icon */}
+      <div className={`p-4 rounded-2xl w-fit mb-6 transition-all duration-300 ${
+        isActive
+          ? 'bg-primary/20 shadow-lg scale-110'
+          : 'bg-primary/10 group-hover:bg-primary/15 group-hover:scale-105'
+      }`}>
+        <Icon className={`h-12 w-12 transition-colors duration-300 ${
+          isActive ? 'text-primary' : 'text-primary/80 group-hover:text-primary'
+        }`} />
+      </div>
+      
+      {/* Title */}
+      <h3 className="text-2xl font-bold mb-4 text-balance leading-tight">
+        {title}
+      </h3>
+      
+      {/* Character Story */}
+      <div className="mb-6 flex-grow">
+        <p
+          className="text-muted-foreground text-balance leading-relaxed italic"
+          dangerouslySetInnerHTML={{
+            __html: `"${characterStory.replace(/\*\*(.*?)\*\*/g, '<strong class="text-primary font-semibold not-italic">$1</strong>')}"`
+          }}
+        />
+      </div>
+      
+      {/* Before/After */}
+      <div className="space-y-4 mb-6">
+        <div className="flex items-start space-x-3">
+          <div className="w-2 h-2 rounded-full bg-destructive/60 mt-2 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-destructive/80 mb-1">Before:</p>
+            <p
+              className="text-sm text-muted-foreground"
+              dangerouslySetInnerHTML={{
+                __html: beforeAfter.before.replace(/\*\*(.*?)\*\*/g, '<strong class="text-foreground font-semibold">$1</strong>')
+              }}
+            />
+          </div>
+        </div>
+        <div className="flex items-start space-x-3">
+          <CheckCircle className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-primary mb-1">After:</p>
+            <p
+              className="text-sm text-foreground"
+              dangerouslySetInnerHTML={{
+                __html: beforeAfter.after.replace(/\*\*(.*?)\*\*/g, '<strong class="text-primary font-semibold">$1</strong>')
+              }}
+            />
+          </div>
+        </div>
+      </div>
+      
+      {/* Metrics */}
+      <div className="flex items-center space-x-2 text-sm font-medium text-accent">
+        <TrendingUp className="w-4 h-4" />
+        <span>{metrics}</span>
+      </div>
+      
+      {/* Hover Effect Overlay */}
+      <div className={`absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 rounded-2xl transition-opacity duration-300 ${
+        isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+      }`} />
+    </div>
+  </div>
+);
+
+// Smart Recommendation Modal Component
+const SmartRecommendationModal = ({
+  isOpen,
+  onClose,
+  selectedStage
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  selectedStage: string | null;
+}) => {
+  const [formData, setFormData] = useState<{ [key: string]: string }>({});
+  const [showRecommendations, setShowRecommendations] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  // Reset modal state when selectedStage changes
+  useEffect(() => {
+    if (selectedStage) {
+      setFormData({});
+      setShowRecommendations(false);
+      setIsGenerating(false);
+    }
+  }, [selectedStage]);
+
+  const stageConfigs = {
+    new: {
+      title: "Tell us about your new brand idea",
+      icon: Rocket,
+      color: "text-blue-500",
+      fields: [
+        { key: 'businessIdea', label: 'What\'s your business idea?', type: 'textarea', placeholder: 'e.g., Organic skincare products for sensitive skin...' },
+        { key: 'industry', label: 'Industry', type: 'select', options: ['Fashion & Apparel', 'Beauty & Cosmetics', 'Food & Beverage', 'Health & Wellness', 'Technology', 'Other'] },
+        { key: 'targetAudience', label: 'Who is your target audience?', type: 'input', placeholder: 'e.g., Working women aged 25-40...' },
+        { key: 'challenge', label: 'Biggest branding challenge?', type: 'select', options: ['Creating a logo', 'Choosing colors', 'Writing brand messaging', 'All of the above'] }
+      ],
+      recommendations: [
+        { icon: UserCircle, title: 'Start with Brand Identity Creation', description: 'AI will extract your brand essence from your idea and generate your first logo, colors, and visual identity' },
+        { icon: Wand2, title: 'Launch with First Content Pack', description: 'Get your initial social media posts and basic marketing materials to start building presence' },
+        { icon: Rocket, title: 'Quick Setup & Go Live', description: 'Organize everything in your personal hub and get ready to launch your brand professionally' }
+      ]
+    },
+    growing: {
+      title: "Help us understand your content needs",
+      icon: Layers,
+      color: "text-green-500",
+      fields: [
+        { key: 'businessType', label: 'What type of business do you run?', type: 'input', placeholder: 'e.g., Handcrafted furniture, Digital agency...' },
+        { key: 'contentFrequency', label: 'How often do you post content?', type: 'select', options: ['Daily', 'Few times a week', 'Weekly', 'Rarely'] },
+        { key: 'platforms', label: 'Main social platforms', type: 'select', options: ['Instagram', 'Facebook', 'LinkedIn', 'Twitter', 'Multiple platforms'] },
+        { key: 'timeSpent', label: 'Hours spent on content weekly?', type: 'select', options: ['1-5 hours', '5-10 hours', '10-20 hours', '20+ hours'] }
+      ],
+      recommendations: [
+        { icon: Layers, title: 'Scale Your Content Production', description: 'Generate weeks of consistent, on-brand social posts and blog articles that match your established voice' },
+        { icon: Building, title: 'Build Your Visual Asset Library', description: 'Create and organize a growing collection of brand-consistent images and graphics for all your content needs' },
+        { icon: Send, title: 'Streamline Your Publishing Workflow', description: 'Manage, schedule, and track all your content from one central dashboard to save hours each week' }
+      ]
+    },
+    established: {
+      title: "Let's optimize your marketing ROI",
+      icon: Target,
+      color: "text-purple-500",
+      fields: [
+        { key: 'businessSize', label: 'Business size', type: 'select', options: ['Solo entrepreneur', 'Small team (2-10)', 'Medium business (10-50)', 'Large business (50+)'] },
+        { key: 'marketingChannels', label: 'Current marketing channels', type: 'select', options: ['Social media only', 'Email + Social', 'Paid ads + Social', 'Multi-channel'] },
+        { key: 'adSpend', label: 'Monthly ad spend', type: 'select', options: ['₹0-10,000', '₹10,000-50,000', '₹50,000-2,00,000', '₹2,00,000+'] },
+        { key: 'goal', label: 'Primary conversion goal', type: 'select', options: ['Brand awareness', 'Lead generation', 'Direct sales', 'App downloads'] }
+      ],
+      recommendations: [
+        { icon: Target, title: 'Optimize Your Ad Performance', description: 'Transform your best content into high-converting campaigns with automated A/B testing across Google and Meta platforms' },
+        { icon: TrendingUp, title: 'Maximize Content ROI', description: 'Turn your existing materials into conversion-focused blog posts and social content that drives measurable results' },
+        { icon: Building, title: 'Advanced Campaign Management', description: 'Deploy and track sophisticated marketing campaigns with detailed performance analytics and optimization insights' }
+      ]
+    }
+  };
+
+  const currentConfig = selectedStage ? stageConfigs[selectedStage as keyof typeof stageConfigs] : null;
+
+  const handleInputChange = (key: string, value: string) => {
+    setFormData(prev => ({ ...prev, [key]: value }));
+  };
+
+  const generateRecommendations = async () => {
+    setIsGenerating(true);
+    // Simulate AI processing
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    setIsGenerating(false);
+    setShowRecommendations(true);
+  };
+
+  const handleGetStarted = () => {
+    const params = new URLSearchParams({
+      stage: selectedStage || '',
+      ...formData
+    });
+    window.location.href = `/signup?${params.toString()}`;
+  };
+
+  if (!currentConfig) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center space-x-3 text-xl">
+            <div className={`p-2 rounded-lg bg-primary/10`}>
+              <currentConfig.icon className={`h-6 w-6 ${currentConfig.color}`} />
+            </div>
+            <span>{currentConfig.title}</span>
+          </DialogTitle>
+        </DialogHeader>
+
+        {!showRecommendations ? (
+          <div className="space-y-6 py-4">
+            <p className="text-muted-foreground">
+              Help us understand your needs so we can provide personalized recommendations.
+            </p>
+
+            <div className="space-y-4">
+              {currentConfig.fields.map((field) => (
+                <div key={field.key} className="space-y-2">
+                  <Label htmlFor={field.key}>{field.label}</Label>
+                  {field.type === 'input' && (
+                    <Input
+                      id={field.key}
+                      placeholder={'placeholder' in field ? field.placeholder : ''}
+                      value={formData[field.key] || ''}
+                      onChange={(e) => handleInputChange(field.key, e.target.value)}
+                    />
+                  )}
+                  {field.type === 'textarea' && (
+                    <Textarea
+                      id={field.key}
+                      placeholder={'placeholder' in field ? field.placeholder : ''}
+                      value={formData[field.key] || ''}
+                      onChange={(e) => handleInputChange(field.key, e.target.value)}
+                      rows={3}
+                    />
+                  )}
+                  {field.type === 'select' && (
+                    <Select value={formData[field.key] || ''} onValueChange={(value) => handleInputChange(field.key, value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select an option" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {field.options?.map((option) => (
+                          <SelectItem key={option} value={option}>{option}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-4">
+              <Button variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button
+                onClick={generateRecommendations}
+                disabled={isGenerating || Object.keys(formData).length < 2}
+                className="btn-gradient-primary"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  'Get My Recommendations'
+                )}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6 py-4">
+            <div className="text-center">
+              <div className="inline-flex items-center space-x-2 bg-primary/10 px-4 py-2 rounded-full text-sm font-medium text-primary mb-4">
+                <CheckCircle className="w-4 h-4" />
+                <span>Personalized recommendations ready!</span>
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Here's your BrandForge AI roadmap:</h3>
+              <p className="text-muted-foreground">
+                Based on your responses, we've identified the perfect tools to accelerate your brand growth.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {currentConfig.recommendations.map((rec, index) => (
+                <div key={index} className="flex items-start space-x-4 p-4 rounded-lg border border-primary/20 bg-primary/5">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <rec.icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-foreground">{rec.title}</h4>
+                    <p className="text-sm text-muted-foreground mt-1">{rec.description}</p>
+                  </div>
+                  <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg p-4 text-center">
+              <p className="text-sm text-muted-foreground mb-3">
+                <strong>Expected timeline:</strong> Professional results in 2-3 weeks
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Your personalized workspace will be pre-configured with these recommendations.
+              </p>
+            </div>
+
+            <div className="flex justify-center space-x-3 pt-4">
+              <Button variant="outline" onClick={onClose}>
+                Maybe Later
+              </Button>
+              <Button onClick={handleGetStarted} className="btn-gradient-primary btn-lg-enhanced">
+                Start My Journey <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const StageAssessment = ({ onStageSelect, selectedStage: parentSelectedStage }: { onStageSelect: (stage: string) => void; selectedStage?: string | null }) => {
+  const [selectedStage, setSelectedStage] = useState<string | null>(parentSelectedStage || null);
+
+  // Sync with parent state
+  useEffect(() => {
+    if (parentSelectedStage !== selectedStage) {
+      setSelectedStage(parentSelectedStage || null);
+    }
+  }, [parentSelectedStage, selectedStage]);
+  
+  const stages = [
+    { id: 'new', label: 'Just getting started', description: 'I have an idea but need to build my brand identity' },
+    { id: 'growing', label: 'Scaling my presence', description: 'I have a brand but struggle with consistent content' },
+    { id: 'established', label: 'Optimizing for growth', description: 'I need better ROI from my marketing efforts' }
+  ];
+  
+  return (
+    <div className="bg-gradient-to-br from-secondary/20 to-accent/10 rounded-2xl p-8 border border-border/30">
+      <div className="text-center mb-6">
+        <h3 className="text-xl font-bold mb-2">Which stage are you in?</h3>
+        <p className="text-muted-foreground">Get personalized recommendations for your brand journey</p>
+      </div>
+      
+      <div className="space-y-3">
+        {stages.map((stage) => (
+          <button
+            key={stage.id}
+            onClick={() => {
+              setSelectedStage(stage.id);
+              onStageSelect(stage.id);
+            }}
+            className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-200 ${
+              selectedStage === stage.id
+                ? 'border-primary bg-primary/10 shadow-md'
+                : 'border-border/30 hover:border-primary/40 hover:bg-primary/5'
+            }`}
+          >
+            <div className="font-medium mb-1">{stage.label}</div>
+            <div className="text-sm text-muted-foreground">{stage.description}</div>
+          </button>
+        ))}
+      </div>
+      
+      {selectedStage && (
+        <div className="mt-6 text-center">
+          <Button
+            size="sm"
+            className="btn-gradient-primary"
+            onClick={() => onStageSelect(selectedStage)}
+          >
+            Show My Path <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const HowItWorksStep = ({ number, title, description }: { number: string, title: string, description: string }) => (
     <div className="relative flex flex-col items-center text-center group">
@@ -126,12 +528,71 @@ const HeroCarousel = () => {
 export default function LandingPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const [activeStoryCard, setActiveStoryCard] = useState<number | null>(null);
+  const [selectedAssessmentStage, setSelectedAssessmentStage] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalStage, setModalStage] = useState<string | null>(null);
 
   useEffect(() => {
     if (user && !isLoading) {
       router.push('/dashboard');
     }
   }, [user, isLoading, router]);
+
+  const brandStories = [
+    {
+      stage: "Stage 1",
+      title: "The Spark: From Idea to Identity",
+      icon: Rocket,
+      characterStory: "Priya had this amazing idea for organic skincare but felt completely lost when it came to branding. She'd tried designing logos herself and even hired a few freelancers, but nothing felt right. After using **BrandForge AI's brand identity generator**, she finally had a cohesive brand identity that her customers immediately connected with. The **AI logo creator** gave her everything she needed. The best part? Her first Instagram post got more engagement than her previous 10 posts combined.",
+      beforeAfter: {
+        before: "Struggling with inconsistent visuals, spending ₹15,000+ on different designers, feeling frustrated with the branding process",
+        after: "Complete **brand identity** ready in under an hour using **AI-powered design tools**, saving both time and money"
+      },
+      metrics: "First month sales increased by 67% with new brand identity"
+    },
+    {
+      stage: "Stage 2",
+      title: "The Scale: From Presence to Power",
+      icon: Layers,
+      characterStory: "Arjun's handcrafted furniture business was doing well, but he was burning out trying to keep up with social media. Between running the workshop and managing orders, creating content felt impossible. Now he spends just 30 minutes every Sunday using **BrandForge AI's Content Studio** to generate a week's worth of posts, and his followers actually engage more because the **AI-generated content** feels authentic to his brand voice.",
+      beforeAfter: {
+        before: "Posting once a week if lucky, running out of content ideas, inconsistent messaging across platforms",
+        after: "Daily posts using **automated content creation**, 2.4x more engagement, and 15 hours saved per week"
+      },
+      metrics: "Monthly inquiries increased from 12 to 31 with consistent posting"
+    },
+    {
+      stage: "Stage 3",
+      title: "The Optimization: From Reach to ROI",
+      icon: Target,
+      characterStory: "Kavya's digital marketing agency had great case studies and blog content, but their ad campaigns weren't converting well. They were spending hours manually creating ad variations and still seeing mediocre results. After implementing **BrandForge AI's Campaign Manager**, they started turning their best content into targeted ads that actually worked. The **campaign optimization tools** transformed their approach, and their client retention improved significantly.",
+      beforeAfter: {
+        before: "Manually creating 3-4 ad variations per campaign, 1.2% average conversion rate, clients questioning ROI",
+        after: "Using **AI-powered campaign tools** to test 15+ variations, 2.8% conversion rate, clients asking for bigger budgets"
+      },
+      metrics: "Client ad spend efficiency improved by 127% in 3 months"
+    }
+  ];
+
+  const handleStageAssessment = (stage: string) => {
+    setSelectedAssessmentStage(stage);
+    setModalStage(stage);
+    setIsModalOpen(true);
+    
+    // Also highlight the relevant story card
+    const stageMap: { [key: string]: number } = { 'new': 0, 'growing': 1, 'established': 2 };
+    const targetIndex = stageMap[stage];
+    if (targetIndex !== undefined) {
+      setActiveStoryCard(targetIndex);
+      setTimeout(() => setActiveStoryCard(null), 3000);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setModalStage(null);
+  };
 
 
   if (isLoading) {
@@ -193,40 +654,97 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Brand Journey Section */}
-        <section className="section-spacing bg-secondary/30">
-          <div className="container-responsive">
-            <div className="text-center max-w-3xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-bold text-balance">AI for Every Stage of Your Brand's Journey</h2>
-              <p className="mt-4 text-lg text-muted-foreground text-balance">
-                Whether you're just starting, scaling up, or optimizing for growth, BrandForge AI adapts to your specific needs.
+        {/* Enhanced Brand Journey Section */}
+        <section className="section-spacing bg-gradient-to-br from-secondary/20 via-background to-accent/10 relative overflow-hidden">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 opacity-5">
+            <div className="absolute top-20 left-10 w-32 h-32 bg-primary rounded-full blur-3xl"></div>
+            <div className="absolute bottom-20 right-10 w-40 h-40 bg-accent rounded-full blur-3xl"></div>
+          </div>
+          
+          <div className="container-responsive relative z-10">
+            {/* Enhanced Header */}
+            <div className="text-center max-w-4xl mx-auto mb-16">
+              <div className="inline-flex items-center space-x-2 bg-primary/10 px-4 py-2 rounded-full text-sm font-medium text-primary mb-6">
+                <Users className="w-4 h-4" />
+                <span>Join 500+ entrepreneurs building stronger brands</span>
+              </div>
+              
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-balance mb-6">
+                Every Brand Has a Story. <span className="text-gradient-brand">What's Yours?</span>
+              </h2>
+              
+              <p className="text-lg md:text-xl text-muted-foreground text-balance leading-relaxed">
+                Whether you're just starting your journey, scaling your success, or optimizing for growth,
+                BrandForge AI meets you exactly where you are—and takes you where you want to go.
               </p>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-16 max-w-6xl mx-auto">
-              <FeatureCard 
-                id="new-brand"
-                icon={Rocket}
-                title="For the New Brand: From Spark to Identity"
-                description="Have a great idea but no brand? Instantly generate a logo, extract key messaging from your site, and create your foundational brand profile in minutes. Launch professionally from day one."
-              />
-              <FeatureCard 
-                id="growing-brand"
-                icon={Layers}
-                title="For the Growing Brand: From Presence to Power"
-                description="Struggling to keep up with content demands? Use your established brand identity to generate a consistent stream of on-brand social posts, blog articles, and stunning visuals. Scale your content, not your team."
-              />
-               <FeatureCard 
-                id="established-brand"
-                icon={Target}
-                title="For the Established Brand: From Reach to ROI"
-                description="Ready to optimize? Turn your best content into high-performing ad campaigns. Generate creative variations for A/B testing and get strategic guidance for platforms like Google and Meta."
-              />
+
+            {/* Interactive Brand Stories */}
+            <div className="relative mb-16">
+              {/* Journey Progress Line */}
+              <div className="absolute top-20 left-0 right-0 h-1 bg-gradient-to-r from-primary/30 via-accent/30 to-primary/30 hidden lg:block z-0"></div>
+              
+              {/* Story Cards */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12 relative z-10">
+                {brandStories.map((story, index) => (
+                  <BrandStoryCard
+                    key={index}
+                    {...story}
+                    index={index}
+                    isActive={activeStoryCard === index}
+                    onHover={setActiveStoryCard}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Stage Assessment */}
+            <div className="max-w-2xl mx-auto mb-16">
+              <StageAssessment onStageSelect={handleStageAssessment} selectedStage={selectedAssessmentStage} />
+            </div>
+
+            {/* Smart Recommendation Modal */}
+            <SmartRecommendationModal
+              isOpen={isModalOpen}
+              onClose={handleCloseModal}
+              selectedStage={modalStage}
+            />
+
+            {/* Social Proof & CTA */}
+            <div className="text-center">
+              <div className="flex justify-center items-center space-x-6 mb-8 flex-wrap gap-4">
+                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                  <Clock className="w-4 h-4 text-primary" />
+                  <span>Average setup: 20 minutes</span>
+                </div>
+                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                  <TrendingUp className="w-4 h-4 text-accent" />
+                  <span>Average engagement boost: 85%</span>
+                </div>
+                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                  <Star className="w-4 h-4 text-primary" />
+                  <span>4.6/5 user rating</span>
+                </div>
+              </div>
+              
+              <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
+                Ready to write your brand's next chapter?
+              </p>
+              
+              <div className="flex justify-center">
+                <Button size="lg" variant="outline" className="btn-lg-enhanced">
+                  <Link href="/features" className="flex items-center">
+                    Explore Features
+                  </Link>
+                </Button>
+              </div>
             </div>
           </div>
         </section>
         
         {/* How It Works Section */}
-        <section className="section-spacing">
+        <section className="py-12 sm:py-16">
             <div className="container-responsive">
                 <div className="text-center max-w-2xl mx-auto">
                     <h2 className="text-3xl md:text-4xl font-bold text-balance">Get Results in 3 Simple Steps</h2>
@@ -243,12 +761,9 @@ export default function LandingPage() {
         </section>
 
         {/* Refinement Highlight Section */}
-        <section className="section-spacing bg-background">
+        <section className="py-12 sm:py-16 bg-background">
             <div className="container-responsive">
                 <div className="text-center max-w-2xl mx-auto">
-                    <div className="inline-block p-4 bg-primary/10 rounded-2xl mb-6">
-                        <Wand2 className="h-10 w-10 text-primary" />
-                    </div>
                     <h2 className="text-3xl md:text-4xl font-bold text-balance">
                         Never Settle for 'Good Enough'—<span className="text-gradient-brand">Refine to Perfection</span>
                     </h2>
