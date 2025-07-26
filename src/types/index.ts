@@ -195,16 +195,6 @@ export const EnhanceRefinePromptOutputSchema = z.object({
 });
 export type EnhanceRefinePromptOutput = z.infer<typeof EnhanceRefinePromptOutputSchema>;
 
-// Schemas for enhancing Text-to-Feature
-export const EnhanceTextToFeatureInputSchema = z.object({
-  textToFeature: z.string().min(3, { message: "Text must be at least 3 characters." }).describe('The user-provided text concept to be enhanced into a visual prompt.'),
-});
-export type EnhanceTextToFeatureInput = z.infer<typeof EnhanceTextToFeatureInputSchema>;
-
-export const EnhanceTextToFeatureOutputSchema = z.object({
-  enhancedTextToFeature: z.string().describe('The AI-enhanced, visually descriptive prompt for the image generation model.'),
-});
-export type EnhanceTextToFeatureOutput = z.infer<typeof EnhanceTextToFeatureOutputSchema>;
 
 
 // Types for admin orphaned images cleanup

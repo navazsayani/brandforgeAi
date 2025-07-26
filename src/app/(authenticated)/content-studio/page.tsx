@@ -22,9 +22,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download, Library, Star, Lock, Sparkles as SparklesIcon, ChevronRight, Target, Users, Check } from 'lucide-react';
-import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, handlePopulateImageFormAction, handlePopulateSocialFormAction, handlePopulateBlogFormAction, getPaymentMode, handleGetPlansConfigAction, handleEditImageAction, handleEnhanceRefinePromptAction, handleEnhanceTextToFeatureAction, type FormState } from '@/lib/actions';
+import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, handlePopulateImageFormAction, handlePopulateSocialFormAction, handlePopulateBlogFormAction, getPaymentMode, handleGetPlansConfigAction, handleEditImageAction, handleEnhanceRefinePromptAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
-import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage, PlansConfig, EnhanceTextToFeatureOutput } from '@/types';
+import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage, PlansConfig } from '@/types';
 import type { DescribeImageOutput } from "@/ai/flows/describe-image-flow";
 import type { GenerateBlogOutlineOutput } from "@/ai/flows/generate-blog-outline-flow";
 import type { GenerateImagesInput } from '@/ai/flows/generate-images';
@@ -229,7 +229,6 @@ const initialPopulateSocialFormState: FormState<PopulateSocialFormOutput> = { er
 const initialPopulateBlogFormState: FormState<PopulateBlogFormOutput> = { error: undefined, data: undefined, message: undefined };
 const initialFreepikTaskStatusState: FormState<{ status: string; images: string[] | null; taskId: string;}> = { error: undefined, data: undefined, message: undefined, taskId: "" };
 const initialPlansState: FormState<PlansConfig> = { data: undefined, error: undefined, message: undefined };
-const initialEnhanceTextToFeatureState: FormState<EnhanceTextToFeatureOutput> = { error: undefined, data: undefined, message: undefined };
 
 
 type SocialImageChoice = 'generated' | 'profile' | 'library' | null;
@@ -308,7 +307,6 @@ export default function ContentStudioPage() {
 
   const [selectedImageProvider, setSelectedImageProvider] = useState<GenerateImagesInput['provider']>('GEMINI');
   const [imageGenBrandDescription, setImageGenBrandDescription] = useState<string>("");
-  const [imageGenTextToFeature, setImageGenTextToFeature] = useState<string>("");
   const [selectedImageStylePreset, setSelectedImageStylePreset] = useState<string>(imageStylePresets[0].value);
   const [customStyleNotesInput, setCustomStyleNotesInput] = useState<string>("");
   const [imageGenNegativePrompt, setImageGenNegativePrompt] = useState<string>("");
@@ -365,9 +363,6 @@ export default function ContentStudioPage() {
   const [refineModalOpen, setRefineModalOpen] = useState(false);
   const [imageToRefine, setImageToRefine] = useState<string | null>(null);
   
-  // State for enhancing Text-to-Feature
-  const [enhanceTextToFeatureState, enhanceTextToFeatureAction] = useActionState(handleEnhanceTextToFeatureAction, initialEnhanceTextToFeatureState);
-  const [isEnhancingTextToFeature, setIsEnhancingTextToFeature] = useState(false);
 
 
   const isPremiumActive = useMemo(() => {
@@ -770,16 +765,6 @@ export default function ContentStudioPage() {
         }
     }, [populateBlogFormState, toast]);
 
-    useEffect(() => {
-        setIsEnhancingTextToFeature(false);
-        if (enhanceTextToFeatureState.data?.enhancedTextToFeature) {
-            setImageGenTextToFeature(enhanceTextToFeatureState.data.enhancedTextToFeature);
-            toast({ title: "Prompt Enhanced!", description: "Your Text-to-Feature idea has been enhanced by AI." });
-        }
-        if (enhanceTextToFeatureState.error) {
-            toast({ title: "Enhancement Error", description: enhanceTextToFeatureState.error, variant: "destructive" });
-        }
-    }, [enhanceTextToFeatureState, toast]);
 
   const copyToClipboard = (text: string, type: string) => {
     navigator.clipboard.writeText(text);
@@ -937,7 +922,6 @@ export default function ContentStudioPage() {
     const exampleImg = useExampleImageForGen ? selectedExampleImageUrl : ""; 
     const combinedStyle = selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "");
     const negPrompt = imageGenNegativePrompt;
-    const textToFeature = imageGenTextToFeature;
     const aspect = selectedAspectRatio;
     const numImages = parseInt(numberOfImagesToGenerate, 10);
     const seedValueStr = imageGenSeed;
@@ -947,53 +931,7 @@ export default function ContentStudioPage() {
     let textPromptContent = "";
     let coreInstructions = "";
 
-    // Text-to-Feature prompt generation - this should take priority
-    if (textToFeature && textToFeature.trim() !== "") {
-        textPromptContent = `You are an expert brand marketing designer specializing in creating contextual, engaging visual content that transforms text concepts into compelling brand-aligned graphics. Your mission is to understand the meaning and context behind the text and create a strategic visual representation that drives engagement and brand recognition.
-
-**Text Content to Transform:**
-"${textToFeature}"
-
-**STRATEGIC CONTENT ANALYSIS:**
-First, analyze the text content to understand:
-- What is the core message or value proposition?
-- What type of content is this? (tips, benefits, questions, statements, calls-to-action, etc.)
-- What emotions or actions should this content inspire?
-- Who is the target audience for this message?
-- What visual metaphors or concepts would best represent this content?
-
-**BRAND STRATEGY CONTEXT:**
-- **Brand Identity:** "${imageGenBrandDescription}"${industryCtx}
-  - Extract the brand's personality, values, and visual identity cues
-  - Consider how this brand would communicate this specific message
-  - Think about the brand's target audience and their preferences
-  - Ensure the visual approach aligns with the brand's positioning
-
-**VISUAL EXECUTION STRATEGY:** "${combinedStyle}"
-- Apply this style to enhance the content's impact and brand alignment
-- For realistic styles: Create professional, market-ready visuals with authentic appeal
-- For artistic styles: Balance creative expression with clear message communication
-- Ensure the style reinforces both the text content and brand personality
-
-**CONTEXTUAL DESIGN REQUIREMENTS:**
-- **CRITICAL:** Create a visual representation of the concept. DO NOT write the input text on the image. For example, if the text is "5 Ways to Improve SEO", create an infographic or a conceptual image with 5 elements related to SEO, not the literal text.
-- **Strategic Messaging:** The image should work as standalone content that communicates the message even without reading every word.
-- **Engagement Optimization:** Design for social media sharing, saving, and interaction.
-- **Brand Consistency:** Maintain visual consistency with the brand's identity and values.
-
-**ENHANCED CREATIVE GUIDELINES:**
-- **Conceptual Visualization:** If the text mentions a list, create visual elements that represent those items, not just text.
-- **Metaphorical Thinking:** Use visual metaphors that reinforce the message (e.g., a rocket for "growth", a lightbulb for "ideas").
-- **Contextual Elements:** Include relevant icons, illustrations, or design elements that support the content theme.
-- **Hierarchy & Flow:** Guide the viewer's eye through the content in a logical, engaging way.
-
-**QUALITY STANDARDS:**
-- Professional marketing-grade execution suitable for paid advertising.
-- Optimized for maximum social media engagement and algorithmic performance.
-- Brand-appropriate messaging that aligns with company values and positioning.
-
-**FINAL OUTPUT:** Create a single, high-quality marketing image that transforms the text content into a compelling visual experience that drives engagement, communicates value, and strengthens brand recognition.`;
-    } else if (selectedImageProvider === 'FREEPIK') {
+    if (selectedImageProvider === 'FREEPIK') {
         if (exampleImg) {
             textPromptContent = `[An AI-generated description of your example image will be used here by the backend to guide content when Freepik/Imagen3 is selected.]\nUsing that description as primary inspiration for the subject and main visual elements, now generate an image based on the following concept: "${imageGenBrandDescription}".`;
         } else {
@@ -1120,7 +1058,6 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
         brandDescription: imageGenBrandDescription,
         industry: currentIndustryValue === "_none_" ? "" : currentIndustryValue,
         imageStyle: combinedStyle,
-        // textToFeature: (textToFeature && textToFeature.trim() !== "") ? textToFeature : undefined,
         exampleImage: (useExampleImageForGen && exampleImg && exampleImg.trim() !== "") ? exampleImg : undefined,
         aspectRatio: aspect,
         numberOfImages: numImages,
@@ -1170,10 +1107,6 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
         
         formData.set("imageStyle", imageStyle);
         
-        const textToFeatureValue = imageGenTextToFeature;
-        if (textToFeatureValue && textToFeatureValue.trim() !== "") {
-            formData.set("textToFeature", textToFeatureValue);
-        }
         
         const exampleImgToUse = (isAdmin || isPremiumActive) ? formSnapshot?.exampleImage : (useExampleImageForGen && selectedExampleImageUrl ? selectedExampleImageUrl : undefined);
         if (typeof exampleImgToUse === 'string' && exampleImgToUse.trim() !== "") {
@@ -1297,16 +1230,6 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
         });
     };
 
-    const handleEnhanceTextToFeature = () => {
-        if (imageGenTextToFeature.trim().length < 3) {
-            toast({ title: "Text too short", description: "Please provide a longer idea to enhance.", variant: "default" });
-            return;
-        }
-        setIsEnhancingTextToFeature(true);
-        const formData = new FormData();
-        formData.append("textToFeature", imageGenTextToFeature);
-        startTransition(() => enhanceTextToFeatureAction(formData));
-    };
 
   const handleSocialSubmit = async (formData: FormData) => {
     let imageSrc = formData.get("selectedImageSrcForSocialPost") as string | null;
@@ -1597,42 +1520,6 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                     />
                   </div>
 
-                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                        <Label htmlFor="imageGenTextToFeature" className="flex items-center"><Type className="w-4 h-4 mr-2 text-primary" />Text to Feature in Image (Optional)</Label>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleEnhanceTextToFeature}
-                            disabled={isEnhancingTextToFeature || imageGenTextToFeature.length < 3 || (useExampleImageForGen && selectedExampleImageUrl.trim() !== "")}
-                            className="text-xs h-auto py-1 px-2"
-                        >
-                            {isEnhancingTextToFeature ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-                            <span className="ml-1">Enhance</span>
-                        </Button>
-                    </div>
-                    <Textarea
-                      id="imageGenTextToFeature"
-                      name="textToFeature"
-                      value={imageGenTextToFeature}
-                      disabled={useExampleImageForGen && selectedExampleImageUrl.trim() !== ""}
-                      onChange={(e) => {
-                        const newValue = e.target.value;
-                        setImageGenTextToFeature(newValue);
-                        // If user starts typing text-to-feature, disable example image
-                        if (newValue.trim() !== "" && useExampleImageForGen) {
-                          setUseExampleImageForGen(false);
-                        }
-                      }}
-                      placeholder="e.g., '5 Ways to Improve Your SEO', 'Why Choose Our Product?', 'Transform Your Business Today'. Leave blank for object/scene generation."
-                      rows={2}
-                    />
-                     <p className="text-xs text-muted-foreground mt-1">
-                       AI will create a contextual, brand-aligned visual that represents your text content - not just typography, but strategic graphics that communicate your message effectively for social media.
-                       {useExampleImageForGen && selectedExampleImageUrl.trim() !== "" && <span className="block mt-1 text-amber-600">Text-to-feature is disabled when using example images as they serve different generation purposes.</span>}
-                     </p>
-                   </div>
                   
                   <div>
                     <Label htmlFor="imageGenImageStylePresetSelect" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Image Style Preset</Label>
@@ -1673,18 +1560,12 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                       id="useExampleImageForGen"
                       name="useExampleImage"
                       checked={useExampleImageForGen}
-                      disabled={imageGenTextToFeature.trim() !== ""}
                       onCheckedChange={(checked) => {
                         setUseExampleImageForGen(checked as boolean);
-                        // If enabling example image, clear text-to-feature
-                        if (checked && imageGenTextToFeature.trim() !== "") {
-                          setImageGenTextToFeature("");
-                        }
                       }}
                     />
-                    <Label htmlFor="useExampleImageForGen" className={cn("text-sm font-medium", imageGenTextToFeature.trim() !== "" ? "text-muted-foreground" : "")}>
+                    <Label htmlFor="useExampleImageForGen" className="text-sm font-medium">
                       Use Example Image from Profile as Reference?
-                      {imageGenTextToFeature.trim() !== "" && <span className="text-xs ml-2">(Disabled when using text-to-feature)</span>}
                     </Label>
                   </div>
 

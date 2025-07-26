@@ -19,7 +19,6 @@ import { populateBlogForm, type PopulateBlogFormInput, type PopulateBlogFormOutp
 import { populateAdCampaignForm, type PopulateAdCampaignFormInput, type PopulateAdCampaignFormOutput } from '@/ai/flows/populate-ad-campaign-form-flow';
 import { editImage, type EditImageInput, type EditImageOutput } from '@/ai/flows/edit-image-flow';
 import { enhanceRefinePrompt, type EnhanceRefinePromptInput, type EnhanceRefinePromptOutput } from '@/ai/flows/enhance-refine-prompt-flow';
-import { enhanceTextToFeature, type EnhanceTextToFeatureInput, type EnhanceTextToFeatureOutput } from '@/ai/flows/enhance-text-to-feature-flow';
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where, collectionGroup, deleteDoc, runTransaction } from 'firebase/firestore';
@@ -263,7 +262,6 @@ export async function handleGenerateImagesAction(
       brandDescription: formData.get("brandDescription") as string,
       industry: formData.get("industry") as string | undefined,
       imageStyle: formData.get("imageStyle") as string,
-      textToFeature: formData.get("textToFeature") as string | undefined,
       exampleImage: exampleImageUrl && exampleImageUrl.trim() !== "" ? decodeHtmlEntitiesInUrl(exampleImageUrl) : undefined,
       exampleImageDescription: aiGeneratedDesc,
       aspectRatio: formData.get("aspectRatio") as string | undefined,
@@ -810,26 +808,6 @@ export async function handleEnhanceRefinePromptAction(
   }
 }
 
-export async function handleEnhanceTextToFeatureAction(
-  prevState: FormState<EnhanceTextToFeatureOutput>,
-  formData: FormData
-): Promise<FormState<EnhanceTextToFeatureOutput>> {
-  try {
-    const input: EnhanceTextToFeatureInput = {
-      textToFeature: formData.get("textToFeature") as string,
-    };
-
-    if (!input.textToFeature) {
-      return { error: "Text to feature is required to enhance the prompt." };
-    }
-
-    const result = await enhanceTextToFeature(input);
-    return { data: result, message: "Text-to-Feature prompt enhanced." };
-  } catch (e: any) {
-    console.error("Error in handleEnhanceTextToFeatureAction:", e);
-    return { error: `Failed to enhance prompt: ${e.message || "Unknown error."}` };
-  }
-}
 
 
 const generateFilenamePart = () => Math.random().toString(36).substring(2, 10);
