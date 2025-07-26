@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import crypto from 'crypto';
@@ -171,7 +172,12 @@ export async function handleGenerateImagesAction(
       return { error: "User not authenticated. Cannot generate images." };
     }
 
-    await checkAndIncrementUsage(userId, 'imageGenerations');
+    const numberOfImagesStr = formData.get("numberOfImages") as string;
+    const numberOfImages = parseInt(numberOfImagesStr, 10) || 1;
+
+    for (let i = 0; i < numberOfImages; i++) {
+        await checkAndIncrementUsage(userId, 'imageGenerations');
+    }
     
     const userDocRef = doc(db, 'users', userId, 'brandProfiles', userId);
     const userDocSnap = await getDoc(userDocRef);
@@ -190,8 +196,6 @@ export async function handleGenerateImagesAction(
       return { error: "Image generation is not available on your current plan. Please upgrade." };
     }
     
-    const numberOfImagesStr = formData.get("numberOfImages") as string;
-    const numberOfImages = parseInt(numberOfImagesStr, 10) || 1;
     const chosenProvider = (formData.get("provider") as GenerateImagesInput['provider']) || process.env.IMAGE_GENERATION_PROVIDER || 'GEMINI';
 
     if (!isAdmin && !isPremiumActive) {
@@ -1859,48 +1863,48 @@ export async function handleGetConnectedAccountsStatusAction(
           } else {
             // Perform a quick validation test
             try {
-            const testUrl = `https://graph.facebook.com/v19.0/me?access_token=${data.meta.accessToken}&fields=id`;
-            const testResponse = await fetch(testUrl, {
-              method: 'GET',
-              signal: AbortSignal.timeout(5000) // 5 second timeout
-            });
-            const testData = await testResponse.json();
-            
-            if (testData.error) {
-              status.metaHealth = 'invalid';
-              console.warn(`[Connection Status:${requestId}] Meta token validation failed:`, testData.error);
-            } else {
-              status.metaHealth = 'healthy';
-              console.log(`[Connection Status:${requestId}] Meta token is healthy`);
+              const testUrl = `https://graph.facebook.com/v19.0/me?access_token=${data.meta.accessToken}&fields=id`;
+              const testResponse = await fetch(testUrl, {
+                method: 'GET',
+                signal: AbortSignal.timeout(5000) // 5 second timeout
+              });
+              const testData = await testResponse.json();
               
-              // Update the validation timestamp in Firestore
-              try {
-                const credentialsRef = doc(db, 'userApiCredentials', userId);
-                await setDoc(credentialsRef, {
-                  meta: {
-                    ...data.meta,
-                    validatedAt: serverTimestamp()
-                  }
-                }, { merge: true });
-                console.log(`[Connection Status:${requestId}] Updated validation timestamp for healthy token`);
-              } catch (updateError: any) {
-                console.warn(`[Connection Status:${requestId}] Failed to update validation timestamp:`, updateError.message);
+              if (testData.error) {
+                status.metaHealth = 'invalid';
+                console.warn(`[Connection Status:${requestId}] Meta token validation failed:`, testData.error);
+              } else {
+                status.metaHealth = 'healthy';
+                console.log(`[Connection Status:${requestId}] Meta token is healthy`);
+                
+                // Update the validation timestamp in Firestore
+                try {
+                  const credentialsRef = doc(db, 'userApiCredentials', userId);
+                  await setDoc(credentialsRef, {
+                    meta: {
+                      ...data.meta,
+                      validatedAt: serverTimestamp()
+                    }
+                  }, { merge: true });
+                  console.log(`[Connection Status:${requestId}] Updated validation timestamp for healthy token`);
+                } catch (updateError: any) {
+                  console.warn(`[Connection Status:${requestId}] Failed to update validation timestamp:`, updateError.message);
+                }
               }
-            }
-          } catch (testError: any) {
-            // If validation test fails, but token is not expired, assume it might still be healthy
-            // This handles cases where the validation test fails due to network issues
-            if (testError.name === 'TimeoutError' || testError.message.includes('timeout')) {
-              status.metaHealth = 'healthy'; // Assume healthy if just a timeout
-              console.warn(`[Connection Status:${requestId}] Meta token validation timed out, assuming healthy:`, testError.message);
-            } else {
-              status.metaHealth = 'unknown';
-              console.warn(`[Connection Status:${requestId}] Meta token validation test failed:`, testError.message);
+            } catch (testError: any) {
+              // If validation test fails, but token is not expired, assume it might still be healthy
+              // This handles cases where the validation test fails due to network issues
+              if (testError.name === 'TimeoutError' || testError.message.includes('timeout')) {
+                status.metaHealth = 'healthy'; // Assume healthy if just a timeout
+                console.warn(`[Connection Status:${requestId}] Meta token validation timed out, assuming healthy:`, testError.message);
+              } else {
+                status.metaHealth = 'unknown';
+                console.warn(`[Connection Status:${requestId}] Meta token validation test failed:`, testError.message);
+              }
             }
           }
         }
-       }
-     } else {
+       } else {
         // No expiration date, assume long-lived token, still test it
         try {
           const testUrl = `https://graph.facebook.com/v19.0/me?access_token=${data.meta.accessToken}&fields=id`;
