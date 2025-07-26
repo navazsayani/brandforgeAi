@@ -132,10 +132,10 @@ export function SafeImage({
 }
 
 // Specialized version for brand profile images
-export function BrandProfileImage(props: Omit<SafeImageProps, 'fallbackIcon' | 'showErrorMessage'>) {
+export function BrandProfileImage(props: SafeImageProps) {
   return (
     <SafeImage
-      {...props}
+      {...props} // Pass all props, including src, to the base component
       fallbackIcon={
         <div className="text-center">
           <ImageIcon className="w-8 h-8 mb-2 mx-auto" />
@@ -148,10 +148,10 @@ export function BrandProfileImage(props: Omit<SafeImageProps, 'fallbackIcon' | '
 }
 
 // Specialized version for library images
-export function LibraryImage(props: Omit<SafeImageProps, 'fallbackIcon' | 'showErrorMessage'>) {
+export function LibraryImage(props: SafeImageProps) {
   return (
     <SafeImage
-      {...props}
+      {...props} // Pass all props, including src, to the base component
       fallbackIcon={
         <div className="text-center">
           <ImageIcon className="w-8 h-8 mb-2 mx-auto" />
