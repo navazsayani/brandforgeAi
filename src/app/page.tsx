@@ -12,7 +12,7 @@ import PublicHeader from '@/components/PublicHeader';
 
 
 const FeatureCard = ({ icon: Icon, title, description }: { icon: React.ElementType, title: string, description: string }) => (
-    <div className="card-compact text-center p-6 md:p-8 h-full flex flex-col">
+    <div className="card-compact text-center p-6 md:p-8 h-full flex flex-col group">
         <div className="p-4 bg-primary/10 rounded-xl w-fit mx-auto mb-6 shadow-sm group-hover:scale-110 transition-transform duration-300">
             <Icon className="h-10 w-10 text-primary" />
         </div>
@@ -194,7 +194,7 @@ export default function LandingPage() {
         </section>
 
         {/* Brand Journey Section */}
-        <section className="section-spacing bg-secondary/50">
+        <section className="section-spacing bg-secondary/30">
           <div className="container-responsive">
             <div className="text-center max-w-3xl mx-auto">
               <h2 className="text-3xl md:text-4xl font-bold text-balance">Find Your Fit: AI for Every Stage of Your Brand's Journey</h2>
@@ -204,19 +204,16 @@ export default function LandingPage() {
             </div>
             <div className="grid-responsive mt-16 max-w-6xl mx-auto">
               <FeatureCard 
-                href="/features#brand-identity"
                 icon={Rocket}
                 title="For the New Brand: From Spark to Identity"
                 description="Have a great idea but no brand? Instantly generate a logo, extract key messaging from your site, and create your foundational brand profile in minutes. Launch professionally from day one."
               />
               <FeatureCard 
-                href="/features#content-studio"
                 icon={Layers}
                 title="For the Growing Brand: From Presence to Power"
                 description="Struggling to keep up with content demands? Use your established brand identity to generate a consistent stream of on-brand social posts, blog articles, and stunning visuals. Scale your content, not your team."
               />
                <FeatureCard 
-                href="/features#campaign-manager"
                 icon={Target}
                 title="For the Established Brand: From Reach to ROI"
                 description="Ready to optimize? Turn your best content into high-performing ad campaigns. Generate creative variations for A/B testing and get strategic guidance for platforms like Google and Meta."
