@@ -26,12 +26,17 @@ export async function runOrphanedImageCleanup(options: {
       
       console.log('\n=== SINGLE USER REPORT ===');
       console.log(`User: ${report.userEmail} (${report.brandName})`);
-      console.log(`Total Images: ${report.totalImages}`);
-      console.log(`Orphaned: ${report.orphanedCount}`);
+      console.log(`Total Images: ${report.totalImageCount}`);
+      console.log(`Orphaned: ${report.totalOrphanedCount}`);
       
-      if (report.orphanedCount > 0) {
+      if (report.totalOrphanedCount > 0) {
         console.log('Orphaned URLs:');
-        report.orphanedUrls.forEach(url => {
+        console.log('Example Images:');
+        report.exampleImages.orphanedUrls.forEach((url: string) => {
+          console.log(`  - ${url}`);
+        });
+        console.log('Library Images:');
+        report.libraryImages.orphanedUrls.forEach((url: string) => {
           console.log(`  - ${url}`);
         });
       }
@@ -46,8 +51,8 @@ export async function runOrphanedImageCleanup(options: {
         console.log('\n🔧 Auto-cleaning up orphaned references...');
         
         for (const report of reports) {
-          if (report.orphanedCount > 0) {
-            console.log(`Cleaning up ${report.orphanedCount} orphaned images for ${report.userEmail}...`);
+          if (report.totalOrphanedCount > 0) {
+            console.log(`Cleaning up ${report.totalOrphanedCount} orphaned images for ${report.userEmail}...`);
             await cleanupOrphanedImagesForUser(report.userId, false);
           }
         }

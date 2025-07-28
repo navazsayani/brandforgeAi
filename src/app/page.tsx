@@ -57,11 +57,6 @@ const BrandStoryCard = ({
     onMouseEnter={() => onHover(index)}
     onMouseLeave={() => onHover(null)}
   >
-    {/* Connection Line */}
-    {index < 2 && (
-      <div className="absolute top-20 left-full w-full h-1 bg-gradient-to-r from-primary/60 to-accent/60 hidden lg:block z-0 group-hover:from-primary group-hover:to-accent transition-all duration-300" />
-    )}
-    
     {/* Main Card */}
     <div className={`relative bg-gradient-to-br from-card via-card/95 to-card/90 border-2 rounded-2xl p-8 h-full flex flex-col shadow-lg transition-all duration-500 ${
       isActive
@@ -687,6 +682,10 @@ export default function LandingPage() {
               
               {/* Story Cards */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12 relative z-10">
+                {/* Connection Lines - positioned at grid level to avoid scaling with cards */}
+                <div className="absolute top-20 left-[calc(33.333%-2rem)] w-16 lg:w-20 xl:w-24 h-1 bg-primary/50 hidden lg:block z-0" />
+                <div className="absolute top-20 left-[calc(66.666%-2rem)] w-16 lg:w-20 xl:w-24 h-1 bg-primary/50 hidden lg:block z-0" />
+                
                 {brandStories.map((story, index) => (
                   <BrandStoryCard
                     key={index}
