@@ -8,9 +8,10 @@ import { industries, freepikValidStyles } from '../../lib/constants'; // Added f
 import { getModelConfig } from '@/lib/model-config';
 import { GoogleGenAI } from "@google/genai";
 import { decodeHtmlEntitiesInUrl, verifyImageUrlExists } from '@/lib/utils';
+import { generateImageWithFireworks, getFireworksDimensions, preprocessControlNetImage } from '@/lib/fireworks-client';
 
 const GenerateImagesInputSchema = z.object({
-  provider: z.enum(['GEMINI', 'FREEPIK', 'LEONARDO_AI', 'IMAGEN']).optional().describe("The image generation provider to use."),
+  provider: z.enum(['GEMINI', 'FREEPIK', 'LEONARDO_AI', 'IMAGEN', 'FIREWORKS_SDXL_TURBO', 'FIREWORKS_SDXL_3']).optional().describe("The image generation provider to use."),
   brandDescription: z
     .string()
     .describe('A detailed description of the brand and its values. This will be used for subtle thematic influence on the new item.'),
@@ -45,6 +46,21 @@ const GenerateImagesInputSchema = z.object({
   freepikEffectColor: z.string().optional().describe("Freepik specific color effect enum (e.g., for Imagen3: 'b&w', 'pastel')."),
   freepikEffectLightning: z.string().optional().describe("Freepik specific lightning effect enum (e.g., for Imagen3: 'studio', 'warm')."),
   freepikEffectFraming: z.string().optional().describe("Freepik specific framing effect enum (e.g., for Imagen3: 'portrait', 'macro')."),
+  
+  // Fireworks AI specific parameters
+  fireworksControlNet: z.object({
+    type: z.enum(['canny', 'depth', 'openpose', 'scribble', 'seg']),
+    conditioning_scale: z.number().min(0).max(2).default(1.0),
+    control_image: z.string().optional().describe("Base64 encoded control image or URL")
+  }).optional().describe("ControlNet configuration for Fireworks AI models"),
+  
+  fireworksImg2ImgStrength: z.number().min(0).max(1).default(0.8).optional().describe("Strength for img2img transformation (0.0 = no change, 1.0 = complete transformation)"),
+  fireworksGuidanceScale: z.number().min(1).max(20).default(7.5).optional().describe("Guidance scale for prompt adherence"),
+  fireworksScheduler: z.enum(['DPMSolverMultistep', 'DDIM', 'PNDM', 'LMSDiscrete']).optional().describe("Sampling scheduler for generation"),
+  fireworksNumInferenceSteps: z.number().min(1).max(50).optional().describe("Number of inference steps (more = higher quality, slower)"),
+  
+  // Quality mode for intelligent model selection
+  qualityMode: z.enum(['fast', 'balanced', 'premium']).optional().describe("Quality preference for intelligent model selection"),
 });
 export type GenerateImagesInput = z.infer<typeof GenerateImagesInputSchema>;
 
@@ -289,6 +305,142 @@ async function _generateImageWithImagen(params: {
   }
 }
 
+// Fireworks AI generation function
+async function _generateImageWithFireworks(params: {
+  model: 'sdxl-turbo' | 'sdxl-3';
+  textPrompt: string;
+  exampleImage?: string;
+  aspectRatio?: string;
+  numberOfImages: number;
+  negativePrompt?: string;
+  seed?: number;
+  // Fireworks specific parameters
+  fireworksControlNet?: {
+    type: 'canny' | 'depth' | 'openpose' | 'scribble' | 'seg';
+    conditioning_scale: number;
+    control_image?: string;
+  };
+  fireworksImg2ImgStrength?: number;
+  fireworksGuidanceScale?: number;
+  fireworksScheduler?: string;
+  fireworksNumInferenceSteps?: number;
+}): Promise<string[]> {
+  console.log(`[Fireworks] Starting generation with model: ${params.model}`);
+  console.log(`[Fireworks] Prompt: ${params.textPrompt.substring(0, 100)}...`);
+  
+  // Get dimensions based on aspect ratio
+  const dimensions = getFireworksDimensions(params.aspectRatio);
+  
+  // Map model names to Fireworks API model names
+  const modelName = params.model === 'sdxl-turbo' ? 'sdxl-turbo' : 'stable-diffusion-xl-1024-v1-0';
+  
+  // Prepare base64 image for img2img if example image is provided
+  let base64Image: string | undefined;
+  if (params.exampleImage) {
+    try {
+      console.log(`[Fireworks] Converting example image to base64 for img2img`);
+      const response = await fetch(params.exampleImage);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch example image: ${response.status}`);
+      }
+      const buffer = await response.arrayBuffer();
+      base64Image = Buffer.from(buffer).toString('base64');
+    } catch (error: any) {
+      console.error(`[Fireworks] Failed to process example image:`, error);
+      throw new Error(`Failed to process example image: ${error.message}`);
+    }
+  }
+  
+  // Prepare ControlNet if specified
+  let controlNet: any = undefined;
+  if (params.fireworksControlNet && params.fireworksControlNet.control_image) {
+    try {
+      console.log(`[Fireworks] Preparing ControlNet: ${params.fireworksControlNet.type}`);
+      const controlImageBase64 = await preprocessControlNetImage(
+        params.fireworksControlNet.control_image,
+        params.fireworksControlNet.type
+      );
+      controlNet = {
+        type: params.fireworksControlNet.type,
+        conditioning_scale: params.fireworksControlNet.conditioning_scale,
+        control_image: controlImageBase64
+      };
+    } catch (error: any) {
+      console.error(`[Fireworks] Failed to prepare ControlNet:`, error);
+      throw new Error(`Failed to prepare ControlNet: ${error.message}`);
+    }
+  }
+  
+  // Generate images (Fireworks supports batch generation)
+  const results = await generateImageWithFireworks({
+    model: modelName,
+    prompt: params.textPrompt,
+    negative_prompt: params.negativePrompt,
+    width: dimensions.width,
+    height: dimensions.height,
+    guidance_scale: params.fireworksGuidanceScale,
+    num_inference_steps: params.fireworksNumInferenceSteps,
+    seed: params.seed,
+    num_images: params.numberOfImages,
+    // img2img parameters
+    image: base64Image,
+    strength: params.fireworksImg2ImgStrength,
+    // ControlNet parameters
+    controlnet: controlNet
+  });
+  
+  console.log(`[Fireworks] Successfully generated ${results.length} image(s)`);
+  return results;
+}
+
+// Intelligent model selection function
+async function selectOptimalModel(context: {
+  qualityMode: 'fast' | 'balanced' | 'premium';
+  hasExampleImage: boolean;
+  numberOfImages: number;
+  userIntent?: 'preview' | 'iteration' | 'final' | 'editing';
+}): Promise<string> {
+  const config = await getModelConfig();
+  
+  // If Fireworks is not enabled, use existing logic
+  if (!config.fireworksEnabled || !config.intelligentModelSelection) {
+    return 'GEMINI';
+  }
+  
+  // Fast mode: Use SDXL Turbo if available
+  if (context.qualityMode === 'fast' && config.fireworksSDXLTurboEnabled) {
+    return 'FIREWORKS_SDXL_TURBO';
+  }
+  
+  // Premium mode: Use SDXL 3 if available
+  if (context.qualityMode === 'premium' && config.fireworksSDXL3Enabled) {
+    return 'FIREWORKS_SDXL_3';
+  }
+  
+  // Preview/iteration: Prefer speed
+  if ((context.userIntent === 'preview' || context.userIntent === 'iteration') && config.fireworksSDXLTurboEnabled) {
+    return 'FIREWORKS_SDXL_TURBO';
+  }
+  
+  // Final assets: Prefer quality
+  if (context.userIntent === 'final' && config.fireworksSDXL3Enabled) {
+    return 'FIREWORKS_SDXL_3';
+  }
+  
+  // Batch generation: Prefer speed
+  if (context.numberOfImages > 2 && config.fireworksSDXLTurboEnabled) {
+    return 'FIREWORKS_SDXL_TURBO';
+  }
+  
+  // Example image: Gemini has good multimodal understanding
+  if (context.hasExampleImage) {
+    return 'GEMINI';
+  }
+  
+  // Default fallback
+  return 'GEMINI';
+}
+
 // For Freepik/Imagen3 provider
 const freepikImagen3ApiAspectRatios: Record<string, string> = {
     "1:1": "square_1_1",
@@ -441,10 +593,32 @@ const generateImagesFlow = ai.defineFlow(
       freepikEffectColor,
       freepikEffectLightning,
       freepikEffectFraming,
+      // Fireworks AI parameters
+      fireworksControlNet,
+      fireworksImg2ImgStrength,
+      fireworksGuidanceScale,
+      fireworksScheduler,
+      fireworksNumInferenceSteps,
+      qualityMode = 'balanced',
     } = input;
 
-    const { imageGenerationModel, textToImageModel } = await getModelConfig();
-    const chosenProvider = input.provider || process.env.IMAGE_GENERATION_PROVIDER || 'GEMINI';
+    const { imageGenerationModel, textToImageModel, fireworksEnabled, intelligentModelSelection } = await getModelConfig();
+    
+    // Intelligent model selection if enabled and no provider specified
+    let chosenProvider = input.provider || process.env.IMAGE_GENERATION_PROVIDER || 'GEMINI';
+    
+    if (!input.provider && fireworksEnabled && intelligentModelSelection) {
+      console.log(`[Intelligent Selection] Analyzing context for optimal model selection`);
+      const optimalProvider = await selectOptimalModel({
+        qualityMode,
+        hasExampleImage: !!exampleImage,
+        numberOfImages,
+        userIntent: finalizedTextPrompt ? 'final' : 'iteration'
+      });
+      chosenProvider = optimalProvider;
+      console.log(`[Intelligent Selection] Selected provider: ${chosenProvider} based on context`);
+    }
+    
     console.log(`Image generation flow started. Chosen provider: ${chosenProvider}, Number of images: ${numberOfImages}`);
 
     const generatedImageResults: string[] = [];
@@ -809,6 +983,48 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                         break;
                     case 'IMAGEN':
                         resultValue = await _generateImageWithImagen_stub({ brandDescription, industry, imageStyle, exampleImage, aspectRatio, negativePrompt, seed, textPrompt: textPromptContent });
+                        break;
+                    case 'FIREWORKS_SDXL_TURBO':
+                        // Check if Fireworks is enabled
+                        if (!fireworksEnabled) {
+                            throw new Error('Fireworks AI is not enabled by administrator');
+                        }
+                        const turboResults = await _generateImageWithFireworks({
+                            model: 'sdxl-turbo',
+                            textPrompt: textPromptContent,
+                            exampleImage: exampleImage,
+                            aspectRatio: aspectRatio,
+                            numberOfImages: 1, // Handle individually in loop
+                            negativePrompt: negativePrompt,
+                            seed: seed,
+                            fireworksControlNet: fireworksControlNet,
+                            fireworksImg2ImgStrength: fireworksImg2ImgStrength,
+                            fireworksGuidanceScale: fireworksGuidanceScale || 1.0, // SDXL Turbo uses lower guidance
+                            fireworksScheduler: fireworksScheduler,
+                            fireworksNumInferenceSteps: fireworksNumInferenceSteps || 4 // SDXL Turbo is fast
+                        });
+                        resultValue = turboResults[0]; // Get first result from batch
+                        break;
+                    case 'FIREWORKS_SDXL_3':
+                        // Check if Fireworks is enabled
+                        if (!fireworksEnabled) {
+                            throw new Error('Fireworks AI is not enabled by administrator');
+                        }
+                        const sdxl3Results = await _generateImageWithFireworks({
+                            model: 'sdxl-3',
+                            textPrompt: textPromptContent,
+                            exampleImage: exampleImage,
+                            aspectRatio: aspectRatio,
+                            numberOfImages: 1, // Handle individually in loop
+                            negativePrompt: negativePrompt,
+                            seed: seed,
+                            fireworksControlNet: fireworksControlNet,
+                            fireworksImg2ImgStrength: fireworksImg2ImgStrength,
+                            fireworksGuidanceScale: fireworksGuidanceScale || 7.5, // SDXL 3 uses higher guidance
+                            fireworksScheduler: fireworksScheduler,
+                            fireworksNumInferenceSteps: fireworksNumInferenceSteps || 20 // SDXL 3 uses more steps
+                        });
+                        resultValue = sdxl3Results[0]; // Get first result from batch
                         break;
                     default:
                         throw new Error(`Unsupported image generation provider in loop: ${chosenProvider}`);

@@ -12,6 +12,12 @@ export const DEFAULT_MODEL_CONFIG: ModelConfig = {
   paymentMode: 'test',
   freepikEnabled: true,
   socialMediaConnectionsEnabled: true,
+  // Fireworks AI configuration (admin controlled)
+  fireworksEnabled: false,
+  fireworksSDXLTurboEnabled: false,
+  fireworksSDXL3Enabled: false,
+  intelligentModelSelection: false,
+  showAdvancedImageControls: false,
 };
 
 // Removed in-memory cache to ensure consistency in serverless environments.

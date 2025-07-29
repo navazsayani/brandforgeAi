@@ -96,6 +96,12 @@ export interface ModelConfig {
   paymentMode?: 'live' | 'test';
   freepikEnabled?: boolean;
   socialMediaConnectionsEnabled?: boolean;
+  // Fireworks AI configuration
+  fireworksEnabled?: boolean;
+  fireworksSDXLTurboEnabled?: boolean;
+  fireworksSDXL3Enabled?: boolean;
+  intelligentModelSelection?: boolean;
+  showAdvancedImageControls?: boolean;
 }
 
 export interface PlanFeature {
@@ -177,6 +183,11 @@ export interface InstagramAccount {
 export const EditImageInputSchema = z.object({
   imageDataUri: z.string().describe("The base image to edit, as a data URI."),
   instruction: z.string().min(3, { message: "Instruction must be at least 3 characters." }).describe('The user\'s instruction on how to edit the image.'),
+  // Optional provider selection for editing
+  provider: z.enum(['GEMINI', 'FIREWORKS_SDXL_3']).optional().describe("The provider to use for image editing."),
+  // Fireworks-specific editing parameters
+  fireworksImg2ImgStrength: z.number().min(0).max(1).default(0.7).optional().describe("Strength for img2img transformation during editing"),
+  fireworksGuidanceScale: z.number().min(1).max(20).default(7.5).optional().describe("Guidance scale for editing precision"),
 });
 export type EditImageInput = z.infer<typeof EditImageInputSchema>;
 

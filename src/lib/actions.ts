@@ -1341,6 +1341,12 @@ export async function handleUpdateSettingsAction(
       paymentMode: formData.get("paymentMode") as 'live' | 'test' | undefined,
       freepikEnabled: formData.get("freepikEnabled") === 'true',
       socialMediaConnectionsEnabled: formData.get("socialMediaConnectionsEnabled") === 'true',
+      // Fireworks AI configuration
+      fireworksEnabled: formData.get("fireworksEnabled") === 'true',
+      fireworksSDXLTurboEnabled: formData.get("fireworksSDXLTurboEnabled") === 'true',
+      fireworksSDXL3Enabled: formData.get("fireworksSDXL3Enabled") === 'true',
+      intelligentModelSelection: formData.get("intelligentModelSelection") === 'true',
+      showAdvancedImageControls: formData.get("showAdvancedImageControls") === 'true',
     };
     
     if (!modelConfig.imageGenerationModel || !modelConfig.textToImageModel || !modelConfig.fastModel || !modelConfig.visionModel || !modelConfig.powerfulModel) {

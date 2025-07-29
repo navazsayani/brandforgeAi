@@ -35,6 +35,12 @@ const modelSettingsSchema = z.object({
   paymentMode: z.enum(['live', 'test']).optional(),
   freepikEnabled: z.boolean().optional(),
   socialMediaConnectionsEnabled: z.boolean().optional(),
+  // Fireworks AI fields
+  fireworksEnabled: z.boolean().optional(),
+  fireworksSDXLTurboEnabled: z.boolean().optional(),
+  fireworksSDXL3Enabled: z.boolean().optional(),
+  intelligentModelSelection: z.boolean().optional(),
+  showAdvancedImageControls: z.boolean().optional(),
 });
 
 const plansSettingsSchema = z.object({
@@ -627,6 +633,109 @@ function SettingsPageContent() {
                                 <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                                 </FormItem>
                             )}
+                            />
+                        </div>
+
+                        {/* Fireworks AI Configuration Section */}
+                        <div className="space-y-4 p-4 border rounded-lg bg-gradient-to-r from-orange-50 to-red-50 border-orange-200">
+                            <h4 className="text-md font-semibold flex items-center gap-2">
+                                <svg className="w-5 h-5 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clipRule="evenodd" />
+                                </svg>
+                                Fireworks AI Configuration
+                            </h4>
+                            <p className="text-xs text-muted-foreground">
+                                Configure Fireworks AI SDXL models for ultra-fast and high-quality image generation.
+                            </p>
+                            
+                            <FormField
+                                control={modelForm.control}
+                                name="fireworksEnabled"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-background">
+                                        <div className="space-y-0.5">
+                                            <FormLabel>Enable Fireworks AI</FormLabel>
+                                            <FormDescription>
+                                                Master switch for all Fireworks AI features. When disabled, users won't see Fireworks options.
+                                            </FormDescription>
+                                        </div>
+                                        <FormControl>
+                                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+                            
+                            <FormField
+                                control={modelForm.control}
+                                name="fireworksSDXLTurboEnabled"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-background">
+                                        <div className="space-y-0.5">
+                                            <FormLabel>Enable SDXL Turbo</FormLabel>
+                                            <FormDescription>
+                                                Ultra-fast generation (2-3 seconds, 1-4 steps). Perfect for rapid prototyping.
+                                            </FormDescription>
+                                        </div>
+                                        <FormControl>
+                                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+                            
+                            <FormField
+                                control={modelForm.control}
+                                name="fireworksSDXL3Enabled"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-background">
+                                        <div className="space-y-0.5">
+                                            <FormLabel>Enable SDXL 3</FormLabel>
+                                            <FormDescription>
+                                                High-quality generation (8-12 seconds, 20+ steps). Best for final production images.
+                                            </FormDescription>
+                                        </div>
+                                        <FormControl>
+                                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+                            
+                            <FormField
+                                control={modelForm.control}
+                                name="intelligentModelSelection"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-background">
+                                        <div className="space-y-0.5">
+                                            <FormLabel>Intelligent Model Selection</FormLabel>
+                                            <FormDescription>
+                                                Automatically choose optimal model based on context (speed vs quality needs).
+                                            </FormDescription>
+                                        </div>
+                                        <FormControl>
+                                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+                            
+                            <FormField
+                                control={modelForm.control}
+                                name="showAdvancedImageControls"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-background">
+                                        <div className="space-y-0.5">
+                                            <FormLabel>Show Advanced Image Controls</FormLabel>
+                                            <FormDescription>
+                                                Display advanced controls like img2img strength, guidance scale, and ControlNet options.
+                                            </FormDescription>
+                                        </div>
+                                        <FormControl>
+                                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
                             />
                         </div>
 
