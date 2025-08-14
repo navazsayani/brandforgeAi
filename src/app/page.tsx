@@ -550,10 +550,10 @@ export default function LandingPage() {
       stage: "Stage 2",
       title: "The Scale: From Presence to Power",
       icon: Layers,
-      characterStory: "Arjun's handcrafted furniture business was doing well, but he was burning out trying to keep up with social media. Between running the workshop and managing orders, creating content felt impossible. Now he spends just 30 minutes every Sunday using **BrandForge AI's Content Studio** to generate a week's worth of posts, and his followers actually engage more because the **AI-generated content** feels authentic to his brand voice.",
+      characterStory: "Arjun's handcrafted furniture business was doing well, but he was burning out trying to keep up with social media. Between running the workshop and managing orders, creating content felt impossible. Now he spends just 30 minutes every Sunday using **BrandForge AI's Content Studio** to generate a week's worth of posts. What surprised him most? The AI started noticing his most engaging posts featured close-up wood grain details and warm lighting. Now every generated image automatically includes these elements, and his followers actually engage more because the **AI-learned content** feels authentically 'Arjun'.",
       beforeAfter: {
         before: "Posting once a week if lucky, running out of content ideas, inconsistent messaging across platforms",
-        after: "Daily posts using **automated content creation**, 2.4x more engagement, and 15 hours saved per week"
+        after: "Daily posts using **Smart Learning AI**, 2.4x more engagement, and 15 hours saved per week"
       },
       metrics: "Monthly inquiries increased from 12 to 31 with consistent posting"
     },
@@ -637,7 +637,23 @@ export default function LandingPage() {
                 
                 <HeroCarousel />
 
-                <div className="mt-12 flex justify-center gap-4">
+                {/* Smart Learning Callout */}
+                <div className="mt-8 p-4 bg-gradient-to-r from-primary/5 to-accent/5 rounded-xl border border-primary/10">
+                  <div className="flex items-center justify-center space-x-2 mb-2">
+                    <div className="p-1.5 bg-primary/15 rounded-lg">
+                      <Lightbulb className="h-4 w-4 text-primary" />
+                    </div>
+                    <span className="text-sm font-medium text-primary">Smart Learning AI</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground text-center">
+                    Our AI learns from your feedback to create better content over time.{' '}
+                    <Link href="/features#smart-learning" className="text-primary hover:underline">
+                      See how it works →
+                    </Link>
+                  </p>
+                </div>
+
+                <div className="mt-8 flex justify-center gap-4">
                     <Button size="lg" className="btn-gradient-primary btn-lg-enhanced focus-enhanced" asChild>
                         <Link href={user ? "/dashboard" : "/signup"}>
                             {user ? "Go to Dashboard" : "Get Started for Free"}
@@ -759,10 +775,66 @@ export default function LandingPage() {
             </div>
         </section>
 
+        {/* Smart Learning Explanation Section */}
+        <section className="py-12 sm:py-16 bg-gradient-to-br from-primary/5 to-accent/5">
+          <div className="container-responsive">
+            <div className="text-center max-w-3xl mx-auto mb-12">
+              <div className="inline-flex items-center space-x-2 bg-primary/10 px-3 py-1.5 rounded-full text-sm font-medium text-primary mb-6">
+                <Lightbulb className="w-4 h-4" />
+                <span>Smart Learning AI</span>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold text-balance">
+                AI That <span className="text-gradient-brand">Learns Your Style</span>
+              </h2>
+              <p className="mt-4 text-lg text-muted-foreground text-balance">
+                Unlike generic AI tools, BrandForge AI learns from your feedback to create increasingly personalized content that matches your proven successful patterns.
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-3 gap-8">
+              <div className="text-center">
+                <div className="p-3 bg-primary/10 rounded-xl w-fit mx-auto mb-4">
+                  <Star className="h-7 w-7 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Rate Your Content</h3>
+                <p className="text-muted-foreground">Give feedback on generated content with star ratings and helpful buttons</p>
+              </div>
+              
+              <div className="text-center">
+                <div className="p-3 bg-accent/10 rounded-xl w-fit mx-auto mb-4">
+                  <Zap className="h-7 w-7 text-accent" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">AI Learns Patterns</h3>
+                <p className="text-muted-foreground">Our system identifies what works best for your brand and audience</p>
+              </div>
+              
+              <div className="text-center">
+                <div className="p-3 bg-primary/10 rounded-xl w-fit mx-auto mb-4">
+                  <TrendingUp className="h-7 w-7 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Better Results</h3>
+                <p className="text-muted-foreground">Future content automatically incorporates your successful patterns</p>
+              </div>
+            </div>
+            
+            <div className="mt-10 text-center">
+              <div className="inline-flex items-center space-x-4 bg-card border rounded-lg p-3">
+                <div className="text-sm text-muted-foreground">
+                  <strong className="text-primary">Expected improvement:</strong> +0.8 stars average rating after 20 pieces of content
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Refinement Highlight Section */}
         <section className="py-12 sm:py-16 bg-background">
             <div className="container-responsive">
                 <div className="text-center max-w-2xl mx-auto">
+                    <div className="inline-flex items-center space-x-2 bg-accent/10 px-3 py-1.5 rounded-full text-sm font-medium text-accent mb-6">
+                        <Wand2 className="w-4 h-4" />
+                        <span>AI Refinement Studio</span>
+                    </div>
                     <h2 className="text-3xl md:text-4xl font-bold text-balance">
                         Never Settle for 'Good Enough'—<span className="text-gradient-brand">Refine to Perfection</span>
                     </h2>

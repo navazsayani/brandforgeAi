@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { UserCircle, Paintbrush, Send, Rocket, ArrowRight, CheckCircle, Wand2 } from 'lucide-react';
+import { UserCircle, Paintbrush, Send, Rocket, ArrowRight, CheckCircle, Wand2, Lightbulb, Zap } from 'lucide-react';
 import PublicHeader from '@/components/PublicHeader';
 
 
@@ -91,18 +91,31 @@ export default function FeaturesPage() {
                             { text: "Use AI to populate entire content forms from a single sentence, kickstarting your creative process.", icon: CheckCircle }
                         ]}
                      />
-                      <FeatureDetailCard 
-                        id="campaign-manager"
-                        icon={Send}
-                        title="Ad Campaign Manager"
-                        description="Craft high-performing ad creatives with AI precision."
+                     <FeatureDetailCard
+                        id="smart-learning"
+                        icon={Lightbulb}
+                        title="Smart Learning AI System"
+                        description="AI that gets smarter with every piece of content you create."
                         benefits={[
-                            { text: "Turn existing content like blog snippets or social posts into compelling ad copy.", icon: CheckCircle },
-                            { text: "Generate multiple headline and body text variations for effective A/B testing.", icon: CheckCircle },
-                            { text: "Receive AI-driven guidance on how to best use your creatives on Google and Meta platforms.", icon: CheckCircle },
-                            { text: "Align ad campaigns with specific goals, from brand awareness to sales conversion.", icon: CheckCircle }
+                            { text: "AI learns from your feedback to understand your brand voice and style preferences", icon: CheckCircle },
+                            { text: "Automatically improves future content based on your highest-rated posts and campaigns", icon: Zap, highlighted: true },
+                            { text: "Transparent insights show exactly what the AI learned from your successful content", icon: CheckCircle },
+                            { text: "Continuous improvement without any manual training or setup required", icon: CheckCircle },
+                            { text: "Built-in cost monitoring and rate limiting ensure efficient learning", icon: CheckCircle }
                         ]}
                      />
+                      <FeatureDetailCard
+                         id="campaign-manager"
+                         icon={Send}
+                         title="Ad Campaign Manager"
+                         description="Craft high-performing ad creatives with AI precision."
+                         benefits={[
+                             { text: "Turn existing content like blog snippets or social posts into compelling ad copy.", icon: CheckCircle },
+                             { text: "Generate multiple headline and body text variations for effective A/B testing.", icon: CheckCircle },
+                             { text: "Receive AI-driven guidance on how to best use your creatives on Google and Meta platforms.", icon: CheckCircle },
+                             { text: "Align ad campaigns with specific goals, from brand awareness to sales conversion.", icon: CheckCircle }
+                         ]}
+                      />
                      <FeatureDetailCard 
                         id="deployment-hub"
                         icon={Rocket}
