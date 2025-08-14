@@ -1,12 +1,15 @@
 /**
  * Utility to detect and clean up orphaned image references
  * This handles cases where Firestore has URLs but Storage files don't exist
+ * AND cases where Storage files exist but have no Firestore references
  */
 
 import { db, storage } from '@/lib/firebaseConfig';
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc } from 'firebase/firestore';
-import { ref as storageRef, getDownloadURL } from 'firebase/storage';
+import { ref as storageRef, getDownloadURL, deleteObject } from 'firebase/storage';
 import { decodeHtmlEntitiesInUrl, verifyImageUrlExists } from './utils';
+import admin from 'firebase-admin';
+import { getStorage as getAdminStorage } from 'firebase-admin/storage';
 
 export interface OrphanedImageReport {
   userId: string;
@@ -152,9 +155,9 @@ export async function scanUserForOrphanedImages(userId: string): Promise<Orphane
 }
 
 /**
- * Clean up orphaned image references for a user
+ * Clean up orphaned image references for a user (Phase 1: Enhanced with storage deletion)
  */
-export async function cleanupOrphanedImagesForUser(userId: string, dryRun: boolean = true): Promise<OrphanedImageReport> {
+export async function cleanupOrphanedImagesForUser(userId: string, dryRun: boolean = true, deleteStorageFiles: boolean = true): Promise<OrphanedImageReport & { storageFilesDeleted?: number }> {
   const report = await scanUserForOrphanedImages(userId) as OrphanedImageReport & { _orphanedLibraryDocs: string[] };
   
   if (report.totalOrphanedCount === 0) {
@@ -166,9 +169,22 @@ export async function cleanupOrphanedImagesForUser(userId: string, dryRun: boole
   console.log(`  - Example images: ${report.exampleImages.orphanedCount}`);
   console.log(`  - Library images: ${report.libraryImages.orphanedCount}`);
   
+  let storageFilesDeleted = 0;
+  
   if (!dryRun) {
     // Clean up orphaned example images
     if (report.exampleImages.orphanedCount > 0) {
+      // Delete storage files first (if enabled)
+      if (deleteStorageFiles) {
+        for (const orphanUrl of report.exampleImages.orphanedUrls) {
+          const deleteResult = await safeDeleteImageFromStorage(orphanUrl, true);
+          if (deleteResult.success && deleteResult.deleted) {
+            storageFilesDeleted++;
+          }
+        }
+      }
+      
+      // Then clean up database references
       const userDocRef = doc(db, 'users', userId, 'brandProfiles', userId);
       await setDoc(userDocRef, {
         exampleImages: report.exampleImages.validUrls
@@ -179,6 +195,17 @@ export async function cleanupOrphanedImagesForUser(userId: string, dryRun: boole
     
     // Clean up orphaned library images
     if (report.libraryImages.orphanedCount > 0 && report._orphanedLibraryDocs) {
+      // Delete storage files first (if enabled)
+      if (deleteStorageFiles) {
+        for (const orphanUrl of report.libraryImages.orphanedUrls) {
+          const deleteResult = await safeDeleteImageFromStorage(orphanUrl, true);
+          if (deleteResult.success && deleteResult.deleted) {
+            storageFilesDeleted++;
+          }
+        }
+      }
+      
+      // Then clean up database references
       for (const docId of report._orphanedLibraryDocs) {
         const docRef = doc(db, `users/${userId}/brandProfiles/${userId}/savedLibraryImages`, docId);
         await deleteDoc(docRef);
@@ -188,13 +215,105 @@ export async function cleanupOrphanedImagesForUser(userId: string, dryRun: boole
     }
     
     console.log(`✓ Total cleanup: ${report.totalOrphanedCount} orphaned image references for user ${userId}`);
+    if (deleteStorageFiles) {
+      console.log(`✓ Deleted ${storageFilesDeleted} storage files`);
+    }
   } else {
     console.log(`DRY RUN: Would remove ${report.totalOrphanedCount} orphaned image references`);
     console.log(`  - Example images: ${report.exampleImages.orphanedCount}`);
     console.log(`  - Library images: ${report.libraryImages.orphanedCount}`);
+    if (deleteStorageFiles) {
+      console.log(`  - Would also delete ${report.totalOrphanedCount} storage files`);
+    }
   }
   
-  return report;
+  return { ...report, storageFilesDeleted };
+}
+
+/**
+ * Phase 2: Clean up storage files that have no database references
+ */
+export async function cleanupStorageOrphansForUser(userId: string, dryRun: boolean = true, minFileAge: number = 7 * 24 * 60 * 60 * 1000): Promise<{
+  totalFiles: number;
+  orphanedFiles: number;
+  deletedFiles: number;
+  savedSpace: number;
+  errors: string[];
+}> {
+  console.log(`Scanning storage orphans for user ${userId}...`);
+  
+  const userStorageFiles = await listUserStorageFiles(userId);
+  const orphanedFiles: Array<{ path: string; size: number }> = [];
+  const errors: string[] = [];
+  
+  console.log(`Found ${userStorageFiles.length} storage files for user ${userId}`);
+  
+  // Check each storage file for database references
+  for (const file of userStorageFiles) {
+    try {
+      // Skip files that are too new (safety measure)
+      const fileAge = Date.now() - file.created.getTime();
+      if (fileAge < minFileAge) {
+        console.log(`Skipping recent file: ${file.path} (age: ${Math.round(fileAge / (24 * 60 * 60 * 1000))} days)`);
+        continue;
+      }
+      
+      // Check if file has database reference
+      const hasDbRef = await checkDatabaseReference(userId, file.url);
+      if (!hasDbRef) {
+        orphanedFiles.push({ path: file.path, size: file.size });
+        console.log(`Found storage orphan: ${file.path}`);
+      }
+    } catch (error: any) {
+      errors.push(`Error checking file ${file.path}: ${error.message}`);
+    }
+  }
+  
+  let deletedFiles = 0;
+  let savedSpace = 0;
+  
+  if (!dryRun && orphanedFiles.length > 0) {
+    console.log(`Deleting ${orphanedFiles.length} orphaned storage files...`);
+    
+    for (const file of orphanedFiles) {
+      try {
+        const bucket = getAdminStorage().bucket();
+        await bucket.file(file.path).delete();
+        deletedFiles++;
+        savedSpace += file.size;
+        console.log(`✓ Deleted orphaned storage file: ${file.path}`);
+      } catch (error: any) {
+        errors.push(`Failed to delete ${file.path}: ${error.message}`);
+      }
+    }
+  }
+  
+  const result = {
+    totalFiles: userStorageFiles.length,
+    orphanedFiles: orphanedFiles.length,
+    deletedFiles,
+    savedSpace,
+    errors
+  };
+  
+  if (dryRun) {
+    console.log(`DRY RUN: Would delete ${orphanedFiles.length} orphaned storage files (${formatBytes(orphanedFiles.reduce((sum, f) => sum + f.size, 0))})`);
+  } else {
+    console.log(`✓ Storage cleanup complete: deleted ${deletedFiles} files, saved ${formatBytes(savedSpace)}`);
+  }
+  
+  return result;
+}
+
+/**
+ * Helper function to format bytes
+ */
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 /**
@@ -274,19 +393,22 @@ export function generateOrphanedImagesReport(reports: OrphanedImageReport[]): vo
 }
 
 /**
- * Enhanced delete function that checks existence before attempting deletion
+ * Enhanced delete function that safely deletes storage files
  */
-export async function safeDeleteImageFromStorage(imageUrl: string): Promise<{ success: boolean; error?: string }> {
+export async function safeDeleteImageFromStorage(imageUrl: string, skipExistenceCheck: boolean = false): Promise<{ success: boolean; error?: string; deleted?: boolean }> {
   try {
     const decodedUrl = decodeHtmlEntitiesInUrl(imageUrl);
     
-    // First check if the image exists
-    const exists = await checkFirebaseStorageUrl(imageUrl);
-    if (!exists) {
-      return {
-        success: false,
-        error: 'Image does not exist in storage (orphaned reference)'
-      };
+    // Check if the image exists (unless skipped)
+    if (!skipExistenceCheck) {
+      const exists = await checkFirebaseStorageUrl(imageUrl);
+      if (!exists) {
+        return {
+          success: true,
+          deleted: false,
+          error: 'Image does not exist in storage (already cleaned up)'
+        };
+      }
     }
     
     // Extract storage path and delete
@@ -302,15 +424,127 @@ export async function safeDeleteImageFromStorage(imageUrl: string): Promise<{ su
     const storagePath = decodeURIComponent(pathMatch[1]);
     const fileRef = storageRef(storage, storagePath);
     
-    // Note: We can't import deleteObject here due to server/client context
-    // This function should be called from the appropriate context
+    // Delete the actual storage file
+    await deleteObject(fileRef);
+    console.log(`✓ Deleted storage file: ${storagePath}`);
     
-    return { success: true };
+    return { success: true, deleted: true };
   } catch (error: any) {
+    if (error.code === 'storage/object-not-found') {
+      return {
+        success: true,
+        deleted: false,
+        error: 'File already deleted or does not exist'
+      };
+    }
     return {
       success: false,
       error: error.message
     };
+  }
+}
+
+/**
+ * Get file age from Firebase Storage using Admin SDK
+ */
+export async function getStorageFileAge(storagePath: string): Promise<number | null> {
+  try {
+    const bucket = getAdminStorage().bucket();
+    const file = bucket.file(storagePath);
+    const [metadata] = await file.getMetadata();
+    const created = new Date(metadata.timeCreated);
+    return Date.now() - created.getTime();
+  } catch (error: any) {
+    console.warn(`Could not get file age for ${storagePath}:`, error.message);
+    return null;
+  }
+}
+
+/**
+ * List all storage files for a user using Admin SDK
+ */
+export async function listUserStorageFiles(userId: string): Promise<Array<{
+  path: string;
+  url: string;
+  size: number;
+  created: Date;
+}>> {
+  try {
+    const bucket = getAdminStorage().bucket();
+    const prefix = `users/${userId}/`;
+    const [files] = await bucket.getFiles({ prefix });
+    
+    const userFiles = [];
+    for (const file of files) {
+      try {
+        const [metadata] = await file.getMetadata();
+        const [url] = await file.getSignedUrl({
+          action: 'read',
+          expires: Date.now() + 60 * 1000 // 1 minute
+        });
+        
+        userFiles.push({
+          path: file.name,
+          url,
+          size: parseInt(metadata.size || '0'),
+          created: new Date(metadata.timeCreated)
+        });
+      } catch (fileError: any) {
+        console.warn(`Could not get metadata for file ${file.name}:`, fileError.message);
+      }
+    }
+    
+    return userFiles;
+  } catch (error: any) {
+    console.error(`Failed to list storage files for user ${userId}:`, error.message);
+    return [];
+  }
+}
+
+/**
+ * Check if a storage file has any database references
+ */
+export async function checkDatabaseReference(userId: string, storageUrl: string): Promise<boolean> {
+  try {
+    // Check brand profile example images
+    const userDocRef = doc(db, 'users', userId, 'brandProfiles', userId);
+    const userDocSnap = await getDoc(userDocRef);
+    
+    if (userDocSnap.exists()) {
+      const brandData = userDocSnap.data();
+      const exampleImages = brandData.exampleImages || [];
+      
+      if (exampleImages.some((url: string) => url === storageUrl)) {
+        return true;
+      }
+    }
+    
+    // Check saved library images
+    const libraryCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/savedLibraryImages`);
+    const librarySnapshot = await getDocs(libraryCollectionRef);
+    
+    for (const doc of librarySnapshot.docs) {
+      const data = doc.data();
+      if (data.storageUrl === storageUrl) {
+        return true;
+      }
+    }
+    
+    // Check brand logos
+    const logosCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/brandLogos`);
+    const logosSnapshot = await getDocs(logosCollectionRef);
+    
+    for (const doc of logosSnapshot.docs) {
+      const data = doc.data();
+      if (data.logoData === storageUrl) {
+        return true;
+      }
+    }
+    
+    return false;
+  } catch (error: any) {
+    console.warn(`Error checking database reference for ${storageUrl}:`, error.message);
+    return true; // Assume it exists to be safe
   }
 }
 
@@ -362,32 +596,61 @@ export async function scanAllOrphanedImages(): Promise<{
 }
 
 /**
- * Clean up all orphaned images across all users
+ * Clean up all orphaned images across all users (Enhanced with storage deletion)
  */
-export async function cleanupAllOrphanedImages(): Promise<{ deletedCount: number }> {
+export async function cleanupAllOrphanedImages(deleteStorageFiles: boolean = true): Promise<{
+  deletedDbReferences: number;
+  deletedStorageFiles: number;
+  storageOrphansDeleted: number;
+  totalSavedSpace: number;
+}> {
   console.log('Starting system-wide orphaned images cleanup...');
   
   const usersCollectionRef = collection(db, 'users');
   const userDocsSnapshot = await getDocs(usersCollectionRef);
   
-  let totalDeleted = 0;
+  let totalDbDeleted = 0;
+  let totalStorageDeleted = 0;
+  let totalStorageOrphansDeleted = 0;
+  let totalSavedSpace = 0;
   
   for (const userDoc of userDocsSnapshot.docs) {
     const userId = userDoc.id;
     
     try {
-      const report = await cleanupOrphanedImagesForUser(userId, false); // false = not dry run
-      totalDeleted += report.totalOrphanedCount;
+      // Phase 1: Clean up database orphans (and their storage files)
+      const report = await cleanupOrphanedImagesForUser(userId, false, deleteStorageFiles);
+      totalDbDeleted += report.totalOrphanedCount;
+      totalStorageDeleted += report.storageFilesDeleted || 0;
       
       if (report.totalOrphanedCount > 0) {
-        console.log(`✓ Cleaned up ${report.totalOrphanedCount} orphaned images for user ${report.userEmail}`);
+        console.log(`✓ Phase 1: Cleaned up ${report.totalOrphanedCount} orphaned DB references for user ${report.userEmail}`);
       }
+      
+      // Phase 2: Clean up storage orphans (files without DB references)
+      const storageCleanup = await cleanupStorageOrphansForUser(userId, false);
+      totalStorageOrphansDeleted += storageCleanup.deletedFiles;
+      totalSavedSpace += storageCleanup.savedSpace;
+      
+      if (storageCleanup.deletedFiles > 0) {
+        console.log(`✓ Phase 2: Cleaned up ${storageCleanup.deletedFiles} orphaned storage files for user ${report.userEmail}`);
+      }
+      
     } catch (error: any) {
       console.warn(`Failed to cleanup orphaned images for user ${userId}:`, error.message);
     }
   }
   
-  console.log(`✓ System-wide cleanup completed. Total deleted: ${totalDeleted} orphaned image references.`);
+  console.log(`✓ System-wide cleanup completed:`);
+  console.log(`  - DB references deleted: ${totalDbDeleted}`);
+  console.log(`  - Storage files deleted (from DB orphans): ${totalStorageDeleted}`);
+  console.log(`  - Storage orphans deleted: ${totalStorageOrphansDeleted}`);
+  console.log(`  - Total storage space saved: ${formatBytes(totalSavedSpace)}`);
   
-  return { deletedCount: totalDeleted };
+  return {
+    deletedDbReferences: totalDbDeleted,
+    deletedStorageFiles: totalStorageDeleted,
+    storageOrphansDeleted: totalStorageOrphansDeleted,
+    totalSavedSpace
+  };
 }

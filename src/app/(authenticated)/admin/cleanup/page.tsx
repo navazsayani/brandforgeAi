@@ -12,7 +12,13 @@ import { Loader2, ShieldCheck, AlertTriangle, CheckCircle, Trash2, Search, Datab
 import type { OrphanedImageScanResult } from '@/types';
 
 const initialScanState: FormState<OrphanedImageScanResult> = { error: undefined, data: undefined, message: undefined };
-const initialCleanupState: FormState<{ success: boolean; deletedCount: number }> = { error: undefined, data: undefined, message: undefined };
+const initialCleanupState: FormState<{
+  success: boolean;
+  deletedDbReferences: number;
+  deletedStorageFiles: number;
+  storageOrphansDeleted: number;
+  totalSavedSpace: number;
+}> = { error: undefined, data: undefined, message: undefined };
 
 export default function AdminCleanupPage() {
     const { currentUser } = useAuth();
@@ -21,6 +27,7 @@ export default function AdminCleanupPage() {
     const [scanResults, setScanResults] = useState<OrphanedImageScanResult | null>(null);
     const [isScanning, setIsScanning] = useState(false);
     const [isCleaning, setIsCleaning] = useState(false);
+    const [deleteStorageFiles, setDeleteStorageFiles] = useState(true);
 
     const [scanState, scanAction] = useActionState(handleAdminScanOrphanedImagesAction, initialScanState);
     const [cleanupState, cleanupAction] = useActionState(handleAdminCleanupOrphanedImagesAction, initialCleanupState);
@@ -57,9 +64,21 @@ export default function AdminCleanupPage() {
             });
         }
         if (cleanupState.data?.success) {
-            toast({ 
-                title: "Cleanup Complete", 
-                description: `Successfully deleted ${cleanupState.data.deletedCount} orphaned image references.`,
+            const totalDeleted = (cleanupState.data.deletedDbReferences || 0) +
+                               (cleanupState.data.deletedStorageFiles || 0) +
+                               (cleanupState.data.storageOrphansDeleted || 0);
+            
+            const formatBytes = (bytes: number): string => {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            };
+            
+            toast({
+                title: "Comprehensive Cleanup Complete",
+                description: `Deleted ${totalDeleted} total items: ${cleanupState.data.deletedDbReferences} DB refs, ${(cleanupState.data.deletedStorageFiles || 0) + (cleanupState.data.storageOrphansDeleted || 0)} storage files. Saved ${formatBytes(cleanupState.data.totalSavedSpace || 0)} of storage space.`,
                 variant: "default"
             });
             // Clear scan results to force a new scan
@@ -117,6 +136,7 @@ export default function AdminCleanupPage() {
         setIsCleaning(true);
         const formData = new FormData();
         formData.append('adminRequesterEmail', currentUser.email);
+        formData.append('deleteStorageFiles', deleteStorageFiles.toString());
         startTransition(() => {
             cleanupAction(formData);
         });
@@ -193,6 +213,23 @@ export default function AdminCleanupPage() {
                             )}
                             {isCleaning ? 'Cleaning...' : 'Clean Up Orphaned Images'}
                         </Button>
+                    </div>
+
+                    {/* Storage File Deletion Option */}
+                    <div className="flex items-center space-x-2 p-4 border rounded-lg bg-blue-50 border-blue-200">
+                        <input
+                            type="checkbox"
+                            id="deleteStorageFiles"
+                            checked={deleteStorageFiles}
+                            onChange={(e) => setDeleteStorageFiles(e.target.checked)}
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor="deleteStorageFiles" className="text-sm font-medium text-blue-800">
+                            Also delete actual storage files (recommended)
+                        </label>
+                        <div className="text-xs text-blue-600 ml-2">
+                            ⚠️ This will permanently delete orphaned files from Firebase Storage and clean up storage orphans (files without DB references)
+                        </div>
                     </div>
 
                     {scanResults && (
@@ -315,13 +352,27 @@ export default function AdminCleanupPage() {
                         AI-generated image libraries to identify references to non-existent storage files.
                     </p>
                     <p>
-                        <strong>What does cleanup do?</strong> Cleanup removes the orphaned references from 
-                        Firestore, ensuring the database only contains valid image references. This improves 
-                        app performance and user experience.
+                        <strong>What does cleanup do?</strong> Cleanup removes orphaned references from
+                        Firestore and optionally deletes the actual storage files. It also finds and removes
+                        storage files that have no database references (reverse orphans). This improves
+                        app performance, user experience, and reduces storage costs.
                     </p>
                     <p>
-                        <strong>Is it safe?</strong> Yes, cleanup only removes database references to files 
-                        that don't exist. No actual image files are deleted during this process.
+                        <strong>Two-Phase Cleanup:</strong>
+                        <br />• <strong>Phase 1:</strong> Removes database references to missing files + deletes those files if they exist
+                        <br />• <strong>Phase 2:</strong> Finds and deletes storage files that have no database references (storage orphans)
+                    </p>
+                    <p>
+                        <strong>Is it safe?</strong> Yes, the system includes multiple safety checks:
+                        <br />• Files must be older than 7 days to be deleted as storage orphans
+                        <br />• Thorough verification before any deletion
+                        <br />• Only files in user directories are processed
+                        <br />• Comprehensive error handling and logging
+                    </p>
+                    <p>
+                        <strong>Storage Benefits:</strong> This comprehensive cleanup can significantly reduce
+                        Firebase Storage costs by removing both database orphans and storage orphans,
+                        potentially saving substantial storage space.
                     </p>
                 </CardContent>
             </Card>

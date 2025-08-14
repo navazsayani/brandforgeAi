@@ -2477,27 +2477,63 @@ export async function handleAdminScanOrphanedImagesAction(
 }
 
 export async function handleAdminCleanupOrphanedImagesAction(
-  prevState: FormState<{ success: boolean; deletedCount: number }>,
+  prevState: FormState<{
+    success: boolean;
+    deletedDbReferences: number;
+    deletedStorageFiles: number;
+    storageOrphansDeleted: number;
+    totalSavedSpace: number;
+  }>,
   formData: FormData
-): Promise<FormState<{ success: boolean; deletedCount: number }>> {
+): Promise<FormState<{
+  success: boolean;
+  deletedDbReferences: number;
+  deletedStorageFiles: number;
+  storageOrphansDeleted: number;
+  totalSavedSpace: number;
+}>> {
   const adminRequesterEmail = formData.get('adminRequesterEmail') as string;
+  const deleteStorageFiles = formData.get('deleteStorageFiles') !== 'false'; // Default to true
 
   if (adminRequesterEmail !== 'admin@brandforge.ai') {
     return { error: "Unauthorized: You do not have permission to perform this action." };
   }
 
   try {
-    console.log('[Admin Cleanup Orphaned Images] Starting system-wide orphaned images cleanup...');
-    const cleanupResult = await cleanupAllOrphanedImages();
+    console.log('[Admin Cleanup Orphaned Images] Starting comprehensive system-wide cleanup...');
+    console.log(`[Admin Cleanup Orphaned Images] Storage file deletion: ${deleteStorageFiles ? 'ENABLED' : 'DISABLED'}`);
     
-    console.log(`[Admin Cleanup Orphaned Images] Cleanup completed. Deleted ${cleanupResult.deletedCount} orphaned references.`);
+    const cleanupResult = await cleanupAllOrphanedImages(deleteStorageFiles);
+    
+    console.log(`[Admin Cleanup Orphaned Images] Cleanup completed:`);
+    console.log(`  - DB references deleted: ${cleanupResult.deletedDbReferences}`);
+    console.log(`  - Storage files deleted: ${cleanupResult.deletedStorageFiles}`);
+    console.log(`  - Storage orphans deleted: ${cleanupResult.storageOrphansDeleted}`);
+    console.log(`  - Storage space saved: ${formatBytes(cleanupResult.totalSavedSpace)}`);
+    
+    const totalDeleted = cleanupResult.deletedDbReferences + cleanupResult.deletedStorageFiles + cleanupResult.storageOrphansDeleted;
     
     return {
-      data: { success: true, deletedCount: cleanupResult.deletedCount },
-      message: `Successfully cleaned up ${cleanupResult.deletedCount} orphaned image references.`
+      data: {
+        success: true,
+        deletedDbReferences: cleanupResult.deletedDbReferences,
+        deletedStorageFiles: cleanupResult.deletedStorageFiles,
+        storageOrphansDeleted: cleanupResult.storageOrphansDeleted,
+        totalSavedSpace: cleanupResult.totalSavedSpace
+      },
+      message: `Successfully cleaned up ${totalDeleted} total items (${cleanupResult.deletedDbReferences} DB refs, ${cleanupResult.deletedStorageFiles + cleanupResult.storageOrphansDeleted} storage files). Saved ${formatBytes(cleanupResult.totalSavedSpace)} of storage space.`
     };
   } catch (e: any) {
     console.error('Error in handleAdminCleanupOrphanedImagesAction:', e);
     return { error: `Failed to cleanup orphaned images: ${e.message || "Unknown error."}` };
   }
+}
+
+// Helper function for formatting bytes
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
