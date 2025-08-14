@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, UserCircle, ImageIcon, MessageSquare, Send, Settings, Briefcase, Images, Menu, LogOut, LogIn as LogInIcon, Sparkles, CreditCard, ShieldCheck, BarChart, Database } from 'lucide-react';
+import { Home, UserCircle, ImageIcon, MessageSquare, Send, Settings, Briefcase, Images, Menu, LogOut, LogIn as LogInIcon, Sparkles, CreditCard, ShieldCheck, BarChart, Database, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
@@ -105,6 +105,19 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <Link href="/admin/cleanup">
                     <Database className="w-5 h-5 mr-4 flex-shrink-0" />
                     <span className="text-break font-medium">Cleanup Orphaned Images</span>
+                </Link>
+             </Button>
+             <Button
+                asChild
+                variant={pathname === '/admin/rag' ? 'secondary' : 'ghost'}
+                className={cn(
+                  "sidebar-nav-item", "justify-start", "gap-0",
+                  pathname === '/admin/rag' && "active shadow-md"
+                )}
+              >
+                <Link href="/admin/rag">
+                    <Brain className="w-5 h-5 mr-4 flex-shrink-0" />
+                    <span className="text-break font-medium">RAG Management</span>
                 </Link>
              </Button>
          </>
@@ -262,6 +275,16 @@ export function AppShell({ children }: { children: ReactNode }) {
                                 <Link href="/admin/cleanup">
                                     <Database className="w-5 h-5 mr-4 flex-shrink-0" />
                                     <span className="text-break font-medium">Cleanup Orphaned Images</span>
+                                </Link>
+                            </Button>
+                            <Button
+                                asChild
+                                variant={pathname === '/admin/rag' ? 'secondary' : 'ghost'}
+                                className={cn("sidebar-nav-item", "justify-start", "gap-0", pathname === '/admin/rag' && "active shadow-md")}
+                            >
+                                <Link href="/admin/rag">
+                                    <Brain className="w-5 h-5 mr-4 flex-shrink-0" />
+                                    <span className="text-break font-medium">RAG Management</span>
                                 </Link>
                             </Button>
                         </>

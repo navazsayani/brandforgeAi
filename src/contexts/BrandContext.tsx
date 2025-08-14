@@ -5,14 +5,8 @@ import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore'; // Added deleteDoc for potential future use
 import { db } from '@/lib/firebaseConfig';
-import type { BrandData, GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign } from '@/types';
-import { useAuth } from './AuthContext'; 
-
-interface LastImageGenerationResult {
-  generatedImages: string[];
-  promptUsed: string;
-  providerUsed: string;
-}
+import type { BrandData, GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign, LastImageGenerationResult } from '@/types';
+import { useAuth } from './AuthContext';
 
 interface BrandContextType {
   userId: string | null; 

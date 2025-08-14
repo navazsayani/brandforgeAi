@@ -23,6 +23,14 @@ import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where, collectionGroup, deleteDoc, runTransaction } from 'firebase/firestore';
 import type { UserProfileSelectItem, BrandData, ModelConfig, PlansConfig, MonthlyUsage, AdminUserUsage, ConnectedAccountsStatus, InstagramAccount, OrphanedImageScanResult } from '@/types';
+import {
+  vectorizeBrandProfile,
+  vectorizeSocialMediaPost,
+  vectorizeBlogPost,
+  vectorizeAdCampaign,
+  vectorizeSavedImage,
+  vectorizeBrandLogo
+} from './rag-auto-vectorizer';
 import { getModelConfig, clearModelConfigCache } from './model-config';
 import { getPlansConfig, clearPlansConfigCache } from './plans-config';
 import { DEFAULT_PLANS_CONFIG } from './constants';
@@ -380,7 +388,9 @@ export async function handleGenerateSocialMediaCaptionAction(
         return { error: "Image description is required if an image is selected for the post."}
     }
 
-    const result = await generateSocialMediaCaption(input);
+    // 🔥 RAG ENHANCEMENT: Pass userId to AI flow
+    const inputWithUserId = { ...input, userId };
+    const result = await generateSocialMediaCaption(inputWithUserId);
     const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/socialMediaPosts`);
     
     const docData: { [key: string]: any } = {
@@ -397,7 +407,15 @@ export async function handleGenerateSocialMediaCaptionAction(
     if (input.targetAudience) docData.targetAudience = input.targetAudience;
     if (input.callToAction) docData.callToAction = input.callToAction;
 
-    await addDoc(firestoreCollectionRef, docData);
+    const docRef = await addDoc(firestoreCollectionRef, docData);
+
+    // 🔥 RAG ENHANCEMENT: Auto-vectorize the social media post
+    try {
+      await vectorizeSocialMediaPost(userId, docData as any, docRef.id);
+      console.log(`[RAG] Auto-vectorized social media post: ${docRef.id}`);
+    } catch (error) {
+      console.log(`[RAG] Failed to vectorize social media post:`, error);
+    }
 
     return { data: { ...result, imageSrc: imageSrc }, message: "Social media content generated and saved successfully!" };
   } catch (e: any)
@@ -499,7 +517,9 @@ export async function handleGenerateBlogContentAction(
       return { error: "All fields (except optional website URL and industry) including outline and tone are required for blog content generation." };
     }
     
-    const result = await generateBlogContent(input);
+    // 🔥 RAG ENHANCEMENT: Pass userId to AI flow
+    const inputWithUserId = { ...input, userId };
+    const result = await generateBlogContent(inputWithUserId);
     const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/blogPosts`);
     
     const docData: { [key: string]: any } = {
@@ -517,7 +537,15 @@ export async function handleGenerateBlogContentAction(
     if (input.articleStyle) docData.articleStyle = input.articleStyle;
     if (input.targetAudience) docData.targetAudience = input.targetAudience;
 
-    await addDoc(firestoreCollectionRef, docData);
+    const docRef = await addDoc(firestoreCollectionRef, docData);
+
+    // 🔥 RAG ENHANCEMENT: Auto-vectorize the blog post
+    try {
+      await vectorizeBlogPost(userId, docData as any, docRef.id);
+      console.log(`[RAG] Auto-vectorized blog post: ${docRef.id}`);
+    } catch (error) {
+      console.log(`[RAG] Failed to vectorize blog post:`, error);
+    }
 
     return { data: result, message: "Blog content generated and saved successfully!" };
   } catch (e: any) {
@@ -585,7 +613,9 @@ export async function handleGenerateAdCampaignAction(
     }
     await ensureUserBrandProfileDocExists(userId, userEmail);
 
-    const result = await generateAdCampaign(input);
+    // 🔥 RAG ENHANCEMENT: Pass userId to AI flow
+    const inputWithUserId = { ...input, userId };
+    const result = await generateAdCampaign(inputWithUserId);
     const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/adCampaigns`);
     
     const docData: { [key: string]: any } = {
@@ -605,7 +635,16 @@ export async function handleGenerateAdCampaignAction(
     if (input.targetAudience) docData.targetAudience = input.targetAudience;
     if (input.callToAction) docData.callToAction = input.callToAction;
 
-    await addDoc(firestoreCollectionRef, docData);
+    const docRef = await addDoc(firestoreCollectionRef, docData);
+    
+    // 🔥 RAG ENHANCEMENT: Auto-vectorize the ad campaign
+    try {
+      await vectorizeAdCampaign(userId, docData as any, docRef.id);
+      console.log(`[RAG] Auto-vectorized ad campaign: ${docRef.id}`);
+    } catch (error) {
+      console.log(`[RAG] Failed to vectorize ad campaign:`, error);
+    }
+    
     return { data: result, message: "Ad campaign variations generated and saved successfully!" };
   } catch (e: any) {
     console.error("Error in handleGenerateAdCampaignAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
@@ -906,8 +945,16 @@ export async function handleSaveGeneratedImagesAction(
             createdAt: serverTimestamp(),
         };
         console.log(`[Save Images Action] -> Document to write:`, docToWrite);
-        await addDoc(firestoreCollectionRef, docToWrite);
+        const docRef = await addDoc(firestoreCollectionRef, docToWrite);
         console.log(`[Save Images Action] -> Successfully wrote image ${index + 1} metadata to Firestore.`);
+        
+        // 🔥 RAG ENHANCEMENT: Auto-vectorize the saved image
+        try {
+          await vectorizeSavedImage(userId, docToWrite as any, docRef.id);
+          console.log(`[RAG] Auto-vectorized saved image: ${docRef.id}`);
+        } catch (error) {
+          console.log(`[RAG] Failed to vectorize saved image:`, error);
+        }
         savedCount++;
       } catch (e: any) {
         const specificError = `Failed during processing of image ${index + 1}: ${(e as Error).message?.substring(0,150)}`;
@@ -1073,13 +1120,23 @@ export async function handleGenerateBrandLogoAction(
 
     const result = await generateBrandLogo(input);
     const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/brandLogos`);
-    await addDoc(firestoreCollectionRef, {
+    const docData = {
       logoData: result.logoDataUri || "",
       brandName: input.brandName,
       logoShape: input.logoShape || "circle",
       logoStyle: input.logoStyle || "modern",
       createdAt: serverTimestamp(),
-    });
+    };
+    const docRef = await addDoc(firestoreCollectionRef, docData);
+    
+    // 🔥 RAG ENHANCEMENT: Auto-vectorize the brand logo
+    try {
+      await vectorizeBrandLogo(userId, docData as any, docRef.id);
+      console.log(`[RAG] Auto-vectorized brand logo: ${docRef.id}`);
+    } catch (error) {
+      console.log(`[RAG] Failed to vectorize brand logo:`, error);
+    }
+    
     return { data: result, message: "Brand logo generated and saved successfully!" };
   } catch (e: any) {
     console.error("Error in handleGenerateBrandLogoAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
@@ -1347,6 +1404,9 @@ export async function handleUpdateSettingsAction(
       fireworksSDXL3Enabled: formData.get("fireworksSDXL3Enabled") === 'true',
       intelligentModelSelection: formData.get("intelligentModelSelection") === 'true',
       showAdvancedImageControls: formData.get("showAdvancedImageControls") === 'true',
+      // Admin-configurable model names
+      fireworksSDXLTurboModel: formData.get("fireworksSDXLTurboModel") as string || 'sdxl-turbo',
+      fireworksSDXL3Model: formData.get("fireworksSDXL3Model") as string || 'stable-diffusion-xl-1024-v1-0',
     };
     
     if (!modelConfig.imageGenerationModel || !modelConfig.textToImageModel || !modelConfig.fastModel || !modelConfig.visionModel || !modelConfig.powerfulModel) {
@@ -1494,17 +1554,51 @@ export async function handleVerifyPaymentAction(
   }
 }
 
-export async function getPaymentMode(): Promise<{ paymentMode: 'live' | 'test', freepikEnabled: boolean, socialMediaConnectionsEnabled: boolean, error?: string }> {
+export async function getPaymentMode(): Promise<{
+  paymentMode: 'live' | 'test',
+  freepikEnabled: boolean,
+  socialMediaConnectionsEnabled: boolean,
+  fireworksEnabled: boolean,
+  fireworksSDXLTurboEnabled: boolean,
+  fireworksSDXL3Enabled: boolean,
+  intelligentModelSelection: boolean,
+  showAdvancedImageControls: boolean,
+  error?: string
+}> {
   try {
-    const { paymentMode, freepikEnabled, socialMediaConnectionsEnabled } = await getModelConfig();
-    return { 
-      paymentMode: paymentMode || 'test', 
+    const {
+      paymentMode,
+      freepikEnabled,
+      socialMediaConnectionsEnabled,
+      fireworksEnabled,
+      fireworksSDXLTurboEnabled,
+      fireworksSDXL3Enabled,
+      intelligentModelSelection,
+      showAdvancedImageControls
+    } = await getModelConfig();
+    return {
+      paymentMode: paymentMode || 'test',
       freepikEnabled: freepikEnabled || false,
-      socialMediaConnectionsEnabled: socialMediaConnectionsEnabled !== false // default to true if undefined
+      socialMediaConnectionsEnabled: socialMediaConnectionsEnabled !== false, // default to true if undefined
+      fireworksEnabled: fireworksEnabled || false,
+      fireworksSDXLTurboEnabled: fireworksSDXLTurboEnabled || false,
+      fireworksSDXL3Enabled: fireworksSDXL3Enabled || false,
+      intelligentModelSelection: intelligentModelSelection || false,
+      showAdvancedImageControls: showAdvancedImageControls || false,
     };
   } catch (e: any) {
     console.error("Error fetching payment mode:", e);
-    return { paymentMode: 'test', freepikEnabled: false, socialMediaConnectionsEnabled: true, error: `Could not retrieve payment mode configuration.` };
+    return {
+      paymentMode: 'test',
+      freepikEnabled: false,
+      socialMediaConnectionsEnabled: true,
+      fireworksEnabled: false,
+      fireworksSDXLTurboEnabled: false,
+      fireworksSDXL3Enabled: false,
+      intelligentModelSelection: false,
+      showAdvancedImageControls: false,
+      error: `Could not retrieve payment mode configuration.`
+    };
   }
 }
 

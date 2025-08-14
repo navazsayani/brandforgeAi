@@ -74,7 +74,7 @@ export default function AdminDashboardPage() {
     };
 
     return (
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto space-y-6">
             <Card className="shadow-lg">
                 <CardHeader>
                     <div className="flex items-center space-x-3">

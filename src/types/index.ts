@@ -20,6 +20,12 @@ export interface GeneratedImage {
   src: string; // Data URI from AI generation, or Firebase Storage URL if saved
   prompt: string;
   style: string;
+  ragMetadata?: {
+    wasRAGEnhanced: boolean;
+    ragInsights: any[];
+    contentId: string;
+    userId: string;
+  };
 }
 
 export interface SavedGeneratedImage {
@@ -32,7 +38,7 @@ export interface SavedGeneratedImage {
 
 export interface GeneratedSocialMediaPost {
   id: string;
-  platform: 'Instagram'; 
+  platform: 'Instagram';
   imageSrc: string | null;
   imageDescription: string;
   caption: string;
@@ -43,6 +49,12 @@ export interface GeneratedSocialMediaPost {
   callToAction?: string;
   createdAt?: any;
   status: 'draft' | 'scheduled' | 'deployed';
+  ragMetadata?: {
+    wasRAGEnhanced: boolean;
+    ragInsights: any[];
+    contentId: string;
+    userId: string;
+  };
 }
 
 export interface GeneratedBlogPost {
@@ -57,6 +69,12 @@ export interface GeneratedBlogPost {
   createdAt?: any;
   status: 'draft' | 'scheduled' | 'deployed';
   outline?: string;
+  ragMetadata?: {
+    wasRAGEnhanced: boolean;
+    ragInsights: any[];
+    contentId: string;
+    userId: string;
+  };
 }
 
 export interface GeneratedAdCampaign {
@@ -77,6 +95,12 @@ export interface GeneratedAdCampaign {
   callToAction?: string;
   createdAt?: any;
   status: 'draft' | 'scheduled' | 'deployed';
+  ragMetadata?: {
+    wasRAGEnhanced: boolean;
+    ragInsights: any[];
+    contentId: string;
+    userId: string;
+  };
 }
 
 export interface UserProfileSelectItem {
@@ -102,6 +126,9 @@ export interface ModelConfig {
   fireworksSDXL3Enabled?: boolean;
   intelligentModelSelection?: boolean;
   showAdvancedImageControls?: boolean;
+  // Admin-configurable Fireworks model names
+  fireworksSDXLTurboModel?: string;
+  fireworksSDXL3Model?: string;
 }
 
 export interface PlanFeature {
@@ -183,8 +210,10 @@ export interface InstagramAccount {
 export const EditImageInputSchema = z.object({
   imageDataUri: z.string().describe("The base image to edit, as a data URI."),
   instruction: z.string().min(3, { message: "Instruction must be at least 3 characters." }).describe('The user\'s instruction on how to edit the image.'),
-  // Optional provider selection for editing
-  provider: z.enum(['GEMINI', 'FIREWORKS_SDXL_3']).optional().describe("The provider to use for image editing."),
+  // Quality mode for consistent UX with image generation
+  qualityMode: z.enum(['fast', 'balanced', 'premium']).default('balanced').optional().describe("Quality mode: fast (SDXL Turbo), balanced (Gemini), premium (SDXL 3)"),
+  // Optional provider selection for editing (overrides qualityMode)
+  provider: z.enum(['GEMINI', 'FIREWORKS_SDXL_TURBO', 'FIREWORKS_SDXL_3']).optional().describe("The provider to use for image editing."),
   // Fireworks-specific editing parameters
   fireworksImg2ImgStrength: z.number().min(0).max(1).default(0.7).optional().describe("Strength for img2img transformation during editing"),
   fireworksGuidanceScale: z.number().min(1).max(20).default(7.5).optional().describe("Guidance scale for editing precision"),
@@ -227,4 +256,28 @@ export interface OrphanedImageScanResult {
   orphanedLibraryImages: OrphanedLibraryImage[];
   totalScanned: number;
   scanTimestamp: string;
+}
+
+// RAG metadata interface
+export interface RAGMetadata {
+  wasRAGEnhanced: boolean;
+  ragInsights: any[];
+  contentId: string;
+  userId: string;
+  brandPatterns?: string;
+  voicePatterns?: string;
+  successfulStyles?: string;
+  effectiveHashtags?: string;
+  performanceInsights?: string;
+  seoKeywords?: string;
+  seasonalTrends?: string;
+  avoidPatterns?: string;
+}
+
+// Last generation result interfaces
+export interface LastImageGenerationResult {
+  generatedImages: string[];
+  promptUsed: string;
+  providerUsed: string;
+  ragMetadata?: RAGMetadata;
 }

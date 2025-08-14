@@ -1,5 +1,5 @@
 interface FireworksGenerationParams {
-  model: 'stable-diffusion-xl-1024-v1-0' | 'sdxl-turbo';
+  model: string; // Now accepts any string for admin-configurable model names
   prompt: string;
   negative_prompt?: string;
   width?: number;
@@ -50,14 +50,31 @@ export async function generateImageWithFireworks(params: FireworksGenerationPara
     hasControlNet: !!params.controlnet
   });
 
-  // Construct the request body based on the generation type
+  // Determine the correct endpoint based on generation type
+  let endpoint: string;
+  if (params.controlnet) {
+    // ControlNet endpoint
+    endpoint = `${baseUrl}/image_generation/accounts/fireworks/models/${params.model}/control_net`;
+    console.log(`[Fireworks] Using ControlNet endpoint`);
+  } else if (params.image) {
+    // Image-to-Image endpoint
+    endpoint = `${baseUrl}/image_generation/accounts/fireworks/models/${params.model}/image_to_image`;
+    console.log(`[Fireworks] Using Image-to-Image endpoint`);
+  } else {
+    // Text-to-Image endpoint
+    endpoint = `${baseUrl}/image_generation/accounts/fireworks/models/${params.model}`;
+    console.log(`[Fireworks] Using Text-to-Image endpoint`);
+  }
+
+  console.log(`[Fireworks] Full endpoint URL: ${endpoint}`);
+
+  // Construct the request body (no longer need to include model in body since it's in URL)
   const requestBody: any = {
-    model: `accounts/fireworks/models/${params.model}`,
     prompt: params.prompt,
     width: params.width || 1024,
     height: params.height || 1024,
-    guidance_scale: params.guidance_scale || (params.model === 'sdxl-turbo' ? 1.0 : 7.5),
-    num_inference_steps: params.num_inference_steps || (params.model === 'sdxl-turbo' ? 4 : 20),
+    guidance_scale: params.guidance_scale || (params.model.includes('turbo') ? 1.0 : 7.5),
+    num_inference_steps: params.num_inference_steps || (params.model.includes('turbo') ? 4 : 20),
     num_images: params.num_images || 1,
     response_format: 'b64_json', // Get base64 encoded images
   };
@@ -90,7 +107,7 @@ export async function generateImageWithFireworks(params: FireworksGenerationPara
   }
 
   try {
-    const response = await fetch(`${baseUrl}/image_generation`, {
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,

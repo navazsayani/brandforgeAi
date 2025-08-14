@@ -12,6 +12,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { getModelConfig } from '@/lib/model-config';
+import { enhanceAdCampaignPrompt, storeContentForRAG, getAdaptiveRAGContext } from '@/lib/rag-integration';
 
 const GenerateAdCampaignInputSchema = z.object({
   brandName: z.string().describe('The name of the brand.'),
@@ -91,9 +92,60 @@ const generateAdCampaignFlow = ai.defineFlow(
     outputSchema: GenerateAdCampaignOutputSchema,
   },
   async input => {
+    // 🔥 RAG ENHANCEMENT: Get user ID from input (will be passed from actions)
+    const userId = (input as any).userId;
+    
+    // 🔥 RAG ENHANCEMENT: Get adaptive RAG context with insights
+    let enhancedInput = input;
+    let ragInsights: any[] = [];
+    let wasRAGEnhanced = false;
+    
+    if (userId) {
+      try {
+        // Create base prompt text for enhancement
+        const basePromptText = `Generate ad campaign for ${input.brandName} with goal ${input.campaignGoal || 'brand awareness'}`;
+        
+        // Get adaptive RAG context with insights
+        const { context, insights } = await getAdaptiveRAGContext(
+          userId,
+          basePromptText,
+          {
+            userId,
+            contentType: 'ad_campaign',
+            industry: input.industry,
+            minPerformance: 0.7,
+            limit: 6,
+            includeIndustryPatterns: true,
+            timeframe: '90days'
+          }
+        );
+        
+        ragInsights = insights;
+        wasRAGEnhanced = insights.length > 0;
+        
+        if (wasRAGEnhanced) {
+          // Build enhanced prompt with RAG context
+          let ragContextText = '';
+          if (context.brandPatterns) ragContextText += `\nBRAND MESSAGING CONTEXT:\n${context.brandPatterns}`;
+          if (context.successfulStyles) ragContextText += `\nSUCCESSFUL CAMPAIGN APPROACHES:\n${context.successfulStyles}`;
+          if (context.avoidPatterns) ragContextText += `\nAVOID THESE MESSAGING PATTERNS:\n${context.avoidPatterns}`;
+          if (context.performanceInsights) ragContextText += `\nCAMPAIGN PERFORMANCE INSIGHTS:\n${context.performanceInsights}`;
+          
+          enhancedInput = {
+            ...input,
+            brandDescription: `${input.brandDescription}${ragContextText}`
+          };
+          
+          console.log(`[RAG] Enhanced ad campaign prompt with ${insights.length} insights`);
+        }
+      } catch (error) {
+        console.log(`[RAG] Failed to enhance prompt, using original:`, error);
+      }
+    }
+
     const { powerfulModel } = await getModelConfig();
 
-    const {output} = await generateAdCampaignPrompt(input, { model: powerfulModel });
+    const {output} = await generateAdCampaignPrompt(enhancedInput, { model: powerfulModel });
     if (!output) {
         throw new Error("AI failed to generate ad campaign variations.");
     }
@@ -103,6 +155,45 @@ const generateAdCampaignFlow = ai.defineFlow(
         // For stricter enforcement, this could throw an error.
         console.warn("AI did not return the expected number of headlines/body texts.", output);
     }
-    return output;
+    
+    // 🔥 RAG ENHANCEMENT: Store successful generation for future RAG
+    if (userId && output) {
+      try {
+        const contentId = `ad_campaign_${Date.now()}`;
+        await storeContentForRAG(
+          userId,
+          'ad_campaign',
+          contentId,
+          {
+            prompt: `Campaign: ${output.campaignConcept}`,
+            result: `${output.campaignConcept}\nHeadlines: ${output.headlines.join(', ')}\nBody: ${output.bodyTexts.join(' | ')}`,
+            style: input.campaignGoal || 'brand_awareness',
+            metadata: {
+              platforms: input.platforms,
+              campaignGoal: input.campaignGoal,
+              targetAudience: input.targetAudience,
+              industry: input.industry,
+              budget: input.budget,
+              wasRAGEnhanced,
+              ragInsights: ragInsights.length > 0 ? ragInsights : undefined
+            }
+          }
+        );
+        console.log(`[RAG] Stored ad campaign generation for future context`);
+      } catch (error) {
+        console.log(`[RAG] Failed to store content for RAG:`, error);
+      }
+    }
+    
+    // Add RAG metadata to output for UI components
+    return {
+      ...output,
+      _ragMetadata: {
+        wasRAGEnhanced,
+        ragInsights,
+        contentId: `ad_campaign_${Date.now()}`,
+        userId
+      }
+    };
   }
 );

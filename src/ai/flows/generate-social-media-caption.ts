@@ -12,6 +12,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { getModelConfig } from '@/lib/model-config';
+import { enhanceSocialMediaPrompt, storeContentForRAG, getAdaptiveRAGContext, createRAGInsightsFromContext } from '@/lib/rag-integration';
 
 const GenerateSocialMediaCaptionInputSchema = z.object({
   brandDescription: z.string().describe('The description of the brand.'),
@@ -76,12 +77,101 @@ const generateSocialMediaCaptionFlow = ai.defineFlow(
     outputSchema: GenerateSocialMediaCaptionOutputSchema,
   },
   async input => {
+    // 🔥 RAG ENHANCEMENT: Get user ID from input (will be passed from actions)
+    const userId = (input as any).userId;
+    
     const { fastModel } = await getModelConfig();
     
-    const {output} = await generateSocialMediaCaptionPrompt(input, { model: fastModel });
+    // 🔥 RAG ENHANCEMENT: Get adaptive RAG context with insights
+    let enhancedInput = input;
+    let ragInsights: any[] = [];
+    let wasRAGEnhanced = false;
+    
+    if (userId) {
+      try {
+        // Create base prompt text for enhancement
+        const basePromptText = `Generate social media caption for ${input.brandDescription} in ${input.tone} tone`;
+        
+        // Get adaptive RAG context with insights
+        const { context, insights } = await getAdaptiveRAGContext(
+          userId,
+          basePromptText,
+          {
+            userId,
+            contentType: 'social_media',
+            industry: input.industry,
+            minPerformance: 0.7,
+            limit: 10,
+            includeIndustryPatterns: true,
+            timeframe: '30days'
+          }
+        );
+        
+        ragInsights = insights;
+        wasRAGEnhanced = insights.length > 0;
+        
+        if (wasRAGEnhanced) {
+          // Build enhanced prompt with RAG context
+          let ragContextText = '';
+          if (context.brandPatterns) ragContextText += `\nBRAND VOICE CONTEXT:\n${context.brandPatterns}`;
+          if (context.voicePatterns) ragContextText += `\nSUCCESSFUL VOICE PATTERNS:\n${context.voicePatterns}`;
+          if (context.effectiveHashtags) ragContextText += `\nEFFECTIVE HASHTAGS:\n${context.effectiveHashtags}`;
+          if (context.performanceInsights) ragContextText += `\nPERFORMANCE INSIGHTS:\n${context.performanceInsights}`;
+          
+          enhancedInput = {
+            ...input,
+            brandDescription: `${input.brandDescription}${ragContextText}`
+          };
+          
+          console.log(`[RAG] Enhanced social media prompt with ${insights.length} insights`);
+        }
+      } catch (error) {
+        console.log(`[RAG] Failed to enhance prompt, using original:`, error);
+      }
+    }
+    
+    const {output} = await generateSocialMediaCaptionPrompt(enhancedInput, { model: fastModel });
     if (!output) {
         throw new Error("AI failed to generate a social media caption.");
     }
-    return output;
+    
+    // 🔥 RAG ENHANCEMENT: Store successful generation for future RAG
+    if (userId && output) {
+      try {
+        const contentId = `social_${Date.now()}`;
+        await storeContentForRAG(
+          userId,
+          'social_media',
+          contentId,
+          {
+            prompt: `Caption: ${output.caption}`,
+            result: `${output.caption}\nHashtags: ${output.hashtags}`,
+            style: input.tone,
+            metadata: {
+              platform: 'Instagram',
+              postGoal: input.postGoal,
+              targetAudience: input.targetAudience,
+              industry: input.industry,
+              wasRAGEnhanced,
+              ragInsights: ragInsights.length > 0 ? ragInsights : undefined
+            }
+          }
+        );
+        console.log(`[RAG] Stored social media generation for future context`);
+      } catch (error) {
+        console.log(`[RAG] Failed to store content for RAG:`, error);
+      }
+    }
+    
+    // Add RAG metadata to output for UI components
+    return {
+      ...output,
+      _ragMetadata: {
+        wasRAGEnhanced,
+        ragInsights,
+        contentId: `social_${Date.now()}`,
+        userId
+      }
+    };
   }
 );

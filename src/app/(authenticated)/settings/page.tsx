@@ -41,6 +41,8 @@ const modelSettingsSchema = z.object({
   fireworksSDXL3Enabled: z.boolean().optional(),
   intelligentModelSelection: z.boolean().optional(),
   showAdvancedImageControls: z.boolean().optional(),
+  fireworksSDXLTurboModel: z.string().optional(),
+  fireworksSDXL3Model: z.string().optional(),
 });
 
 const plansSettingsSchema = z.object({
@@ -737,6 +739,54 @@ function SettingsPageContent() {
                                     </FormItem>
                                 )}
                             />
+                            
+                            {/* Model Name Configuration */}
+                            <div className="space-y-4 p-4 border rounded-lg bg-amber-50 border-amber-200">
+                                <h5 className="text-sm font-semibold text-amber-800">Model Name Configuration</h5>
+                                <p className="text-xs text-amber-700">
+                                    Configure the exact model names used by Fireworks AI. Leave blank to disable that model and fallback to Gemini.
+                                </p>
+                                
+                                <FormField
+                                    control={modelForm.control}
+                                    name="fireworksSDXLTurboModel"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>SDXL Turbo Model Name</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    placeholder="e.g., sdxl-turbo"
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormDescription>
+                                                The exact model name for SDXL Turbo on Fireworks AI. If empty, fast mode will fallback to Gemini.
+                                            </FormDescription>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                
+                                <FormField
+                                    control={modelForm.control}
+                                    name="fireworksSDXL3Model"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>SDXL 3 Model Name</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    placeholder="e.g., stable-diffusion-xl-1024-v1-0"
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormDescription>
+                                                The exact model name for SDXL 3 on Fireworks AI. If empty, premium mode will fallback to Gemini.
+                                            </FormDescription>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
                         </div>
 
                         <Alert>

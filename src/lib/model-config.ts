@@ -18,6 +18,9 @@ export const DEFAULT_MODEL_CONFIG: ModelConfig = {
   fireworksSDXL3Enabled: false,
   intelligentModelSelection: false,
   showAdvancedImageControls: false,
+  // Admin-configurable Fireworks model names
+  fireworksSDXLTurboModel: 'sdxl-turbo',
+  fireworksSDXL3Model: 'stable-diffusion-xl-1024-v1-0',
 };
 
 // Removed in-memory cache to ensure consistency in serverless environments.

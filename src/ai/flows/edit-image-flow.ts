@@ -14,6 +14,26 @@ import { EditImageInputSchema, EditImageOutputSchema, type EditImageInput, type 
 import { decodeHtmlEntitiesInUrl, verifyImageUrlExists } from '@/lib/utils';
 import { generateImageWithFireworks } from '@/lib/fireworks-client';
 
+// Helper function to convert provider names to user-friendly display names
+function getProviderDisplayName(provider: string, actualModelUsed?: string): string {
+  switch (provider.toUpperCase()) {
+    case 'FIREWORKS_SDXL_TURBO':
+      return actualModelUsed || 'SDXL Turbo';
+    case 'FIREWORKS_SDXL_3':
+      return actualModelUsed || 'SDXL 3';
+    case 'GEMINI':
+      return 'Gemini';
+    case 'FREEPIK':
+      return 'Freepik (Imagen3)';
+    case 'IMAGEN':
+      return 'Imagen';
+    case 'LEONARDO_AI':
+      return 'Leonardo AI';
+    default:
+      return provider;
+  }
+}
+
 export type { EditImageInput, EditImageOutput };
 
 export async function editImage(input: EditImageInput): Promise<EditImageOutput> {
@@ -28,19 +48,71 @@ const editImageFlow = ai.defineFlow(
   },
   async (input) => {
     // Get configuration including Fireworks settings
-    const { imageGenerationModel, fireworksEnabled, fireworksSDXL3Enabled } = await getModelConfig();
+    const {
+      imageGenerationModel,
+      fireworksEnabled,
+      fireworksSDXLTurboEnabled,
+      fireworksSDXL3Enabled,
+      intelligentModelSelection,
+      fireworksSDXLTurboModel,
+      fireworksSDXL3Model
+    } = await getModelConfig();
+    
+    // Check if model names are configured, fallback to Gemini if not
+    const hasTurboModel = fireworksSDXLTurboEnabled && fireworksSDXLTurboModel?.trim();
+    const hasSDXL3Model = fireworksSDXL3Enabled && fireworksSDXL3Model?.trim();
     
     // Determine which provider to use for editing
     let editProvider = input.provider || 'GEMINI';
+    let actualProviderUsed = editProvider; // Track the actual provider used (may change due to fallbacks)
+    let actualModelUsed: string | undefined; // Track the specific model used
     
-    // If Fireworks is enabled and no provider specified, use intelligent selection
-    if (!input.provider && fireworksEnabled && fireworksSDXL3Enabled) {
+    // If no provider specified, use quality mode-based intelligent selection
+    if (!input.provider && fireworksEnabled && intelligentModelSelection) {
+      const qualityMode = input.qualityMode || 'balanced';
+      
+      switch (qualityMode) {
+        case 'fast':
+          if (hasTurboModel) {
+            editProvider = 'FIREWORKS_SDXL_TURBO';
+            console.log(`[editImageFlow] Fast editing mode: Using SDXL Turbo for quick edits`);
+          } else {
+            editProvider = 'GEMINI';
+            console.log(`[editImageFlow] Fast mode requested but SDXL Turbo not configured, using Gemini`);
+          }
+          break;
+        case 'premium':
+          if (hasSDXL3Model) {
+            editProvider = 'FIREWORKS_SDXL_3';
+            console.log(`[editImageFlow] Premium editing mode: Using SDXL 3 for high-quality edits`);
+          } else {
+            editProvider = 'GEMINI';
+            console.log(`[editImageFlow] Premium mode requested but SDXL 3 not configured, using Gemini`);
+          }
+          break;
+        case 'balanced':
+        default:
+          editProvider = 'GEMINI';
+          console.log(`[editImageFlow] Balanced editing mode: Using Gemini for intelligent edits`);
+          break;
+      }
+    }
+    // Legacy fallback: If intelligent selection is disabled but Fireworks is enabled
+    else if (!input.provider && fireworksEnabled && hasSDXL3Model && !intelligentModelSelection) {
       // For image editing, SDXL 3 with img2img provides better control
       editProvider = 'FIREWORKS_SDXL_3';
-      console.log(`[editImageFlow] Using Fireworks SDXL 3 for enhanced img2img editing`);
+      console.log(`[editImageFlow] Using Fireworks SDXL 3 for enhanced img2img editing (legacy mode)`);
     }
 
+    // Validate that advanced Fireworks controls are not used with Gemini
+    if (editProvider === 'GEMINI') {
+      if (input.fireworksImg2ImgStrength !== undefined || input.fireworksGuidanceScale !== undefined) {
+        console.warn('[editImageFlow] Fireworks-specific parameters (img2img strength, guidance scale) will be ignored when using Gemini provider.');
+      }
+    }
+    
     console.log(`[editImageFlow] Starting refinement with provider: ${editProvider}`);
+    console.log(`[editImageFlow] Quality mode: ${input.qualityMode || 'balanced'}`);
     console.log(`[editImageFlow] Instruction: ${input.instruction}`);
     
     // Check if the input is a URL and fetch it on the server if necessary
@@ -99,42 +171,100 @@ Your execution must follow these rules in order of importance:
 "${input.instruction}"
 `;
 
+    // Helper function to get mode-specific parameters
+    const getModeParameters = (qualityMode: string, provider: string) => {
+      switch (qualityMode) {
+        case 'fast':
+          return {
+            num_inference_steps: provider === 'FIREWORKS_SDXL_TURBO' ? 4 : 25,
+            strength: 0.6, // Less transformation for speed
+            guidance_scale: provider === 'FIREWORKS_SDXL_TURBO' ? 1.0 : 7.5
+          };
+        case 'premium':
+          return {
+            num_inference_steps: 25,
+            strength: 0.7, // Balanced transformation
+            guidance_scale: 7.5
+          };
+        default: // balanced
+          return {
+            num_inference_steps: 20,
+            strength: 0.7,
+            guidance_scale: 7.5
+          };
+      }
+    };
+
     // Execute editing based on selected provider
-    if (editProvider === 'FIREWORKS_SDXL_3' && fireworksEnabled) {
-      console.log(`[editImageFlow] Using Fireworks SDXL 3 for img2img editing`);
+    if ((editProvider === 'FIREWORKS_SDXL_3' || editProvider === 'FIREWORKS_SDXL_TURBO') && fireworksEnabled) {
+      const isSDXLTurbo = editProvider === 'FIREWORKS_SDXL_TURBO';
       
-      try {
-        // Convert data URI to base64 for Fireworks API
-        const base64Match = imageDataUri.match(/^data:image\/[^;]+;base64,(.+)$/);
-        if (!base64Match) {
-          throw new Error('Invalid image data URI format');
+      // Get admin-configured model name with fallback
+      let modelName: string;
+      if (isSDXLTurbo) {
+        modelName = fireworksSDXLTurboModel || '';
+        if (!modelName.trim()) {
+          console.log(`[editImageFlow] SDXL Turbo model name not configured, falling back to Gemini`);
+          editProvider = 'GEMINI';
+          actualProviderUsed = 'GEMINI';
+          actualModelUsed = 'Gemini (fallback from SDXL Turbo)';
+        } else {
+          actualModelUsed = `SDXL Turbo (${modelName})`;
         }
-        const base64Image = base64Match[1];
-        
-        // Use Fireworks SDXL 3 for precise img2img editing
-        const editedImages = await generateImageWithFireworks({
-          model: 'stable-diffusion-xl-1024-v1-0', // SDXL 3
-          prompt: enhancedPrompt,
-          image: base64Image, // img2img input
-          strength: input.fireworksImg2ImgStrength || 0.7, // Moderate transformation
-          guidance_scale: input.fireworksGuidanceScale || 7.5,
-          num_inference_steps: 25, // Higher steps for quality editing
-          num_images: 1,
-          width: 1024,
-          height: 1024
-        });
-        
-        if (!editedImages || editedImages.length === 0) {
-          throw new Error('Fireworks API returned no edited images');
+      } else {
+        modelName = fireworksSDXL3Model || '';
+        if (!modelName.trim()) {
+          console.log(`[editImageFlow] SDXL 3 model name not configured, falling back to Gemini`);
+          editProvider = 'GEMINI';
+          actualProviderUsed = 'GEMINI';
+          actualModelUsed = 'Gemini (fallback from SDXL 3)';
+        } else {
+          actualModelUsed = `SDXL 3 (${modelName})`;
         }
+      }
+      
+      if (editProvider !== 'GEMINI') {
+        console.log(`[editImageFlow] Using Fireworks ${isSDXLTurbo ? 'SDXL Turbo' : 'SDXL 3'} for img2img editing with model: ${modelName}`);
         
-        console.log(`[editImageFlow] Successfully edited image using Fireworks SDXL 3`);
-        return { editedImageDataUri: editedImages[0] };
-        
-      } catch (error: any) {
-        console.error(`[editImageFlow] Fireworks editing failed, falling back to Gemini:`, error);
-        // Fall back to Gemini if Fireworks fails
-        editProvider = 'GEMINI';
+        try {
+          // Convert data URI to base64 for Fireworks API
+          const base64Match = imageDataUri.match(/^data:image\/[^;]+;base64,(.+)$/);
+          if (!base64Match) {
+            throw new Error('Invalid image data URI format');
+          }
+          const base64Image = base64Match[1];
+          
+          // Get mode-specific parameters
+          const modeParams = getModeParameters(input.qualityMode || 'balanced', editProvider);
+          
+          // Use Fireworks for img2img editing with mode-specific parameters
+          const editedImages = await generateImageWithFireworks({
+            model: modelName,
+            prompt: enhancedPrompt,
+            image: base64Image, // img2img input
+            strength: input.fireworksImg2ImgStrength || modeParams.strength,
+            guidance_scale: input.fireworksGuidanceScale || modeParams.guidance_scale,
+            num_inference_steps: modeParams.num_inference_steps,
+            num_images: 1,
+            width: 1024,
+            height: 1024
+          });
+          
+          if (!editedImages || editedImages.length === 0) {
+            throw new Error('Fireworks API returned no edited images');
+          }
+          
+          console.log(`[editImageFlow] Successfully edited image using Fireworks ${isSDXLTurbo ? 'SDXL Turbo' : 'SDXL 3'}`);
+          const displayProviderName = getProviderDisplayName(actualProviderUsed, actualModelUsed);
+          return { editedImageDataUri: editedImages[0], providerUsed: displayProviderName };
+          
+        } catch (error: any) {
+          console.error(`[editImageFlow] Fireworks editing failed, falling back to Gemini:`, error);
+          // Fall back to Gemini if Fireworks fails
+          editProvider = 'GEMINI';
+          actualProviderUsed = 'GEMINI';
+          actualModelUsed = `Gemini (fallback from ${isSDXLTurbo ? 'SDXL Turbo' : 'SDXL 3'})`;
+        }
       }
     }
     
@@ -158,7 +288,12 @@ Your execution must follow these rules in order of importance:
         throw new Error('AI failed to generate a valid edited image or the format was unexpected.');
       }
       
-      return { editedImageDataUri: media.url };
+      // Set actualModelUsed for Gemini if not already set by fallback logic
+      if (!actualModelUsed) {
+        actualModelUsed = 'Gemini';
+      }
+      const displayProviderName = getProviderDisplayName(actualProviderUsed, actualModelUsed);
+      return { editedImageDataUri: media.url, providerUsed: displayProviderName };
     }
     
     throw new Error(`Unsupported edit provider: ${editProvider}`);

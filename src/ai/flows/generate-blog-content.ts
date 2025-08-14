@@ -12,6 +12,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { fetchWebsiteContentTool } from '@/ai/tools/fetch-website-content-tool';
 import { getModelConfig } from '@/lib/model-config';
+import { enhanceBlogContentPrompt, storeContentForRAG, getAdaptiveRAGContext } from '@/lib/rag-integration';
 
 const GenerateBlogContentInputSchema = z.object({
   brandName: z.string().describe('The name of the brand.'),
@@ -105,6 +106,9 @@ const generateBlogContentFlow = ai.defineFlow(
     outputSchema: GenerateBlogContentOutputSchema,
   },
   async (input) => {
+    // 🔥 RAG ENHANCEMENT: Get user ID from input (will be passed from actions)
+    const userId = (input as any).userId;
+    
     let websiteContent: string | undefined = undefined;
     let extractionError: string | undefined = undefined;
 
@@ -121,19 +125,67 @@ const generateBlogContentFlow = ai.defineFlow(
       }
     }
 
+    // 🔥 RAG ENHANCEMENT: Get adaptive RAG context with insights
+    let enhancedInput = input;
+    let ragInsights: any[] = [];
+    let wasRAGEnhanced = false;
+    
+    if (userId) {
+      try {
+        // Create base prompt text for enhancement
+        const basePromptText = `Generate blog content for ${input.brandName} about ${input.keywords} in ${input.blogTone} tone`;
+        
+        // Get adaptive RAG context with insights
+        const { context, insights } = await getAdaptiveRAGContext(
+          userId,
+          basePromptText,
+          {
+            userId,
+            contentType: 'blog_post',
+            industry: input.industry,
+            minPerformance: 0.6,
+            limit: 8,
+            includeIndustryPatterns: true,
+            timeframe: '90days'
+          }
+        );
+        
+        ragInsights = insights;
+        wasRAGEnhanced = insights.length > 0;
+        
+        if (wasRAGEnhanced) {
+          // Build enhanced prompt with RAG context
+          let ragContextText = '';
+          if (context.brandPatterns) ragContextText += `\nBRAND WRITING STYLE:\n${context.brandPatterns}`;
+          if (context.successfulStyles) ragContextText += `\nSUCCESSFUL CONTENT APPROACHES:\n${context.successfulStyles}`;
+          if (context.seoKeywords) ragContextText += `\nEFFECTIVE SEO KEYWORDS:\n${context.seoKeywords}`;
+          if (context.performanceInsights) ragContextText += `\nCONTENT PERFORMANCE INSIGHTS:\n${context.performanceInsights}`;
+          
+          enhancedInput = {
+            ...input,
+            brandDescription: `${input.brandDescription}${ragContextText}`
+          };
+          
+          console.log(`[RAG] Enhanced blog content prompt with ${insights.length} insights`);
+        }
+      } catch (error) {
+        console.log(`[RAG] Failed to enhance prompt, using original:`, error);
+      }
+    }
+
     const { powerfulModel } = await getModelConfig();
     
     const {output} = await generateBlogContentPrompt({
-      brandName: input.brandName,
-      brandDescription: input.brandDescription,
-      industry: input.industry,
-      keywords: input.keywords,
-      targetPlatform: input.targetPlatform,
-      websiteUrl: input.websiteUrl,
-      blogOutline: input.blogOutline,
-      blogTone: input.blogTone,
-      articleStyle: input.articleStyle,
-      targetAudience: input.targetAudience,
+      brandName: enhancedInput.brandName,
+      brandDescription: enhancedInput.brandDescription,
+      industry: enhancedInput.industry,
+      keywords: enhancedInput.keywords,
+      targetPlatform: enhancedInput.targetPlatform,
+      websiteUrl: enhancedInput.websiteUrl,
+      blogOutline: enhancedInput.blogOutline,
+      blogTone: enhancedInput.blogTone,
+      articleStyle: enhancedInput.articleStyle,
+      targetAudience: enhancedInput.targetAudience,
       websiteContent: websiteContent,
       extractionError: extractionError,
     }, { model: powerfulModel });
@@ -141,6 +193,44 @@ const generateBlogContentFlow = ai.defineFlow(
     if (!output) {
         throw new Error("AI failed to generate blog content.");
     }
-    return output;
+    
+    // 🔥 RAG ENHANCEMENT: Store successful generation for future RAG
+    if (userId && output) {
+      try {
+        const contentId = `blog_${Date.now()}`;
+        await storeContentForRAG(
+          userId,
+          'blog_post',
+          contentId,
+          {
+            prompt: `Blog: ${output.title}`,
+            result: `${output.title}\n\n${output.content.substring(0, 500)}...`,
+            style: input.blogTone,
+            metadata: {
+              platform: input.targetPlatform,
+              articleStyle: input.articleStyle,
+              targetAudience: input.targetAudience,
+              industry: input.industry,
+              wasRAGEnhanced,
+              ragInsights: ragInsights.length > 0 ? ragInsights : undefined
+            }
+          }
+        );
+        console.log(`[RAG] Stored blog content generation for future context`);
+      } catch (error) {
+        console.log(`[RAG] Failed to store content for RAG:`, error);
+      }
+    }
+    
+    // Add RAG metadata to output for UI components
+    return {
+      ...output,
+      _ragMetadata: {
+        wasRAGEnhanced,
+        ragInsights,
+        contentId: `blog_${Date.now()}`,
+        userId
+      }
+    };
   }
 );

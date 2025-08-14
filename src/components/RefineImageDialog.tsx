@@ -8,10 +8,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Wand2, Sparkles, X, Check, RefreshCcw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { handleEditImageAction, handleEnhanceRefinePromptAction } from '@/lib/actions';
+import { handleEditImageAction, handleEnhanceRefinePromptAction, getPaymentMode } from '@/lib/actions';
 import type { FormState } from '@/lib/actions';
 import type { EditImageOutput, EnhanceRefinePromptOutput } from '@/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -41,6 +42,12 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
   const [refinementHistory, setRefinementHistory] = useState<string[]>([]);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
   
+  // Fireworks AI state
+  const [fireworksEnabled, setFireworksEnabled] = useState(false);
+  const [fireworksSDXLTurboEnabled, setFireworksSDXLTurboEnabled] = useState(false);
+  const [fireworksSDXL3Enabled, setFireworksSDXL3Enabled] = useState(false);
+  const [qualityMode, setQualityMode] = useState<'fast' | 'balanced' | 'premium'>('balanced');
+  
   const isProcessing = isEditing || isEnhancing;
 
   useEffect(() => {
@@ -54,6 +61,25 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
       setInstruction('');
     }
   }, [imageToRefine, isOpen]);
+
+  // Fetch Fireworks configuration when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      async function fetchConfig() {
+        try {
+          const result = await getPaymentMode();
+          if (!result.error) {
+            setFireworksEnabled(result.fireworksEnabled || false);
+            setFireworksSDXLTurboEnabled(result.fireworksSDXLTurboEnabled || false);
+            setFireworksSDXL3Enabled(result.fireworksSDXL3Enabled || false);
+          }
+        } catch (error) {
+          console.error('Failed to fetch Fireworks config:', error);
+        }
+      }
+      fetchConfig();
+    }
+  }, [isOpen]);
 
 
   useEffect(() => {
@@ -104,8 +130,13 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
     const formData = new FormData();
     formData.append("userId", userId || "");
     // Pass the URL directly to the server action
-    formData.append("imageDataUri", currentImage); 
+    formData.append("imageDataUri", currentImage);
     formData.append("instruction", instruction);
+    
+    // Add quality mode if Fireworks is enabled
+    if (fireworksEnabled && (fireworksSDXLTurboEnabled || fireworksSDXL3Enabled)) {
+      formData.append("qualityMode", qualityMode);
+    }
     
     startTransition(() => editAction(formData));
   };
@@ -175,6 +206,43 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
                   </Button>
                 </div>
               </div>
+
+              {/* Fireworks AI Quality Mode Selector */}
+              {fireworksEnabled && (fireworksSDXLTurboEnabled || fireworksSDXL3Enabled) && (
+                <div>
+                  <Label htmlFor="quality-mode" className="text-base font-medium">Image Quality</Label>
+                  <p className="text-sm text-muted-foreground mb-2">Choose the quality level for your refinement.</p>
+                  <Select value={qualityMode} onValueChange={(value: 'fast' | 'balanced' | 'premium') => setQualityMode(value)} disabled={isProcessing}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select quality mode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {fireworksSDXLTurboEnabled && (
+                        <SelectItem value="fast">
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">Fast Preview</span>
+                            <span className="text-xs text-muted-foreground">SDXL Turbo • 2-3 seconds</span>
+                          </div>
+                        </SelectItem>
+                      )}
+                      <SelectItem value="balanced">
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium">Standard Quality</span>
+                          <span className="text-xs text-muted-foreground">Current models • 5-8 seconds</span>
+                        </div>
+                      </SelectItem>
+                      {fireworksSDXL3Enabled && (
+                        <SelectItem value="premium">
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">Premium Quality</span>
+                            <span className="text-xs text-muted-foreground">SDXL 3 • 8-12 seconds</span>
+                          </div>
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <Button type="submit" className="w-full text-base py-3" disabled={isProcessing || !instruction}>
                  {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
                  {isProcessing ? 'Generating...' : 'Generate Refinement'}

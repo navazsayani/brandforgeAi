@@ -24,7 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download, Library, Star, Lock, Sparkles as SparklesIcon, ChevronRight, Target, Users, Check } from 'lucide-react';
 import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, handlePopulateImageFormAction, handlePopulateSocialFormAction, handlePopulateBlogFormAction, getPaymentMode, handleGetPlansConfigAction, handleEditImageAction, handleEnhanceRefinePromptAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
-import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage, PlansConfig } from '@/types';
+import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage, PlansConfig, LastImageGenerationResult } from '@/types';
 import type { DescribeImageOutput } from "@/ai/flows/describe-image-flow";
 import type { GenerateBlogOutlineOutput } from "@/ai/flows/generate-blog-outline-flow";
 import type { GenerateImagesInput } from '@/ai/flows/generate-images';
@@ -39,6 +39,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import SocialMediaPreviews from '@/components/SocialMediaPreviews';
 import { RefineImageDialog } from '@/components/RefineImageDialog';
 import { Badge } from '@/components/ui/badge';
+import { FireworksImageControls } from '@/components/FireworksImageControls';
+import { ContentFeedbackWidget, RAGInsightsBadge, createRAGInsights } from '@/components/feedback';
 
 
 /**
@@ -218,9 +220,9 @@ const ImageGridItem = ({
   );
 };
 
-const initialImageFormState: FormState<{ generatedImages: string[]; promptUsed: string; providerUsed: string; }>= { error: undefined, data: undefined, message: undefined };
-const initialSocialFormState: FormState<{ caption: string; hashtags: string; imageSrc: string | null }> = { error: undefined, data: undefined, message: undefined };
-const initialBlogFormState: FormState<{ title: string; content: string; tags: string }> = { error: undefined, data: undefined, message: undefined };
+const initialImageFormState: FormState<{ generatedImages: string[]; promptUsed: string; providerUsed: string; ragMetadata?: any }>= { error: undefined, data: undefined, message: undefined };
+const initialSocialFormState: FormState<{ caption: string; hashtags: string; imageSrc: string | null; ragMetadata?: any }> = { error: undefined, data: undefined, message: undefined };
+const initialBlogFormState: FormState<{ title: string; content: string; tags: string; ragMetadata?: any }> = { error: undefined, data: undefined, message: undefined };
 const initialDescribeImageState: FormState<DescribeImageOutput> = { error: undefined, data: undefined, message: undefined };
 const initialBlogOutlineState: FormState<GenerateBlogOutlineOutput> = { error: undefined, data: undefined, message: undefined };
 const initialSaveImagesState: FormState<{savedCount: number}> = { error: undefined, data: undefined, message: undefined };
@@ -305,7 +307,7 @@ export default function ContentStudioPage() {
   const [selectedLibraryImageIndexForSocial, setSelectedLibraryImageIndexForSocial] = useState<number | null>(null);
 
 
-  const [selectedImageProvider, setSelectedImageProvider] = useState<GenerateImagesInput['provider']>('GEMINI');
+  const [selectedImageProvider, setSelectedImageProvider] = useState<GenerateImagesInput['provider']>('AUTO');
   const [imageGenBrandDescription, setImageGenBrandDescription] = useState<string>("");
   const [selectedImageStylePreset, setSelectedImageStylePreset] = useState<string>(imageStylePresets[0].value);
   const [customStyleNotesInput, setCustomStyleNotesInput] = useState<string>("");
@@ -358,6 +360,23 @@ export default function ContentStudioPage() {
   
   // State for config fetched from server
   const [freepikEnabled, setFreepikEnabled] = useState(false);
+  const [fireworksEnabled, setFireworksEnabled] = useState(false);
+  const [fireworksSDXLTurboEnabled, setFireworksSDXLTurboEnabled] = useState(false);
+  const [fireworksSDXL3Enabled, setFireworksSDXL3Enabled] = useState(false);
+  const [intelligentModelSelection, setIntelligentModelSelection] = useState(false);
+  const [showAdvancedImageControls, setShowAdvancedImageControls] = useState(false);
+
+  // State for Fireworks AI controls
+  const [fireworksQualityMode, setFireworksQualityMode] = useState<'fast' | 'balanced' | 'premium'>('balanced');
+  const [fireworksAdvancedSettings, setFireworksAdvancedSettings] = useState({
+    fireworksImg2ImgStrength: 0.8,
+    fireworksGuidanceScale: 7.5,
+    fireworksNumInferenceSteps: 20,
+    fireworksControlNet: {
+      type: 'canny' as 'canny' | 'depth' | 'openpose' | 'scribble' | 'seg',
+      conditioning_scale: 1.0
+    }
+  });
 
   // State for image refinement
   const [refineModalOpen, setRefineModalOpen] = useState(false);
@@ -388,6 +407,11 @@ export default function ContentStudioPage() {
         toast({ title: "Config Error", description: result.error, variant: "destructive" });
       } else {
         setFreepikEnabled(result.freepikEnabled || false);
+        setFireworksEnabled(result.fireworksEnabled || false);
+        setFireworksSDXLTurboEnabled(result.fireworksSDXLTurboEnabled || false);
+        setFireworksSDXL3Enabled(result.fireworksSDXL3Enabled || false);
+        setIntelligentModelSelection(result.intelligentModelSelection || false);
+        setShowAdvancedImageControls(result.showAdvancedImageControls || false);
       }
     }
     fetchConfig();
@@ -395,6 +419,7 @@ export default function ContentStudioPage() {
   }, [toast]);
   
   const imageGenerationProviders = useMemo(() => [
+    { value: "AUTO", label: "AUTO (Intelligent Selection)", disabled: false, premium: false },
     { value: "GEMINI", label: "Gemini (Google AI)", disabled: false, premium: false },
     { value: "FREEPIK", label: "Freepik API (imagen3)", premium: true, disabled: !freepikEnabled },
   ], [freepikEnabled]);
@@ -465,8 +490,8 @@ export default function ContentStudioPage() {
         setImageGenBrandDescription("");
         setSelectedBlogIndustry("_none_");
         setCustomStyleNotesInput("");
-        setNumberOfImagesToGenerate("1"); 
-        if (!isAdmin) setSelectedImageProvider('GEMINI'); 
+        setNumberOfImagesToGenerate("1");
+        if (!isAdmin) setSelectedImageProvider('AUTO');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brandData, useImageForSocialPost, socialImageChoice, sessionLastImageGenerationResult, savedLibraryImages]);
@@ -513,9 +538,20 @@ export default function ContentStudioPage() {
       setIsAdmin(true);
     } else {
       setIsAdmin(false);
-      setSelectedImageProvider("GEMINI"); // Ensure non-admins default to GEMINI
+      setSelectedImageProvider("AUTO"); // Ensure non-admins default to AUTO (intelligent selection)
     }
   }, [currentUser]);
+
+  // Dynamic provider selection based on Fireworks settings
+  useEffect(() => {
+    if (fireworksEnabled) {
+      // When Fireworks is enabled, default to AUTO for intelligent selection
+      setSelectedImageProvider('AUTO');
+    } else {
+      // When Fireworks is disabled, fall back to GEMINI
+      setSelectedImageProvider('GEMINI');
+    }
+  }, [fireworksEnabled]);
 
   useEffect(() => {
     if (selectedImageProvider === 'FREEPIK' && (isAdmin || isPremiumActive)) { 
@@ -1161,6 +1197,19 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                 formData.delete("freepikEffectFraming");
             }
         }
+
+        // Add Fireworks AI quality mode and advanced settings if enabled
+        if (fireworksEnabled && (fireworksSDXLTurboEnabled || fireworksSDXL3Enabled)) {
+            formData.append("qualityMode", fireworksQualityMode);
+            
+            if (showAdvancedImageControls) {
+                formData.append("fireworksImg2ImgStrength", fireworksAdvancedSettings.fireworksImg2ImgStrength.toString());
+                formData.append("fireworksGuidanceScale", fireworksAdvancedSettings.fireworksGuidanceScale.toString());
+                formData.append("fireworksNumInferenceSteps", fireworksAdvancedSettings.fireworksNumInferenceSteps.toString());
+                formData.append("fireworksControlNetType", fireworksAdvancedSettings.fireworksControlNet.type);
+                formData.append("fireworksControlNetScale", fireworksAdvancedSettings.fireworksControlNet.conditioning_scale.toString());
+            }
+        }
                 
         imageAction(formData);
     });
@@ -1359,6 +1408,21 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     });
   };
 
+  const handleFireworksAdvancedSettingsChange = (settings: {
+    fireworksImg2ImgStrength?: number;
+    fireworksGuidanceScale?: number;
+    fireworksNumInferenceSteps?: number;
+    fireworksControlNet?: {
+      type: 'canny' | 'depth' | 'openpose' | 'scribble' | 'seg';
+      conditioning_scale: number;
+    };
+  }) => {
+    setFireworksAdvancedSettings(prev => ({
+      ...prev,
+      ...settings
+    }));
+  };
+
   return (
     <div className="w-full">
       <div className="px-0 mb-6">
@@ -1476,7 +1540,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                   {(isAdmin || (isPremiumActive && freepikEnabled)) && (
                     <div>
                       <Label htmlFor="imageGenProviderSelect" className="flex items-center mb-1"><Server className="w-4 h-4 mr-2 text-primary" />Image Generation Provider</Label>
-                      <Select name="provider" value={selectedImageProvider || 'GEMINI'} onValueChange={(value) => setSelectedImageProvider(value as GenerateImagesInput['provider'])}>
+                      <Select name="provider" value={selectedImageProvider || 'AUTO'} onValueChange={(value) => setSelectedImageProvider(value as GenerateImagesInput['provider'])}>
                           <SelectTrigger id="imageGenProviderSelect">
                               <SelectValue placeholder="Select image generation provider" />
                           </SelectTrigger>
@@ -1746,6 +1810,18 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                         {(selectedImageProvider === 'FREEPIK' && (isAdmin || isPremiumActive)) ? "Seed is ignored for Freepik/Imagen3 UI integration." : "Seed might not be strictly enforced by all models."}
                       </p>
                   </div>
+
+                  {/* Fireworks AI Controls */}
+                  {fireworksEnabled && (fireworksSDXLTurboEnabled || fireworksSDXL3Enabled) && (
+                    <div className="pt-4 mt-4 border-t">
+                      <FireworksImageControls
+                        onQualityModeChange={setFireworksQualityMode}
+                        onAdvancedSettingsChange={handleFireworksAdvancedSettingsChange}
+                        showAdvancedControls={showAdvancedImageControls}
+                        qualityMode={fireworksQualityMode}
+                      />
+                    </div>
+                  )}
                 </CardContent>
                 <CardFooter>
                   {isAdmin ? (
@@ -1753,8 +1829,8 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                         <Eye className="mr-2 h-4 w-4" /> Preview Prompt
                     </Button>
                   ) : (
-                    <SubmitButton 
-                        className="w-full" 
+                    <SubmitButton
+                        className="w-full"
                         loadingText={parseInt(numberOfImagesToGenerate,10) > 1 ? "Generating Images..." : "Generating Image..."}
                         type="submit"
                         disabled={isClearing}
@@ -1825,6 +1901,29 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                     >
                       <ImageUp className="mr-2 h-4 w-4" /> Use First Image for Social Post
                     </Button>
+
+                    {/* Content Feedback Widget for Image Generation */}
+                    {userId && (
+                      <ContentFeedbackWidget
+                        contentId={`image-gen-${sessionLastImageGenerationResult?.promptUsed?.slice(0, 20) || Date.now()}`}
+                        contentType="image"
+                        userId={userId}
+                        ragContext={{
+                          wasRAGEnhanced: !!sessionLastImageGenerationResult?.ragMetadata,
+                          ragContextUsed: sessionLastImageGenerationResult?.ragMetadata ? [
+                            sessionLastImageGenerationResult.ragMetadata.brandPatterns,
+                            sessionLastImageGenerationResult.ragMetadata.successfulStyles,
+                            sessionLastImageGenerationResult.ragMetadata.performanceInsights
+                          ].filter((item): item is string => Boolean(item)) : undefined,
+                          insights: sessionLastImageGenerationResult?.ragMetadata ? createRAGInsights({
+                            brandPatterns: sessionLastImageGenerationResult.ragMetadata.brandPatterns,
+                            successfulStyles: sessionLastImageGenerationResult.ragMetadata.successfulStyles,
+                            performanceInsights: sessionLastImageGenerationResult.ragMetadata.performanceInsights
+                          }) : undefined
+                        }}
+                        className="mt-4"
+                      />
+                    )}
                   </CardContent>
               </Card>
             )}
@@ -2128,6 +2227,19 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                       </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                      {/* RAG Insights Badge for Social Media */}
+                      {(socialState.data as any)?.ragMetadata && (
+                        <RAGInsightsBadge
+                          insights={createRAGInsights({
+                            brandPatterns: (socialState.data as any).ragMetadata.brandPatterns,
+                            voicePatterns: (socialState.data as any).ragMetadata.voicePatterns,
+                            effectiveHashtags: (socialState.data as any).ragMetadata.effectiveHashtags,
+                            performanceInsights: (socialState.data as any).ragMetadata.performanceInsights
+                          })}
+                          className="mb-4"
+                        />
+                      )}
+
                       <p className="text-sm text-muted-foreground">
                         Image and text ready! Download the image (if applicable) and copy the caption/hashtags to post on Instagram.
                       </p>
@@ -2183,6 +2295,31 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                           brandLogoUrl={brandData?.brandLogoUrl}
                         />
                       </div>
+
+                      {/* Content Feedback Widget for Social Media */}
+                      {userId && (
+                        <ContentFeedbackWidget
+                          contentId={`social-${generatedSocialPost.caption?.slice(0, 20) || Date.now()}`}
+                          contentType="social_media"
+                          userId={userId}
+                          ragContext={{
+                            wasRAGEnhanced: !!(socialState.data as any)?.ragMetadata,
+                            ragContextUsed: (socialState.data as any)?.ragMetadata ? [
+                              (socialState.data as any).ragMetadata.brandPatterns,
+                              (socialState.data as any).ragMetadata.voicePatterns,
+                              (socialState.data as any).ragMetadata.effectiveHashtags,
+                              (socialState.data as any).ragMetadata.performanceInsights
+                            ].filter(Boolean) : undefined,
+                            insights: (socialState.data as any)?.ragMetadata ? createRAGInsights({
+                              brandPatterns: (socialState.data as any).ragMetadata.brandPatterns,
+                              voicePatterns: (socialState.data as any).ragMetadata.voicePatterns,
+                              effectiveHashtags: (socialState.data as any).ragMetadata.effectiveHashtags,
+                              performanceInsights: (socialState.data as any).ragMetadata.performanceInsights
+                            }) : undefined
+                          }}
+                          className="mt-4"
+                        />
+                      )}
                   </CardContent>
                 </Card>
             )}
@@ -2426,6 +2563,19 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                       )}
                   </CardHeader>
                   <CardContent className="space-y-4">
+                      {/* RAG Insights Badge for Blog Content */}
+                      {(blogState.data as any)?.ragMetadata && (
+                        <RAGInsightsBadge
+                          insights={createRAGInsights({
+                            brandPatterns: (blogState.data as any).ragMetadata.brandPatterns,
+                            voicePatterns: (blogState.data as any).ragMetadata.voicePatterns,
+                            successfulStyles: (blogState.data as any).ragMetadata.successfulStyles,
+                            performanceInsights: (blogState.data as any).ragMetadata.performanceInsights
+                          })}
+                          className="mb-4"
+                        />
+                      )}
+
                       <div>
                           <Label htmlFor="generatedBlogTitle" className="text-sm font-medium mb-1 text-muted-foreground">Generated Title:</Label>
                           <div className="p-3 border rounded-md bg-muted/50">
@@ -2455,6 +2605,31 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                               <Copy className="w-3 h-3 mr-1" /> Copy Tags
                           </Button>
                       </div>
+
+                      {/* Content Feedback Widget for Blog Content */}
+                      {userId && (
+                        <ContentFeedbackWidget
+                          contentId={`blog-${generatedBlogPost?.title?.slice(0, 20) || Date.now()}`}
+                          contentType="blog_post"
+                          userId={userId}
+                          ragContext={{
+                            wasRAGEnhanced: !!(blogState.data as any)?.ragMetadata,
+                            ragContextUsed: (blogState.data as any)?.ragMetadata ? [
+                              (blogState.data as any).ragMetadata.brandPatterns,
+                              (blogState.data as any).ragMetadata.voicePatterns,
+                              (blogState.data as any).ragMetadata.successfulStyles,
+                              (blogState.data as any).ragMetadata.performanceInsights
+                            ].filter(Boolean) : undefined,
+                            insights: (blogState.data as any)?.ragMetadata ? createRAGInsights({
+                              brandPatterns: (blogState.data as any).ragMetadata.brandPatterns,
+                              voicePatterns: (blogState.data as any).ragMetadata.voicePatterns,
+                              successfulStyles: (blogState.data as any).ragMetadata.successfulStyles,
+                              performanceInsights: (blogState.data as any).ragMetadata.performanceInsights
+                            }) : undefined
+                          }}
+                          className="mt-4"
+                        />
+                      )}
                   </CardContent>
                 </Card>
             )}

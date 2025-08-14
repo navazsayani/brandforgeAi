@@ -9,9 +9,10 @@ import { getModelConfig } from '@/lib/model-config';
 import { GoogleGenAI } from "@google/genai";
 import { decodeHtmlEntitiesInUrl, verifyImageUrlExists } from '@/lib/utils';
 import { generateImageWithFireworks, getFireworksDimensions, preprocessControlNetImage } from '@/lib/fireworks-client';
+import { enhanceImageGenerationPrompt, storeContentForRAG, getAdaptiveRAGContext } from '@/lib/rag-integration';
 
 const GenerateImagesInputSchema = z.object({
-  provider: z.enum(['GEMINI', 'FREEPIK', 'LEONARDO_AI', 'IMAGEN', 'FIREWORKS_SDXL_TURBO', 'FIREWORKS_SDXL_3']).optional().describe("The image generation provider to use."),
+  provider: z.enum(['AUTO', 'GEMINI', 'FREEPIK', 'LEONARDO_AI', 'IMAGEN', 'FIREWORKS_SDXL_TURBO', 'FIREWORKS_SDXL_3']).optional().describe("The image generation provider to use. AUTO enables intelligent selection based on quality modes."),
   brandDescription: z
     .string()
     .describe('A detailed description of the brand and its values. This will be used for subtle thematic influence on the new item.'),
@@ -324,15 +325,33 @@ async function _generateImageWithFireworks(params: {
   fireworksGuidanceScale?: number;
   fireworksScheduler?: string;
   fireworksNumInferenceSteps?: number;
-}): Promise<string[]> {
+}): Promise<{ images: string[]; actualModelUsed: string }> {
   console.log(`[Fireworks] Starting generation with model: ${params.model}`);
   console.log(`[Fireworks] Prompt: ${params.textPrompt.substring(0, 100)}...`);
   
   // Get dimensions based on aspect ratio
   const dimensions = getFireworksDimensions(params.aspectRatio);
   
-  // Map model names to Fireworks API model names
-  const modelName = params.model === 'sdxl-turbo' ? 'sdxl-turbo' : 'stable-diffusion-xl-1024-v1-0';
+  // Get admin-configurable model names with fallback
+  const config = await getModelConfig();
+  let modelName: string;
+  let actualModelUsed: string;
+  
+  if (params.model === 'sdxl-turbo') {
+    modelName = config.fireworksSDXLTurboModel || '';
+    if (!modelName.trim()) {
+      throw new Error('SDXL Turbo model name not configured by administrator');
+    }
+    actualModelUsed = `SDXL Turbo (${modelName})`;
+  } else {
+    modelName = config.fireworksSDXL3Model || '';
+    if (!modelName.trim()) {
+      throw new Error('SDXL 3 model name not configured by administrator');
+    }
+    actualModelUsed = `SDXL 3 (${modelName})`;
+  }
+  
+  console.log(`[Fireworks] Using admin-configured model name: ${modelName}`);
   
   // Prepare base64 image for img2img if example image is provided
   let base64Image: string | undefined;
@@ -390,7 +409,7 @@ async function _generateImageWithFireworks(params: {
   });
   
   console.log(`[Fireworks] Successfully generated ${results.length} image(s)`);
-  return results;
+  return { images: results, actualModelUsed };
 }
 
 // Intelligent model selection function
@@ -399,46 +418,118 @@ async function selectOptimalModel(context: {
   hasExampleImage: boolean;
   numberOfImages: number;
   userIntent?: 'preview' | 'iteration' | 'final' | 'editing';
+  hasAdvancedControls?: boolean; // ControlNet or img2img parameters
 }): Promise<string> {
   const config = await getModelConfig();
   
+  console.log(`[Intelligent Selection] DEBUG - Config check:`, {
+    fireworksEnabled: config.fireworksEnabled,
+    intelligentModelSelection: config.intelligentModelSelection,
+    fireworksSDXLTurboEnabled: config.fireworksSDXLTurboEnabled,
+    fireworksSDXL3Enabled: config.fireworksSDXL3Enabled,
+    fireworksSDXLTurboModel: config.fireworksSDXLTurboModel,
+    fireworksSDXL3Model: config.fireworksSDXL3Model,
+    qualityMode: context.qualityMode
+  });
+  
   // If Fireworks is not enabled, use existing logic
   if (!config.fireworksEnabled || !config.intelligentModelSelection) {
+    console.log(`[Intelligent Selection] Fireworks disabled or intelligent selection disabled - using Gemini`);
     return 'GEMINI';
   }
   
-  // Fast mode: Use SDXL Turbo if available
-  if (context.qualityMode === 'fast' && config.fireworksSDXLTurboEnabled) {
+  // Check if model names are configured, fallback to Gemini if not
+  const hasTurboModel = config.fireworksSDXLTurboEnabled && config.fireworksSDXLTurboModel?.trim();
+  const hasSDXL3Model = config.fireworksSDXL3Enabled && config.fireworksSDXL3Model?.trim();
+  
+  console.log(`[Intelligent Selection] Model availability:`, {
+    hasTurboModel,
+    hasSDXL3Model,
+    turboModelName: config.fireworksSDXLTurboModel,
+    sdxl3ModelName: config.fireworksSDXL3Model
+  });
+  
+  // CRITICAL: Advanced controls (ControlNet, img2img) require Fireworks - Gemini doesn't support them
+  if (context.hasAdvancedControls) {
+    if (context.qualityMode === 'fast' && hasTurboModel) {
+      console.log(`[Intelligent Selection] Advanced controls + fast mode: Using SDXL Turbo (required for advanced features)`);
+      return 'FIREWORKS_SDXL_TURBO';
+    }
+    if (hasSDXL3Model) {
+      console.log(`[Intelligent Selection] Advanced controls detected: Using SDXL 3 (required for ControlNet/img2img)`);
+      return 'FIREWORKS_SDXL_3';
+    }
+    if (hasTurboModel) {
+      console.log(`[Intelligent Selection] Advanced controls detected: Using SDXL Turbo (SDXL 3 not available)`);
+      return 'FIREWORKS_SDXL_TURBO';
+    }
+    // If no Fireworks models available but advanced controls requested, throw error
+    throw new Error('Advanced controls (ControlNet, img2img) require Fireworks AI models, but no Fireworks models are configured or enabled by administrator');
+  }
+  
+  // Premium mode: Always prefer SDXL 3 if available (highest quality)
+  if (context.qualityMode === 'premium' && hasSDXL3Model) {
+    console.log(`[Intelligent Selection] Premium mode: Using SDXL 3 for maximum quality`);
+    return 'FIREWORKS_SDXL_3';
+  }
+  
+  // Fast mode: Always prefer SDXL Turbo if available (fastest generation)
+  if (context.qualityMode === 'fast' && hasTurboModel) {
+    console.log(`[Intelligent Selection] Fast mode: Using SDXL Turbo for speed`);
     return 'FIREWORKS_SDXL_TURBO';
   }
   
-  // Premium mode: Use SDXL 3 if available
-  if (context.qualityMode === 'premium' && config.fireworksSDXL3Enabled) {
+  // Multimodal task differentiation (when example image is provided)
+  if (context.hasExampleImage) {
+    // For balanced mode with example images, use Gemini's multimodal understanding
+    if (context.qualityMode === 'balanced') {
+      console.log(`[Intelligent Selection] Balanced mode + example image: Using Gemini for multimodal understanding`);
+      return 'GEMINI';
+    }
+    // If premium/fast modes didn't match above, fall through to other logic
+  }
+  
+  // Final assets: Prefer quality
+  if (context.userIntent === 'final' && hasSDXL3Model) {
+    console.log(`[Intelligent Selection] Final intent: Using SDXL 3 for quality`);
     return 'FIREWORKS_SDXL_3';
   }
   
   // Preview/iteration: Prefer speed
-  if ((context.userIntent === 'preview' || context.userIntent === 'iteration') && config.fireworksSDXLTurboEnabled) {
+  if ((context.userIntent === 'preview' || context.userIntent === 'iteration') && hasTurboModel) {
+    console.log(`[Intelligent Selection] Preview/iteration intent: Using SDXL Turbo for speed`);
     return 'FIREWORKS_SDXL_TURBO';
-  }
-  
-  // Final assets: Prefer quality
-  if (context.userIntent === 'final' && config.fireworksSDXL3Enabled) {
-    return 'FIREWORKS_SDXL_3';
   }
   
   // Batch generation: Prefer speed
-  if (context.numberOfImages > 2 && config.fireworksSDXLTurboEnabled) {
+  if (context.numberOfImages > 2 && hasTurboModel) {
+    console.log(`[Intelligent Selection] Batch generation (${context.numberOfImages} images): Using SDXL Turbo for speed`);
     return 'FIREWORKS_SDXL_TURBO';
   }
   
-  // Example image: Gemini has good multimodal understanding
-  if (context.hasExampleImage) {
-    return 'GEMINI';
-  }
-  
-  // Default fallback
+  // Default fallback (balanced mode or when Fireworks models unavailable)
+  console.log(`[Intelligent Selection] Default fallback: Using Gemini`);
   return 'GEMINI';
+}
+
+// Helper function to convert provider names to user-friendly display names
+function getProviderDisplayName(provider: string, actualModelUsed?: string): string {
+  switch (provider.toUpperCase()) {
+    case 'FIREWORKS_SDXL_TURBO':
+      return actualModelUsed || 'SDXL Turbo';
+    case 'FIREWORKS_SDXL_3':
+      return actualModelUsed || 'SDXL 3';
+    case 'GEMINI':
+      return 'Gemini';
+    case 'FREEPIK':
+      return 'Freepik (Imagen3)';
+    case 'IMAGEN':
+      return 'Imagen';
+    case 'LEONARDO_AI':
+      return 'Leonardo AI';
+    default:
+      return provider;
+  }
 }
 
 // For Freepik/Imagen3 provider
@@ -604,25 +695,65 @@ const generateImagesFlow = ai.defineFlow(
 
     const { imageGenerationModel, textToImageModel, fireworksEnabled, intelligentModelSelection } = await getModelConfig();
     
-    // Intelligent model selection if enabled and no provider specified
-    let chosenProvider = input.provider || process.env.IMAGE_GENERATION_PROVIDER || 'GEMINI';
+    // 🔥 RAG ENHANCEMENT: Get user ID from input (will be passed from actions)
+    const userId = (input as any).userId;
     
-    if (!input.provider && fireworksEnabled && intelligentModelSelection) {
-      console.log(`[Intelligent Selection] Analyzing context for optimal model selection`);
+    // Determine the default provider based on Fireworks availability
+    const getDefaultProvider = (): string => {
+      if (fireworksEnabled && intelligentModelSelection) {
+        return 'AUTO'; // Default to AUTO when Fireworks is enabled
+      }
+      return process.env.IMAGE_GENERATION_PROVIDER || 'GEMINI'; // Fallback to Gemini when Fireworks is disabled
+    };
+    
+    // Get the chosen provider, defaulting intelligently based on admin settings
+    let chosenProvider = input.provider || getDefaultProvider();
+    
+    // Handle AUTO provider selection with intelligent model selection
+    if (chosenProvider === 'AUTO' || (!input.provider && fireworksEnabled && intelligentModelSelection)) {
+      console.log(`[Intelligent Selection] AUTO provider selected - analyzing context for optimal model selection`);
+      
+      // Detect if advanced controls are being used
+      const hasAdvancedControls = !!(fireworksControlNet || (exampleImage && fireworksImg2ImgStrength !== undefined));
+      
       const optimalProvider = await selectOptimalModel({
         qualityMode,
         hasExampleImage: !!exampleImage,
         numberOfImages,
-        userIntent: finalizedTextPrompt ? 'final' : 'iteration'
+        userIntent: finalizedTextPrompt ? 'final' : 'iteration',
+        hasAdvancedControls
       });
       chosenProvider = optimalProvider;
-      console.log(`[Intelligent Selection] Selected provider: ${chosenProvider} based on context`);
+      console.log(`[Intelligent Selection] AUTO mode selected provider: ${chosenProvider} based on context (advanced controls: ${hasAdvancedControls})`);
+    } else if (chosenProvider === 'AUTO') {
+      // AUTO selected but intelligent selection is disabled - fallback to Gemini
+      console.log(`[Intelligent Selection] AUTO selected but intelligent selection disabled - falling back to Gemini`);
+      chosenProvider = 'GEMINI';
+    }
+    
+    // Validate that advanced controls are not used with Gemini (which doesn't support them)
+    if (chosenProvider.toUpperCase() === 'GEMINI') {
+      if (fireworksControlNet) {
+        throw new Error('ControlNet is not supported with Gemini provider. Please select a Fireworks AI model (SDXL Turbo or SDXL 3) or disable ControlNet.');
+      }
+      if (exampleImage && fireworksImg2ImgStrength !== undefined) {
+        throw new Error('Advanced img2img controls are not supported with Gemini provider. Please select a Fireworks AI model (SDXL Turbo or SDXL 3) or use standard image generation.');
+      }
+      if (fireworksGuidanceScale !== undefined || fireworksScheduler || fireworksNumInferenceSteps !== undefined) {
+        console.warn('[Validation] Fireworks-specific parameters (guidance scale, scheduler, inference steps) will be ignored when using Gemini provider.');
+      }
     }
     
     console.log(`Image generation flow started. Chosen provider: ${chosenProvider}, Number of images: ${numberOfImages}`);
 
     const generatedImageResults: string[] = [];
-    let actualPromptUsedForFirstImage = ""; 
+    let actualPromptUsedForFirstImage = "";
+    let actualProviderUsed = chosenProvider; // Track the actual provider used (may change due to fallbacks)
+    let actualModelUsed: string | undefined; // Track the specific model used
+    
+    // 🔥 RAG ENHANCEMENT: Declare RAG variables at function level
+    let ragInsights: any[] = [];
+    let wasRAGEnhanced = false;
     const compositionGuidance = "IMPORTANT COMPOSITION RULE: When depicting human figures as the primary subject, the image *must* be well-composed. Avoid awkward or unintentional cropping of faces or key body parts. Ensure the figure is presented naturally and fully within the frame, unless the prompt *explicitly* requests a specific framing like 'close-up', 'headshot', 'upper body shot', or an artistic crop. Prioritize showing the entire subject if it's a person.";
 
     let industryLabel = "";
@@ -744,6 +875,42 @@ const generateImagesFlow = ai.defineFlow(
             if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
                 console.log(`Using finalized text prompt for image ${i+1}: "${finalizedTextPrompt.substring(0,100)}..." (Provider: ${chosenProvider})`);
                 textPromptContent = finalizedTextPrompt;
+                
+                // 🔥 RAG ENHANCEMENT: Enhance finalized prompt with adaptive RAG context
+                
+                if (userId) {
+                    try {
+                        const { context, insights } = await getAdaptiveRAGContext(
+                            userId,
+                            finalizedTextPrompt,
+                            {
+                                userId,
+                                contentType: 'saved_image',
+                                industry,
+                                minPerformance: 0.6,
+                                limit: 8,
+                                includeIndustryPatterns: true,
+                                timeframe: 'recent'
+                            }
+                        );
+                        
+                        ragInsights = insights;
+                        wasRAGEnhanced = insights.length > 0;
+                        
+                        if (wasRAGEnhanced) {
+                            let ragContextText = '';
+                            if (context.brandPatterns) ragContextText += `\n\nBRAND CONTEXT:\n${context.brandPatterns}`;
+                            if (context.successfulStyles) ragContextText += `\n\nPROVEN SUCCESSFUL STYLES:\n${context.successfulStyles}`;
+                            if (context.avoidPatterns) ragContextText += `\n\nAVOID PATTERNS:\n${context.avoidPatterns}`;
+                            if (context.performanceInsights) ragContextText += `\n\nPERFORMANCE INSIGHTS:\n${context.performanceInsights}`;
+                            
+                            textPromptContent += ragContextText;
+                            console.log(`[RAG] Enhanced finalized prompt with ${insights.length} insights`);
+                        }
+                    } catch (error) {
+                        console.log(`[RAG] Failed to enhance prompt, using original:`, error);
+                    }
+                }
                 
                 if (chosenProvider !== 'FREEPIK') { 
                     if (aspectRatio && !finalizedTextPrompt.toLowerCase().includes("aspect ratio")) {
@@ -886,6 +1053,42 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                 }
                 textPromptContent = `Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.\n\n${coreInstructions}`;
                 
+                // 🔥 RAG ENHANCEMENT: Enhance constructed prompt with adaptive RAG context
+                
+                if (userId) {
+                    try {
+                        const { context, insights } = await getAdaptiveRAGContext(
+                            userId,
+                            textPromptContent,
+                            {
+                                userId,
+                                contentType: 'saved_image',
+                                industry,
+                                minPerformance: 0.6,
+                                limit: 8,
+                                includeIndustryPatterns: true,
+                                timeframe: 'recent'
+                            }
+                        );
+                        
+                        ragInsights = insights;
+                        wasRAGEnhanced = insights.length > 0;
+                        
+                        if (wasRAGEnhanced) {
+                            let ragContextText = '';
+                            if (context.brandPatterns) ragContextText += `\n\nBRAND CONTEXT:\n${context.brandPatterns}`;
+                            if (context.successfulStyles) ragContextText += `\n\nPROVEN SUCCESSFUL STYLES:\n${context.successfulStyles}`;
+                            if (context.avoidPatterns) ragContextText += `\n\nAVOID PATTERNS:\n${context.avoidPatterns}`;
+                            if (context.performanceInsights) ragContextText += `\n\nPERFORMANCE INSIGHTS:\n${context.performanceInsights}`;
+                            
+                            textPromptContent += ragContextText;
+                            console.log(`[RAG] Enhanced constructed prompt with ${insights.length} insights`);
+                        }
+                    } catch (error) {
+                        console.log(`[RAG] Failed to enhance prompt, using original:`, error);
+                    }
+                }
+                
                 if (chosenProvider !== 'FREEPIK') { 
                   if (negativePrompt) {
                       textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
@@ -989,42 +1192,80 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                         if (!fireworksEnabled) {
                             throw new Error('Fireworks AI is not enabled by administrator');
                         }
-                        const turboResults = await _generateImageWithFireworks({
-                            model: 'sdxl-turbo',
-                            textPrompt: textPromptContent,
-                            exampleImage: exampleImage,
-                            aspectRatio: aspectRatio,
-                            numberOfImages: 1, // Handle individually in loop
-                            negativePrompt: negativePrompt,
-                            seed: seed,
-                            fireworksControlNet: fireworksControlNet,
-                            fireworksImg2ImgStrength: fireworksImg2ImgStrength,
-                            fireworksGuidanceScale: fireworksGuidanceScale || 1.0, // SDXL Turbo uses lower guidance
-                            fireworksScheduler: fireworksScheduler,
-                            fireworksNumInferenceSteps: fireworksNumInferenceSteps || 4 // SDXL Turbo is fast
-                        });
-                        resultValue = turboResults[0]; // Get first result from batch
+                        try {
+                            const turboResults = await _generateImageWithFireworks({
+                                model: 'sdxl-turbo',
+                                textPrompt: textPromptContent,
+                                exampleImage: exampleImage,
+                                aspectRatio: aspectRatio,
+                                numberOfImages: 1, // Handle individually in loop
+                                negativePrompt: negativePrompt,
+                                seed: seed,
+                                fireworksControlNet: fireworksControlNet,
+                                fireworksImg2ImgStrength: fireworksImg2ImgStrength,
+                                fireworksGuidanceScale: fireworksGuidanceScale || 1.0, // SDXL Turbo uses lower guidance
+                                fireworksScheduler: fireworksScheduler,
+                                fireworksNumInferenceSteps: fireworksNumInferenceSteps || 4 // SDXL Turbo is fast
+                            });
+                            resultValue = turboResults.images[0]; // Get first result from batch
+                            actualModelUsed = turboResults.actualModelUsed; // Track the actual model used
+                        } catch (fireworksError: any) {
+                            console.warn(`[Fallback] SDXL Turbo failed: ${fireworksError.message}. Falling back to Gemini.`);
+                            actualProviderUsed = 'GEMINI'; // Update the actual provider used
+                            actualModelUsed = 'Gemini (fallback from SDXL Turbo)'; // Track fallback
+                            const modelForGemini = exampleImage ? imageGenerationModel : textToImageModel;
+                            const finalPromptPartsForGemini: ({text: string} | {media: {url: string}})[] = [];
+                            if (exampleImage) {
+                                const decodedExampleImageUrl = decodeHtmlEntitiesInUrl(exampleImage);
+                                finalPromptPartsForGemini.push({ media: { url: decodedExampleImageUrl } });
+                            }
+                            finalPromptPartsForGemini.push({ text: textPromptContent });
+                            resultValue = await _generateImageWithGemini({
+                                aiInstance: ai,
+                                promptParts: finalPromptPartsForGemini,
+                                model: modelForGemini,
+                            });
+                        }
                         break;
                     case 'FIREWORKS_SDXL_3':
                         // Check if Fireworks is enabled
                         if (!fireworksEnabled) {
                             throw new Error('Fireworks AI is not enabled by administrator');
                         }
-                        const sdxl3Results = await _generateImageWithFireworks({
-                            model: 'sdxl-3',
-                            textPrompt: textPromptContent,
-                            exampleImage: exampleImage,
-                            aspectRatio: aspectRatio,
-                            numberOfImages: 1, // Handle individually in loop
-                            negativePrompt: negativePrompt,
-                            seed: seed,
-                            fireworksControlNet: fireworksControlNet,
-                            fireworksImg2ImgStrength: fireworksImg2ImgStrength,
-                            fireworksGuidanceScale: fireworksGuidanceScale || 7.5, // SDXL 3 uses higher guidance
-                            fireworksScheduler: fireworksScheduler,
-                            fireworksNumInferenceSteps: fireworksNumInferenceSteps || 20 // SDXL 3 uses more steps
-                        });
-                        resultValue = sdxl3Results[0]; // Get first result from batch
+                        try {
+                            const sdxl3Results = await _generateImageWithFireworks({
+                                model: 'sdxl-3',
+                                textPrompt: textPromptContent,
+                                exampleImage: exampleImage,
+                                aspectRatio: aspectRatio,
+                                numberOfImages: 1, // Handle individually in loop
+                                negativePrompt: negativePrompt,
+                                seed: seed,
+                                fireworksControlNet: fireworksControlNet,
+                                fireworksImg2ImgStrength: fireworksImg2ImgStrength,
+                                fireworksGuidanceScale: fireworksGuidanceScale || 7.5, // SDXL 3 uses higher guidance
+                                fireworksScheduler: fireworksScheduler,
+                                fireworksNumInferenceSteps: fireworksNumInferenceSteps || 20 // SDXL 3 uses more steps
+                            });
+                            resultValue = sdxl3Results.images[0]; // Get first result from batch
+                            actualModelUsed = sdxl3Results.actualModelUsed; // Track the actual model used
+                        } catch (fireworksError: any) {
+                            console.warn(`[Fallback] SDXL 3 failed: ${fireworksError.message}. Falling back to Gemini.`);
+                            actualProviderUsed = 'GEMINI'; // Update the actual provider used
+                            actualModelUsed = 'Gemini (fallback from SDXL 3)'; // Track fallback
+                            const modelForGemini = exampleImage ? imageGenerationModel : textToImageModel;
+                            const finalPromptPartsForGemini: ({text: string} | {media: {url: string}})[] = [];
+                            if (exampleImage) {
+                                const decodedExampleImageUrl = decodeHtmlEntitiesInUrl(exampleImage);
+                                finalPromptPartsForGemini.push({ media: { url: decodedExampleImageUrl } });
+                            }
+                            finalPromptPartsForGemini.push({ text: textPromptContent });
+                            resultValue = await _generateImageWithGemini({
+                                aiInstance: ai,
+                                promptParts: finalPromptPartsForGemini,
+                                model: modelForGemini,
+                            });
+                        }
                         break;
                     default:
                         throw new Error(`Unsupported image generation provider in loop: ${chosenProvider}`);
@@ -1033,6 +1274,33 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                 // Only push result if we have one (Imagen batch generation handles this differently)
                 if (resultValue) {
                     generatedImageResults.push(resultValue);
+                    
+                    // 🔥 RAG ENHANCEMENT: Store successful generation for future RAG
+                    if (userId && i === 0) { // Store only first image to avoid duplicates
+                        try {
+                            const contentId = `generated_${Date.now()}_${i}`;
+                            await storeContentForRAG(
+                                userId,
+                                'image',
+                                contentId,
+                                {
+                                    prompt: textPromptContent,
+                                    style: imageStyle,
+                                    metadata: {
+                                        provider: chosenProvider,
+                                        qualityMode,
+                                        industry,
+                                        aspectRatio,
+                                        wasRAGEnhanced: wasRAGEnhanced || false,
+                                        ragInsights: ragInsights && ragInsights.length > 0 ? ragInsights : undefined
+                                    }
+                                }
+                            );
+                            console.log(`[RAG] Stored generated image for future context`);
+                        } catch (error) {
+                            console.log(`[RAG] Failed to store content for RAG:`, error);
+                        }
+                    }
                 }
             } catch (error: any) {
                  console.error(`Error during generation of image ${i+1}/${numberOfImages} with provider ${chosenProvider}. Full error:`, JSON.stringify(error, Object.getOwnPropertyNames(error)));
@@ -1060,7 +1328,23 @@ Your mission is to create a compelling, brand-aligned visual asset that:
         actualPromptUsedForFirstImage = `Concept: "${brandDescription}". Add stylistic details: "${imageStyle}". (Error occurred before full prompt capture for batch)`;
     }
 
-    return {generatedImages: finalGeneratedImages, promptUsed: actualPromptUsedForFirstImage, providerUsed: chosenProvider };
+    // Use helper function to get user-friendly display name
+    const displayProviderName = getProviderDisplayName(actualProviderUsed, actualModelUsed);
+    
+    // Add RAG metadata to output for UI components
+    const result = {
+      generatedImages: finalGeneratedImages,
+      promptUsed: actualPromptUsedForFirstImage,
+      providerUsed: displayProviderName,
+      _ragMetadata: userId ? {
+        wasRAGEnhanced: (ragInsights && ragInsights.length > 0) || false,
+        ragInsights: ragInsights || [],
+        contentId: `generated_${Date.now()}`,
+        userId
+      } : undefined
+    };
+    
+    return result;
   }
 );
 
