@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Wand2, Sparkles, X, Check, RefreshCcw } from 'lucide-react';
+import { Loader2, Wand2, Sparkles, X, Check, RefreshCcw, Palette, Sun, Image as ImageIcon, Brush } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { handleEditImageAction, handleEnhanceRefinePromptAction, getPaymentMode } from '@/lib/actions';
@@ -20,6 +20,58 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const initialEditImageState: FormState<EditImageOutput> = { error: undefined, data: undefined };
 const initialEnhancePromptState: FormState<EnhanceRefinePromptOutput> = { error: undefined, data: undefined };
+
+// Instruction Templates
+const INSTRUCTION_TEMPLATES = {
+  lighting: {
+    icon: Sun,
+    label: "Lighting",
+    templates: [
+      "Make the image brighter and more vibrant",
+      "Add dramatic lighting with strong shadows",
+      "Create a golden hour warm lighting effect",
+      "Add soft, diffused lighting for a professional look",
+      "Increase contrast and make colors more vivid",
+      "Create moody, low-key lighting"
+    ]
+  },
+  background: {
+    icon: ImageIcon,
+    label: "Background",
+    templates: [
+      "Remove the background completely",
+      "Blur the background for depth of field",
+      "Change background to a professional studio setting",
+      "Replace background with a nature scene",
+      "Add a gradient background",
+      "Make the background pure white"
+    ]
+  },
+  style: {
+    icon: Brush,
+    label: "Style",
+    templates: [
+      "Convert to black and white with high contrast",
+      "Apply a vintage film photography style",
+      "Make it look like a watercolor painting",
+      "Add an oil painting artistic effect",
+      "Create a modern, minimalist style",
+      "Apply a cinematic color grading"
+    ]
+  },
+  colors: {
+    icon: Palette,
+    label: "Colors",
+    templates: [
+      "Enhance the colors to be more saturated",
+      "Make the image warmer with orange tones",
+      "Add cool blue tones throughout",
+      "Increase the vibrancy of specific colors",
+      "Create a monochromatic color scheme",
+      "Adjust colors for better skin tones"
+    ]
+  }
+};
 
 interface RefineImageDialogProps {
   isOpen: boolean;
@@ -42,6 +94,9 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
   const [refinementHistory, setRefinementHistory] = useState<string[]>([]);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
   
+  // Template selection state
+  const [selectedTemplateCategory, setSelectedTemplateCategory] = useState<string | null>(null);
+  
   // Fireworks AI state
   const [fireworksEnabled, setFireworksEnabled] = useState(false);
   const [fireworksSDXLTurboEnabled, setFireworksSDXLTurboEnabled] = useState(false);
@@ -59,8 +114,15 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
       setCurrentImage(null);
       setRefinementHistory([]);
       setInstruction('');
+      setSelectedTemplateCategory(null);
     }
   }, [imageToRefine, isOpen]);
+
+  // Handler for template selection
+  const handleTemplateSelection = (categoryKey: string, template: string) => {
+    setInstruction(template);
+    setSelectedTemplateCategory(categoryKey);
+  };
 
   // Fetch Fireworks configuration when dialog opens
   useEffect(() => {
@@ -190,13 +252,55 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
             <form onSubmit={handleRefineSubmit} className="space-y-4">
               <div>
                 <Label htmlFor="refine-instruction" className="text-base font-medium">Instruction</Label>
-                <p className="text-sm text-muted-foreground mb-2">Be specific. E.g., "Change the background to a beach at sunset", "Add a steam effect to the coffee cup".</p>
+                <p className="text-sm text-muted-foreground mb-3">Be specific. E.g., "Change the background to a beach at sunset", "Add a steam effect to the coffee cup".</p>
+                
+                {/* Template Selection */}
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Wand2 className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-medium text-muted-foreground">Quick Templates</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    {Object.entries(INSTRUCTION_TEMPLATES).map(([key, category]) => {
+                      const IconComponent = category.icon;
+                      return (
+                        <Select
+                          key={key}
+                          value={selectedTemplateCategory === key ? instruction : ""}
+                          onValueChange={(value) => handleTemplateSelection(key, value)}
+                          disabled={isProcessing}
+                        >
+                          <SelectTrigger className="h-auto p-3">
+                            <div className="flex items-center gap-2 w-full">
+                              <IconComponent className="w-4 h-4 text-muted-foreground" />
+                              <SelectValue placeholder={category.label} />
+                            </div>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {category.templates.map((template, index) => (
+                              <SelectItem key={index} value={template}>
+                                <div className="text-sm">{template}</div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <div className="relative">
                   <Textarea
                     id="refine-instruction"
                     value={instruction}
-                    onChange={(e) => setInstruction(e.target.value)}
-                    placeholder="Type your change here..."
+                    onChange={(e) => {
+                      setInstruction(e.target.value);
+                      // Clear template selection when user manually types
+                      if (selectedTemplateCategory) {
+                        setSelectedTemplateCategory(null);
+                      }
+                    }}
+                    placeholder="Type your change here or select from templates above..."
                     rows={4}
                     className="pr-12 text-base"
                     disabled={isProcessing}
