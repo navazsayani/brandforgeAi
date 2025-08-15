@@ -33,7 +33,7 @@ import { industries } from '@/lib/constants';
 import type { BrandData, UserProfileSelectItem } from '@/types';
 import { cn } from '@/lib/utils';
 import { RefineImageDialog } from '@/components/RefineImageDialog';
-import { checkFirebaseStorageUrl } from '@/lib/cleanup-orphaned-images';
+import { checkFirebaseStorageUrl } from '@/lib/client-storage-utils';
 import {
   AlertDialog,
   AlertDialogAction,

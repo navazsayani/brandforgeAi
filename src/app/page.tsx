@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, UserCircle, Rocket, Paintbrush, Send, ArrowRight, Wand2, Layers, Target, CheckCircle, TrendingUp, Users, Clock, Star, X, Lightbulb, Zap, Building } from 'lucide-react';
+import { Loader2, UserCircle, Rocket, Paintbrush, Send, ArrowRight, Wand2, Layers, Target, CheckCircle, TrendingUp, Users, Clock, Star, X, Lightbulb, Zap, Building, RefreshCcw } from 'lucide-react';
 import PublicHeader from '@/components/PublicHeader';
 
 
@@ -539,10 +539,10 @@ export default function LandingPage() {
       stage: "Stage 1",
       title: "The Spark: From Idea to Identity",
       icon: Rocket,
-      characterStory: "Priya had this amazing idea for organic skincare but felt completely lost when it came to branding. She'd tried designing logos herself and even hired a few freelancers, but nothing felt right. After using **BrandForge AI's brand identity generator**, she finally had a cohesive brand identity that her customers immediately connected with. The **AI logo creator** gave her everything she needed. The best part? Her first Instagram post got more engagement than her previous 10 posts combined.",
+      characterStory: "Priya had this amazing idea for organic skincare but felt completely lost when it came to branding. She'd tried designing logos herself and even hired a few freelancers, but nothing felt right. After using **BrandForge AI's brand identity generator**, she got her first logo, but it needed tweaks. Instead of starting over, she used the **AI Refinement Studio** to perfect it with simple instructions like 'make the leaves more delicate' and 'soften the green tone.' Three refinements later, she had the perfect logo that her customers immediately connected with.",
       beforeAfter: {
         before: "Struggling with inconsistent visuals, spending ₹15,000+ on different designers, feeling frustrated with the branding process",
-        after: "Complete **brand identity** ready in under an hour using **AI-powered design tools**, saving both time and money"
+        after: "Perfect **brand identity** achieved through **AI generation and refinement**, saving both time and money"
       },
       metrics: "First month sales increased by 67% with new brand identity"
     },
@@ -830,7 +830,7 @@ export default function LandingPage() {
         {/* Refinement Highlight Section */}
         <section className="py-12 sm:py-16 bg-background">
             <div className="container-responsive">
-                <div className="text-center max-w-2xl mx-auto">
+                <div className="text-center max-w-3xl mx-auto">
                     <div className="inline-flex items-center space-x-2 bg-accent/10 px-3 py-1.5 rounded-full text-sm font-medium text-accent mb-6">
                         <Wand2 className="w-4 h-4" />
                         <span>AI Refinement Studio</span>
@@ -841,9 +841,37 @@ export default function LandingPage() {
                     <p className="mt-4 text-lg text-muted-foreground text-balance">
                         Your first AI generation is just the starting point. Our unique Refinement Studio lets you iteratively edit any image with simple text commands. Change backgrounds, add objects, or alter styles until it's exactly right.
                     </p>
+                    
+                    {/* Enhanced Features Grid */}
+                    <div className="grid md:grid-cols-3 gap-6 mt-10">
+                        <div className="text-center">
+                            <div className="p-3 bg-accent/10 rounded-xl w-fit mx-auto mb-3">
+                                <Wand2 className="h-6 w-6 text-accent" />
+                            </div>
+                            <h3 className="font-semibold mb-2">Simple Instructions</h3>
+                            <p className="text-sm text-muted-foreground">"Make the sky more dramatic" or "Add morning mist"</p>
+                        </div>
+                        
+                        <div className="text-center">
+                            <div className="p-3 bg-primary/10 rounded-xl w-fit mx-auto mb-3">
+                                <RefreshCcw className="h-6 w-6 text-primary" />
+                            </div>
+                            <h3 className="font-semibold mb-2">Version History</h3>
+                            <p className="text-sm text-muted-foreground">Revert to any previous version with one click</p>
+                        </div>
+                        
+                        <div className="text-center">
+                            <div className="p-3 bg-accent/10 rounded-xl w-fit mx-auto mb-3">
+                                <Zap className="h-6 w-6 text-accent" />
+                            </div>
+                            <h3 className="font-semibold mb-2">Quality Modes</h3>
+                            <p className="text-sm text-muted-foreground">From fast previews to premium results</p>
+                        </div>
+                    </div>
+                    
                     <div className="mt-8">
                         <Button size="lg" variant="outline" asChild>
-                            <Link href="/features#content-studio">Learn More About the Content Studio</Link>
+                            <Link href="/features#ai-refinement-studio">Explore AI Refinement Studio</Link>
                         </Button>
                     </div>
                 </div>

@@ -92,6 +92,19 @@ export default function FeaturesPage() {
                         ]}
                      />
                      <FeatureDetailCard
+                        id="ai-refinement-studio"
+                        icon={Wand2}
+                        title="AI Refinement Studio"
+                        description="Perfect your visuals with iterative AI-powered editing."
+                        benefits={[
+                            { text: "Transform any image with simple text instructions like 'change the background to a sunset'", icon: CheckCircle },
+                            { text: "Iterative refinement lets you make multiple adjustments until it's exactly right", icon: Wand2, highlighted: true },
+                            { text: "Version history keeps track of every change so you can revert to any previous version", icon: CheckCircle },
+                            { text: "Quality modes from fast preview to premium results based on your needs", icon: CheckCircle },
+                            { text: "AI prompt enhancement makes your instructions more effective automatically", icon: CheckCircle }
+                        ]}
+                     />
+                     <FeatureDetailCard
                         id="smart-learning"
                         icon={Lightbulb}
                         title="Smart Learning AI System"

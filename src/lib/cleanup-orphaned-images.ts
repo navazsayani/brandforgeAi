@@ -452,7 +452,7 @@ export async function getStorageFileAge(storagePath: string): Promise<number | n
     const bucket = getAdminStorage().bucket();
     const file = bucket.file(storagePath);
     const [metadata] = await file.getMetadata();
-    const created = new Date(metadata.timeCreated);
+    const created = new Date(metadata.timeCreated || Date.now());
     return Date.now() - created.getTime();
   } catch (error: any) {
     console.warn(`Could not get file age for ${storagePath}:`, error.message);
@@ -486,8 +486,8 @@ export async function listUserStorageFiles(userId: string): Promise<Array<{
         userFiles.push({
           path: file.name,
           url,
-          size: parseInt(metadata.size || '0'),
-          created: new Date(metadata.timeCreated)
+          size: parseInt(String(metadata.size || '0')),
+          created: new Date(metadata.timeCreated || Date.now())
         });
       } catch (fileError: any) {
         console.warn(`Could not get metadata for file ${file.name}:`, fileError.message);

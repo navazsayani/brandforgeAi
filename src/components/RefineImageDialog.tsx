@@ -125,6 +125,13 @@ export function RefineImageDialog({ isOpen, onOpenChange, imageToRefine, onRefin
     e.preventDefault();
     if (!currentImage || !instruction) return;
     
+    // Ensure currentImage matches the last item in refinement history to prevent state mismatch after revert
+    const expectedImage = refinementHistory[refinementHistory.length - 1];
+    if (currentImage !== expectedImage) {
+      setCurrentImage(expectedImage);
+      return;
+    }
+    
     setIsEditing(true);
 
     const formData = new FormData();

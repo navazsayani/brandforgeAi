@@ -20,7 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { handleDeleteSavedImageAction } from '@/lib/actions';
 import type { FormState as DeleteFormState } from '@/lib/actions';
 import { RefineImageDialog } from '@/components/RefineImageDialog';
-import { checkFirebaseStorageUrl } from '@/lib/cleanup-orphaned-images';
+import { checkFirebaseStorageUrl } from '@/lib/client-storage-utils';
 
 
 const fetchSavedLibraryImages = async (userId: string): Promise<SavedGeneratedImage[]> => {
