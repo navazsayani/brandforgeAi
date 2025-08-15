@@ -6,11 +6,12 @@ import { useFormStatus } from 'react-dom';
 import NextImage from 'next/image';
 import { BrandProfileImage, LibraryImage } from '@/components/SafeImage';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { db } from '@/lib/firebaseConfig';
+import { db, storage } from '@/lib/firebaseConfig';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { ref as storageRef, deleteObject } from 'firebase/storage';
 import type { SavedGeneratedImage } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Images, UserCircle, FileImage, Trash2, Loader2, Wand2 } from 'lucide-react';
+import { AlertCircle, Images, UserCircle, FileImage, Trash2, Loader2, Wand2, Download } from 'lucide-react';
 import { Alert, AlertTitle } from '@/components/ui/alert';
 import { useBrand } from '@/contexts/BrandContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -54,6 +55,74 @@ function DeleteButton() {
         </Button>
     );
 }
+
+// Download handler function
+const handleDownload = (imageUrl: string, filename: string) => {
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = filename;
+    link.target = '_blank'; // For external URLs
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
+// Delete brand profile image handler function
+const handleDeleteBrandProfileImage = async (
+    imageUrl: string,
+    imageIndex: number,
+    brandData: any,
+    setBrandData: any,
+    userId: string,
+    toast: any
+) => {
+    if (!brandData || !brandData.exampleImages) {
+        toast({ title: "Error", description: "No brand data available", variant: "destructive" });
+        return;
+    }
+
+    try {
+        // First, try to delete the image from Firebase Storage
+        let storageDeleted = false;
+        try {
+            // Extract storage path from URL
+            if (imageUrl.includes('firebase') && imageUrl.includes('appspot.com')) {
+                const urlObj = new URL(imageUrl);
+                const pathMatch = urlObj.pathname.match(/\/o\/(.+)$/);
+                if (pathMatch) {
+                    const storagePath = decodeURIComponent(pathMatch[1]);
+                    const fileRef = storageRef(storage, storagePath);
+                    await deleteObject(fileRef);
+                    storageDeleted = true;
+                    console.log(`✓ Deleted storage file: ${storagePath}`);
+                }
+            }
+        } catch (storageError: any) {
+            console.warn('Could not delete from storage (file may not exist):', storageError.message);
+            // Continue with database deletion even if storage deletion fails
+        }
+
+        // Create a new array without the deleted image
+        const updatedExampleImages = brandData.exampleImages.filter((_: string, index: number) => index !== imageIndex);
+        
+        // Update the brand data
+        const updatedBrandData = {
+            ...brandData,
+            exampleImages: updatedExampleImages
+        };
+
+        await setBrandData(updatedBrandData, userId);
+        
+        const message = storageDeleted
+            ? "Brand profile image has been removed from both storage and database successfully."
+            : "Brand profile image reference has been removed from database successfully.";
+            
+        toast({ title: "Image Deleted", description: message });
+    } catch (error) {
+        console.error('Error deleting brand profile image:', error);
+        toast({ title: "Deletion Failed", description: "Failed to delete the image. Please try again.", variant: "destructive" });
+    }
+};
 
 function SavedImageCard({ image, userId, onRefineClick }: { image: SavedGeneratedImage; userId: string; onRefineClick: (url: string) => void; }) {
     const { toast } = useToast();
@@ -124,6 +193,16 @@ function SavedImageCard({ image, userId, onRefineClick }: { image: SavedGenerate
                     <input type="hidden" name="storageUrl" value={image.storageUrl} />
                     <Button
                         type="button"
+                        variant="secondary"
+                        size="icon"
+                        className="absolute top-2 right-12 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        title="Download full size image"
+                        onClick={() => handleDownload(image.storageUrl, `library-image-${image.id}.png`)}
+                    >
+                        <Download className="h-4 w-4" />
+                    </Button>
+                    <Button
+                        type="button"
                         variant="destructive"
                         size="icon"
                         className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
@@ -158,7 +237,7 @@ function SavedImageCard({ image, userId, onRefineClick }: { image: SavedGenerate
 
 export default function ImageLibraryPage() {
   const { user, isLoading: isLoadingUser } = useAuth();
-  const { brandData, isLoading: isLoadingBrand, error: errorBrand, setSessionLastImageGenerationResult } = useBrand();
+  const { brandData, isLoading: isLoadingBrand, error: errorBrand, setSessionLastImageGenerationResult, setBrandData } = useBrand();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -269,6 +348,26 @@ export default function ImageLibraryPage() {
                         className="transition-transform duration-300 group-hover:scale-105"
                         data-ai-hint="brand example"
                       />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="icon"
+                        className="absolute top-2 right-12 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        title="Download full size image"
+                        onClick={() => handleDownload(imageUrl, `brand-profile-image-${index + 1}.png`)}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        title="Delete brand profile image"
+                        onClick={() => handleDeleteBrandProfileImage(imageUrl, index, brandData, setBrandData, user?.uid || '', toast)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                    </div>
                 </div>
                 <CardContent className="p-3 flex flex-col flex-grow">
