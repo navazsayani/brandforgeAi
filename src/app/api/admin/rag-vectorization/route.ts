@@ -137,11 +137,27 @@ async function startVectorizationJob(
       const userDoc = await getDoc(doc(db, 'users', userId));
       const userData = userDoc.data();
       
+      // Get brand name from brand profiles subcollection
+      let brandName = 'Unknown Brand';
+      try {
+        const brandProfilesSnapshot = await getDocs(collection(db, `users/${userId}/brandProfiles`));
+        if (!brandProfilesSnapshot.empty) {
+          const primaryBrandProfile = brandProfilesSnapshot.docs[0]?.data();
+          brandName = primaryBrandProfile?.brandName || userData?.displayName || 'Unknown Brand';
+        } else {
+          // Fallback to user document fields if no brand profiles exist
+          brandName = userData?.brandName || userData?.displayName || 'Unknown Brand';
+        }
+      } catch (error) {
+        console.warn(`[RAG Vectorization API] Error fetching brand profile for user ${userId}:`, error);
+        brandName = userData?.brandName || userData?.displayName || 'Unknown Brand';
+      }
+      
       totalItems = 1; // Will be updated when we count actual content
       jobDetails = {
         userId,
         userEmail: userData?.email || 'Unknown',
-        brandName: userData?.brandName || userData?.displayName || 'Unknown Brand'
+        brandName
       };
       
     } else if (type === 'content_type' && contentType) {

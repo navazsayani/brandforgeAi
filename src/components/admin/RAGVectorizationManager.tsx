@@ -86,7 +86,13 @@ export const RAGVectorizationManager: React.FC<RAGVectorizationManagerProps> = (
 
       if (response.ok) {
         const { jobs } = await response.json();
-        setJobs(jobs || []);
+        // Convert date strings/timestamps to Date objects
+        const processedJobs = (jobs || []).map((job: any) => ({
+          ...job,
+          startedAt: job.startedAt ? new Date(job.startedAt) : undefined,
+          completedAt: job.completedAt ? new Date(job.completedAt) : undefined
+        }));
+        setJobs(processedJobs);
       }
     } catch (error) {
       console.error('Error loading vectorization jobs:', error);
@@ -404,10 +410,19 @@ export const RAGVectorizationManager: React.FC<RAGVectorizationManagerProps> = (
 
                   {job.completedAt && (
                     <div className="text-sm text-muted-foreground mt-2">
-                      Completed: {job.completedAt.toLocaleString()}
-                      {job.startedAt && (
+                      Completed: {job.completedAt instanceof Date ? job.completedAt.toLocaleString() : new Date(job.completedAt).toLocaleString()}
+                      {job.startedAt && job.completedAt && (
                         <span className="ml-4">
-                          Duration: {formatDuration(Math.floor((job.completedAt.getTime() - job.startedAt.getTime()) / 1000))}
+                          Duration: {(() => {
+                            try {
+                              const startTime = job.startedAt instanceof Date ? job.startedAt.getTime() : new Date(job.startedAt).getTime();
+                              const endTime = job.completedAt instanceof Date ? job.completedAt.getTime() : new Date(job.completedAt).getTime();
+                              return formatDuration(Math.floor((endTime - startTime) / 1000));
+                            } catch (error) {
+                              console.warn('Error calculating duration:', error);
+                              return 'N/A';
+                            }
+                          })()}
                         </span>
                       )}
                     </div>
