@@ -11,7 +11,7 @@ import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { ref as storageRef, deleteObject } from 'firebase/storage';
 import type { SavedGeneratedImage } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Images, UserCircle, FileImage, Trash2, Loader2, Wand2, Download } from 'lucide-react';
+import { AlertCircle, Images, UserCircle, FileImage, Trash2, Loader2, Wand2, Download, Paintbrush } from 'lucide-react';
 import { Alert, AlertTitle } from '@/components/ui/alert';
 import { useBrand } from '@/contexts/BrandContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,6 +22,7 @@ import { handleDeleteSavedImageAction } from '@/lib/actions';
 import type { FormState as DeleteFormState } from '@/lib/actions';
 import { RefineImageDialog } from '@/components/RefineImageDialog';
 import { checkFirebaseStorageUrl } from '@/lib/client-storage-utils';
+import Link from 'next/link';
 
 
 const fetchSavedLibraryImages = async (userId: string): Promise<SavedGeneratedImage[]> => {
@@ -327,12 +328,18 @@ export default function ImageLibraryPage() {
           </Alert>
         )}
         {!isLoadingBrand && !errorBrand && brandProfileImages.length === 0 && (
-          <Card className="shadow-sm">
-            <CardContent className="pt-6 text-center">
-              <p className="text-muted-foreground">No example images uploaded to your Brand Profile.</p>
-              <p className="text-sm text-muted-foreground">Visit the Brand Profile page to add some.</p>
-            </CardContent>
-          </Card>
+            <Card className="text-center py-12 px-6 bg-secondary/30 border-dashed border-2">
+                <div className="w-fit mx-auto p-3 bg-primary/10 rounded-full mb-4">
+                    <UserCircle className="w-10 h-10 text-primary" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground">No Example Images</h3>
+                <p className="text-muted-foreground mt-1 max-w-md mx-auto">
+                    You haven't uploaded any example images to your brand profile yet. Adding some will help the AI understand your visual style.
+                </p>
+                <Button asChild className="mt-4">
+                    <Link href="/brand-profile">Go to Brand Profile</Link>
+                </Button>
+            </Card>
         )}
         {!isLoadingBrand && !errorBrand && brandProfileImages.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -413,15 +420,22 @@ export default function ImageLibraryPage() {
             <p>{errorSaved}</p>
           </Alert>
         )}
-        {!isLoadingSaved && !errorSaved && savedImages.length === 0 && user && ( // Only show "empty" if not loading, no error, and user is present (so query would have run)
-          <Card className="shadow-sm">
-            <CardContent className="pt-6 text-center">
-              <p className="text-muted-foreground">Your AI-generated image library is empty.</p>
-              <p className="text-sm text-muted-foreground">
-                Generate images in the Content Studio and save them to see them here.
-              </p>
-            </CardContent>
-          </Card>
+        {!isLoadingSaved && !errorSaved && savedImages.length === 0 && user && (
+            <Card className="text-center py-12 px-6 bg-secondary/30 border-dashed border-2">
+                <div className="w-fit mx-auto p-3 bg-primary/10 rounded-full mb-4">
+                    <FileImage className="w-10 h-10 text-primary" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground">Your Library is Empty</h3>
+                <p className="text-muted-foreground mt-1 max-w-md mx-auto">
+                   Images you generate in the Content Studio and save will appear here.
+                </p>
+                <Button asChild className="mt-4">
+                    <Link href="/content-studio">
+                        <Paintbrush className="w-4 h-4 mr-2" />
+                        Generate an Image
+                    </Link>
+                </Button>
+            </Card>
         )}
         {!isLoadingSaved && !errorSaved && savedImages.length > 0 && user && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">

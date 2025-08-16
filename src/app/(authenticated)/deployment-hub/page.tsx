@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Send, Image as ImageIconLucide, MessageSquareText, Newspaper, Briefcase, AlertCircle, RefreshCw, Layers, CheckCircle, Loader2, Copy, Rocket, Facebook, Edit, Download, Trash2, Instagram, ExternalLink, Monitor } from 'lucide-react';
+import { Send, Image as ImageIconLucide, MessageSquareText, Newspaper, Briefcase, AlertCircle, RefreshCw, Layers, CheckCircle, Loader2, Copy, Rocket, Facebook, Edit, Download, Trash2, Instagram, ExternalLink, Monitor, Paintbrush } from 'lucide-react';
 import type { GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign, InstagramAccount, ModelConfig } from '@/types';
 import { cn } from '@/lib/utils';
 import { handleDeleteContentAction, handleUpdateContentStatusAction, handleSimulatedDeployAction, handleUpdateContentAction, handleGetInstagramAccountsAction, handleGetSettingsAction, type FormState } from '@/lib/actions';
@@ -167,11 +167,21 @@ export default function DeploymentHubPage() {
       )}
 
       {!isLoading && !fetchError && filteredContent.length === 0 && (
-        <Card className="shadow-lg">
-          <CardContent className="pt-6 text-center">
-            <p className="text-lg text-muted-foreground">No content found for this filter.</p>
-            <p className="text-sm text-muted-foreground">Visit the Content Studio or Campaign Manager to create assets.</p>
-          </CardContent>
+        <Card className="text-center py-20 px-6 bg-secondary/30 border-dashed border-2">
+            <div className="w-fit mx-auto p-4 bg-primary/10 rounded-full mb-4">
+                <Rocket className="w-12 h-12 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold text-foreground">Your Deployment Hub is Ready</h3>
+            <p className="text-muted-foreground mt-2 max-w-md mx-auto">
+                This is where you'll manage your generated social posts, blog articles, and ad campaigns.
+                Once you create some content, it will appear here.
+            </p>
+            <Button asChild className="mt-6 btn-gradient-primary">
+                <Link href="/content-studio">
+                    <Paintbrush className="w-4 h-4 mr-2" />
+                    Go to Content Studio
+                </Link>
+            </Button>
         </Card>
       )}
 

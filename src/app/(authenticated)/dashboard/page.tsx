@@ -22,6 +22,7 @@ import { getPaymentMode } from '@/lib/actions';
 import { format } from 'date-fns';
 import SocialMediaPreviews from '@/components/SocialMediaPreviews';
 import { SafeImage } from '@/components/SafeImage';
+import { OnboardingChecklist } from '@/components/OnboardingChecklist';
 
 type RecentItem = {
   id: string;
@@ -160,6 +161,7 @@ export default function DashboardPage() {
 
     return (
         <div className="space-y-8 animate-fade-in">
+            <OnboardingChecklist />
             <GreetingCard isLoading={isLoading} brandData={brandData} paymentMode={paymentMode} />
 
             <div className="grid gap-6 sm:grid-cols-2">
