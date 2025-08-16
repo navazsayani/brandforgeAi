@@ -96,6 +96,7 @@ async function ensureUserBrandProfileDocExists(userId: string, userEmail?: strin
       plan: 'free',
       userEmail: userEmail || "",
       subscriptionEndDate: null,
+      welcomeGiftOffered: false,
     };
     await setDoc(brandProfileDocRef, initialProfileData);
     console.log(`[ensureUserBrandProfileDocExists] Successfully created brand profile document for user ${userId}.`);
@@ -1141,6 +1142,41 @@ export async function handleGenerateBrandLogoAction(
   } catch (e: any) {
     console.error("Error in handleGenerateBrandLogoAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
     return { error: `Failed to generate brand logo: ${e.message || "Unknown error. Check server logs."}` };
+  }
+}
+
+export async function handleWelcomeGiftImageGenerationAction(
+  prevState: FormState<{ generatedImages: string[] }>,
+  formData: FormData
+): Promise<FormState<{ generatedImages: string[] }>> {
+  const userId = formData.get("userId") as string;
+  const prompt = formData.get("prompt") as string;
+  const brandDescription = formData.get("brandDescription") as string;
+  const imageStyle = formData.get("imageStyle") as string;
+
+  if (!userId || !prompt || !brandDescription) {
+    return { error: "Missing required information for welcome gift." };
+  }
+
+  try {
+    const input: GenerateImagesInput = {
+      brandDescription: brandDescription,
+      imageStyle: imageStyle,
+      finalizedTextPrompt: prompt,
+      numberOfImages: 3,
+    };
+    
+    // Note: We are NOT calling checkAndIncrementUsage here
+    const result = await generateImages(input);
+
+    // After successfully generating, mark the gift as offered
+    const brandProfileRef = doc(db, 'users', userId, 'brandProfiles', userId);
+    await setDoc(brandProfileRef, { welcomeGiftOffered: true }, { merge: true });
+
+    return { data: { generatedImages: result.generatedImages }, message: "Your free images have been generated!" };
+  } catch (e: any) {
+    console.error("Error in handleWelcomeGiftImageGenerationAction:", e);
+    return { error: `Failed to generate images: ${e.message || "Unknown error."}` };
   }
 }
 
