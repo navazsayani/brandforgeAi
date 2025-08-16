@@ -23,6 +23,9 @@ import { format } from 'date-fns';
 import SocialMediaPreviews from '@/components/SocialMediaPreviews';
 import { SafeImage } from '@/components/SafeImage';
 import { OnboardingChecklist } from '@/components/OnboardingChecklist';
+import { WelcomeCard } from '@/components/WelcomeCard';
+import { WelcomeGiftDialog } from '@/components/WelcomeGiftDialog';
+
 
 type RecentItem = {
   id: string;
@@ -143,6 +146,7 @@ export default function DashboardPage() {
     const { brandData, isLoading: isBrandLoading } = useBrand();
     const { currentUser, isLoading: isAuthLoading } = useAuth();
     const [paymentMode, setPaymentMode] = useState<'live' | 'test' | 'loading'>('loading');
+    const [showWelcomeGift, setShowWelcomeGift] = useState(false);
     
     useEffect(() => {
         async function fetchMode() {
@@ -157,10 +161,37 @@ export default function DashboardPage() {
         fetchMode();
     }, []);
 
+    useEffect(() => {
+        // Trigger for the Welcome Gift Dialog
+        if (brandData && brandData.brandDescription && brandData.welcomeGiftOffered === false) {
+            setShowWelcomeGift(true);
+        }
+    }, [brandData]);
+
     const isLoading = isBrandLoading || isAuthLoading || paymentMode === 'loading';
+    const isProfileIncomplete = !brandData?.brandDescription;
+
+    if (isLoading) {
+        return (
+             <div className="space-y-8 animate-fade-in">
+                <GreetingCard isLoading={true} brandData={null} paymentMode={paymentMode} />
+                 <div className="grid gap-6 sm:grid-cols-2">
+                    <ActionCard isLoading={true} href="#" icon={<div />} title="" description="" />
+                    <ActionCard isLoading={true} href="#" icon={<div />} title="" description="" />
+                    <ActionCard isLoading={true} href="#" icon={<div />} title="" description="" />
+                    <ActionCard isLoading={true} href="#" icon={<div />} title="" description="" />
+                </div>
+             </div>
+        );
+    }
+
+    if (isProfileIncomplete) {
+        return <WelcomeCard />;
+    }
 
     return (
         <div className="space-y-8 animate-fade-in">
+            <WelcomeGiftDialog isOpen={showWelcomeGift} onOpenChange={setShowWelcomeGift} />
             <OnboardingChecklist />
             <GreetingCard isLoading={isLoading} brandData={brandData} paymentMode={paymentMode} />
 

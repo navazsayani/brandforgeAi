@@ -15,12 +15,14 @@ import { cn } from '@/lib/utils';
 
 // Fetch checkers
 const hasSavedImages = async (userId: string): Promise<boolean> => {
+    if (!userId) return false;
     const q = query(collection(db, `users/${userId}/brandProfiles/${userId}/savedLibraryImages`), limit(1));
     const snapshot = await getDocs(q);
     return !snapshot.empty;
 };
 
 const hasSavedSocialPosts = async (userId: string): Promise<boolean> => {
+    if (!userId) return false;
     const q = query(collection(db, `users/${userId}/brandProfiles/${userId}/socialMediaPosts`), limit(1));
     const snapshot = await getDocs(q);
     return !snapshot.empty;
@@ -96,7 +98,7 @@ export function OnboardingChecklist() {
 
     const isAllComplete = steps.every(step => step.isComplete);
 
-    if (!isVisible || isAllComplete) {
+    if (!isVisible || isAllComplete || isLoading) {
         return null;
     }
 

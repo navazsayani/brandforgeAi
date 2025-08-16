@@ -13,6 +13,7 @@ export interface BrandData {
   plan?: 'free' | 'premium';
   userEmail?: string; // Added user's email
   subscriptionEndDate?: any; // Can be a Firestore Timestamp object
+  welcomeGiftOffered?: boolean; // To track if the user has received the welcome gift
 }
 
 export interface GeneratedImage {

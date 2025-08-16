@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState, useRef, useActionState, startTransition, useMemo } from 'react';
 import NextImage from 'next/image';
+import { useRouter } from 'next/navigation';
 import { BrandProfileImage } from '@/components/SafeImage';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -68,6 +69,7 @@ const brandProfileSchema = z.object({
   plan: z.enum(['free', 'premium']).optional(),
   userEmail: z.string().email().optional().or(z.literal('')),
   subscriptionEndDate: z.any().optional(),
+  welcomeGiftOffered: z.boolean().optional(),
 });
 
 type BrandProfileFormData = z.infer<typeof brandProfileSchema>;
@@ -86,6 +88,7 @@ const defaultFormValues: BrandProfileFormData = {
   plan: 'free',
   userEmail: "",
   subscriptionEndDate: null,
+  welcomeGiftOffered: false,
 };
 
 const initialExtractState: ExtractFormState<{ brandDescription: string; targetKeywords: string; }> = { error: undefined, data: undefined, message: undefined };
@@ -97,6 +100,7 @@ export default function BrandProfilePage() {
   const { currentUser, userId, isLoading: isAuthLoading } = useAuth();
   const { brandData: contextBrandData, setBrandData: setContextBrandData, isLoading: isBrandContextLoading, error: brandContextError, setSessionLastImageGenerationResult } = useBrand();
   const { toast } = useToast();
+  const router = useRouter();
 
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [adminTargetUserId, setAdminTargetUserId] = useState<string>("");
@@ -476,6 +480,7 @@ export default function BrandProfilePage() {
   };
 
   const onSubmit: SubmitHandler<BrandProfileFormData> = async (data) => {
+    const wasProfileIncomplete = !currentProfileBeingEdited?.brandDescription;
     let finalData = { ...data };
     const userIdToSaveFor = isAdmin && adminTargetUserId ? adminTargetUserId : userId;
 
@@ -487,6 +492,7 @@ export default function BrandProfilePage() {
     if (!isAdmin) {
       finalData.plan = currentProfileBeingEdited?.plan || 'free';
       finalData.subscriptionEndDate = currentProfileBeingEdited?.subscriptionEndDate || null;
+      finalData.welcomeGiftOffered = currentProfileBeingEdited?.welcomeGiftOffered || false;
     } else {
         if (finalData.plan === 'free') {
             finalData.subscriptionEndDate = null;
@@ -548,6 +554,11 @@ export default function BrandProfilePage() {
         await setContextBrandData(finalData, userId);
       }
       toast({ title: "Brand Profile Saved", description: "Information saved successfully." });
+
+      // Redirect if it was the first time completing the profile
+      if (wasProfileIncomplete && finalData.brandDescription) {
+        router.push('/dashboard');
+      }
     } catch (error: any) {
       toast({ title: "Save Error", description: error.message || "Failed to save profile.", variant: "destructive" });
     } finally {
@@ -797,6 +808,7 @@ export default function BrandProfilePage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="flex items-center text-base"><FileText className="w-5 h-5 mr-2 text-primary"/>Brand Description <span className="text-destructive ml-1">*</span></FormLabel>
+                        <FormDescription>This is the most important field! The AI uses this to understand your brand's voice and style.</FormDescription>
                         <div className="relative">
                           <FormControl>
                             <Textarea 
@@ -1065,7 +1077,7 @@ export default function BrandProfilePage() {
                 disabled={isAuthLoading || isBrandContextLoading || isAdminLoadingTargetProfile || form.formState.isSubmitting || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing || isLoadingAdminProfiles}
               >
                 {(isUploadingLogo || isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null)}
-                {isUploadingLogo ? 'Uploading & Saving...' : (isUploading ? 'Uploading Image(s)...' : (isAuthLoading || isBrandContextLoading || isAdminLoadingTargetProfile ? 'Loading...' : (form.formState.isSubmitting ? 'Saving...' : (isExtracting ? 'Extracting...' : 'Save Brand Profile'))))}
+                {isUploadingLogo ? 'Uploading & Saving...' : (isUploading ? 'Uploading Image(s)...' : (isAuthLoading || isBrandContextLoading || isAdminLoadingTargetProfile ? 'Loading...' : (form.formState.isSubmitting ? 'Saving...' : 'Save Brand Profile')))}
               </Button>
             </CardFooter>
           </Card>
