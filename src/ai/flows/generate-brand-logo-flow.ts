@@ -31,54 +31,88 @@ const GenerateBrandLogoOutputSchema = z.object({
 });
 export type GenerateBrandLogoOutput = z.infer<typeof GenerateBrandLogoOutputSchema>;
 
+// --- START: Helper functions for detailed prompt construction ---
+
+function getStyleGuidance(style: string): string {
+  const guidance = {
+    minimalist: 'STYLE: Clean, simple design with plenty of white space and minimal elements.',
+    modern: 'STYLE: Contemporary look with clean lines and current design trends.',
+    classic: 'STYLE: Timeless, traditional design with elegant proportions.',
+    playful: 'STYLE: Friendly, approachable design with personality.',
+    bold: 'STYLE: Strong, confident design with high contrast and impact.',
+    elegant: 'STYLE: Sophisticated, refined design with graceful elements.'
+  };
+  return guidance[style as keyof typeof guidance] || guidance.modern;
+}
+
+function getSimpleIndustryGuidance(industry: string): string {
+  const industryLower = industry.toLowerCase();
+  if (industryLower.includes('tech') || industryLower.includes('saas')) return 'INDUSTRY CONTEXT: Technology/Software - Consider clean geometric shapes, connectivity, or innovation symbols.';
+  if (industryLower.includes('health') || industryLower.includes('wellness')) return 'INDUSTRY CONTEXT: Health/Wellness - Consider balance, vitality, care, or growth concepts.';
+  if (industryLower.includes('food') || industryLower.includes('beverage')) return 'INDUSTRY CONTEXT: Food/Beverage - Consider freshness, quality, nourishment, or culinary concepts.';
+  if (industryLower.includes('finance') || industryLower.includes('fintech')) return 'INDUSTRY CONTEXT: Finance - Consider trust, security, growth, or stability concepts.';
+  if (industryLower.includes('education')) return 'INDUSTRY CONTEXT: Education - Consider growth, knowledge, development, or learning concepts.';
+  if (industryLower.includes('fashion') || industryLower.includes('apparel')) return 'INDUSTRY CONTEXT: Fashion/Apparel - Consider style, elegance, craftsmanship, or personal expression.';
+  if (industryLower.includes('real estate')) return 'INDUSTRY CONTEXT: Real Estate - Consider homes, community, stability, or investment concepts.';
+  return `INDUSTRY CONTEXT: ${industry} - Consider concepts relevant to this industry.`;
+}
+
+function getShapeGuidance(shape: string): string {
+  const shapeGuidance = {
+    circle: 'SHAPE: Design to fit within a circular boundary.',
+    square: 'SHAPE: Design to fit within a square/rectangular boundary.',
+    shield: 'SHAPE: Design to fit within a shield-shaped boundary.',
+    hexagon: 'SHAPE: Design to fit within a hexagonal boundary.',
+    diamond: 'SHAPE: Design to fit within a diamond/rhombus boundary.',
+    custom: 'SHAPE: Create a unique, organic shape that perfectly fits the brand identity.'
+  };
+  return shapeGuidance[shape as keyof typeof shapeGuidance] || shapeGuidance.circle;
+}
+
+function getLogoTypeInstruction(logoType: string, brandName: string): string {
+    switch (logoType) {
+        case 'logotype':
+            return `**Design Focus: Logotype/Wordmark** - The primary focus MUST be on the stylized text of the brand name: "${brandName}". Create a unique, memorable typographic treatment. A small, simple icon can accompany the text, but the text itself must be the hero.`;
+        case 'monogram':
+            const initials = brandName.split(' ').map(n => n[0]).join('');
+            return `**Design Focus: Monogram/Lettermark** - Create a powerful and creative monogram using the initials "${initials}". The initials should be artfully combined into a single, cohesive symbol.`;
+        case 'logomark':
+        default:
+            return `**Design Focus: Logomark/Icon** - Create a compelling, abstract, or symbolic icon that represents the essence of "${brandName}". The icon should be clean, recognizable, and memorable on its own, optionally accompanied by the brand name in a clean font.`;
+    }
+}
+
+// --- END: Helper functions ---
+
+
 // Helper function for creating Gemini-optimized prompts
 function _createGeminiLogoPrompt(input: GenerateBrandLogoInput): string {
     const { brandName, brandDescription, industry, targetKeywords, logoType, logoShape, logoStyle, logoColors, logoBackground } = input;
     
-    let typeInstruction = '';
-    switch (logoType) {
-        case 'logotype':
-            typeInstruction = `**Design Focus: Logotype/Wordmark**
-- The primary focus MUST be on the stylized text of the brand name: "${brandName}".
-- Create a unique, memorable, and custom typographic treatment. Do NOT use standard fonts.
-- A small, simple icon can accompany the text, but the text itself must be the hero.`;
-            break;
-        case 'monogram':
-            const initials = brandName.split(' ').map(n => n[0]).join('');
-            typeInstruction = `**Design Focus: Monogram/Lettermark**
-- Create a powerful and creative monogram using the initials "${initials}".
-- The initials should be artfully combined into a single, cohesive symbol.`;
-            break;
-        case 'logomark':
-        default:
-            typeInstruction = `**Design Focus: Logomark/Icon**
-- Create a compelling, abstract, or symbolic icon that represents the essence of "${brandName}".
-- The icon should be clean, recognizable, and memorable on its own.
-- It can be accompanied by the brand name in a clean, complementary font.`;
-    }
+    const promptParts = [
+        `You are a world-class branding expert and logo designer. Your task is to design a professional, unique, and memorable logo for the brand "${brandName}".`,
+        `\n**//-- BRAND CONTEXT --//**`,
+        `- **Brand Essence:** ${brandDescription}`,
+        industry && industry !== '_none_' ? `- **Industry:** ${industry}` : '',
+        targetKeywords ? `- **Key Themes:** ${targetKeywords}` : '',
+        
+        `\n**//-- DESIGN SPECIFICATIONS --//**`,
+        getLogoTypeInstruction(logoType || 'logomark', brandName),
+        getStyleGuidance(logoStyle || 'modern'),
+        getShapeGuidance(logoShape || 'circle'),
+        logoColors ? `- **Color Palette:** Strictly use a palette based on: ${logoColors}.` : '- **Color Palette:** Use a professional and appropriate color palette (max 3 colors).',
+        `- **Background:** The logo MUST be on a ${logoBackground} background. For 'transparent', ensure there's no background color.`,
+        `- **Quality:** Professional, vector-style graphic suitable for all business uses.`,
+        
+        industry && industry !== '_none_' ? getSimpleIndustryGuidance(industry) : '',
 
-    return `
-You are a world-class branding expert and logo designer. Your task is to design a professional, unique, and memorable logo for the brand "${brandName}".
-
-**//-- BRAND CONTEXT --//**
-- **Brand Essence:** ${brandDescription}
-- **Industry:** ${industry || 'Not specified'}
-- **Key Themes:** ${targetKeywords || 'Not specified'}
-
-**//-- DESIGN SPECIFICATIONS --//**
-${typeInstruction}
-
-- **Artistic Style:** ${logoStyle}.
-- **Overall Shape/Form:** The design should feel cohesive within a ${logoShape} form factor.
-- **Color Palette:** ${logoColors ? `Strictly use a palette based on: ${logoColors}.` : 'Use a professional and appropriate color palette (max 3 colors).'}
-- **Background:** The logo MUST be on a ${logoBackground} background. For 'transparent', ensure there's no background color.
-- **Quality:** Professional, vector-style graphic suitable for all business uses.
-
-**//-- CRITICAL REQUIREMENTS --//**
-1.  **Relevance:** The design must be deeply connected to the brand's identity and industry.
-2.  **Simplicity & Memorability:** Avoid overly complex or cluttered designs. The logo must be easily recognizable.
-3.  **No Generic Clip-Art:** Generate a completely original and custom design.
-`;
+        `\n**//-- CRITICAL REQUIREMENTS --//**`,
+        `1.  **Relevance:** The design must be deeply connected to the brand's identity, essence, and industry.`,
+        `2.  **Simplicity & Memorability:** Avoid overly complex or cluttered designs. The logo must be easily recognizable.`,
+        `3.  **Originality:** Generate a completely original and custom design. Avoid generic clip-art.`,
+    ];
+    
+    return promptParts.filter(Boolean).join('\n');
 }
 
 // Helper function for creating Imagen-optimized prompts
@@ -110,7 +144,7 @@ function _createImagenLogoPrompt(input: GenerateBrandLogoInput): string {
     
     prompt += `Shape: ${logoShape}. `;
     prompt += `Background: ${logoBackground} background. `;
-    prompt += `Context: ${brandDescription}. ${industry ? `Industry: ${industry}.` : ''} ${targetKeywords ? `Keywords: ${targetKeywords}.` : ''}`;
+    prompt += `Brand Context: ${brandDescription}. ${industry && industry !== '_none_' ? `Industry: ${industry}.` : ''} ${targetKeywords ? `Keywords: ${targetKeywords}.` : ''}`;
 
     return prompt;
 }
@@ -152,7 +186,6 @@ const generateBrandLogoFlow = ai.defineFlow(
     }
   }
 );
-
 
 export async function generateBrandLogo(
   input: GenerateBrandLogoInput
