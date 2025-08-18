@@ -33,7 +33,7 @@ const defaultEmptyBrandData: BrandData = {
     brandName: "",
     websiteUrl: "",
     brandDescription: "",
-    industry: "_none_", 
+    industry: "_none_",
     imageStyleNotes: "",
     exampleImages: [],
     targetKeywords: "",
@@ -42,6 +42,7 @@ const defaultEmptyBrandData: BrandData = {
     userEmail: "",
     subscriptionEndDate: null,
     welcomeGiftOffered: false,
+    hasUsedPreviewMode: false,
 };
 
 export const BrandProvider = ({ children }: { children: ReactNode }) => {
@@ -165,6 +166,12 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
             needsSave = true;
         }
 
+        // Initialize hasUsedPreviewMode for existing users
+        if (normalizedData.hasUsedPreviewMode === undefined) {
+            normalizedData.hasUsedPreviewMode = false;
+            needsSave = true;
+        }
+
         if (normalizedData.plan === 'premium' && normalizedData.subscriptionEndDate) {
             const endDate = (normalizedData.subscriptionEndDate as any).toDate();
             if (new Date() > endDate) {
@@ -183,7 +190,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         }
       } else {
         isNewUserSetupFlow = true; // This is a new user setup
-        const defaultWithEmail = { ...defaultEmptyBrandData, userEmail: currentUser.email || "", subscriptionEndDate: null, welcomeGiftOffered: false };
+        const defaultWithEmail = { ...defaultEmptyBrandData, userEmail: currentUser.email || "", subscriptionEndDate: null, welcomeGiftOffered: false, hasUsedPreviewMode: false };
         setBrandDataState(defaultWithEmail);
         await setBrandDataCB(defaultWithEmail, userId);
       }
@@ -193,7 +200,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
       if (isNewUserSetupFlow) {
         console.error("Non-critical error during initial brand profile setup:", e);
         // Fallback to a clean default state without showing an error to the user
-        setBrandDataState({ ...defaultEmptyBrandData, userEmail: currentUser?.email || "", subscriptionEndDate: null, welcomeGiftOffered: false });
+        setBrandDataState({ ...defaultEmptyBrandData, userEmail: currentUser?.email || "", subscriptionEndDate: null, welcomeGiftOffered: false, hasUsedPreviewMode: false });
       } else {
         // For existing users, an error fetching data is more critical.
         console.error("Error fetching brand data from Firestore:", e);
@@ -215,7 +222,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
             specificError = "Database permission error. Please check your Firestore security rules in the Firebase console.";
           }
           setError(specificError);
-          setBrandDataState({ ...defaultEmptyBrandData, userEmail: currentUser?.email || "", subscriptionEndDate: null, welcomeGiftOffered: false });
+          setBrandDataState({ ...defaultEmptyBrandData, userEmail: currentUser?.email || "", subscriptionEndDate: null, welcomeGiftOffered: false, hasUsedPreviewMode: false });
         }
       }
     } finally {

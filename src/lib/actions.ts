@@ -1,5 +1,6 @@
 
 
+
 'use server';
 
 import crypto from 'crypto';
@@ -97,6 +98,7 @@ async function ensureUserBrandProfileDocExists(userId: string, userEmail?: strin
       userEmail: userEmail || "",
       subscriptionEndDate: null,
       welcomeGiftOffered: false,
+      hasUsedPreviewMode: false,
     };
     await setDoc(brandProfileDocRef, initialProfileData);
     console.log(`[ensureUserBrandProfileDocExists] Successfully created brand profile document for user ${userId}.`);
@@ -1102,8 +1104,11 @@ export async function handleGenerateBrandLogoAction(
       brandDescription: formData.get("brandDescription") as string,
       industry: formData.get("industry") as string | undefined,
       targetKeywords: formData.get("targetKeywords") as string | undefined,
+      logoType: formData.get("logoType") as GenerateBrandLogoInput['logoType'] | undefined,
       logoShape: formData.get("logoShape") as GenerateBrandLogoInput['logoShape'] | undefined,
       logoStyle: formData.get("logoStyle") as GenerateBrandLogoInput['logoStyle'] | undefined,
+      logoColors: formData.get("logoColors") as string | undefined,
+      logoBackground: formData.get("logoBackground") as GenerateBrandLogoInput['logoBackground'] | undefined,
     };
 
     if (!input.brandName || !input.brandDescription) {
@@ -1111,8 +1116,11 @@ export async function handleGenerateBrandLogoAction(
     }
      if (input.industry === "" || input.industry === undefined) delete input.industry;
      if (input.targetKeywords === "" || input.targetKeywords === undefined) delete input.targetKeywords;
-     if (!input.logoShape || input.logoShape === undefined) delete input.logoShape;
-     if (!input.logoStyle || input.logoStyle === undefined) delete input.logoStyle;
+     if (!input.logoType) delete input.logoType;
+     if (!input.logoShape) delete input.logoShape;
+     if (!input.logoStyle) delete input.logoStyle;
+     if (!input.logoColors) delete input.logoColors;
+     if (!input.logoBackground) delete input.logoBackground;
     if (!userId) {
         return { error: "User ID is missing. Cannot save brand logo."};
     }
@@ -1177,6 +1185,52 @@ export async function handleWelcomeGiftImageGenerationAction(
   } catch (e: any) {
     console.error("Error in handleWelcomeGiftImageGenerationAction:", e);
     return { error: `Failed to generate images: ${e.message || "Unknown error."}` };
+  }
+}
+
+export async function handlePreviewModeImageGenerationAction(
+  prevState: FormState<{ generatedImages: string[] }>,
+  formData: FormData
+): Promise<FormState<{ generatedImages: string[] }>> {
+  const userId = formData.get("userId") as string;
+  const prompt = formData.get("prompt") as string;
+
+  if (!userId || !prompt) {
+    return { error: "Missing required information for preview mode." };
+  }
+
+  try {
+    // Check if user has already used preview mode
+    const brandProfileRef = doc(db, 'users', userId, 'brandProfiles', userId);
+    const brandProfileSnap = await getDoc(brandProfileRef);
+    
+    if (brandProfileSnap.exists()) {
+      const brandData = brandProfileSnap.data() as BrandData;
+      if (brandData.hasUsedPreviewMode) {
+        return { error: "Preview mode can only be used once. Please complete your brand profile to continue generating content." };
+      }
+    }
+
+    const input: GenerateImagesInput = {
+      brandDescription: "A modern, professional business", // Default description for preview
+      imageStyle: "modern, professional, clean",
+      finalizedTextPrompt: prompt,
+      numberOfImages: 1, // Only 1 image in preview mode
+    };
+    
+    // Note: We are NOT calling checkAndIncrementUsage here - this is free
+    const result = await generateImages(input);
+
+    // Mark that user has used preview mode
+    await setDoc(brandProfileRef, { hasUsedPreviewMode: true }, { merge: true });
+
+    return {
+      data: { generatedImages: result.generatedImages },
+      message: "Preview image generated! Complete your brand profile to unlock unlimited generations and better quality."
+    };
+  } catch (e: any) {
+    console.error("Error in handlePreviewModeImageGenerationAction:", e);
+    return { error: `Failed to generate preview image: ${e.message || "Unknown error."}` };
   }
 }
 

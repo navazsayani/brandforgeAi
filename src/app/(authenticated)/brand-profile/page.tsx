@@ -20,7 +20,7 @@ import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
-import { UserCircle, LinkIcon, FileText, UploadCloud, Tag, Brain, Loader2, Trash2, Edit, Briefcase, Image as ImageIconLucide, Sparkles, Star, ShieldCheck, UserSearch, Users, Wand2 } from 'lucide-react';
+import { UserCircle, LinkIcon, FileText, UploadCloud, Tag, Brain, Loader2, Trash2, Edit, Briefcase, Image as ImageIconLucide, Sparkles, Star, ShieldCheck, UserSearch, Users, Wand2, Type as TypeIcon, Palette, ImagePlay } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { handleExtractBrandInfoFromUrlAction, handleGenerateBrandLogoAction, handleGetAllUserProfilesForAdminAction, handleEnhanceBrandDescriptionAction, type FormState as ExtractFormState, type FormState as GenerateLogoFormState, type FormState as AdminFetchProfilesState, type FormState as EnhanceDescriptionState } from '@/lib/actions';
 import { storage, db } from '@/lib/firebaseConfig';
@@ -61,6 +61,9 @@ const brandProfileSchema = z.object({
   targetKeywords: z.string().optional(),
   logoShape: z.enum(['circle', 'square', 'shield', 'hexagon', 'diamond', 'custom']).optional(),
   logoStyle: z.enum(['minimalist', 'modern', 'classic', 'playful', 'bold', 'elegant']).optional(),
+  logoType: z.enum(['logomark', 'logotype', 'monogram']).optional(),
+  logoColors: z.string().optional(),
+  logoBackground: z.enum(['white', 'transparent', 'dark']).optional(),
   brandLogoUrl: z.union([
     z.string().url({ message: "Please enter a valid URL." }),
     z.string().startsWith('data:').optional(),
@@ -70,6 +73,7 @@ const brandProfileSchema = z.object({
   userEmail: z.string().email().optional().or(z.literal('')),
   subscriptionEndDate: z.any().optional(),
   welcomeGiftOffered: z.boolean().optional(),
+  hasUsedPreviewMode: z.boolean().optional(),
 });
 
 type BrandProfileFormData = z.infer<typeof brandProfileSchema>;
@@ -84,11 +88,15 @@ const defaultFormValues: BrandProfileFormData = {
   targetKeywords: "",
   logoShape: "circle",
   logoStyle: "modern",
+  logoType: 'logomark',
+  logoColors: '',
+  logoBackground: 'white',
   brandLogoUrl: "",
   plan: 'free',
   userEmail: "",
   subscriptionEndDate: null,
   welcomeGiftOffered: false,
+  hasUsedPreviewMode: false,
 };
 
 const initialExtractState: ExtractFormState<{ brandDescription: string; targetKeywords: string; }> = { error: undefined, data: undefined, message: undefined };
@@ -346,6 +354,9 @@ export default function BrandProfilePage() {
     const targetKeywords = form.getValues("targetKeywords");
     const logoShape = form.getValues("logoShape");
     const logoStyle = form.getValues("logoStyle");
+    const logoType = form.getValues("logoType");
+    const logoColors = form.getValues("logoColors");
+    const logoBackground = form.getValues("logoBackground");
 
     if (!brandName || !brandDescription) {
       toast({ title: "Missing Info", description: "Brand Name & Description required for logo.", variant: "default" });
@@ -359,6 +370,9 @@ export default function BrandProfilePage() {
     if (targetKeywords) formData.append("targetKeywords", targetKeywords);
     if (logoShape) formData.append("logoShape", logoShape);
     if (logoStyle) formData.append("logoStyle", logoStyle);
+    if (logoType) formData.append("logoType", logoType);
+    if (logoColors) formData.append("logoColors", logoColors);
+    if (logoBackground) formData.append("logoBackground", logoBackground);
     if (effectiveUserIdForStorage) formData.append("userId", effectiveUserIdForStorage);
     
     const emailForLogoAction = currentProfileBeingEdited?.userEmail || (userId === effectiveUserIdForStorage ? currentUser?.email : undefined);
@@ -493,6 +507,7 @@ export default function BrandProfilePage() {
       finalData.plan = currentProfileBeingEdited?.plan || 'free';
       finalData.subscriptionEndDate = currentProfileBeingEdited?.subscriptionEndDate || null;
       finalData.welcomeGiftOffered = currentProfileBeingEdited?.welcomeGiftOffered || false;
+      finalData.hasUsedPreviewMode = currentProfileBeingEdited?.hasUsedPreviewMode || false;
     } else {
         if (finalData.plan === 'free') {
             finalData.subscriptionEndDate = null;
@@ -894,110 +909,70 @@ export default function BrandProfilePage() {
                       <FormDescription>Your plan is managed from the Pricing page.</FormDescription>
                     </FormItem>
                   )}
-
+                  
+                  {/* --- Enhanced Logo Generation Section --- */}
                   <FormItem>
                     <FormLabel className="flex items-center text-base mb-2"><Sparkles className="w-5 h-5 mr-2 text-primary"/>Brand Logo</FormLabel>
-                    <div className="p-4 border rounded-lg space-y-4">
-                      {/* Logo Shape and Style Selection */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="logoShape"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-sm font-medium">Logo Shape</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value ?? 'circle'}
-                                disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select shape" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectGroup>
-                                    <SelectLabel>Shapes</SelectLabel>
-                                    <SelectItem value="circle">Circle</SelectItem>
-                                    <SelectItem value="square">Square</SelectItem>
-                                    <SelectItem value="shield">Shield</SelectItem>
-                                    <SelectItem value="hexagon">Hexagon</SelectItem>
-                                    <SelectItem value="diamond">Diamond</SelectItem>
-                                    <SelectItem value="custom">Custom (Organic Shape)</SelectItem>
-                                  </SelectGroup>
-                                </SelectContent>
-                              </Select>
-                              <FormDescription className="text-xs">
-                                {field.value === 'custom'
-                                  ? 'Custom: Creates a unique, organic shape that fits the brand identity perfectly - not constrained by geometric boundaries.'
-                                  : 'Shape defines the outer boundary/frame for the logo design.'
-                                }
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="logoStyle"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-sm font-medium">Logo Style</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value ?? 'modern'}
-                                disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select style" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectGroup>
-                                    <SelectLabel>Styles</SelectLabel>
-                                    <SelectItem value="minimalist">Minimalist</SelectItem>
-                                    <SelectItem value="modern">Modern</SelectItem>
-                                    <SelectItem value="classic">Classic</SelectItem>
-                                    <SelectItem value="playful">Playful</SelectItem>
-                                    <SelectItem value="bold">Bold</SelectItem>
-                                    <SelectItem value="elegant">Elegant</SelectItem>
-                                  </SelectGroup>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      
-                      {/* Logo Preview and Generation */}
+                    <div className="p-4 border rounded-lg space-y-6">
                       <div className="flex flex-col sm:flex-row items-center gap-4">
-                        <div className="relative w-32 h-32 sm:w-36 sm:h-36 md:w-40 md:h-40 lg:w-44 lg:h-44 border rounded-md flex items-center justify-center bg-muted overflow-hidden flex-shrink-0">
+                        {/* Logo Preview */}
+                        <div className="relative w-32 h-32 sm:w-36 sm:h-36 border rounded-md flex items-center justify-center bg-muted overflow-hidden flex-shrink-0">
                           {isGeneratingLogo ? (
-                            <Loader2 className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 text-primary animate-spin" />
+                            <Loader2 className="w-12 h-12 sm:w-14 sm:h-14 text-primary animate-spin" />
                           ) : currentLogoToDisplay ? (
                             <div className="relative w-full h-full">
-                                <BrandProfileImage src={currentLogoToDisplay} alt="Brand Logo Preview" fill className="object-contain p-2 sm:p-2.5 md:p-3 lg:p-3" data-ai-hint="brand logo"/>
+                                <BrandProfileImage src={currentLogoToDisplay} alt="Brand Logo Preview" fill className="object-contain p-2 sm:p-2.5" data-ai-hint="brand logo"/>
                             </div>
                           ) : (
-                            <ImageIconLucide className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 text-muted-foreground" />
+                            <ImageIconLucide className="w-12 h-12 sm:w-14 sm:h-14 text-muted-foreground" />
                           )}
                         </div>
+                        {/* Generation Button */}
                         <div className="flex-1 text-center sm:text-left">
                           <Button type="button" onClick={handleGenerateLogo} disabled={isGeneratingLogo || isUploadingLogo || !form.getValues("brandName") || !form.getValues("brandDescription")} className="w-full sm:w-auto">
                             {isGeneratingLogo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />} Generate Logo
                           </Button>
                           {!currentLogoToDisplay && !isGeneratingLogo && <p className="text-xs text-muted-foreground mt-2">Fill Brand Name & Description for logo.</p>}
                           {generateLogoState.error && !isGeneratingLogo && <p className="text-xs text-destructive mt-1">{generateLogoState.error}</p>}
+                          {generatedLogoPreview && <Alert variant="default" className="mt-2 text-xs"><Sparkles className="h-4 w-4" /><AlertDescription>New logo generated! Click &quot;Save Brand Profile&quot; to upload and keep it.</AlertDescription></Alert>}
                         </div>
                       </div>
-                      {isUploadingLogo && logoUploadProgress > 0 && logoUploadProgress < 100 && <Progress value={logoUploadProgress} className="w-full h-2 mt-2" />}
-                      {generatedLogoPreview && <Alert variant="default" className="mt-2"><Sparkles className="h-4 w-4" /><AlertTitle>Logo Generated!</AlertTitle><AlertDescription>New logo generated. Click &quot;Save Brand Profile&quot; to upload and save.</AlertDescription></Alert>}
+
+                      {/* New Logo Design Controls */}
+                      <div className="space-y-4 pt-4 border-t">
+                        <h3 className="text-sm font-semibold text-muted-foreground">Logo Design Specifications</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                           <FormField control={form.control} name="logoType" render={({ field }) => (
+                              <FormItem><FormLabel className="flex items-center text-sm"><TypeIcon className="w-4 h-4 mr-2"/>Type</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value ?? 'logomark'}>
+                                  <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                  <SelectContent><SelectGroup><SelectLabel>Logo Types</SelectLabel><SelectItem value="logomark">Logomark (Symbol/Icon)</SelectItem><SelectItem value="logotype">Logotype (Wordmark)</SelectItem><SelectItem value="monogram">Monogram (Initials)</SelectItem></SelectGroup></SelectContent>
+                                </Select>
+                              </FormItem>
+                            )} />
+                           <FormField control={form.control} name="logoColors" render={({ field }) => (
+                              <FormItem><FormLabel className="flex items-center text-sm"><Palette className="w-4 h-4 mr-2"/>Color Palette</FormLabel><FormControl><Input placeholder="e.g., deep teal, soft gold" {...field} /></FormControl></FormItem>
+                            )} />
+                            <FormField control={form.control} name="logoStyle" render={({ field }) => (
+                              <FormItem><FormLabel className="flex items-center text-sm"><Wand2 className="w-4 h-4 mr-2"/>Style</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value ?? 'modern'}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                  <SelectContent><SelectGroup><SelectLabel>Styles</SelectLabel><SelectItem value="minimalist">Minimalist</SelectItem><SelectItem value="modern">Modern</SelectItem><SelectItem value="classic">Classic</SelectItem><SelectItem value="playful">Playful</SelectItem><SelectItem value="bold">Bold</SelectItem><SelectItem value="elegant">Elegant</SelectItem></SelectGroup></SelectContent>
+                                </Select>
+                              </FormItem>
+                            )} />
+                           <FormField control={form.control} name="logoBackground" render={({ field }) => (
+                            <FormItem><FormLabel className="flex items-center text-sm"><ImagePlay className="w-4 h-4 mr-2"/>Background</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value ?? 'white'}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                <SelectContent><SelectGroup><SelectLabel>Backgrounds</SelectLabel><SelectItem value="white">White</SelectItem><SelectItem value="transparent">Transparent</SelectItem><SelectItem value="dark">Dark</SelectItem></SelectGroup></SelectContent>
+                              </Select>
+                            </FormItem>
+                          )} />
+                        </div>
+                      </div>
                     </div>
                     <FormField control={form.control} name="brandLogoUrl" render={() => <FormMessage />} />
                   </FormItem>
+
                   <FormField
                     control={form.control}
                     name="imageStyleNotes"

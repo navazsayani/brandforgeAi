@@ -4,9 +4,12 @@
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Rocket, ArrowRight, Sparkles } from 'lucide-react';
+import { Rocket, ArrowRight, Sparkles, Eye } from 'lucide-react';
+import { useState } from 'react';
+import { PreviewModeDialog } from './PreviewModeDialog';
 
 export function WelcomeCard() {
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   return (
     <div className="flex items-center justify-center h-full">
         <Card className="w-full max-w-2xl text-center py-10 px-6 animate-fade-in shadow-xl bg-secondary/30 border-primary/20">
@@ -38,12 +41,28 @@ export function WelcomeCard() {
                     </div>
                 </div>
 
-                <Button asChild size="lg" className="w-full sm:w-auto btn-gradient-primary btn-lg-enhanced">
-                    <Link href="/brand-profile">
-                        Create My Brand Profile
-                        <ArrowRight className="w-5 h-5 ml-2" />
-                    </Link>
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-3 w-full">
+                    <Button asChild size="lg" className="flex-1 btn-gradient-primary btn-lg-enhanced">
+                        <Link href="/brand-profile">
+                            Create My Brand Profile
+                            <ArrowRight className="w-5 h-5 ml-2" />
+                        </Link>
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="lg"
+                        className="flex-1 border-primary/20 hover:bg-primary/5"
+                        onClick={() => setShowPreviewDialog(true)}
+                    >
+                        <Eye className="w-5 h-5 mr-2" />
+                        Try AI Preview
+                    </Button>
+                </div>
+                
+                <PreviewModeDialog
+                    isOpen={showPreviewDialog}
+                    onOpenChange={setShowPreviewDialog}
+                />
             </CardContent>
         </Card>
     </div>

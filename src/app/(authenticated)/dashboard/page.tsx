@@ -25,6 +25,7 @@ import { SafeImage } from '@/components/SafeImage';
 import { OnboardingChecklist } from '@/components/OnboardingChecklist';
 import { WelcomeCard } from '@/components/WelcomeCard';
 import { WelcomeGiftDialog } from '@/components/WelcomeGiftDialog';
+import { PreviewModeDialog } from '@/components/PreviewModeDialog';
 
 
 type RecentItem = {
@@ -147,6 +148,7 @@ export default function DashboardPage() {
     const { currentUser, isLoading: isAuthLoading } = useAuth();
     const [paymentMode, setPaymentMode] = useState<'live' | 'test' | 'loading'>('loading');
     const [showWelcomeGift, setShowWelcomeGift] = useState(false);
+    const [showPreviewMode, setShowPreviewMode] = useState(false);
     
     useEffect(() => {
         async function fetchMode() {
@@ -165,6 +167,15 @@ export default function DashboardPage() {
         // Trigger for the Welcome Gift Dialog
         if (brandData && brandData.brandDescription && brandData.welcomeGiftOffered === false) {
             setShowWelcomeGift(true);
+        }
+        
+        // Trigger for Preview Mode Dialog - show for users without brand description who haven't used preview
+        if (brandData && !brandData.brandDescription && !brandData.hasUsedPreviewMode) {
+            // Small delay to avoid showing multiple dialogs at once
+            const timer = setTimeout(() => {
+                setShowPreviewMode(true);
+            }, 1000);
+            return () => clearTimeout(timer);
         }
     }, [brandData]);
 
@@ -192,6 +203,7 @@ export default function DashboardPage() {
     return (
         <div className="space-y-8 animate-fade-in">
             <WelcomeGiftDialog isOpen={showWelcomeGift} onOpenChange={setShowWelcomeGift} />
+            <PreviewModeDialog isOpen={showPreviewMode} onOpenChange={setShowPreviewMode} />
             <OnboardingChecklist />
             <GreetingCard isLoading={isLoading} brandData={brandData} paymentMode={paymentMode} />
 

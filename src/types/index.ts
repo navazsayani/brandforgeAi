@@ -1,4 +1,5 @@
 
+
 import { z } from 'zod';
 
 export interface BrandData {
@@ -10,10 +11,16 @@ export interface BrandData {
   targetKeywords?: string;
   exampleImages?: string[]; // URLs from Firebase Storage
   brandLogoUrl?: string; // URL from Firebase Storage for the brand logo
+  logoType?: 'logomark' | 'logotype' | 'monogram';
+  logoShape?: 'circle' | 'square' | 'shield' | 'hexagon' | 'diamond' | 'custom';
+  logoStyle?: 'minimalist' | 'modern' | 'classic' | 'playful' | 'bold' | 'elegant';
+  logoColors?: string;
+  logoBackground?: 'white' | 'transparent' | 'dark';
   plan?: 'free' | 'premium';
   userEmail?: string; // Added user's email
   subscriptionEndDate?: any; // Can be a Firestore Timestamp object
   welcomeGiftOffered?: boolean; // To track if the user has received the welcome gift
+  hasUsedPreviewMode?: boolean; // To track if user has used AI preview before profile completion
 }
 
 export interface GeneratedImage {
@@ -193,7 +200,7 @@ export interface UserApiCredentials {
         accessToken: string;
         refreshToken?: string;
         expiresAt?: any; // Firestore Timestamp
-        updatedAt: any; // Firestore Timestamp
+        updatedAt?: any; // Firestore Timestamp
         tokenType?: 'short_lived' | 'long_lived';
         validatedAt?: any; // Firestore Timestamp
         metaUserId?: string;

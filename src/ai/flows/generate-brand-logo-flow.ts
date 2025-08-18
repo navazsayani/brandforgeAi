@@ -11,14 +11,18 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { getModelConfig } from '@/lib/model-config';
+import { GoogleGenAI } from "@google/genai";
 
 const GenerateBrandLogoInputSchema = z.object({
   brandName: z.string().describe('The name of the brand.'),
   brandDescription: z.string().describe('A detailed description of the brand, its values, and target audience.'),
   industry: z.string().optional().describe('The industry of the brand (e.g., Fashion, Technology).'),
   targetKeywords: z.string().optional().describe('Comma-separated list of target keywords for the brand.'),
-  logoShape: z.enum(['circle', 'square', 'shield', 'hexagon', 'diamond', 'custom']).optional().describe('Preferred logo shape/form factor.'),
-  logoStyle: z.enum(['minimalist', 'modern', 'classic', 'playful', 'bold', 'elegant']).optional().describe('Preferred logo style aesthetic.'),
+  logoType: z.enum(['logomark', 'logotype', 'monogram']).optional().default('logomark').describe('The type of logo to generate (Symbol, Wordmark, or Initials).'),
+  logoShape: z.enum(['circle', 'square', 'shield', 'hexagon', 'diamond', 'custom']).optional().default('circle').describe('Preferred logo shape/form factor.'),
+  logoStyle: z.enum(['minimalist', 'modern', 'classic', 'playful', 'bold', 'elegant']).optional().default('modern').describe('Preferred logo style aesthetic.'),
+  logoColors: z.string().optional().describe('A text description of the desired color palette (e.g., "deep teal, soft gold").'),
+  logoBackground: z.enum(['white', 'transparent', 'dark']).optional().default('white').describe('The desired background for the logo.'),
 });
 export type GenerateBrandLogoInput = z.infer<typeof GenerateBrandLogoInputSchema>;
 
@@ -27,95 +31,89 @@ const GenerateBrandLogoOutputSchema = z.object({
 });
 export type GenerateBrandLogoOutput = z.infer<typeof GenerateBrandLogoOutputSchema>;
 
-export async function generateBrandLogo(
-  input: GenerateBrandLogoInput
-): Promise<GenerateBrandLogoOutput> {
-  return generateBrandLogoFlow(input);
+// Helper function for creating Gemini-optimized prompts
+function _createGeminiLogoPrompt(input: GenerateBrandLogoInput): string {
+    const { brandName, brandDescription, industry, targetKeywords, logoType, logoShape, logoStyle, logoColors, logoBackground } = input;
+    
+    let typeInstruction = '';
+    switch (logoType) {
+        case 'logotype':
+            typeInstruction = `**Design Focus: Logotype/Wordmark**
+- The primary focus MUST be on the stylized text of the brand name: "${brandName}".
+- Create a unique, memorable, and custom typographic treatment. Do NOT use standard fonts.
+- A small, simple icon can accompany the text, but the text itself must be the hero.`;
+            break;
+        case 'monogram':
+            const initials = brandName.split(' ').map(n => n[0]).join('');
+            typeInstruction = `**Design Focus: Monogram/Lettermark**
+- Create a powerful and creative monogram using the initials "${initials}".
+- The initials should be artfully combined into a single, cohesive symbol.`;
+            break;
+        case 'logomark':
+        default:
+            typeInstruction = `**Design Focus: Logomark/Icon**
+- Create a compelling, abstract, or symbolic icon that represents the essence of "${brandName}".
+- The icon should be clean, recognizable, and memorable on its own.
+- It can be accompanied by the brand name in a clean, complementary font.`;
+    }
+
+    return `
+You are a world-class branding expert and logo designer. Your task is to design a professional, unique, and memorable logo for the brand "${brandName}".
+
+**//-- BRAND CONTEXT --//**
+- **Brand Essence:** ${brandDescription}
+- **Industry:** ${industry || 'Not specified'}
+- **Key Themes:** ${targetKeywords || 'Not specified'}
+
+**//-- DESIGN SPECIFICATIONS --//**
+${typeInstruction}
+
+- **Artistic Style:** ${logoStyle}.
+- **Overall Shape/Form:** The design should feel cohesive within a ${logoShape} form factor.
+- **Color Palette:** ${logoColors ? `Strictly use a palette based on: ${logoColors}.` : 'Use a professional and appropriate color palette (max 3 colors).'}
+- **Background:** The logo MUST be on a ${logoBackground} background. For 'transparent', ensure there's no background color.
+- **Quality:** Professional, vector-style graphic suitable for all business uses.
+
+**//-- CRITICAL REQUIREMENTS --//**
+1.  **Relevance:** The design must be deeply connected to the brand's identity and industry.
+2.  **Simplicity & Memorability:** Avoid overly complex or cluttered designs. The logo must be easily recognizable.
+3.  **No Generic Clip-Art:** Generate a completely original and custom design.
+`;
 }
 
-const generateLogoPromptText = (input: GenerateBrandLogoInput): string => {
-  const { brandName, brandDescription, industry, targetKeywords, logoShape = 'circle', logoStyle = 'modern' } = input;
-  
-  // Simplified, brand-focused prompt that prioritizes relevance
-  let prompt = `Create a professional logo for "${brandName}".
+// Helper function for creating Imagen-optimized prompts
+function _createImagenLogoPrompt(input: GenerateBrandLogoInput): string {
+    const { brandName, brandDescription, industry, targetKeywords, logoType, logoShape, logoStyle, logoColors, logoBackground } = input;
+    
+    let prompt = `Professional logo for "${brandName}". `;
+    
+    switch (logoType) {
+        case 'logotype':
+            prompt += `A stylized logotype (wordmark). `;
+            break;
+        case 'monogram':
+            const initials = brandName.split(' ').map(n => n[0]).join('');
+            prompt += `A creative monogram using the initials "${initials}". `;
+            break;
+        case 'logomark':
+        default:
+            prompt += `An iconic logomark (symbol). `;
+    }
 
-BRAND ESSENCE:
-${brandDescription}
-${industry && industry !== '_none_' ? `Industry: ${industry}` : ''}
-${targetKeywords ? `Key themes: ${targetKeywords}` : ''}
+    prompt += `Style: ${logoStyle}, minimalist, clean vector graphic. `;
+    
+    if (logoColors) {
+        prompt += `Color Palette: ${logoColors}. `;
+    } else {
+        prompt += `Professional color palette. `;
+    }
+    
+    prompt += `Shape: ${logoShape}. `;
+    prompt += `Background: ${logoBackground} background. `;
+    prompt += `Context: ${brandDescription}. ${industry ? `Industry: ${industry}.` : ''} ${targetKeywords ? `Keywords: ${targetKeywords}.` : ''}`;
 
-DESIGN SPECIFICATIONS:
-- Professional quality suitable for business use
-- Clean, memorable, and directly related to "${brandName}" and its business
-- Vector-style graphic on white background
-- Maximum 3 colors with good contrast
-
-${getShapeGuidance(logoShape)}
-
-${getStyleGuidance(logoStyle)}
-
-${industry && industry !== '_none_' ? getSimpleIndustryGuidance(industry) : ''}
-
-CRITICAL REQUIREMENTS:
-1. The logo MUST clearly represent "${brandName}" and reflect its business/industry
-2. Focus on creating a design that someone would immediately associate with "${brandName}"
-3. Avoid generic symbols - make it specific to this brand's identity
-4. The design should be professional and memorable
-
-Create a logo that clearly represents "${brandName}" and its business purpose.`;
-
-  return prompt;
-};
-
-// Simplified style guidance
-function getStyleGuidance(style: string): string {
-  const guidance = {
-    minimalist: 'STYLE: Clean, simple design with plenty of white space and minimal elements.',
-    modern: 'STYLE: Contemporary look with clean lines and current design trends.',
-    classic: 'STYLE: Timeless, traditional design with elegant proportions.',
-    playful: 'STYLE: Friendly, approachable design with personality.',
-    bold: 'STYLE: Strong, confident design with high contrast and impact.',
-    elegant: 'STYLE: Sophisticated, refined design with graceful elements.'
-  };
-  return guidance[style as keyof typeof guidance] || guidance.modern;
+    return prompt;
 }
-
-// Simplified industry guidance
-function getSimpleIndustryGuidance(industry: string): string {
-  const industryLower = industry.toLowerCase();
-  
-  if (industryLower.includes('tech') || industryLower.includes('saas')) {
-    return 'INDUSTRY CONTEXT: Technology/Software - Consider clean geometric shapes, connectivity concepts, or innovation symbols.';
-  } else if (industryLower.includes('health') || industryLower.includes('wellness')) {
-    return 'INDUSTRY CONTEXT: Health/Wellness - Consider balance, vitality, care, or growth concepts.';
-  } else if (industryLower.includes('food') || industryLower.includes('beverage')) {
-    return 'INDUSTRY CONTEXT: Food/Beverage - Consider freshness, quality, nourishment, or culinary concepts.';
-  } else if (industryLower.includes('finance') || industryLower.includes('fintech')) {
-    return 'INDUSTRY CONTEXT: Finance - Consider trust, security, growth, or stability concepts.';
-  } else if (industryLower.includes('education')) {
-    return 'INDUSTRY CONTEXT: Education - Consider growth, knowledge, development, or learning concepts.';
-  } else if (industryLower.includes('fashion') || industryLower.includes('apparel')) {
-    return 'INDUSTRY CONTEXT: Fashion/Apparel - Consider style, elegance, craftsmanship, or personal expression.';
-  } else if (industryLower.includes('real estate')) {
-    return 'INDUSTRY CONTEXT: Real Estate - Consider homes, community, stability, or investment concepts.';
-  }
-  
-  return `INDUSTRY CONTEXT: ${industry} - Consider concepts relevant to this industry.`;
-}
-
-// Get shape-specific guidance
-function getShapeGuidance(shape: string): string {
-  const shapeGuidance = {
-    circle: 'SHAPE: Design to fit within a circular boundary - the logo should work well in a round frame.',
-    square: 'SHAPE: Design to fit within a square/rectangular boundary - the logo should work well in a square frame.',
-    shield: 'SHAPE: Design to fit within a shield-shaped boundary - the logo should work well in a shield-like frame.',
-    hexagon: 'SHAPE: Design to fit within a hexagonal boundary - the logo should work well in a hexagon frame.',
-    diamond: 'SHAPE: Design to fit within a diamond/rhombus boundary - the logo should work well in a diamond frame.',
-    custom: 'SHAPE: Create a unique, organic shape that perfectly fits the brand identity - break free from standard geometric boundaries while maintaining professional appeal. The logo itself can define its own optimal shape.'
-  };
-  return shapeGuidance[shape as keyof typeof shapeGuidance] || shapeGuidance.circle;
-}
-
 
 const generateBrandLogoFlow = ai.defineFlow(
   {
@@ -124,18 +122,22 @@ const generateBrandLogoFlow = ai.defineFlow(
     outputSchema: GenerateBrandLogoOutputSchema,
   },
   async (input) => {
-    const promptText = generateLogoPromptText(input);
-    console.log("Attempting logo generation with prompt:", promptText);
+    const { textToImageModel } = await getModelConfig();
+    const isImagen = textToImageModel.toLowerCase().includes('imagen');
 
-    const { imageGenerationModel } = await getModelConfig();
+    const promptText = isImagen
+      ? _createImagenLogoPrompt(input)
+      : _createGeminiLogoPrompt(input);
+      
+    console.log(`[Logo Gen] Using ${isImagen ? 'Imagen' : 'Gemini'} prompt for model: ${textToImageModel}`);
+    console.log(`[Logo Gen] Prompt:`, promptText.substring(0, 500) + "...");
 
     try {
       const {media} = await ai.generate({
-        model: imageGenerationModel,
+        model: textToImageModel,
         prompt: promptText,
         config: {
           responseModalities: ['TEXT', 'IMAGE'],
-          // safetySettings removed as per request
         },
       });
 
@@ -145,8 +147,15 @@ const generateBrandLogoFlow = ai.defineFlow(
       }
       return { logoDataUri: media.url };
     } catch (error: any) {
-      console.error("Error during ai.generate call for logo:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
-      throw new Error(`Error during logo generation API call: ${error.message || 'Unknown error from ai.generate()'}`);
+      console.error("Error during logo generation:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      throw new Error(`Error during logo generation: ${error.message || 'Unknown error'}`);
     }
   }
 );
+
+
+export async function generateBrandLogo(
+  input: GenerateBrandLogoInput
+): Promise<GenerateBrandLogoOutput> {
+  return generateBrandLogoFlow(input);
+}

@@ -144,6 +144,16 @@ function isImagenModel(modelName: string): boolean {
   return modelName.toLowerCase().includes('imagen');
 }
 
+// Helper function to detect Imagen 4.0 models specifically
+function isImagen4Model(modelName: string): boolean {
+  return modelName.toLowerCase().includes('imagen-4');
+}
+
+// Helper function to detect Imagen 3.0 models specifically
+function isImagen3Model(modelName: string): boolean {
+  return modelName.toLowerCase().includes('imagen-3');
+}
+
 // Helper function to map UI aspect ratios to Imagen supported ratios
 function mapToImagenAspectRatio(uiAspectRatio?: string): string {
   const mapping: Record<string, string> = {
@@ -162,7 +172,8 @@ function validateImagenModel(modelName: string): string {
   const validModels = [
     'imagen-3.0-generate-001',
     'imagen-3.0-fast-generate-001',
-    'imagen-4.0-generate-preview-06-06'
+    'imagen-4.0-generate-preview-06-06',
+    'imagen-4.0-fast-generate-001'
   ];
   
   // Remove "googleai/" prefix if present (Imagen API doesn't use this prefix)
@@ -191,6 +202,46 @@ function validateImagenModel(modelName: string): string {
   */
 }
 
+// Helper function to optimize prompts for Imagen models
+function optimizePromptForImagen(originalPrompt: string, modelName: string): string {
+  console.log(`[Imagen] Optimizing prompt for model: ${modelName}`);
+  
+  // Remove Gemini-specific formatting and instructions
+  let optimizedPrompt = originalPrompt
+    // Remove markdown formatting
+    .replace(/\*\*(.*?)\*\*/g, '$1') // Remove **bold**
+    .replace(/\*(.*?)\*/g, '$1') // Remove *italic*
+    .replace(/#{1,6}\s/g, '') // Remove markdown headers
+    .replace(/^-\s/gm, '') // Remove bullet points
+    .replace(/^\d+\.\s/gm, '') // Remove numbered lists
+    
+    // Remove Gemini-specific instructions (using compatible regex)
+    .replace(/You are creating[\s\S]*?platforms\./, '') // Remove "You are creating..." intro
+    .replace(/Generate a new[\s\S]*?Instagram\./, '') // Remove "Generate a new..." intro
+    .replace(/\*\*[A-Z\s]+:\*\*/g, '') // Remove section headers like **BRAND STRATEGY:**
+    .replace(/CRITICAL REQUIREMENT[\s\S]*?constraint\./gi, '') // Remove critical requirements (handled by API params)
+    .replace(/Use seed:.*?\./gi, '') // Remove seed instructions (handled by API)
+    .replace(/IMPORTANT COMPOSITION RULE[\s\S]*?person\./, '') // Remove composition guidance
+    .replace(/Important for batch generation[\s\S]*?variations\./, '') // Remove batch instructions
+    .replace(/Avoid the following.*?image:/gi, '') // Remove negative prompt text (handled separately)
+    
+    // Clean up extra whitespace and newlines
+    .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double
+    .replace(/^\s+|\s+$/g, '') // Trim whitespace
+    .replace(/\s{2,}/g, ' '); // Replace multiple spaces with single
+  
+  // For Imagen, focus on direct, descriptive language
+  if (isImagen4Model(modelName)) {
+    // Imagen 4.0 works best with concise, descriptive prompts
+    optimizedPrompt = optimizedPrompt
+      .replace(/^.*?concept:\s*"([^"]+)".*$/im, '$1') // Extract core concept if present
+      .substring(0, 1000); // Limit length for better results
+  }
+  
+  console.log(`[Imagen] Original prompt length: ${originalPrompt.length}, Optimized length: ${optimizedPrompt.length}`);
+  return optimizedPrompt;
+}
+
 // New function to generate images using Google's Imagen API
 async function _generateImageWithImagen(params: {
   model: string;
@@ -207,6 +258,11 @@ async function _generateImageWithImagen(params: {
   console.log(`Prompt: ${params.prompt.substring(0, 100)}...`);
   console.log(`Number of images: ${params.numberOfImages}`);
   console.log(`Aspect ratio: ${params.aspectRatio}`);
+  console.log(`Model type: Imagen ${isImagen4Model(validatedModel) ? '4.0' : '3.0'}`);
+  
+  // Optimize the prompt for Imagen models
+  const optimizedPrompt = optimizePromptForImagen(params.prompt, validatedModel);
+  console.log(`Optimized prompt: ${optimizedPrompt.substring(0, 200)}...`);
   
   try {
     // Initialize GoogleGenAI with API key from environment
@@ -219,27 +275,85 @@ async function _generateImageWithImagen(params: {
     
     const ai = new GoogleGenAI({ apiKey });
     
+    // Build request config with model-specific optimizations
     const requestConfig: any = {
       numberOfImages: params.numberOfImages,
       aspectRatio: mapToImagenAspectRatio(params.aspectRatio),
-      personGeneration: "allow_adult", // Allow generation of adults but not children
-      safetySettings: "block_none", // Allow more creative freedom
-      outputOptions: {
+    };
+
+    // Model-specific parameter configuration
+    if (isImagen4Model(validatedModel)) {
+      // Imagen 4.0 optimized parameters
+      console.log(`Configuring for Imagen 4.0 model with enhanced parameters`);
+      
+      // Imagen 4.0 supports enhanced safety and quality settings
+      requestConfig.personGeneration = "allow_adult";
+      requestConfig.safetySettings = "block_few"; // More permissive than default but safer than block_none
+      
+      // Enhanced output options for Imagen 4.0
+      requestConfig.outputOptions = {
         compressionQuality: "high",
         mimeType: "image/png"
+      };
+      
+      // Imagen 4.0 specific enhancements
+      requestConfig.includeSafetyAttributes = false; // Disable safety attributes for cleaner output
+      requestConfig.languageHints = ["en"]; // Optimize for English prompts
+      
+      // Skip negative prompt for Imagen 4.0 (not supported)
+      if (params.negativePrompt && params.negativePrompt.trim()) {
+        console.log(`Skipping negative prompt for Imagen 4.0 model: "${params.negativePrompt.trim()}"`);
+        console.log(`Imagen 4.0 uses advanced prompt understanding instead of negative prompts`);
       }
-    };
-    
-    // Add negative prompt if provided
-    if (params.negativePrompt && params.negativePrompt.trim()) {
-      requestConfig.negativePrompt = params.negativePrompt.trim();
-      console.log(`Using negative prompt: ${params.negativePrompt.trim()}`);
-    }
-    
-    // Add seed if provided for reproducibility
-    if (params.seed !== undefined) {
-      requestConfig.seed = params.seed;
-      console.log(`Using seed: ${params.seed}`);
+      
+      // Enhanced seed handling for Imagen 4.0
+      if (params.seed !== undefined) {
+        requestConfig.seed = params.seed;
+        console.log(`Using seed for Imagen 4.0: ${params.seed}`);
+      }
+      
+    } else if (isImagen3Model(validatedModel)) {
+      // Imagen 3.0 parameters (backward compatibility)
+      console.log(`Configuring for Imagen 3.0 model with legacy parameters`);
+      
+      requestConfig.personGeneration = "allow_adult";
+      requestConfig.safetySettings = "block_none"; // More permissive for Imagen 3.0
+      requestConfig.outputOptions = {
+        compressionQuality: "high",
+        mimeType: "image/png"
+      };
+      
+      // Add negative prompt for Imagen 3.0 (supported)
+      if (params.negativePrompt && params.negativePrompt.trim()) {
+        requestConfig.negativePrompt = params.negativePrompt.trim();
+        console.log(`Using negative prompt for Imagen 3.0: ${params.negativePrompt.trim()}`);
+      }
+      
+      // Add seed for Imagen 3.0
+      if (params.seed !== undefined) {
+        requestConfig.seed = params.seed;
+        console.log(`Using seed for Imagen 3.0: ${params.seed}`);
+      }
+    } else {
+      // Fallback configuration for unknown Imagen models
+      console.log(`Using fallback configuration for unknown Imagen model: ${validatedModel}`);
+      
+      requestConfig.personGeneration = "allow_adult";
+      requestConfig.safetySettings = "block_few"; // Conservative approach
+      requestConfig.outputOptions = {
+        compressionQuality: "high",
+        mimeType: "image/png"
+      };
+      
+      // Conservative approach: skip negative prompt for unknown models
+      if (params.negativePrompt && params.negativePrompt.trim()) {
+        console.log(`Skipping negative prompt for unknown Imagen model version`);
+      }
+      
+      if (params.seed !== undefined) {
+        requestConfig.seed = params.seed;
+        console.log(`Using seed: ${params.seed}`);
+      }
     }
     
     console.log(`Full Imagen API request:`, {
@@ -252,7 +366,7 @@ async function _generateImageWithImagen(params: {
     
     const response = await ai.models.generateImages({
       model: validatedModel,
-      prompt: params.prompt,
+      prompt: optimizedPrompt,
       config: requestConfig
     });
 
