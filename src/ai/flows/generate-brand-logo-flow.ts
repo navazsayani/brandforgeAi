@@ -24,7 +24,6 @@ const GenerateBrandLogoInputSchema = z.object({
   logoStyle: z.enum(['minimalist', 'modern', 'classic', 'playful', 'bold', 'elegant']).optional().default('modern').describe('Preferred logo style aesthetic.'),
   logoColors: z.string().optional().describe('A text description of the desired color palette (e.g., "deep teal, soft gold").'),
   logoBackground: z.enum(['white', 'transparent', 'dark']).optional().default('white').describe('The desired background for the logo.'),
-  logoSize: z.enum(['small', 'medium', 'large']).optional().default('medium').describe('The preferred logo size for different use cases.'),
 });
 export type GenerateBrandLogoInput = z.infer<typeof GenerateBrandLogoInputSchema>;
 
@@ -93,15 +92,6 @@ function getShapeGuidance(shape: string): string {
   return shapeGuidance[shape as keyof typeof shapeGuidance] || shapeGuidance.circle;
 }
 
-function getLogoSizeGuidance(size: string): string {
-  const sizeGuidance = {
-    small: 'SIZE: Design for small applications (business cards, favicons, app icons) - prioritize simplicity and clarity at small scales. Avoid fine details that may not be visible.',
-    medium: 'SIZE: Design for standard business applications (letterheads, websites, signage) - balanced detail level that works across most use cases.',
-    large: 'SIZE: Design for large format applications (billboards, banners, large displays) - can include more intricate details and complex elements.'
-  };
-  return sizeGuidance[size as keyof typeof sizeGuidance] || sizeGuidance.medium;
-}
-
 function getLogoTypeInstruction(logoType: string, brandName: string): string {
     switch (logoType) {
         case 'logotype':
@@ -120,7 +110,7 @@ function getLogoTypeInstruction(logoType: string, brandName: string): string {
 
 // Helper function for creating Gemini-optimized prompts (conversational style)
 function _createGeminiLogoPrompt(input: GenerateBrandLogoInput): string {
-    const { brandName, brandDescription, industry, targetKeywords, logoType, logoShape, logoStyle, logoColors, logoBackground, logoSize } = input;
+    const { brandName, brandDescription, industry, targetKeywords, logoType, logoShape, logoStyle, logoColors, logoBackground } = input;
     
     const conversationalPrompt = `I need you to design a compelling and memorable logo for "${brandName}". Let me tell you about this brand and what I'm envisioning:
 
@@ -138,7 +128,7 @@ I'm thinking the overall aesthetic should be ${logoStyle || 'modern'} - somethin
 
 ${logoColors ? `For colors, I'd love to see a palette based on: ${logoColors}. These colors should reflect the brand's character.` : 'Please choose colors that authentically represent the brand\'s personality and appeal to their target audience.'}
 
-The logo will be used on a ${logoBackground || 'white'} background, so please design accordingly. ${getLogoSizeGuidance(logoSize || 'medium')}
+The logo will be used on a ${logoBackground || 'white'} background, so please design accordingly.
 
 ${industry && industry !== '_none_' ? getEnhancedIndustryGuidance(industry, brandDescription) : ''}
 
@@ -152,7 +142,7 @@ Make it memorable, authentic, and perfectly suited for all business applications
 
 // Helper function for creating Imagen-optimized prompts (direct descriptive style)
 function _createImagenLogoPrompt(input: GenerateBrandLogoInput): string {
-    const { brandName, brandDescription, industry, targetKeywords, logoType, logoShape, logoStyle, logoColors, logoBackground, logoSize } = input;
+    const { brandName, brandDescription, industry, targetKeywords, logoType, logoShape, logoStyle, logoColors, logoBackground } = input;
     
     // Build visual description based on logo type
     let visualDescription = '';

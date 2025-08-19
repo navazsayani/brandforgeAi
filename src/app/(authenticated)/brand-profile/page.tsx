@@ -64,7 +64,6 @@ const brandProfileSchema = z.object({
   logoType: z.enum(['logomark', 'logotype', 'monogram']).optional(),
   logoColors: z.string().optional(),
   logoBackground: z.enum(['white', 'transparent', 'dark']).optional(),
-  logoSize: z.enum(['small', 'medium', 'large']).optional(),
   brandLogoUrl: z.union([
     z.string().url({ message: "Please enter a valid URL." }),
     z.string().startsWith('data:').optional(),
@@ -92,7 +91,6 @@ const defaultFormValues: BrandProfileFormData = {
   logoType: 'logomark',
   logoColors: '',
   logoBackground: 'white',
-  logoSize: 'medium',
   brandLogoUrl: "",
   plan: 'free',
   userEmail: "",
@@ -359,7 +357,6 @@ export default function BrandProfilePage() {
     const logoType = form.getValues("logoType");
     const logoColors = form.getValues("logoColors");
     const logoBackground = form.getValues("logoBackground");
-    const logoSize = form.getValues("logoSize");
 
     if (!brandName || !brandDescription) {
       toast({ title: "Missing Info", description: "Brand Name & Description required for logo.", variant: "default" });
@@ -376,7 +373,6 @@ export default function BrandProfilePage() {
     if (logoType) formData.append("logoType", logoType);
     if (logoColors) formData.append("logoColors", logoColors);
     if (logoBackground) formData.append("logoBackground", logoBackground);
-    if (logoSize) formData.append("logoSize", logoSize);
     if (effectiveUserIdForStorage) formData.append("userId", effectiveUserIdForStorage);
     
     const emailForLogoAction = currentProfileBeingEdited?.userEmail || (userId === effectiveUserIdForStorage ? currentUser?.email : undefined);
@@ -671,7 +667,7 @@ export default function BrandProfilePage() {
        setAcceptedRefinement(null);
     }
   };
-
+  
   const handleDownloadLogo = () => {
     const logoUrl = generatedLogoPreview || currentProfileBeingEdited?.brandLogoUrl;
     if (!logoUrl) {
@@ -1010,14 +1006,6 @@ export default function BrandProfilePage() {
                               <FormItem><FormLabel className="flex items-center text-sm"><Wand2 className="w-4 h-4 mr-2"/>Style</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value ?? 'modern'}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                                   <SelectContent><SelectGroup><SelectLabel>Styles</SelectLabel><SelectItem value="minimalist">Minimalist</SelectItem><SelectItem value="modern">Modern</SelectItem><SelectItem value="classic">Classic</SelectItem><SelectItem value="playful">Playful</SelectItem><SelectItem value="bold">Bold</SelectItem><SelectItem value="elegant">Elegant</SelectItem></SelectGroup></SelectContent>
-                                </Select>
-                              </FormItem>
-                            )} />
-                           <FormField control={form.control} name="logoSize" render={({ field }) => (
-                              <FormItem><FormLabel className="flex items-center text-sm"><ImageIconLucide className="w-4 h-4 mr-2"/>Size</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value ?? 'medium'}>
-                                  <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                  <SelectContent><SelectGroup><SelectLabel>Sizes</SelectLabel><SelectItem value="small">Small (Cards, Icons)</SelectItem><SelectItem value="medium">Medium (Standard)</SelectItem><SelectItem value="large">Large (Banners, Signs)</SelectItem></SelectGroup></SelectContent>
                                 </Select>
                               </FormItem>
                             )} />
