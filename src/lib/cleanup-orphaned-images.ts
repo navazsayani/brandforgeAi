@@ -27,6 +27,12 @@ export interface OrphanedImageReport {
     totalImages: number;
     orphanedCount: number;
   };
+  logoImages: {
+    orphanedUrls: string[];
+    validUrls: string[];
+    totalImages: number;
+    orphanedCount: number;
+  };
   totalOrphanedCount: number;
   totalImageCount: number;
 }
@@ -60,6 +66,176 @@ export async function checkFirebaseStorageUrl(url: string): Promise<boolean> {
     console.warn(`Error checking storage URL ${url}:`, error.message);
     return true;
   }
+}
+
+/**
+ * Scan a user's brand logos for dormant/inactive ones
+ */
+export async function scanUserForDormantLogos(userId: string, dormantThresholdDays: number = 90): Promise<{
+  userId: string;
+  userEmail?: string;
+  brandName?: string;
+  dormantLogos: Array<{
+    logoId: string;
+    logoUrl: string;
+    lastUpdated: Date;
+    daysSinceUpdate: number;
+  }>;
+  totalLogos: number;
+  dormantCount: number;
+}> {
+  console.log(`Scanning user ${userId} for dormant logos (threshold: ${dormantThresholdDays} days)...`);
+  
+  const userDocRef = doc(db, 'users', userId, 'brandProfiles', userId);
+  const userDocSnap = await getDoc(userDocRef);
+  
+  if (!userDocSnap.exists()) {
+    throw new Error(`User profile not found for ${userId}`);
+  }
+  
+  const brandData = userDocSnap.data();
+  const userEmail = brandData.userEmail || 'Unknown';
+  const brandName = brandData.brandName || 'Unnamed Brand';
+  
+  // Scan brand logos collection
+  const logosCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/brandLogos`);
+  const logosSnapshot = await getDocs(logosCollectionRef);
+  
+  console.log(`Found ${logosSnapshot.docs.length} logos for ${userEmail}`);
+  
+  const dormantLogos: Array<{
+    logoId: string;
+    logoUrl: string;
+    lastUpdated: Date;
+    daysSinceUpdate: number;
+  }> = [];
+  
+  const dormantThresholdMs = dormantThresholdDays * 24 * 60 * 60 * 1000;
+  const now = new Date();
+  
+  for (const logoDoc of logosSnapshot.docs) {
+    const logoData = logoDoc.data();
+    const logoUrl = logoData.logoUrl;
+    
+    if (!logoUrl) continue; // Skip logos without URLs
+    
+    // Get the last updated timestamp
+    const updatedAt = logoData.updatedAt || logoData.createdAt;
+    const lastUpdated = updatedAt?.toDate ? updatedAt.toDate() : new Date(updatedAt || 0);
+    const timeSinceUpdate = now.getTime() - lastUpdated.getTime();
+    const daysSinceUpdate = Math.floor(timeSinceUpdate / (24 * 60 * 60 * 1000));
+    
+    console.log(`Checking logo ${logoDoc.id}: last updated ${daysSinceUpdate} days ago`);
+    
+    // Check if logo is dormant
+    if (timeSinceUpdate > dormantThresholdMs) {
+      // Additional check: Skip the 'currentLogo' if it's the only logo (active brand logo)
+      if (logoDoc.id === 'currentLogo' && logosSnapshot.docs.length === 1) {
+        console.log(`Skipping currentLogo as it's the only logo for user ${userId}`);
+        continue;
+      }
+      
+      dormantLogos.push({
+        logoId: logoDoc.id,
+        logoUrl,
+        lastUpdated,
+        daysSinceUpdate
+      });
+      console.log(`✗ Logo ${logoDoc.id} is dormant (${daysSinceUpdate} days old)`);
+    } else {
+      console.log(`✓ Logo ${logoDoc.id} is active`);
+    }
+  }
+  
+  return {
+    userId,
+    userEmail,
+    brandName,
+    dormantLogos,
+    totalLogos: logosSnapshot.docs.length,
+    dormantCount: dormantLogos.length
+  };
+}
+
+/**
+ * Clean up dormant logos for a user
+ */
+export async function cleanupDormantLogosForUser(
+  userId: string,
+  dormantThresholdDays: number = 90,
+  dryRun: boolean = true
+): Promise<{
+  userId: string;
+  userEmail?: string;
+  deletedLogos: number;
+  deletedStorageFiles: number;
+  savedSpace: number;
+  errors: string[];
+}> {
+  const dormantScan = await scanUserForDormantLogos(userId, dormantThresholdDays);
+  
+  if (dormantScan.dormantCount === 0) {
+    console.log(`No dormant logos found for user ${userId}`);
+    return {
+      userId,
+      userEmail: dormantScan.userEmail,
+      deletedLogos: 0,
+      deletedStorageFiles: 0,
+      savedSpace: 0,
+      errors: []
+    };
+  }
+  
+  console.log(`Found ${dormantScan.dormantCount} dormant logos for user ${userId}`);
+  
+  let deletedLogos = 0;
+  let deletedStorageFiles = 0;
+  let savedSpace = 0;
+  const errors: string[] = [];
+  
+  if (!dryRun) {
+    for (const dormantLogo of dormantScan.dormantLogos) {
+      try {
+        // Delete from Firestore
+        const logoDocRef = doc(db, `users/${userId}/brandProfiles/${userId}/brandLogos`, dormantLogo.logoId);
+        await deleteDoc(logoDocRef);
+        deletedLogos++;
+        console.log(`✓ Deleted dormant logo document: ${dormantLogo.logoId}`);
+        
+        // Delete from Storage
+        const deleteResult = await safeDeleteImageFromStorage(dormantLogo.logoUrl, false);
+        if (deleteResult.success && deleteResult.deleted) {
+          deletedStorageFiles++;
+          // Estimate saved space (we don't have exact file size, so estimate)
+          savedSpace += 100 * 1024; // Estimate 100KB per logo
+          console.log(`✓ Deleted dormant logo storage file: ${dormantLogo.logoUrl}`);
+        } else if (deleteResult.error) {
+          console.warn(`Warning deleting storage file: ${deleteResult.error}`);
+        }
+        
+      } catch (error: any) {
+        const errorMsg = `Failed to delete dormant logo ${dormantLogo.logoId}: ${error.message}`;
+        errors.push(errorMsg);
+        console.error(errorMsg);
+      }
+    }
+    
+    console.log(`✓ Cleaned up ${deletedLogos} dormant logos for user ${userId}`);
+  } else {
+    console.log(`DRY RUN: Would delete ${dormantScan.dormantCount} dormant logos for user ${userId}`);
+    dormantScan.dormantLogos.forEach(logo => {
+      console.log(`  - Would delete: ${logo.logoId} (${logo.daysSinceUpdate} days old)`);
+    });
+  }
+  
+  return {
+    userId,
+    userEmail: dormantScan.userEmail,
+    deletedLogos,
+    deletedStorageFiles,
+    savedSpace,
+    errors
+  };
 }
 
 /**
@@ -128,8 +304,37 @@ export async function scanUserForOrphanedImages(userId: string): Promise<Orphane
     }
   }
   
-  const totalOrphanedCount = exampleOrphanedUrls.length + libraryOrphanedUrls.length;
-  const totalImageCount = exampleImages.length + librarySnapshot.docs.length;
+  // Scan brand logos
+  const logosCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/brandLogos`);
+  const logosSnapshot = await getDocs(logosCollectionRef);
+  
+  console.log(`Found ${logosSnapshot.docs.length} brand logos for ${userEmail}`);
+  
+  const logoOrphanedUrls: string[] = [];
+  const logoValidUrls: string[] = [];
+  const orphanedLogoDocs: string[] = []; // Store doc IDs for cleanup
+  
+  for (const logoDoc of logosSnapshot.docs) {
+    const logoData = logoDoc.data();
+    const logoUrl = logoData.logoUrl;
+    
+    if (logoUrl) {
+      console.log(`Checking brand logo: ${logoUrl.substring(0, 80)}...`);
+      
+      const exists = await checkFirebaseStorageUrl(logoUrl);
+      if (exists) {
+        logoValidUrls.push(logoUrl);
+        console.log(`✓ Valid`);
+      } else {
+        logoOrphanedUrls.push(logoUrl);
+        orphanedLogoDocs.push(logoDoc.id);
+        console.log(`✗ Orphaned`);
+      }
+    }
+  }
+  
+  const totalOrphanedCount = exampleOrphanedUrls.length + libraryOrphanedUrls.length + logoOrphanedUrls.length;
+  const totalImageCount = exampleImages.length + librarySnapshot.docs.length + logosSnapshot.docs.length;
   
   return {
     userId,
@@ -147,18 +352,25 @@ export async function scanUserForOrphanedImages(userId: string): Promise<Orphane
       totalImages: librarySnapshot.docs.length,
       orphanedCount: libraryOrphanedUrls.length
     },
+    logoImages: {
+      orphanedUrls: logoOrphanedUrls,
+      validUrls: logoValidUrls,
+      totalImages: logosSnapshot.docs.length,
+      orphanedCount: logoOrphanedUrls.length
+    },
     totalOrphanedCount,
     totalImageCount,
     // Store orphaned doc IDs for cleanup (internal use)
-    _orphanedLibraryDocs: orphanedLibraryDocs
-  } as OrphanedImageReport & { _orphanedLibraryDocs: string[] };
+    _orphanedLibraryDocs: orphanedLibraryDocs,
+    _orphanedLogoDocs: orphanedLogoDocs
+  } as OrphanedImageReport & { _orphanedLibraryDocs: string[]; _orphanedLogoDocs: string[] };
 }
 
 /**
  * Clean up orphaned image references for a user (Phase 1: Enhanced with storage deletion)
  */
 export async function cleanupOrphanedImagesForUser(userId: string, dryRun: boolean = true, deleteStorageFiles: boolean = true): Promise<OrphanedImageReport & { storageFilesDeleted?: number }> {
-  const report = await scanUserForOrphanedImages(userId) as OrphanedImageReport & { _orphanedLibraryDocs: string[] };
+  const report = await scanUserForOrphanedImages(userId) as OrphanedImageReport & { _orphanedLibraryDocs: string[]; _orphanedLogoDocs: string[] };
   
   if (report.totalOrphanedCount === 0) {
     console.log(`No orphaned images found for user ${userId}`);
@@ -168,6 +380,7 @@ export async function cleanupOrphanedImagesForUser(userId: string, dryRun: boole
   console.log(`Found ${report.totalOrphanedCount} orphaned images for user ${userId}`);
   console.log(`  - Example images: ${report.exampleImages.orphanedCount}`);
   console.log(`  - Library images: ${report.libraryImages.orphanedCount}`);
+  console.log(`  - Logo images: ${report.logoImages.orphanedCount}`);
   
   let storageFilesDeleted = 0;
   
@@ -214,6 +427,27 @@ export async function cleanupOrphanedImagesForUser(userId: string, dryRun: boole
       console.log(`✓ Cleaned up ${report.libraryImages.orphanedCount} orphaned library image references`);
     }
     
+    // Clean up orphaned logo images
+    if (report.logoImages.orphanedCount > 0 && report._orphanedLogoDocs) {
+      // Delete storage files first (if enabled)
+      if (deleteStorageFiles) {
+        for (const orphanUrl of report.logoImages.orphanedUrls) {
+          const deleteResult = await safeDeleteImageFromStorage(orphanUrl, true);
+          if (deleteResult.success && deleteResult.deleted) {
+            storageFilesDeleted++;
+          }
+        }
+      }
+      
+      // Then clean up database references
+      for (const docId of report._orphanedLogoDocs) {
+        const docRef = doc(db, `users/${userId}/brandProfiles/${userId}/brandLogos`, docId);
+        await deleteDoc(docRef);
+      }
+      
+      console.log(`✓ Cleaned up ${report.logoImages.orphanedCount} orphaned logo image references`);
+    }
+    
     console.log(`✓ Total cleanup: ${report.totalOrphanedCount} orphaned image references for user ${userId}`);
     if (deleteStorageFiles) {
       console.log(`✓ Deleted ${storageFilesDeleted} storage files`);
@@ -222,6 +456,7 @@ export async function cleanupOrphanedImagesForUser(userId: string, dryRun: boole
     console.log(`DRY RUN: Would remove ${report.totalOrphanedCount} orphaned image references`);
     console.log(`  - Example images: ${report.exampleImages.orphanedCount}`);
     console.log(`  - Library images: ${report.libraryImages.orphanedCount}`);
+    console.log(`  - Logo images: ${report.logoImages.orphanedCount}`);
     if (deleteStorageFiles) {
       console.log(`  - Would also delete ${report.totalOrphanedCount} storage files`);
     }
@@ -335,7 +570,7 @@ export async function scanAllUsersForOrphanedImages(): Promise<OrphanedImageRepo
       reports.push(report);
       
       if (report.totalOrphanedCount > 0) {
-        console.log(`⚠️  User ${report.userEmail} has ${report.totalOrphanedCount} orphaned images (${report.exampleImages.orphanedCount} example + ${report.libraryImages.orphanedCount} library)`);
+        console.log(`⚠️  User ${report.userEmail} has ${report.totalOrphanedCount} orphaned images (${report.exampleImages.orphanedCount} example + ${report.libraryImages.orphanedCount} library + ${report.logoImages.orphanedCount} logo)`);
       }
     } catch (error: any) {
       console.warn(`Failed to scan user ${userId}:`, error.message);
@@ -357,12 +592,14 @@ export function generateOrphanedImagesReport(reports: OrphanedImageReport[]): vo
   const totalImages = reports.reduce((sum, r) => sum + r.totalImageCount, 0);
   const totalExampleOrphaned = reports.reduce((sum, r) => sum + r.exampleImages.orphanedCount, 0);
   const totalLibraryOrphaned = reports.reduce((sum, r) => sum + r.libraryImages.orphanedCount, 0);
+  const totalLogoOrphaned = reports.reduce((sum, r) => sum + r.logoImages.orphanedCount, 0);
   
   console.log(`Total Users Scanned: ${totalUsers}`);
   console.log(`Users with Orphaned Images: ${usersWithOrphans}`);
   console.log(`Total Orphaned References: ${totalOrphaned}`);
   console.log(`  - Example Images: ${totalExampleOrphaned}`);
   console.log(`  - Library Images: ${totalLibraryOrphaned}`);
+  console.log(`  - Logo Images: ${totalLogoOrphaned}`);
   console.log(`Total Images: ${totalImages}`);
   console.log(`Orphaned Percentage: ${totalImages > 0 ? ((totalOrphaned / totalImages) * 100).toFixed(1) : 0}%`);
   
@@ -530,13 +767,13 @@ export async function checkDatabaseReference(userId: string, storageUrl: string)
       }
     }
     
-    // Check brand logos
+    // Check brand logos (updated to use logoUrl instead of logoData)
     const logosCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/brandLogos`);
     const logosSnapshot = await getDocs(logosCollectionRef);
     
     for (const doc of logosSnapshot.docs) {
       const data = doc.data();
-      if (data.logoData === storageUrl) {
+      if (data.logoUrl === storageUrl) {
         return true;
       }
     }
@@ -554,6 +791,7 @@ export async function checkDatabaseReference(userId: string, storageUrl: string)
 export async function scanAllOrphanedImages(): Promise<{
   orphanedBrandImages: Array<{ userId: string; userEmail?: string; imageUrl: string }>;
   orphanedLibraryImages: Array<{ userId: string; userEmail?: string; imageId: string; imageUrl: string }>;
+  orphanedLogoImages: Array<{ userId: string; userEmail?: string; logoId: string; imageUrl: string }>;
   totalScanned: number;
   scanTimestamp: string;
 }> {
@@ -562,6 +800,7 @@ export async function scanAllOrphanedImages(): Promise<{
   const reports = await scanAllUsersForOrphanedImages();
   const orphanedBrandImages: Array<{ userId: string; userEmail?: string; imageUrl: string }> = [];
   const orphanedLibraryImages: Array<{ userId: string; userEmail?: string; imageId: string; imageUrl: string }> = [];
+  const orphanedLogoImages: Array<{ userId: string; userEmail?: string; logoId: string; imageUrl: string }> = [];
   
   for (const report of reports) {
     // Add orphaned brand profile images
@@ -582,29 +821,44 @@ export async function scanAllOrphanedImages(): Promise<{
         imageUrl
       });
     }
+    
+    // Add orphaned logo images
+    for (const imageUrl of report.logoImages.orphanedUrls) {
+      orphanedLogoImages.push({
+        userId: report.userId,
+        userEmail: report.userEmail,
+        logoId: `orphaned-logo-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+        imageUrl
+      });
+    }
   }
   
-  const totalOrphans = orphanedBrandImages.length + orphanedLibraryImages.length;
+  const totalOrphans = orphanedBrandImages.length + orphanedLibraryImages.length + orphanedLogoImages.length;
   console.log(`Scan completed. Found ${totalOrphans} orphaned images across ${reports.length} users.`);
   
   return {
     orphanedBrandImages,
     orphanedLibraryImages,
+    orphanedLogoImages,
     totalScanned: reports.length,
     scanTimestamp: new Date().toISOString()
   };
 }
 
 /**
- * Clean up all orphaned images across all users (Enhanced with storage deletion)
+ * Clean up all orphaned images across all users (Enhanced with storage deletion and dormant logos)
  */
-export async function cleanupAllOrphanedImages(deleteStorageFiles: boolean = true): Promise<{
+export async function cleanupAllOrphanedImages(deleteStorageFiles: boolean = true, cleanupDormantLogos: boolean = true, dormantThresholdDays: number = 90): Promise<{
   deletedDbReferences: number;
   deletedStorageFiles: number;
   storageOrphansDeleted: number;
+  deletedDormantLogos: number;
   totalSavedSpace: number;
 }> {
   console.log('Starting system-wide orphaned images cleanup...');
+  if (cleanupDormantLogos) {
+    console.log(`Including dormant logo cleanup (threshold: ${dormantThresholdDays} days)`);
+  }
   
   const usersCollectionRef = collection(db, 'users');
   const userDocsSnapshot = await getDocs(usersCollectionRef);
@@ -612,6 +866,7 @@ export async function cleanupAllOrphanedImages(deleteStorageFiles: boolean = tru
   let totalDbDeleted = 0;
   let totalStorageDeleted = 0;
   let totalStorageOrphansDeleted = 0;
+  let totalDormantLogosDeleted = 0;
   let totalSavedSpace = 0;
   
   for (const userDoc of userDocsSnapshot.docs) {
@@ -636,6 +891,17 @@ export async function cleanupAllOrphanedImages(deleteStorageFiles: boolean = tru
         console.log(`✓ Phase 2: Cleaned up ${storageCleanup.deletedFiles} orphaned storage files for user ${report.userEmail}`);
       }
       
+      // Phase 3: Clean up dormant logos (if enabled)
+      if (cleanupDormantLogos) {
+        const logoCleanup = await cleanupDormantLogosForUser(userId, dormantThresholdDays, false);
+        totalDormantLogosDeleted += logoCleanup.deletedLogos;
+        totalSavedSpace += logoCleanup.savedSpace;
+        
+        if (logoCleanup.deletedLogos > 0) {
+          console.log(`✓ Phase 3: Cleaned up ${logoCleanup.deletedLogos} dormant logos for user ${logoCleanup.userEmail}`);
+        }
+      }
+      
     } catch (error: any) {
       console.warn(`Failed to cleanup orphaned images for user ${userId}:`, error.message);
     }
@@ -645,12 +911,61 @@ export async function cleanupAllOrphanedImages(deleteStorageFiles: boolean = tru
   console.log(`  - DB references deleted: ${totalDbDeleted}`);
   console.log(`  - Storage files deleted (from DB orphans): ${totalStorageDeleted}`);
   console.log(`  - Storage orphans deleted: ${totalStorageOrphansDeleted}`);
+  if (cleanupDormantLogos) {
+    console.log(`  - Dormant logos deleted: ${totalDormantLogosDeleted}`);
+  }
   console.log(`  - Total storage space saved: ${formatBytes(totalSavedSpace)}`);
   
   return {
     deletedDbReferences: totalDbDeleted,
     deletedStorageFiles: totalStorageDeleted,
     storageOrphansDeleted: totalStorageOrphansDeleted,
+    deletedDormantLogos: totalDormantLogosDeleted,
     totalSavedSpace
   };
+}
+
+/**
+ * Scan all users for dormant logos
+ */
+export async function scanAllUsersForDormantLogos(dormantThresholdDays: number = 90): Promise<Array<{
+  userId: string;
+  userEmail?: string;
+  brandName?: string;
+  dormantLogos: Array<{
+    logoId: string;
+    logoUrl: string;
+    lastUpdated: Date;
+    daysSinceUpdate: number;
+  }>;
+  totalLogos: number;
+  dormantCount: number;
+}>> {
+  console.log(`Scanning all users for dormant logos (threshold: ${dormantThresholdDays} days)...`);
+  
+  const usersCollectionRef = collection(db, 'users');
+  const userDocsSnapshot = await getDocs(usersCollectionRef);
+  
+  const reports = [];
+  
+  for (const userDoc of userDocsSnapshot.docs) {
+    const userId = userDoc.id;
+    
+    try {
+      const report = await scanUserForDormantLogos(userId, dormantThresholdDays);
+      reports.push(report);
+      
+      if (report.dormantCount > 0) {
+        console.log(`⚠️  User ${report.userEmail} has ${report.dormantCount} dormant logos out of ${report.totalLogos} total`);
+      }
+    } catch (error: any) {
+      console.warn(`Failed to scan dormant logos for user ${userId}:`, error.message);
+    }
+  }
+  
+  const totalDormant = reports.reduce((sum, r) => sum + r.dormantCount, 0);
+  const totalLogos = reports.reduce((sum, r) => sum + r.totalLogos, 0);
+  console.log(`Scan completed. Found ${totalDormant} dormant logos out of ${totalLogos} total across ${reports.length} users.`);
+  
+  return reports;
 }

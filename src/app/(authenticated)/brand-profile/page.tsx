@@ -20,7 +20,7 @@ import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
-import { UserCircle, LinkIcon, FileText, UploadCloud, Tag, Brain, Loader2, Trash2, Edit, Briefcase, Image as ImageIconLucide, Sparkles, Star, ShieldCheck, UserSearch, Users, Wand2, Type as TypeIcon, Palette, ImagePlay } from 'lucide-react';
+import { UserCircle, LinkIcon, FileText, UploadCloud, Tag, Brain, Loader2, Trash2, Edit, Briefcase, Image as ImageIconLucide, Sparkles, Star, ShieldCheck, UserSearch, Users, Wand2, Type as TypeIcon, Palette, ImagePlay, Download } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { handleExtractBrandInfoFromUrlAction, handleGenerateBrandLogoAction, handleGetAllUserProfilesForAdminAction, handleEnhanceBrandDescriptionAction, type FormState as ExtractFormState, type FormState as GenerateLogoFormState, type FormState as AdminFetchProfilesState, type FormState as EnhanceDescriptionState } from '@/lib/actions';
 import { storage, db } from '@/lib/firebaseConfig';
@@ -64,6 +64,7 @@ const brandProfileSchema = z.object({
   logoType: z.enum(['logomark', 'logotype', 'monogram']).optional(),
   logoColors: z.string().optional(),
   logoBackground: z.enum(['white', 'transparent', 'dark']).optional(),
+  logoSize: z.enum(['small', 'medium', 'large']).optional(),
   brandLogoUrl: z.union([
     z.string().url({ message: "Please enter a valid URL." }),
     z.string().startsWith('data:').optional(),
@@ -91,6 +92,7 @@ const defaultFormValues: BrandProfileFormData = {
   logoType: 'logomark',
   logoColors: '',
   logoBackground: 'white',
+  logoSize: 'medium',
   brandLogoUrl: "",
   plan: 'free',
   userEmail: "",
@@ -357,6 +359,7 @@ export default function BrandProfilePage() {
     const logoType = form.getValues("logoType");
     const logoColors = form.getValues("logoColors");
     const logoBackground = form.getValues("logoBackground");
+    const logoSize = form.getValues("logoSize");
 
     if (!brandName || !brandDescription) {
       toast({ title: "Missing Info", description: "Brand Name & Description required for logo.", variant: "default" });
@@ -373,6 +376,7 @@ export default function BrandProfilePage() {
     if (logoType) formData.append("logoType", logoType);
     if (logoColors) formData.append("logoColors", logoColors);
     if (logoBackground) formData.append("logoBackground", logoBackground);
+    if (logoSize) formData.append("logoSize", logoSize);
     if (effectiveUserIdForStorage) formData.append("userId", effectiveUserIdForStorage);
     
     const emailForLogoAction = currentProfileBeingEdited?.userEmail || (userId === effectiveUserIdForStorage ? currentUser?.email : undefined);
@@ -668,6 +672,40 @@ export default function BrandProfilePage() {
     }
   };
 
+  const handleDownloadLogo = () => {
+    const logoUrl = generatedLogoPreview || currentProfileBeingEdited?.brandLogoUrl;
+    if (!logoUrl) {
+      toast({ title: "No Logo", description: "No logo available to download.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      // Create a temporary link element
+      const link = document.createElement('a');
+      const brandName = form.getValues("brandName") || "brand";
+      const fileName = `${brandName.toLowerCase().replace(/[^a-z0-9]/g, '_')}_logo.png`;
+      
+      if (logoUrl.startsWith('data:')) {
+        // For data URIs (generated logos)
+        link.href = logoUrl;
+        link.download = fileName;
+      } else {
+        // For Firebase Storage URLs, we need to handle CORS
+        link.href = logoUrl;
+        link.download = fileName;
+        link.target = '_blank';
+      }
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({ title: "Download Started", description: "Logo download initiated." });
+    } catch (error: any) {
+      toast({ title: "Download Error", description: `Failed to download logo: ${error.message}`, variant: "destructive" });
+    }
+  };
+
 
   if (isAuthLoading || (isBrandContextLoading && !currentProfileBeingEdited && !(isAdmin && adminTargetUserId))) {
     return (
@@ -927,11 +965,18 @@ export default function BrandProfilePage() {
                             <ImageIconLucide className="w-12 h-12 sm:w-14 sm:h-14 text-muted-foreground" />
                           )}
                         </div>
-                        {/* Generation Button */}
+                        {/* Generation and Download Buttons */}
                         <div className="flex-1 text-center sm:text-left">
-                          <Button type="button" onClick={handleGenerateLogo} disabled={isGeneratingLogo || isUploadingLogo || !form.getValues("brandName") || !form.getValues("brandDescription")} className="w-full sm:w-auto">
-                            {isGeneratingLogo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />} Generate Logo
-                          </Button>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <Button type="button" onClick={handleGenerateLogo} disabled={isGeneratingLogo || isUploadingLogo || !form.getValues("brandName") || !form.getValues("brandDescription")} className="w-full sm:w-auto">
+                              {isGeneratingLogo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />} Generate Logo
+                            </Button>
+                            {currentLogoToDisplay && (
+                              <Button type="button" onClick={handleDownloadLogo} variant="outline" disabled={isGeneratingLogo || isUploadingLogo} className="w-full sm:w-auto">
+                                <Download className="mr-2 h-4 w-4" /> Download
+                              </Button>
+                            )}
+                          </div>
                           {!currentLogoToDisplay && !isGeneratingLogo && <p className="text-xs text-muted-foreground mt-2">Fill Brand Name & Description for logo.</p>}
                           {generateLogoState.error && !isGeneratingLogo && <p className="text-xs text-destructive mt-1">{generateLogoState.error}</p>}
                           {generatedLogoPreview && <Alert variant="default" className="mt-2 text-xs"><Sparkles className="h-4 w-4" /><AlertDescription>New logo generated! Click &quot;Save Brand Profile&quot; to upload and keep it.</AlertDescription></Alert>}
@@ -950,6 +995,14 @@ export default function BrandProfilePage() {
                                 </Select>
                               </FormItem>
                             )} />
+                           <FormField control={form.control} name="logoShape" render={({ field }) => (
+                              <FormItem><FormLabel className="flex items-center text-sm"><ImagePlay className="w-4 h-4 mr-2"/>Shape</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value ?? 'circle'}>
+                                  <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                  <SelectContent><SelectGroup><SelectLabel>Shapes</SelectLabel><SelectItem value="circle">Circle</SelectItem><SelectItem value="square">Square</SelectItem><SelectItem value="shield">Shield</SelectItem><SelectItem value="hexagon">Hexagon</SelectItem><SelectItem value="diamond">Diamond</SelectItem><SelectItem value="custom">Custom</SelectItem></SelectGroup></SelectContent>
+                                </Select>
+                              </FormItem>
+                            )} />
                            <FormField control={form.control} name="logoColors" render={({ field }) => (
                               <FormItem><FormLabel className="flex items-center text-sm"><Palette className="w-4 h-4 mr-2"/>Color Palette</FormLabel><FormControl><Input placeholder="e.g., deep teal, soft gold" {...field} /></FormControl></FormItem>
                             )} />
@@ -957,6 +1010,14 @@ export default function BrandProfilePage() {
                               <FormItem><FormLabel className="flex items-center text-sm"><Wand2 className="w-4 h-4 mr-2"/>Style</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value ?? 'modern'}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                                   <SelectContent><SelectGroup><SelectLabel>Styles</SelectLabel><SelectItem value="minimalist">Minimalist</SelectItem><SelectItem value="modern">Modern</SelectItem><SelectItem value="classic">Classic</SelectItem><SelectItem value="playful">Playful</SelectItem><SelectItem value="bold">Bold</SelectItem><SelectItem value="elegant">Elegant</SelectItem></SelectGroup></SelectContent>
+                                </Select>
+                              </FormItem>
+                            )} />
+                           <FormField control={form.control} name="logoSize" render={({ field }) => (
+                              <FormItem><FormLabel className="flex items-center text-sm"><ImageIconLucide className="w-4 h-4 mr-2"/>Size</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value ?? 'medium'}>
+                                  <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                  <SelectContent><SelectGroup><SelectLabel>Sizes</SelectLabel><SelectItem value="small">Small (Cards, Icons)</SelectItem><SelectItem value="medium">Medium (Standard)</SelectItem><SelectItem value="large">Large (Banners, Signs)</SelectItem></SelectGroup></SelectContent>
                                 </Select>
                               </FormItem>
                             )} />

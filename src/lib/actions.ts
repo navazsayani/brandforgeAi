@@ -35,7 +35,7 @@ import {
 import { getModelConfig, clearModelConfigCache } from './model-config';
 import { getPlansConfig, clearPlansConfigCache } from './plans-config';
 import { DEFAULT_PLANS_CONFIG } from './constants';
-import { decodeHtmlEntitiesInUrl, verifyImageUrlExists } from './utils';
+import { decodeHtmlEntitiesInUrl, verifyImageUrlExists, compressDataUriServer } from './utils';
 import { scanAllOrphanedImages, cleanupAllOrphanedImages } from './cleanup-orphaned-images';
 import Razorpay from 'razorpay';
 import admin from 'firebase-admin';
@@ -1099,28 +1099,58 @@ export async function handleGenerateBrandLogoAction(
     const userId = formData.get('userId') as string;
     const userEmail = formData.get('userEmail') as string | undefined;
 
-    const input: GenerateBrandLogoInput = {
+    // Build input object with proper type handling
+    const inputData: Partial<GenerateBrandLogoInput> = {
       brandName: formData.get("brandName") as string,
       brandDescription: formData.get("brandDescription") as string,
-      industry: formData.get("industry") as string | undefined,
-      targetKeywords: formData.get("targetKeywords") as string | undefined,
-      logoType: formData.get("logoType") as GenerateBrandLogoInput['logoType'] | undefined,
-      logoShape: formData.get("logoShape") as GenerateBrandLogoInput['logoShape'] | undefined,
-      logoStyle: formData.get("logoStyle") as GenerateBrandLogoInput['logoStyle'] | undefined,
-      logoColors: formData.get("logoColors") as string | undefined,
-      logoBackground: formData.get("logoBackground") as GenerateBrandLogoInput['logoBackground'] | undefined,
     };
+
+    // Add optional fields only if they have values
+    const industry = formData.get("industry") as string;
+    if (industry && industry !== "" && industry !== "_none_") {
+      inputData.industry = industry;
+    }
+
+    const targetKeywords = formData.get("targetKeywords") as string;
+    if (targetKeywords && targetKeywords !== "") {
+      inputData.targetKeywords = targetKeywords;
+    }
+
+    const logoType = formData.get("logoType") as string;
+    if (logoType && logoType !== "") {
+      inputData.logoType = logoType as GenerateBrandLogoInput['logoType'];
+    }
+
+    const logoShape = formData.get("logoShape") as string;
+    if (logoShape && logoShape !== "") {
+      inputData.logoShape = logoShape as GenerateBrandLogoInput['logoShape'];
+    }
+
+    const logoStyle = formData.get("logoStyle") as string;
+    if (logoStyle && logoStyle !== "") {
+      inputData.logoStyle = logoStyle as GenerateBrandLogoInput['logoStyle'];
+    }
+
+    const logoColors = formData.get("logoColors") as string;
+    if (logoColors && logoColors !== "") {
+      inputData.logoColors = logoColors;
+    }
+
+    const logoBackground = formData.get("logoBackground") as string;
+    if (logoBackground && logoBackground !== "") {
+      inputData.logoBackground = logoBackground as GenerateBrandLogoInput['logoBackground'];
+    }
+
+    const logoSize = formData.get("logoSize") as string;
+    if (logoSize && logoSize !== "") {
+      inputData.logoSize = logoSize as GenerateBrandLogoInput['logoSize'];
+    }
+
+    const input = inputData as GenerateBrandLogoInput;
 
     if (!input.brandName || !input.brandDescription) {
       return { error: "Brand name and description are required for logo generation." };
     }
-     if (input.industry === "" || input.industry === undefined) delete input.industry;
-     if (input.targetKeywords === "" || input.targetKeywords === undefined) delete input.targetKeywords;
-     if (!input.logoType) delete input.logoType;
-     if (!input.logoShape) delete input.logoShape;
-     if (!input.logoStyle) delete input.logoStyle;
-     if (!input.logoColors) delete input.logoColors;
-     if (!input.logoBackground) delete input.logoBackground;
     if (!userId) {
         return { error: "User ID is missing. Cannot save brand logo."};
     }
@@ -1128,15 +1158,39 @@ export async function handleGenerateBrandLogoAction(
 
 
     const result = await generateBrandLogo(input);
-    const firestoreCollectionRef = collection(db, `users/${userId}/brandProfiles/${userId}/brandLogos`);
+    
+    // Store the logo in Firebase Storage instead of Firestore to avoid size limits
+    let logoStorageUrl = "";
+    if (result.logoDataUri) {
+      try {
+        // Compress the logo data before uploading to storage
+        const compressedLogoData = compressDataUriServer(result.logoDataUri, 800 * 1024);
+        console.log(`[Logo Storage] Original size: ${result.logoDataUri.length} bytes, Compressed size: ${compressedLogoData.length} bytes`);
+        
+        // Upload to Firebase Storage
+        const logoFilePath = `users/${userId}/brand_logos/current_logo_${Date.now()}.png`;
+        const logoStorageRef = storageRef(storage, logoFilePath);
+        const snapshot = await uploadString(logoStorageRef, compressedLogoData, 'data_url');
+        logoStorageUrl = await getDownloadURL(snapshot.ref);
+        console.log(`[Logo Storage] Successfully uploaded logo to storage: ${logoStorageUrl}`);
+      } catch (storageError: any) {
+        console.error(`[Logo Storage] Failed to upload logo to storage:`, storageError);
+        throw new Error(`Failed to save logo: ${storageError.message}`);
+      }
+    }
+    
+    // Use a fixed document ID to overwrite previous logos instead of accumulating them
+    const logoDocRef = doc(db, `users/${userId}/brandProfiles/${userId}/brandLogos`, 'currentLogo');
     const docData = {
-      logoData: result.logoDataUri || "",
+      logoUrl: logoStorageUrl, // Store URL instead of data
       brandName: input.brandName,
       logoShape: input.logoShape || "circle",
       logoStyle: input.logoStyle || "modern",
       createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     };
-    const docRef = await addDoc(firestoreCollectionRef, docData);
+    await setDoc(logoDocRef, docData);
+    const docRef = { id: 'currentLogo' }; // For RAG compatibility
     
     // 🔥 RAG ENHANCEMENT: Auto-vectorize the brand logo
     try {
@@ -2540,10 +2594,20 @@ export async function handleTestInstagramPermissionsAction(
 }
 
 export async function handleAdminScanOrphanedImagesAction(
-  prevState: FormState<OrphanedImageScanResult>,
+  prevState: FormState<OrphanedImageScanResult & {
+    orphanedLogoImages?: Array<{ userId: string; userEmail?: string; logoId: string; imageUrl: string }>;
+    dormantLogos?: Array<{ userId: string; userEmail?: string; logoId: string; logoUrl: string; daysSinceUpdate: number }>;
+    totalDormantLogos?: number;
+  }>,
   formData: FormData
-): Promise<FormState<OrphanedImageScanResult>> {
+): Promise<FormState<OrphanedImageScanResult & {
+  orphanedLogoImages?: Array<{ userId: string; userEmail?: string; logoId: string; imageUrl: string }>;
+  dormantLogos?: Array<{ userId: string; userEmail?: string; logoId: string; logoUrl: string; daysSinceUpdate: number }>;
+  totalDormantLogos?: number;
+}>> {
   const adminRequesterEmail = formData.get('adminRequesterEmail') as string;
+  const includeDormantLogos = formData.get('includeDormantLogos') !== 'false'; // Default to true
+  const dormantThresholdDays = parseInt(formData.get('dormantThresholdDays') as string || '90', 10);
 
   if (adminRequesterEmail !== 'admin@brandforge.ai') {
     return { error: "Unauthorized: You do not have permission to perform this action." };
@@ -2551,14 +2615,50 @@ export async function handleAdminScanOrphanedImagesAction(
 
   try {
     console.log('[Admin Scan Orphaned Images] Starting system-wide orphaned images scan...');
+    if (includeDormantLogos) {
+      console.log(`[Admin Scan Orphaned Images] Including dormant logos scan (threshold: ${dormantThresholdDays} days)`);
+    }
+    
     const scanResult = await scanAllOrphanedImages();
     
-    const totalOrphans = scanResult.orphanedBrandImages.length + scanResult.orphanedLibraryImages.length;
+    let dormantLogos: Array<{ userId: string; userEmail?: string; logoId: string; logoUrl: string; daysSinceUpdate: number }> = [];
+    let totalDormantLogos = 0;
+    
+    // Scan for dormant logos if requested
+    if (includeDormantLogos) {
+      const { scanAllUsersForDormantLogos } = await import('./cleanup-orphaned-images');
+      const dormantReports = await scanAllUsersForDormantLogos(dormantThresholdDays);
+      
+      for (const report of dormantReports) {
+        for (const logo of report.dormantLogos) {
+          dormantLogos.push({
+            userId: report.userId,
+            userEmail: report.userEmail,
+            logoId: logo.logoId,
+            logoUrl: logo.logoUrl,
+            daysSinceUpdate: logo.daysSinceUpdate
+          });
+        }
+      }
+      totalDormantLogos = dormantLogos.length;
+      console.log(`[Admin Scan Orphaned Images] Found ${totalDormantLogos} dormant logos.`);
+    }
+    
+    const totalOrphans = scanResult.orphanedBrandImages.length + scanResult.orphanedLibraryImages.length + scanResult.orphanedLogoImages.length;
     console.log(`[Admin Scan Orphaned Images] Scan completed. Found ${totalOrphans} orphaned images.`);
     
+    let message = `Scan completed. Found ${totalOrphans} orphaned image references (${scanResult.orphanedBrandImages.length} brand, ${scanResult.orphanedLibraryImages.length} library, ${scanResult.orphanedLogoImages.length} logo) across ${scanResult.totalScanned} users.`;
+    if (includeDormantLogos) {
+      message += ` Also found ${totalDormantLogos} dormant logos.`;
+    }
+    
     return {
-      data: scanResult,
-      message: `Scan completed. Found ${totalOrphans} orphaned image references across ${scanResult.totalScanned} users.`
+      data: {
+        ...scanResult,
+        dormantLogos: includeDormantLogos ? dormantLogos : undefined,
+        totalDormantLogos: includeDormantLogos ? totalDormantLogos : undefined
+      },
+      message
     };
   } catch (e: any) {
     console.error('Error in handleAdminScanOrphanedImagesAction:', e);
@@ -2572,6 +2672,7 @@ export async function handleAdminCleanupOrphanedImagesAction(
     deletedDbReferences: number;
     deletedStorageFiles: number;
     storageOrphansDeleted: number;
+    deletedDormantLogos: number;
     totalSavedSpace: number;
   }>,
   formData: FormData
@@ -2580,10 +2681,13 @@ export async function handleAdminCleanupOrphanedImagesAction(
   deletedDbReferences: number;
   deletedStorageFiles: number;
   storageOrphansDeleted: number;
+  deletedDormantLogos: number;
   totalSavedSpace: number;
 }>> {
   const adminRequesterEmail = formData.get('adminRequesterEmail') as string;
   const deleteStorageFiles = formData.get('deleteStorageFiles') !== 'false'; // Default to true
+  const cleanupDormantLogos = formData.get('cleanupDormantLogos') !== 'false'; // Default to true
+  const dormantThresholdDays = parseInt(formData.get('dormantThresholdDays') as string || '90', 10);
 
   if (adminRequesterEmail !== 'admin@brandforge.ai') {
     return { error: "Unauthorized: You do not have permission to perform this action." };
@@ -2592,16 +2696,21 @@ export async function handleAdminCleanupOrphanedImagesAction(
   try {
     console.log('[Admin Cleanup Orphaned Images] Starting comprehensive system-wide cleanup...');
     console.log(`[Admin Cleanup Orphaned Images] Storage file deletion: ${deleteStorageFiles ? 'ENABLED' : 'DISABLED'}`);
+    console.log(`[Admin Cleanup Orphaned Images] Dormant logo cleanup: ${cleanupDormantLogos ? 'ENABLED' : 'DISABLED'}`);
+    if (cleanupDormantLogos) {
+      console.log(`[Admin Cleanup Orphaned Images] Dormant threshold: ${dormantThresholdDays} days`);
+    }
     
-    const cleanupResult = await cleanupAllOrphanedImages(deleteStorageFiles);
+    const cleanupResult = await cleanupAllOrphanedImages(deleteStorageFiles, cleanupDormantLogos, dormantThresholdDays);
     
     console.log(`[Admin Cleanup Orphaned Images] Cleanup completed:`);
     console.log(`  - DB references deleted: ${cleanupResult.deletedDbReferences}`);
     console.log(`  - Storage files deleted: ${cleanupResult.deletedStorageFiles}`);
     console.log(`  - Storage orphans deleted: ${cleanupResult.storageOrphansDeleted}`);
+    console.log(`  - Dormant logos deleted: ${cleanupResult.deletedDormantLogos}`);
     console.log(`  - Storage space saved: ${formatBytes(cleanupResult.totalSavedSpace)}`);
     
-    const totalDeleted = cleanupResult.deletedDbReferences + cleanupResult.deletedStorageFiles + cleanupResult.storageOrphansDeleted;
+    const totalDeleted = cleanupResult.deletedDbReferences + cleanupResult.deletedStorageFiles + cleanupResult.storageOrphansDeleted + cleanupResult.deletedDormantLogos;
     
     return {
       data: {
@@ -2609,9 +2718,10 @@ export async function handleAdminCleanupOrphanedImagesAction(
         deletedDbReferences: cleanupResult.deletedDbReferences,
         deletedStorageFiles: cleanupResult.deletedStorageFiles,
         storageOrphansDeleted: cleanupResult.storageOrphansDeleted,
+        deletedDormantLogos: cleanupResult.deletedDormantLogos,
         totalSavedSpace: cleanupResult.totalSavedSpace
       },
-      message: `Successfully cleaned up ${totalDeleted} total items (${cleanupResult.deletedDbReferences} DB refs, ${cleanupResult.deletedStorageFiles + cleanupResult.storageOrphansDeleted} storage files). Saved ${formatBytes(cleanupResult.totalSavedSpace)} of storage space.`
+      message: `Successfully cleaned up ${totalDeleted} total items (${cleanupResult.deletedDbReferences} DB refs, ${cleanupResult.deletedStorageFiles + cleanupResult.storageOrphansDeleted} storage files, ${cleanupResult.deletedDormantLogos} dormant logos). Saved ${formatBytes(cleanupResult.totalSavedSpace)} of storage space.`
     };
   } catch (e: any) {
     console.error('Error in handleAdminCleanupOrphanedImagesAction:', e);
