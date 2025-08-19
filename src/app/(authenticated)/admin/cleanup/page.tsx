@@ -44,7 +44,7 @@ export default function AdminCleanupPage() {
         }
         if (scanState.data) {
             setScanResults(scanState.data);
-            const totalOrphans = scanState.data.orphanedBrandImages.length + scanState.data.orphanedLibraryImages.length;
+            const totalOrphans = scanState.data.orphanedBrandImages.length + scanState.data.orphanedLibraryImages.length + (scanState.data.orphanedLogoImages?.length || 0);
             toast({ 
                 title: "Scan Complete", 
                 description: `Found ${totalOrphans} orphaned image references across all users.`,
@@ -123,7 +123,7 @@ export default function AdminCleanupPage() {
             return;
         }
 
-        const totalOrphans = scanResults.orphanedBrandImages.length + scanResults.orphanedLibraryImages.length;
+        const totalOrphans = scanResults.orphanedBrandImages.length + scanResults.orphanedLibraryImages.length + (scanResults.orphanedLogoImages?.length || 0);
         if (totalOrphans === 0) {
             toast({ 
                 title: "No Orphans Found", 
@@ -157,8 +157,8 @@ export default function AdminCleanupPage() {
         );
     }
 
-    const totalOrphans = scanResults ? 
-        scanResults.orphanedBrandImages.length + scanResults.orphanedLibraryImages.length : 0;
+    const totalOrphans = scanResults ?
+        scanResults.orphanedBrandImages.length + scanResults.orphanedLibraryImages.length + (scanResults.orphanedLogoImages?.length || 0) : 0;
 
     return (
         <div className="max-w-6xl mx-auto py-6 px-4">
@@ -256,7 +256,7 @@ export default function AdminCleanupPage() {
 
             {/* Scan Results Details */}
             {scanResults && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {/* Brand Profile Orphaned Images */}
                     <Card className="shadow-lg">
                         <CardHeader>
@@ -333,6 +333,46 @@ export default function AdminCleanupPage() {
                             )}
                         </CardContent>
                     </Card>
+
+                    {/* Logo Orphaned Images */}
+                    <Card className="shadow-lg">
+                        <CardHeader>
+                            <CardTitle className="text-lg flex items-center gap-2">
+                                <FileX className="w-5 h-5 text-orange-500" />
+                                Orphaned Logo Images
+                                <Badge variant={(scanResults.orphanedLogoImages?.length || 0) > 0 ? "destructive" : "secondary"}>
+                                    {scanResults.orphanedLogoImages?.length || 0}
+                                </Badge>
+                            </CardTitle>
+                            <CardDescription>
+                                AI-generated brand logos with broken storage references.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {(scanResults.orphanedLogoImages?.length || 0) === 0 ? (
+                                <div className="text-center py-4 text-muted-foreground">
+                                    <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500" />
+                                    No orphaned logo images found.
+                                </div>
+                            ) : (
+                                <div className="space-y-3 max-h-96 overflow-y-auto">
+                                    {scanResults.orphanedLogoImages?.map((orphan: any, index: number) => (
+                                        <div key={index} className="p-3 border rounded-lg bg-muted/50">
+                                            <div className="text-sm font-medium truncate">
+                                                User: {orphan.userEmail || orphan.userId.substring(0, 8) + '...'}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground mt-1">
+                                                Logo ID: {orphan.logoId}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground break-all">
+                                                URL: {orphan.imageUrl.substring(0, 60)}...
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
                 </div>
             )}
 
@@ -348,8 +388,8 @@ export default function AdminCleanupPage() {
                         are manually deleted from storage or due to synchronization issues.
                     </p>
                     <p>
-                        <strong>What does the scan do?</strong> The scan checks all user brand profiles and 
-                        AI-generated image libraries to identify references to non-existent storage files.
+                        <strong>What does the scan do?</strong> The scan checks all user brand profiles,
+                        AI-generated image libraries, and brand logos to identify references to non-existent storage files.
                     </p>
                     <p>
                         <strong>What does cleanup do?</strong> Cleanup removes orphaned references from

@@ -259,9 +259,17 @@ export interface OrphanedLibraryImage {
   imageUrl: string;
 }
 
+export interface OrphanedLogoImage {
+  userId: string;
+  userEmail?: string;
+  logoId: string;
+  imageUrl: string;
+}
+
 export interface OrphanedImageScanResult {
   orphanedBrandImages: OrphanedBrandImage[];
   orphanedLibraryImages: OrphanedLibraryImage[];
+  orphanedLogoImages: OrphanedLogoImage[];
   totalScanned: number;
   scanTimestamp: string;
 }
