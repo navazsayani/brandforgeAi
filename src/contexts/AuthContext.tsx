@@ -54,7 +54,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (e) {
       const firebaseError = e as FirebaseError;
       console.error("Sign up error:", firebaseError);
-      setError(firebaseError.message || "Failed to sign up.");
+      if (firebaseError.code === 'auth/email-already-in-use') {
+        setError("This email is already in use. Please log in or use a different email.");
+      } else {
+        setError(firebaseError.message || "Failed to sign up.");
+      }
       return null;
     } finally {
       setIsLoading(false);
@@ -71,7 +75,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (e) {
       const firebaseError = e as FirebaseError;
       console.error("Log in error:", firebaseError);
-      setError(firebaseError.message || "Failed to log in. Check credentials.");
+      if (firebaseError.code === 'auth/invalid-credential' || firebaseError.code === 'auth/wrong-password' || firebaseError.code === 'auth/user-not-found') {
+        setError("Invalid email or password. Please try again.");
+      } else {
+        setError(firebaseError.message || "Failed to log in. Please try again later.");
+      }
       return null;
     } finally {
       setIsLoading(false);

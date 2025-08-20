@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Loader2, Wand2, Eye, Sparkles, CheckCircle, ArrowRight, User, Star } from 'lucide-react';
 import { handlePreviewModeImageGenerationAction, FormState } from '@/lib/actions';
 import { useBrand } from '@/contexts/BrandContext';
