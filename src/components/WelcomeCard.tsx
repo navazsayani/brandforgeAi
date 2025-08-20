@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Rocket, ArrowRight, Sparkles, Eye } from 'lucide-react';
 import { useState } from 'react';
 import { PreviewModeDialog } from './PreviewModeDialog';
-import { useBrand } from '@/contexts/AuthContext';
+import { useBrand } from '@/contexts/BrandContext';
 import { cn } from '@/lib/utils';
 
 export function WelcomeCard() {
