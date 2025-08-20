@@ -17,6 +17,7 @@ const initialCleanupState: FormState<{
   deletedDbReferences: number;
   deletedStorageFiles: number;
   storageOrphansDeleted: number;
+  deletedDormantLogos: number;
   totalSavedSpace: number;
 }> = { error: undefined, data: undefined, message: undefined };
 

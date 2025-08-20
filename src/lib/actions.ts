@@ -1141,11 +1141,6 @@ export async function handleGenerateBrandLogoAction(
       inputData.logoBackground = logoBackground as GenerateBrandLogoInput['logoBackground'];
     }
 
-    const logoSize = formData.get("logoSize") as string;
-    if (logoSize && logoSize !== "") {
-      inputData.logoSize = logoSize as GenerateBrandLogoInput['logoSize'];
-    }
-
     const input = inputData as GenerateBrandLogoInput;
 
     if (!input.brandName || !input.brandDescription) {
