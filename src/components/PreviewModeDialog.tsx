@@ -72,7 +72,7 @@ const PromptSuggestions = ({ onSelectPrompt }: { onSelectPrompt: (prompt: string
 
 export function PreviewModeDialog({ isOpen, onOpenChange }: PreviewModeDialogProps) {
   const { userId } = useAuth();
-  const { brandData } = useBrand();
+  const { brandData, setBrandData } = useBrand();
   const { toast } = useToast();
 
   const [prompt, setPrompt] = useState('');
@@ -91,20 +91,11 @@ export function PreviewModeDialog({ isOpen, onOpenChange }: PreviewModeDialogPro
     }
   }, [previewState, toast]);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!prompt.trim() || !userId) return;
-
-    const formData = new FormData();
-    formData.append('userId', userId);
-    formData.append('prompt', prompt);
-
-    startTransition(() => {
-      previewAction(formData);
-    });
-  };
-
   const handleClose = () => {
+    // Only mark preview as used if an image was successfully generated
+    if (generatedImage && brandData && !brandData.hasUsedPreviewMode && userId) {
+        setBrandData({ ...brandData, hasUsedPreviewMode: true }, userId);
+    }
     setPrompt('');
     setGeneratedImage(null);
     setIsComplete(false);
@@ -169,27 +160,46 @@ export function PreviewModeDialog({ isOpen, onOpenChange }: PreviewModeDialogPro
                 </div>
               </div>
             ) : (
-              <form id="preview-form" onSubmit={handleSubmit}>
                 <div className="space-y-4">
                   <SocialProofBanner />
-                  <Label htmlFor="preview-prompt">What would you like to create?</Label>
-                  <Textarea
-                    id="preview-prompt"
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="e.g., a modern logo for a coffee shop, a professional headshot, a product mockup..."
-                    rows={3}
-                    required
-                  />
-                  <PromptSuggestions onSelectPrompt={setPrompt} />
+                  <form id="preview-form" action={previewAction}>
+                    <input type="hidden" name="userId" value={userId || ''} />
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="preview-prompt">What would you like to create?</Label>
+                        <Textarea
+                          id="preview-prompt"
+                          name="prompt"
+                          value={prompt}
+                          onChange={(e) => setPrompt(e.target.value)}
+                          placeholder="e.g., a modern logo for a coffee shop, a professional headshot, a product mockup..."
+                          rows={3}
+                          required
+                          className="mt-2"
+                        />
+                      </div>
+                      <PromptSuggestions onSelectPrompt={setPrompt} />
+                      <DialogFooter className="flex-col sm:flex-row gap-2 pt-4">
+                        <Button type="button" variant="ghost" onClick={handleClose}>
+                            Maybe Later
+                        </Button>
+                        <SubmitButton
+                            className="w-full sm:w-auto"
+                            loadingText="Generating Preview..."
+                            disabled={!prompt.trim()}
+                        >
+                            <Wand2 className="mr-2 h-4 w-4" />
+                            Generate Free Preview
+                        </SubmitButton>
+                      </DialogFooter>
+                    </div>
+                  </form>
                 </div>
-              </form>
             )}
         </div>
         
-        <DialogFooter className="flex-col sm:flex-row gap-2 pt-4 border-t">
-          {isComplete ? (
-            <>
+        {isComplete && (
+            <DialogFooter className="flex-col sm:flex-row gap-2 pt-4 border-t">
               <Button variant="ghost" onClick={handleClose}>
                 Close
               </Button>
@@ -199,24 +209,8 @@ export function PreviewModeDialog({ isOpen, onOpenChange }: PreviewModeDialogPro
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
-            </>
-          ) : (
-            <>
-                <Button variant="ghost" onClick={handleClose}>
-                    Maybe Later
-                </Button>
-                <SubmitButton
-                    form="preview-form"
-                    className="w-full sm:w-auto"
-                    loadingText="Generating Preview..."
-                    disabled={!prompt.trim()}
-                >
-                    <Wand2 className="mr-2 h-4 w-4" />
-                    Generate Free Preview
-                </SubmitButton>
-            </>
-          )}
-        </DialogFooter>
+            </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );
