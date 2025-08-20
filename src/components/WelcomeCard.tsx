@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Rocket, ArrowRight, Sparkles, Eye } from 'lucide-react';
 import { useState } from 'react';
 import { PreviewModeDialog } from './PreviewModeDialog';
-import { useBrand } from '@/contexts/BrandContext';
+import { useBrand } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
 export function WelcomeCard() {
@@ -57,8 +57,8 @@ export function WelcomeCard() {
                         variant="outline"
                         size="lg"
                         className={cn(
-                            "flex-1 border-primary/20 hover:bg-primary/5",
-                            !hasUsedPreview && "animate-pulse ring-2 ring-primary/50 ring-offset-2 ring-offset-background"
+                            "flex-1 border-primary/20 hover:bg-primary/5 relative",
+                            !hasUsedPreview && "animate-gradient-pulse"
                         )}
                         onClick={() => setShowPreviewDialog(true)}
                         disabled={hasUsedPreview}

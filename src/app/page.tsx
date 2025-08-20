@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import NextImage from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -739,7 +739,7 @@ export default function LandingPage() {
                 </div>
                 <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                   <Star className="w-4 h-4 text-primary" />
-                  <span>4.6/5 user rating</span>
+                  <span>4.9/5 user rating</span>
                 </div>
               </div>
               

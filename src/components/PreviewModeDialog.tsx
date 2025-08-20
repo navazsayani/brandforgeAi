@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { SubmitButton } from './SubmitButton';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 interface PreviewModeDialogProps {
   isOpen: boolean;
@@ -39,7 +40,7 @@ const SocialProofBanner = () => (
                 <User className="w-6 h-6 p-1 rounded-full bg-white border-2 border-white text-pink-500" />
             </div>
             <span className="text-gray-700 dark:text-gray-300">
-                <strong>2,800+</strong> brands created this week
+                <strong>500+</strong> brands created this week
             </span>
             <Badge variant="secondary" className="ml-auto bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/50 dark:text-amber-300 dark:border-amber-800/50">
                 <Star className="w-3 h-3 mr-1" /> 4.9/5 rating
@@ -117,7 +118,7 @@ export function PreviewModeDialog({ isOpen, onOpenChange }: PreviewModeDialogPro
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="sm:max-w-xl md:max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3 text-2xl">
             <Eye className="w-7 h-7 text-primary" />
@@ -131,70 +132,62 @@ export function PreviewModeDialog({ isOpen, onOpenChange }: PreviewModeDialogPro
           </DialogDescription>
         </DialogHeader>
 
-        {isComplete ? (
-          <div className="space-y-6">
-            {generatedImage && (
-              <div className="relative aspect-square rounded-lg overflow-hidden border bg-muted max-w-md mx-auto">
-                <NextImage 
-                  src={generatedImage} 
-                  alt="AI Preview Image" 
-                  fill 
-                  style={{ objectFit: 'contain' }} 
-                  className="p-4" 
-                />
-              </div>
-            )}
-            
-            <div className="text-center space-y-4">
-              <div className="flex items-center justify-center gap-2">
-                <CheckCircle className="w-5 h-5 text-green-500" />
-                <p className="font-semibold text-green-700 dark:text-green-400">
-                  Preview Generated Successfully!
-                </p>
-              </div>
-              
-              <div className="p-4 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border border-primary/20">
-                <div className="flex items-center justify-center space-x-2 mb-2">
-                  <Sparkles className="w-5 h-5 text-primary" />
-                  <p className="font-semibold text-foreground">
-                    Ready to unlock the full power?
-                  </p>
+        <div className="flex-1 overflow-y-auto pr-2 -mr-4 space-y-4">
+            {isComplete ? (
+              <div className="space-y-6">
+                {generatedImage && (
+                  <div className="relative aspect-square rounded-lg overflow-hidden border bg-muted max-w-md mx-auto">
+                    <NextImage 
+                      src={generatedImage} 
+                      alt="AI Preview Image" 
+                      fill 
+                      style={{ objectFit: 'contain' }} 
+                      className="p-4" 
+                    />
+                  </div>
+                )}
+                
+                <div className="text-center space-y-4">
+                  <div className="flex items-center justify-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <p className="font-semibold text-green-700 dark:text-green-400">
+                      Preview Generated Successfully!
+                    </p>
+                  </div>
+                  
+                  <div className="p-4 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border border-primary/20">
+                    <div className="flex items-center justify-center space-x-2 mb-2">
+                      <Sparkles className="w-5 h-5 text-primary" />
+                      <p className="font-semibold text-foreground">
+                        Ready to unlock the full power?
+                      </p>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Complete your brand profile to get unlimited generations, better quality, and personalized results!
+                    </p>
+                  </div>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Complete your brand profile to get unlimited generations, better quality, and personalized results!
-                </p>
               </div>
-            </div>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            <div className="py-4 space-y-4">
-              <SocialProofBanner />
-              <Label htmlFor="preview-prompt">What would you like to create?</Label>
-              <Textarea
-                id="preview-prompt"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="e.g., a modern logo for a coffee shop, a professional headshot, a product mockup..."
-                rows={3}
-                required
-              />
-              <PromptSuggestions onSelectPrompt={setPrompt} />
-            </div>
-            <DialogFooter>
-              <SubmitButton
-                className="w-full"
-                loadingText="Generating Preview..."
-                disabled={!prompt.trim()}
-              >
-                <Wand2 className="mr-2 h-4 w-4" />
-                Generate Free Preview
-              </SubmitButton>
-            </DialogFooter>
-          </form>
-        )}
+            ) : (
+              <form id="preview-form" onSubmit={handleSubmit}>
+                <div className="space-y-4">
+                  <SocialProofBanner />
+                  <Label htmlFor="preview-prompt">What would you like to create?</Label>
+                  <Textarea
+                    id="preview-prompt"
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    placeholder="e.g., a modern logo for a coffee shop, a professional headshot, a product mockup..."
+                    rows={3}
+                    required
+                  />
+                  <PromptSuggestions onSelectPrompt={setPrompt} />
+                </div>
+              </form>
+            )}
+        </div>
         
-        <DialogFooter className="flex-col sm:flex-row gap-2">
+        <DialogFooter className="flex-col sm:flex-row gap-2 pt-4 border-t">
           {isComplete ? (
             <>
               <Button variant="ghost" onClick={handleClose}>
@@ -208,9 +201,20 @@ export function PreviewModeDialog({ isOpen, onOpenChange }: PreviewModeDialogPro
               </Button>
             </>
           ) : (
-            <Button variant="ghost" onClick={handleClose}>
-              Maybe Later
-            </Button>
+            <>
+                <Button variant="ghost" onClick={handleClose}>
+                    Maybe Later
+                </Button>
+                <SubmitButton
+                    form="preview-form"
+                    className="w-full sm:w-auto"
+                    loadingText="Generating Preview..."
+                    disabled={!prompt.trim()}
+                >
+                    <Wand2 className="mr-2 h-4 w-4" />
+                    Generate Free Preview
+                </SubmitButton>
+            </>
           )}
         </DialogFooter>
       </DialogContent>
