@@ -7,9 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Rocket, ArrowRight, Sparkles, Eye } from 'lucide-react';
 import { useState } from 'react';
 import { PreviewModeDialog } from './PreviewModeDialog';
+import { useBrand } from '@/contexts/BrandContext';
+import { cn } from '@/lib/utils';
 
 export function WelcomeCard() {
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  const { brandData } = useBrand();
+  const hasUsedPreview = brandData?.hasUsedPreviewMode || false;
+
   return (
     <div className="flex items-center justify-center h-full">
         <Card className="w-full max-w-2xl text-center py-10 px-6 animate-fade-in shadow-xl bg-secondary/30 border-primary/20">
@@ -51,11 +56,15 @@ export function WelcomeCard() {
                     <Button
                         variant="outline"
                         size="lg"
-                        className="flex-1 border-primary/20 hover:bg-primary/5"
+                        className={cn(
+                            "flex-1 border-primary/20 hover:bg-primary/5",
+                            !hasUsedPreview && "animate-pulse ring-2 ring-primary/50 ring-offset-2 ring-offset-background"
+                        )}
                         onClick={() => setShowPreviewDialog(true)}
+                        disabled={hasUsedPreview}
                     >
                         <Eye className="w-5 h-5 mr-2" />
-                        Try AI Preview
+                        {hasUsedPreview ? 'Preview Used' : 'Try AI Preview'}
                     </Button>
                 </div>
                 

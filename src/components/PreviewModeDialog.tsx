@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useActionState, startTransition } from 'react';
@@ -6,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Loader2, Wand2, Eye, Sparkles, CheckCircle, ArrowRight } from 'lucide-react';
+import { Loader2, Wand2, Eye, Sparkles, CheckCircle, ArrowRight, User, Star } from 'lucide-react';
 import { handlePreviewModeImageGenerationAction, FormState } from '@/lib/actions';
 import { useBrand } from '@/contexts/BrandContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,6 +21,52 @@ interface PreviewModeDialogProps {
 }
 
 const initialPreviewState: FormState<{ generatedImages: string[] }> = { error: undefined, data: undefined };
+
+const PREVIEW_PROMPT_SUGGESTIONS = [
+  "A modern, minimalist logo for a tech startup called 'Innovate'",
+  "An engaging social media image for a new coffee shop's grand opening",
+  "A professional website banner for an online marketing course",
+  "A vibrant, eye-catching illustration of a person working remotely from a beautiful location",
+];
+
+const SocialProofBanner = () => (
+    <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-3 rounded-lg mb-4 border border-blue-100 dark:from-blue-900/30 dark:to-purple-900/30 dark:border-blue-800/50">
+        <div className="flex items-center gap-2 text-sm">
+            <div className="flex -space-x-2">
+                <User className="w-6 h-6 p-1 rounded-full bg-white border-2 border-white text-blue-500" />
+                <User className="w-6 h-6 p-1 rounded-full bg-white border-2 border-white text-purple-500" />
+                <User className="w-6 h-6 p-1 rounded-full bg-white border-2 border-white text-pink-500" />
+            </div>
+            <span className="text-gray-700 dark:text-gray-300">
+                <strong>2,800+</strong> brands created this week
+            </span>
+            <Badge variant="secondary" className="ml-auto bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/50 dark:text-amber-300 dark:border-amber-800/50">
+                <Star className="w-3 h-3 mr-1" /> 4.9/5 rating
+            </Badge>
+        </div>
+    </div>
+);
+
+const PromptSuggestions = ({ onSelectPrompt }: { onSelectPrompt: (prompt: string) => void }) => (
+    <div className="space-y-3 mt-4">
+        <p className="text-sm text-muted-foreground">
+            Try one of these popular prompts to get started:
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {PREVIEW_PROMPT_SUGGESTIONS.map((prompt, index) => (
+                <button
+                    key={index}
+                    type="button"
+                    onClick={() => onSelectPrompt(prompt)}
+                    className="text-left p-3 rounded-md bg-gray-50 hover:bg-gray-100 dark:bg-gray-800/50 dark:hover:bg-gray-800/80 text-sm transition-colors"
+                >
+                    &quot;{prompt}&quot;
+                </button>
+            ))}
+        </div>
+    </div>
+);
+
 
 export function PreviewModeDialog({ isOpen, onOpenChange }: PreviewModeDialogProps) {
   const { userId } = useAuth();
@@ -121,6 +168,7 @@ export function PreviewModeDialog({ isOpen, onOpenChange }: PreviewModeDialogPro
         ) : (
           <form onSubmit={handleSubmit}>
             <div className="py-4 space-y-4">
+              <SocialProofBanner />
               <Label htmlFor="preview-prompt">What would you like to create?</Label>
               <Textarea
                 id="preview-prompt"
@@ -130,9 +178,7 @@ export function PreviewModeDialog({ isOpen, onOpenChange }: PreviewModeDialogPro
                 rows={3}
                 required
               />
-              <div className="text-xs text-muted-foreground">
-                💡 Tip: Be specific about what you want to create for better results
-              </div>
+              <PromptSuggestions onSelectPrompt={setPrompt} />
             </div>
             <DialogFooter>
               <SubmitButton
