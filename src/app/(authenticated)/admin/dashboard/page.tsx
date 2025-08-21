@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState, useActionState, startTransition } from 'react';
@@ -11,15 +10,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
-import { handleGetAllUserProfilesForAdminAction, handleUpdateUserPlanByAdminAction, type FormState } from '@/lib/actions';
-import { Loader2, ShieldCheck, CalendarIcon, X } from 'lucide-react';
+import { handleGetAllUserProfilesForAdminAction, handleUpdateUserPlanByAdminAction, handleDeleteUserByAdminAction, type FormState } from '@/lib/actions';
+import { Loader2, ShieldCheck, CalendarIcon, X, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import type { UserProfileSelectItem } from '@/types';
 import { SubmitButton } from '@/components/SubmitButton';
 import { Label } from '@/components/ui/label';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const initialFetchState: FormState<UserProfileSelectItem[]> = { error: undefined, data: undefined, message: undefined };
 const initialUpdateState: FormState<{ success: boolean }> = { error: undefined, data: undefined, message: undefined };
+const initialDeleteState: FormState<{ success: boolean }> = { error: undefined, data: undefined, message: undefined };
 
 export default function AdminDashboardPage() {
     const { currentUser } = useAuth();
@@ -29,16 +40,22 @@ export default function AdminDashboardPage() {
 
     const [fetchState, fetchAction] = useActionState(handleGetAllUserProfilesForAdminAction, initialFetchState);
     const [updateState, updateAction] = useActionState(handleUpdateUserPlanByAdminAction, initialUpdateState);
+    const [deleteState, deleteAction] = useActionState(handleDeleteUserByAdminAction, initialDeleteState);
+
+    const reFetchUsers = React.useCallback(() => {
+        if (currentUser?.email) {
+            const formData = new FormData();
+            formData.append('adminRequesterEmail', currentUser.email);
+            startTransition(() => fetchAction(formData));
+        }
+    }, [currentUser, fetchAction]);
+
 
     useEffect(() => {
         if (currentUser?.email === 'admin@brandforge.ai') {
-            const formData = new FormData();
-            formData.append('adminRequesterEmail', currentUser.email);
-            startTransition(() => {
-                fetchAction(formData);
-            });
+            reFetchUsers();
         }
-    }, [currentUser, fetchAction]);
+    }, [currentUser, reFetchUsers]);
 
     useEffect(() => {
         if (fetchState.data) {
@@ -54,17 +71,22 @@ export default function AdminDashboardPage() {
     useEffect(() => {
         if (updateState.message && !updateState.error) {
             toast({ title: "Success", description: updateState.message });
-            // Re-fetch users to show updated data
-            if (currentUser?.email) {
-                 const formData = new FormData();
-                 formData.append('adminRequesterEmail', currentUser.email);
-                 startTransition(() => fetchAction(formData));
-            }
+            reFetchUsers();
         }
         if (updateState.error) {
             toast({ title: "Update Failed", description: updateState.error, variant: "destructive" });
         }
-    }, [updateState, toast, currentUser, fetchAction]);
+    }, [updateState, toast, reFetchUsers]);
+
+    useEffect(() => {
+        if (deleteState.data?.success) {
+            toast({ title: "User Deleted", description: deleteState.message });
+            reFetchUsers();
+        }
+        if (deleteState.error) {
+            toast({ title: "Deletion Failed", description: deleteState.error, variant: "destructive" });
+        }
+    }, [deleteState, toast, reFetchUsers]);
     
     const handlePlanUpdate = (formData: FormData) => {
         if (currentUser?.email) {
@@ -120,8 +142,9 @@ export default function AdminDashboardPage() {
                                                 ? format(new Date(user.subscriptionEndDate), 'PPP')
                                                 : 'N/A'}
                                         </TableCell>
-                                        <TableCell className="text-right">
+                                        <TableCell className="text-right space-x-2">
                                             <EditUserSubscriptionForm user={user} onUpdate={handlePlanUpdate} />
+                                            <DeleteUserDialog user={user} onDelete={deleteAction} adminEmail={currentUser?.email || ''}/>
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -132,6 +155,36 @@ export default function AdminDashboardPage() {
                 </CardContent>
             </Card>
         </div>
+    );
+}
+
+function DeleteUserDialog({ user, onDelete, adminEmail }: { user: UserProfileSelectItem, onDelete: (formData: FormData) => void, adminEmail: string }) {
+    return (
+        <AlertDialog>
+            <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Delete
+                </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+                <form action={onDelete}>
+                    <input type="hidden" name="userIdToDelete" value={user.userId} />
+                    <input type="hidden" name="userEmailToDelete" value={user.userEmail} />
+                    <input type="hidden" name="adminRequesterEmail" value={adminEmail} />
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action is irreversible. This will permanently delete the user <strong className="text-foreground">{user.userEmail}</strong> and all of their data, including brand profiles, generated content, images, and usage history from the system.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <SubmitButton variant="destructive" loadingText="Deleting...">Yes, Delete User</SubmitButton>
+                    </AlertDialogFooter>
+                </form>
+            </AlertDialogContent>
+        </AlertDialog>
     );
 }
 

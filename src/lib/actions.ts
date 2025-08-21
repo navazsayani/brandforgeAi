@@ -1,6 +1,3 @@
-
-
-
 'use server';
 
 import crypto from 'crypto';
@@ -22,7 +19,7 @@ import { editImage, type EditImageInput, type EditImageOutput } from '@/ai/flows
 import { enhanceRefinePrompt, type EnhanceRefinePromptInput, type EnhanceRefinePromptOutput } from '@/ai/flows/enhance-refine-prompt-flow';
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
-import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where, collectionGroup, deleteDoc, runTransaction } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, getDocs, query as firestoreQuery, where, collectionGroup, deleteDoc, runTransaction, updateDoc } from 'firebase/firestore';
 import type { UserProfileSelectItem, BrandData, ModelConfig, PlansConfig, MonthlyUsage, AdminUserUsage, ConnectedAccountsStatus, InstagramAccount, OrphanedImageScanResult } from '@/types';
 import {
   vectorizeBrandProfile,
@@ -40,6 +37,8 @@ import { scanAllOrphanedImages, cleanupAllOrphanedImages } from './cleanup-orpha
 import Razorpay from 'razorpay';
 import admin from 'firebase-admin';
 import { getStorage as getAdminStorage } from 'firebase-admin/storage';
+import { getAuth as getAdminAuth } from 'firebase-admin/auth';
+import { getFirestore as getAdminFirestore } from 'firebase-admin/firestore';
 
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {
@@ -1244,19 +1243,20 @@ export async function handlePreviewModeImageGenerationAction(
   const userId = formData.get("userId") as string;
   const prompt = formData.get("prompt") as string;
 
-  if (!userId || !prompt) {
-    return { error: "Missing required information for preview mode." };
+  if (!prompt) {
+    return { error: "Missing prompt for preview mode." };
   }
 
   try {
-    // Check if user has already used preview mode
-    const brandProfileRef = doc(db, 'users', userId, 'brandProfiles', userId);
-    const brandProfileSnap = await getDoc(brandProfileRef);
-    
-    if (brandProfileSnap.exists()) {
-      const brandData = brandProfileSnap.data() as BrandData;
-      if (brandData.hasUsedPreviewMode) {
-        return { error: "Preview mode can only be used once. Please complete your brand profile to continue generating content." };
+    // If a user is logged in, check if they have already used preview mode
+    if (userId) {
+      const brandProfileRef = doc(db, 'users', userId, 'brandProfiles', userId);
+      const brandProfileSnap = await getDoc(brandProfileRef);
+      if (brandProfileSnap.exists()) {
+        const brandData = brandProfileSnap.data() as BrandData;
+        if (brandData.hasUsedPreviewMode) {
+          return { error: "Preview mode can only be used once. Please complete your brand profile to continue generating content." };
+        }
       }
     }
 
@@ -1269,10 +1269,7 @@ export async function handlePreviewModeImageGenerationAction(
     
     // Note: We are NOT calling checkAndIncrementUsage here - this is free
     const result = await generateImages(input);
-
-    // Mark that user has used preview mode
-    await setDoc(brandProfileRef, { hasUsedPreviewMode: true }, { merge: true });
-
+    
     return {
       data: { generatedImages: result.generatedImages },
       message: "Preview image generated! Complete your brand profile to unlock unlimited generations and better quality."
@@ -2700,9 +2697,11 @@ export async function handleAdminCleanupOrphanedImagesAction(
     
     console.log(`[Admin Cleanup Orphaned Images] Cleanup completed:`);
     console.log(`  - DB references deleted: ${cleanupResult.deletedDbReferences}`);
-    console.log(`  - Storage files deleted: ${cleanupResult.deletedStorageFiles}`);
+    console.log(`  - Storage files deleted (from DB orphans): ${cleanupResult.deletedStorageFiles}`);
     console.log(`  - Storage orphans deleted: ${cleanupResult.storageOrphansDeleted}`);
-    console.log(`  - Dormant logos deleted: ${cleanupResult.deletedDormantLogos}`);
+    if (cleanupDormantLogos) {
+      console.log(`  - Dormant logos deleted: ${cleanupResult.deletedDormantLogos}`);
+    }
     console.log(`  - Storage space saved: ${formatBytes(cleanupResult.totalSavedSpace)}`);
     
     const totalDeleted = cleanupResult.deletedDbReferences + cleanupResult.deletedStorageFiles + cleanupResult.storageOrphansDeleted + cleanupResult.deletedDormantLogos;
@@ -2731,4 +2730,110 @@ function formatBytes(bytes: number): string {
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+async function deleteCollection(collectionPath: string, batchSize: number) {
+  const adminDb = getAdminFirestore();
+  const collectionRef = adminDb.collection(collectionPath);
+  const q = collectionRef.orderBy('__name__').limit(batchSize);
+
+  return new Promise((resolve, reject) => {
+    deleteQueryBatch(q, resolve).catch(reject);
+  });
+}
+
+async function deleteQueryBatch(query: admin.firestore.Query, resolve: (value: unknown) => void) {
+    const adminDb = getAdminFirestore();
+    const snapshot = await query.get();
+
+    const batchSize = snapshot.size;
+    if (batchSize === 0) {
+        // When there are no documents left, we are done
+        resolve(true);
+        return;
+    }
+
+    // Delete documents in a batch
+    const batch = adminDb.batch();
+    snapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+    });
+    await batch.commit();
+
+    // Recurse on the next process tick, to avoid
+    // exploding the stack.
+    process.nextTick(() => {
+        deleteQueryBatch(query, resolve);
+    });
+}
+
+
+export async function handleDeleteUserByAdminAction(
+  prevState: FormState<{ success: boolean }>,
+  formData: FormData
+): Promise<FormState<{ success: boolean }>> {
+  const adminRequesterEmail = formData.get('adminRequesterEmail') as string;
+  const userIdToDelete = formData.get('userIdToDelete') as string;
+
+  if (adminRequesterEmail !== 'admin@brandforge.ai') {
+    return { error: "Unauthorized: You do not have permission to perform this action." };
+  }
+
+  if (!userIdToDelete) {
+    return { error: "User ID to delete is required." };
+  }
+
+  if (userIdToDelete === 'admin-user-id-placeholder' || adminRequesterEmail === (formData.get('userEmailToDelete') as string)) {
+      return { error: "Cannot delete the primary admin account." };
+  }
+  
+  try {
+    console.log(`[ADMIN DELETE] Starting deletion for user: ${userIdToDelete}`);
+
+    const adminAuth = getAdminAuth();
+    const adminStorage = getAdminStorage();
+    const adminDb = getAdminFirestore();
+    
+    // 1. Delete all user data from Firebase Storage
+    console.log(`[ADMIN DELETE] Deleting all files from Storage for user ${userIdToDelete}...`);
+    const bucket = adminStorage.bucket();
+    await bucket.deleteFiles({ prefix: `users/${userIdToDelete}/` });
+    console.log(`[ADMIN DELETE] Storage files deleted.`);
+
+    // 2. Delete all user data from Firestore
+    console.log(`[ADMIN DELETE] Deleting all documents from Firestore for user ${userIdToDelete}...`);
+    const subcollections = [
+        'brandProfiles', 'contentFeedback', 'ragContext', 'ragMetrics', 'ragVectors', 'usage', 'userApiCredentials'
+    ];
+    for (const subcollection of subcollections) {
+        await deleteCollection(`users/${userIdToDelete}/${subcollection}`, 100);
+        console.log(`[ADMIN DELETE]   - Subcollection '${subcollection}' deleted.`);
+    }
+    
+    // Delete the main user document
+    await adminDb.collection('users').doc(userIdToDelete).delete();
+    console.log(`[ADMIN DELETE] Main user document deleted.`);
+
+    // 3. Delete user from the user index
+    const userIndexRef = adminDb.collection('userIndex').doc('profiles');
+    await userIndexRef.update({
+        [userIdToDelete]: admin.firestore.FieldValue.delete()
+    });
+    console.log(`[ADMIN DELETE] User removed from user index.`);
+    
+    // 4. Delete user from Firebase Authentication
+    console.log(`[ADMIN DELETE] Deleting user from Firebase Authentication...`);
+    await adminAuth.deleteUser(userIdToDelete);
+    console.log(`[ADMIN DELETE] Authentication record deleted.`);
+
+    console.log(`[ADMIN DELETE] Successfully deleted user ${userIdToDelete} and all associated data.`);
+    return { data: { success: true }, message: 'User and all associated data have been permanently deleted.' };
+
+  } catch (e: any) {
+    console.error(`Error in handleDeleteUserByAdminAction for user ${userIdToDelete}:`, e);
+    if (e.code === 'auth/user-not-found') {
+        return { error: "User not found in Firebase Authentication. They may have already been deleted. Please check Firestore and Storage manually." };
+    }
+    return { error: `Failed to delete user: ${e.message || "Unknown error."}` };
+  }
 }

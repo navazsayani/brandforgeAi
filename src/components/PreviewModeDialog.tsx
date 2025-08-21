@@ -40,10 +40,10 @@ const SocialProofBanner = () => (
                 <User className="w-6 h-6 p-1 rounded-full bg-white border-2 border-white text-pink-500" />
             </div>
             <span className="text-gray-700 dark:text-gray-300">
-                <strong>500+</strong> brands created this week
+                <strong>17+</strong> brands created this week
             </span>
             <Badge variant="secondary" className="ml-auto bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/50 dark:text-amber-300 dark:border-amber-800/50">
-                <Star className="w-3 h-3 mr-1" /> 4.9/5 rating
+                <Star className="w-3 h-3 mr-1" /> 4.6/5 rating
             </Badge>
         </div>
     </div>
