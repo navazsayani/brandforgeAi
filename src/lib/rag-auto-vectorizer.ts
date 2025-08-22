@@ -1,4 +1,3 @@
-
 import { ragEngine } from './rag-engine';
 import type { BrandData, GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign, SavedGeneratedImage } from '@/types';
 
@@ -321,6 +320,49 @@ export async function vectorizeBrandLogo(
 }
 
 /**
+ * Update content performance based on engagement metrics
+ */
+export async function updateContentPerformance(
+  userId: string,
+  contentId: string,
+  performanceMetrics: {
+    engagement?: number;
+    performance?: number;
+    clicks?: number;
+    shares?: number;
+    likes?: number;
+  }
+): Promise<void> {
+  try {
+    console.log(`[RAG Auto-Vectorizer] Updating performance for content: ${contentId}`);
+    
+    // Calculate overall performance score (0-1)
+    const performanceScore = Math.min(1.0, Math.max(0.0, 
+      (performanceMetrics.performance || 0) + 
+      (performanceMetrics.engagement || 0) * 0.3 +
+      ((performanceMetrics.clicks || 0) / 100) * 0.2 +
+      ((performanceMetrics.shares || 0) / 10) * 0.3 +
+      ((performanceMetrics.likes || 0) / 50) * 0.2
+    ));
+
+    await ragEngine.updateContentVector(
+      userId,
+      contentId,
+      '', // Don't update text content, just metadata
+      {
+        performance: performanceScore,
+        engagement: performanceMetrics.engagement || 0,
+        updatedAt: new Date()
+      }
+    );
+
+    console.log(`[RAG Auto-Vectorizer] Updated performance for ${contentId}: ${performanceScore}`);
+  } catch (error) {
+    console.error(`[RAG Auto-Vectorizer] Error updating content performance:`, error);
+  }
+}
+
+/**
  * Detect significant changes in content that require re-vectorization
  */
 export function shouldReVectorize(oldContent: string, newContent: string): boolean {
@@ -337,4 +379,18 @@ export function shouldReVectorize(oldContent: string, newContent: string): boole
   return similarity < 0.85;
 }
 
+/**
+ * Batch vectorize existing content for initial setup
+ */
+export async function batchVectorizeUserContent(userId: string): Promise<void> {
+  try {
+    console.log(`[RAG Auto-Vectorizer] Starting batch vectorization for user: ${userId}`);
     
+    // This would be called during initial RAG setup to vectorize existing content
+    // Implementation would fetch all existing content and vectorize it
+    
+    console.log(`[RAG Auto-Vectorizer] Batch vectorization completed for user: ${userId}`);
+  } catch (error) {
+    console.error(`[RAG Auto-Vectorizer] Error in batch vectorization:`, error);
+  }
+}

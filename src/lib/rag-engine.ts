@@ -1,4 +1,3 @@
-
 import { db } from '@/lib/firebaseConfig';
 import { 
   collection, 
@@ -225,16 +224,6 @@ export class RAGEngine {
     try {
       console.log(`[RAG] Storing vector for ${contentType} - User: ${userId}`);
       
-      // IDEMPOTENCY CHECK: See if a vector for this contentId already exists
-      const vectorCollectionRef = collection(db, `users/${userId}/ragVectors`);
-      const existingQuery = query(vectorCollectionRef, where('contentId', '==', contentId), firestoreLimit(1));
-      const existingSnapshot = await getDocs(existingQuery);
-
-      if (!existingSnapshot.empty) {
-          console.log(`[RAG] Vector for contentId '${contentId}' already exists. Skipping creation to avoid duplicates.`);
-          return;
-      }
-
       // Check rate limits before generating embedding
       const rateLimitCheck = await this.checkRateLimit(userId);
       if (!rateLimitCheck.allowed) {
@@ -263,6 +252,7 @@ export class RAGEngine {
       };
 
       // Store in user's vector collection
+      const vectorCollectionRef = collection(db, `users/${userId}/ragVectors`);
       await addDoc(vectorCollectionRef, vectorDoc);
       
       console.log(`[RAG] Successfully stored vector for ${contentType}`);
@@ -908,5 +898,3 @@ export class EmbeddingService {
 
 // Export singleton instance
 export const ragEngine = new RAGEngine();
-
-    
