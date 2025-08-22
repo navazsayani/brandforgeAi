@@ -6,9 +6,7 @@ const scheduler_1 = require("firebase-functions/v2/scheduler");
 const app_1 = require("firebase-admin/app");
 const firestore_2 = require("firebase-admin/firestore");
 // Initialize Firebase Admin
-if (!app_1.initializeApp.length) {
-    (0, app_1.initializeApp)();
-}
+(0, app_1.initializeApp)();
 const db = (0, firestore_2.getFirestore)();
 // Import vectorization functions
 const rag_auto_vectorizer_1 = require("./rag-auto-vectorizer");
@@ -273,7 +271,7 @@ async (event) => {
     try {
         console.log(`[RAG Cleanup] Starting weekly vector cleanup`);
         // Get all users
-        const usersSnapshot = await db.collection('users').get();
+        const usersSnapshot = await (0, firestore_2.getFirestore)().collection('users').get();
         let cleanupCount = 0;
         for (const userDoc of usersSnapshot.docs) {
             const userId = userDoc.id;
@@ -308,7 +306,7 @@ exports.updateUserBrandContext = (0, firestore_1.onDocumentWritten)('users/{user
             return;
         }
         // Debounce: Only update context every 5 minutes to avoid excessive updates
-        const contextDocRef = db.doc(`users/${userId}/ragContext/summary`);
+        const contextDocRef = (0, firestore_2.getFirestore)().doc(`users/${userId}/ragContext/summary`);
         const contextDoc = await contextDocRef.get();
         if (contextDoc.exists) {
             const lastUpdate = (_b = (_a = contextDoc.data()) === null || _a === void 0 ? void 0 : _a.lastUpdated) === null || _b === void 0 ? void 0 : _b.toDate();

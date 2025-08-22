@@ -17,3 +17,4 @@ import '@/ai/flows/populate-blog-form-flow.ts';
 import '@/ai/flows/populate-ad-campaign-form-flow.ts';
 import '@/ai/flows/edit-image-flow.ts';
 import '@/ai/flows/enhance-refine-prompt-flow.ts';
+import '@/ai/flows/generate-brandforge-app-logo-flow.ts';

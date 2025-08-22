@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview An AI agent that generates a brand logo for the BrandForge AI application itself.
@@ -74,9 +73,3 @@ Example direction: Think of a sleek, abstract 'B' that subtly incorporates a spa
     }
   }
 );
-
-
-    
-
-    
-

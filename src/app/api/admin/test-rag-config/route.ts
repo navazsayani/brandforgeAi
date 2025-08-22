@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ragEngine } from '@/lib/rag-engine';
+import { ragEngine, EmbeddingService } from '@/lib/rag-engine';
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     // Test 2: Test embedding generation with configuration
     const testUserId = 'test-user-123';
     const testText = "This is a test for RAG configuration integration";
-    const embeddingService = new (await import('@/lib/rag-engine')).EmbeddingService(ragEngine);
+    const embeddingService = new EmbeddingService(ragEngine);
     const embedding = await embeddingService.generateEmbedding(testText);
     console.log('[Test RAG Config] Generated embedding dimensions:', embedding.length);
     

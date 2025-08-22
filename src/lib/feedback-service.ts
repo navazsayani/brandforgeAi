@@ -43,7 +43,7 @@ export class FeedbackService {
     try {
       // 🔥 RATE LIMITING: Check recent feedback count
       await this.checkRateLimit(userId);
-      const feedbackData: Omit<ContentFeedback, 'id'> = {
+      const feedbackData: Omit<ContentFeedback, 'id'> & { [key: string]: any } = {
         contentId,
         userId,
         contentType,
@@ -51,12 +51,16 @@ export class FeedbackService {
         wasHelpful: feedback.wasHelpful,
         wasRAGEnhanced: ragContext?.wasRAGEnhanced || false,
         ragContextUsed: ragContext?.ragContextUsed || [],
-        ragInsights: ragContext?.ragInsights,
         userComment: feedback.comment,
         timestamp: new Date(),
         createdAt: new Date(),
         updatedAt: new Date()
       };
+      
+      // Only include ragInsights if it's defined and not empty
+      if (ragContext?.ragInsights) {
+        feedbackData.ragInsights = ragContext.ragInsights;
+      }
 
       // Store feedback
       const feedbackRef = collection(db, `users/${userId}/contentFeedback`);
@@ -68,7 +72,7 @@ export class FeedbackService {
       });
 
       // Update performance metrics
-      await this.updatePerformanceMetrics(userId, feedbackData);
+      await this.updatePerformanceMetrics(userId, feedbackData as Omit<ContentFeedback, 'id'>);
 
       // Update pattern stats if RAG was used
       if (ragContext?.wasRAGEnhanced && ragContext.ragContextUsed?.length) {
