@@ -9,7 +9,13 @@
       "source": ".",
       "frameworksBackend": {
         "region": "us-west1"
-      }
+      },
+      "rewrites": [
+        {
+          "source": "**",
+          "function": "ssrbrandforge-ai-app"
+        }
+      ]
     }
   ]
 }
