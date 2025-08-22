@@ -1,3 +1,4 @@
+
 'use server';
 
 import crypto from 'crypto';
@@ -1768,53 +1769,6 @@ export async function handleGetPlansConfigAction(
   }
 }
 
-export async function handleUpdatePlansConfigAction(
-  prevState: FormState<PlansConfig>,
-  formData: FormData
-): Promise<FormState<PlansConfig>> {
-  const adminRequesterEmail = formData.get('adminRequesterEmail') as string;
-  if (adminRequesterEmail !== 'admin@brandforge.ai') {
-    return { error: "Unauthorized: You do not have permission to perform this action." };
-  }
-
-  try {
-    const currentConfig = await getPlansConfig(true); // Get the latest config to merge with
-    
-    const updatedConfig: PlansConfig = JSON.parse(JSON.stringify(currentConfig)); // Deep copy
-
-    // Update USD Pro Plan
-    updatedConfig.USD.pro.price.amount = formData.get('usd_pro_price') as string;
-    updatedConfig.USD.pro.price.originalAmount = formData.get('usd_pro_original_price') as string || undefined;
-    updatedConfig.USD.pro.quotas.imageGenerations = Number(formData.get('pro_images_quota'));
-    updatedConfig.USD.pro.quotas.socialPosts = Number(formData.get('pro_social_quota'));
-    updatedConfig.USD.pro.quotas.blogPosts = Number(formData.get('pro_blogs_quota'));
-    
-    // Update INR Pro Plan
-    updatedConfig.INR.pro.price.amount = formData.get('inr_pro_price') as string;
-    updatedConfig.INR.pro.price.originalAmount = formData.get('inr_pro_original_price') as string || undefined;
-    updatedConfig.INR.pro.quotas.imageGenerations = Number(formData.get('pro_images_quota'));
-    updatedConfig.INR.pro.quotas.socialPosts = Number(formData.get('pro_social_quota'));
-    updatedConfig.INR.pro.quotas.blogPosts = Number(formData.get('pro_blogs_quota'));
-
-    // Update Free Plan (quotas are the same across currencies)
-    updatedConfig.USD.free.quotas.imageGenerations = Number(formData.get('free_images_quota'));
-    updatedConfig.USD.free.quotas.socialPosts = Number(formData.get('free_social_quota'));
-    updatedConfig.USD.free.quotas.blogPosts = Number(formData.get('free_blogs_quota'));
-    updatedConfig.INR.free.quotas.imageGenerations = Number(formData.get('free_images_quota'));
-    updatedConfig.INR.free.quotas.socialPosts = Number(formData.get('free_social_quota'));
-    updatedConfig.INR.free.quotas.blogPosts = Number(formData.get('free_blogs_quota'));
-
-    const configDocRef = doc(db, 'configuration', 'plans');
-    await setDoc(configDocRef, updatedConfig);
-    clearPlansConfigCache();
-
-    return { data: updatedConfig, message: "Plans configuration updated successfully." };
-  } catch (e: any) {
-    console.error("Error in handleUpdatePlansConfigAction:", e);
-    return { error: `Failed to update plans configuration: ${e.message || "Unknown error."}` };
-  }
-}
-
 export async function handleUpdateContentStatusAction(
   prevState: FormState<{ success: boolean }>,
   formData: FormData
@@ -2922,3 +2876,5 @@ export async function handleDeleteUserByAdminAction(
     return { error: `Failed to delete user: ${e.message || "Unknown error occurred during user deletion."}` };
   }
 }
+
+    
