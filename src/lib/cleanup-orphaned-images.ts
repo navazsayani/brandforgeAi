@@ -8,8 +8,12 @@ import { db, storage } from '@/lib/firebaseConfig';
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc } from 'firebase/firestore';
 import { ref as storageRef, getDownloadURL, deleteObject } from 'firebase/storage';
 import { decodeHtmlEntitiesInUrl, verifyImageUrlExists } from './utils';
+import { ensureFirebaseAdminInitialized } from './firebase-admin';
 import admin from 'firebase-admin';
 import { getStorage as getAdminStorage } from 'firebase-admin/storage';
+
+// Initialize Firebase Admin SDK
+ensureFirebaseAdminInitialized();
 
 export interface OrphanedImageReport {
   userId: string;

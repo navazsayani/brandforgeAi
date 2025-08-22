@@ -35,18 +35,14 @@ import { DEFAULT_PLANS_CONFIG } from './constants';
 import { decodeHtmlEntitiesInUrl, verifyImageUrlExists, compressDataUriServer } from './utils';
 import { scanAllOrphanedImages, cleanupAllOrphanedImages } from './cleanup-orphaned-images';
 import Razorpay from 'razorpay';
+import { ensureFirebaseAdminInitialized } from './firebase-admin';
 import admin from 'firebase-admin';
 import { getStorage as getAdminStorage } from 'firebase-admin/storage';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 import { getFirestore as getAdminFirestore } from 'firebase-admin/firestore';
 
 // Initialize Firebase Admin SDK
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.applicationDefault(),
-    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  });
-}
+ensureFirebaseAdminInitialized();
 
 // Generic type for form state with error
 export interface FormState<T = any> {
@@ -1304,33 +1300,52 @@ export async function handleGetAllUserProfilesForAdminAction(
   }
 
   try {
-    const usersCollectionRef = collection(db, 'users');
-    const userDocsSnapshot = await getDocs(usersCollectionRef);
+    // Use the same approach as handleGetUsageForAllUsersAction - query the userIndex first
+    const userIndexRef = doc(db, 'userIndex', 'profiles');
+    const userIndexSnap = await getDoc(userIndexRef);
+
+    if (!userIndexSnap.exists()) {
+      return { data: [], message: "No user index found." };
+    }
     
-    if (userDocsSnapshot.empty) {
-      return { data: [], message: "No users found in the database." };
+    const userIndex = userIndexSnap.data();
+    const userIds = Object.keys(userIndex);
+
+    if (userIds.length === 0) {
+      return { data: [], message: "No users found." };
     }
 
     const profiles: UserProfileSelectItem[] = [];
-    for (const userDoc of userDocsSnapshot.docs) {
-      const userId = userDoc.id;
+    
+    for (const userId of userIds) {
+      const userData = userIndex[userId];
       const profileDocRef = doc(db, 'users', userId, 'brandProfiles', userId);
       const profileDocSnap = await getDoc(profileDocRef);
 
       if (profileDocSnap.exists()) {
+        // User has a brand profile
         const data = profileDocSnap.data() as BrandData;
         const endDate = data.subscriptionEndDate;
         profiles.push({
           userId: userId,
           brandName: data.brandName || "Unnamed Brand",
-          userEmail: data.userEmail || userDoc.data().email || "No Email",
+          userEmail: data.userEmail || userData.userEmail || "No Email",
           plan: data.plan || 'free',
           subscriptionEndDate: endDate ? (endDate as any).toDate().toISOString() : null,
+        });
+      } else {
+        // User exists in index but hasn't created a brand profile yet
+        profiles.push({
+          userId: userId,
+          brandName: "No Brand Profile",
+          userEmail: userData.userEmail || "No Email",
+          plan: 'free',
+          subscriptionEndDate: null,
         });
       }
     }
     
-    return { data: profiles, message: "User profiles fetched successfully." };
+    return { data: profiles, message: `User profiles fetched successfully. Found ${profiles.length} users.` };
 
   } catch (e: any) {
     if (e.code === 'permission-denied') {
@@ -2790,50 +2805,120 @@ export async function handleDeleteUserByAdminAction(
   try {
     console.log(`[ADMIN DELETE] Starting deletion for user: ${userIdToDelete}`);
 
-    const adminAuth = getAdminAuth();
-    const adminStorage = getAdminStorage();
-    const adminDb = getAdminFirestore();
+    // Ensure Firebase Admin SDK is properly initialized
+    try {
+      ensureFirebaseAdminInitialized();
+    } catch (initError: any) {
+      console.error(`[ADMIN DELETE] Firebase Admin SDK initialization failed:`, initError);
+      throw new Error(`Firebase Admin SDK initialization failed: ${initError.message}`);
+    }
+
+    // Check if Firebase Admin SDK is properly initialized
+    if (!admin.apps.length) {
+      throw new Error('Firebase Admin SDK is not initialized after initialization attempt');
+    }
+
+    let adminAuth, adminStorage, adminDb;
+    
+    try {
+      adminAuth = getAdminAuth();
+      adminStorage = getAdminStorage();
+      adminDb = getAdminFirestore();
+      console.log(`[ADMIN DELETE] Firebase Admin services initialized successfully`);
+    } catch (initError: any) {
+      console.error(`[ADMIN DELETE] Failed to initialize Firebase Admin services:`, initError);
+      throw new Error(`Firebase Admin SDK services initialization failed: ${initError.message}`);
+    }
     
     // 1. Delete all user data from Firebase Storage
     console.log(`[ADMIN DELETE] Deleting all files from Storage for user ${userIdToDelete}...`);
-    const bucket = adminStorage.bucket();
-    await bucket.deleteFiles({ prefix: `users/${userIdToDelete}/` });
-    console.log(`[ADMIN DELETE] Storage files deleted.`);
+    try {
+      const bucket = adminStorage.bucket();
+      const [files] = await bucket.getFiles({ prefix: `users/${userIdToDelete}/` });
+      
+      if (files.length > 0) {
+        console.log(`[ADMIN DELETE] Found ${files.length} files to delete`);
+        await bucket.deleteFiles({ prefix: `users/${userIdToDelete}/` });
+        console.log(`[ADMIN DELETE] Storage files deleted.`);
+      } else {
+        console.log(`[ADMIN DELETE] No storage files found for user ${userIdToDelete}`);
+      }
+    } catch (storageError: any) {
+      console.error(`[ADMIN DELETE] Storage deletion failed:`, storageError);
+      throw new Error(`Failed to delete user storage files: ${storageError.message}`);
+    }
 
     // 2. Delete all user data from Firestore
     console.log(`[ADMIN DELETE] Deleting all documents from Firestore for user ${userIdToDelete}...`);
-    const subcollections = [
-        'brandProfiles', 'contentFeedback', 'ragContext', 'ragMetrics', 'ragVectors', 'usage', 'userApiCredentials'
-    ];
-    for (const subcollection of subcollections) {
-        await deleteCollection(`users/${userIdToDelete}/${subcollection}`, 100);
-        console.log(`[ADMIN DELETE]   - Subcollection '${subcollection}' deleted.`);
+    try {
+      const subcollections = [
+          'brandProfiles', 'contentFeedback', 'ragContext', 'ragMetrics', 'ragVectors', 'usage'
+      ];
+      for (const subcollection of subcollections) {
+          await deleteCollection(`users/${userIdToDelete}/${subcollection}`, 100);
+          console.log(`[ADMIN DELETE]   - Subcollection '${subcollection}' deleted.`);
+      }
+      
+      // Delete the main user document
+      await adminDb.collection('users').doc(userIdToDelete).delete();
+      console.log(`[ADMIN DELETE] Main user document deleted.`);
+
+      // Delete user API credentials (separate collection)
+      try {
+        await adminDb.collection('userApiCredentials').doc(userIdToDelete).delete();
+        console.log(`[ADMIN DELETE] User API credentials deleted.`);
+      } catch (credError: any) {
+        console.warn(`[ADMIN DELETE] Could not delete user API credentials (may not exist):`, credError.message);
+      }
+
+      // Delete user from the user index
+      try {
+        const userIndexRef = adminDb.collection('userIndex').doc('profiles');
+        await userIndexRef.update({
+            [userIdToDelete]: admin.firestore.FieldValue.delete()
+        });
+        console.log(`[ADMIN DELETE] User removed from user index.`);
+      } catch (indexError: any) {
+        console.warn(`[ADMIN DELETE] Could not remove user from index (may not exist):`, indexError.message);
+      }
+    } catch (firestoreError: any) {
+      console.error(`[ADMIN DELETE] Firestore deletion failed:`, firestoreError);
+      throw new Error(`Failed to delete user Firestore data: ${firestoreError.message}`);
     }
     
-    // Delete the main user document
-    await adminDb.collection('users').doc(userIdToDelete).delete();
-    console.log(`[ADMIN DELETE] Main user document deleted.`);
-
-    // 3. Delete user from the user index
-    const userIndexRef = adminDb.collection('userIndex').doc('profiles');
-    await userIndexRef.update({
-        [userIdToDelete]: admin.firestore.FieldValue.delete()
-    });
-    console.log(`[ADMIN DELETE] User removed from user index.`);
-    
-    // 4. Delete user from Firebase Authentication
+    // 3. Delete user from Firebase Authentication
     console.log(`[ADMIN DELETE] Deleting user from Firebase Authentication...`);
-    await adminAuth.deleteUser(userIdToDelete);
-    console.log(`[ADMIN DELETE] Authentication record deleted.`);
+    try {
+      await adminAuth.deleteUser(userIdToDelete);
+      console.log(`[ADMIN DELETE] Authentication record deleted.`);
+    } catch (authError: any) {
+      if (authError.code === 'auth/user-not-found') {
+        console.warn(`[ADMIN DELETE] User not found in Firebase Authentication (may have been already deleted)`);
+      } else {
+        console.error(`[ADMIN DELETE] Authentication deletion failed:`, authError);
+        throw new Error(`Failed to delete user from Firebase Authentication: ${authError.message}`);
+      }
+    }
 
     console.log(`[ADMIN DELETE] Successfully deleted user ${userIdToDelete} and all associated data.`);
     return { data: { success: true }, message: 'User and all associated data have been permanently deleted.' };
 
   } catch (e: any) {
-    console.error(`Error in handleDeleteUserByAdminAction for user ${userIdToDelete}:`, e);
-    if (e.code === 'auth/user-not-found') {
-        return { error: "User not found in Firebase Authentication. They may have already been deleted. Please check Firestore and Storage manually." };
+    console.error(`[ADMIN DELETE] Critical error in handleDeleteUserByAdminAction for user ${userIdToDelete}:`, e);
+    
+    // Provide more specific error messages based on the error type
+    if (e.message?.includes('Firebase Admin SDK')) {
+      return { error: `Firebase Admin SDK error: ${e.message}. Please check server configuration and credentials.` };
+    } else if (e.message?.includes('Could not refresh access token')) {
+      return { error: "Authentication failed: Could not refresh access token. Please check Firebase Admin SDK credentials and permissions." };
+    } else if (e.code === 'auth/user-not-found') {
+      return { error: "User not found in Firebase Authentication. They may have already been deleted." };
+    } else if (e.message?.includes('storage')) {
+      return { error: `Storage deletion failed: ${e.message}` };
+    } else if (e.message?.includes('firestore') || e.message?.includes('Firestore')) {
+      return { error: `Database deletion failed: ${e.message}` };
     }
-    return { error: `Failed to delete user: ${e.message || "Unknown error."}` };
+    
+    return { error: `Failed to delete user: ${e.message || "Unknown error occurred during user deletion."}` };
   }
 }

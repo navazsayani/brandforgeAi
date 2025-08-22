@@ -1,0 +1,13 @@
+{
+  "name": "brandforge-ai-functions",
+  "main": "lib/index.js",
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "firebase-functions": "^5.0.0",
+    "openai": "^4.20.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "firebase-functions-test": "^3.1.0"
+  }
+}

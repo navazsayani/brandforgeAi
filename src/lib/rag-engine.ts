@@ -17,6 +17,7 @@ import {
 // Note: Firebase Vector Search is still in preview - using alternative approach
 // import { VectorQuery } from 'firebase/firestore';
 import type { BrandData } from '@/types';
+import OpenAI from 'openai';
 
 // Types for RAG system
 export interface RAGVector {
@@ -852,9 +853,11 @@ export class RAGEngine {
  */
 export class EmbeddingService {
   private ragEngine: RAGEngine | null = null;
+  private openai: OpenAI;
 
   constructor(ragEngine?: RAGEngine) {
     this.ragEngine = ragEngine || null;
+    this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   }
 
   async generateEmbedding(text: string): Promise<number[]> {
@@ -869,25 +872,12 @@ export class EmbeddingService {
         dimensions = config.embedding?.dimensions || 1536;
       }
 
-      // Use OpenAI embeddings - can be extended to support other providers
-      const response = await fetch('https://api.openai.com/v1/embeddings', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const response = await this.openai.embeddings.create({
           input: text,
           model: embeddingModel,
-        }),
       });
 
-      if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const embedding = data.data[0].embedding;
+      const embedding = response.data[0].embedding;
       
       // Validate embedding dimensions match configuration
       if (embedding.length !== dimensions) {
