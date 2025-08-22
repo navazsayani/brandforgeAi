@@ -4,9 +4,7 @@ import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
 // Initialize Firebase Admin
-if (!initializeApp.length) {
-  initializeApp();
-}
+initializeApp();
 
 const db = getFirestore();
 
@@ -19,7 +17,7 @@ import {
   vectorizeSavedImage,
   vectorizeBrandLogo,
   shouldReVectorize
-} from '../../src/lib/rag-auto-vectorizer';
+} from './rag-auto-vectorizer';
 
 /**
  * Auto-vectorize brand profile changes
@@ -29,7 +27,7 @@ export const autoVectorizeBrandProfile = onDocumentWritten(
   'users/{userId}/brandProfiles/{profileId}',
   async (event) => {
     const change = event.data;
-    const { userId, profileId } = event.params;
+    const { userId } = event.params;
     
     try {
       console.log(`[RAG Trigger] Brand profile change detected for user: ${userId}`);
@@ -83,7 +81,7 @@ export const autoVectorizeSocialMediaPost = onDocumentWritten(
   'users/{userId}/brandProfiles/{profileId}/socialMediaPosts/{postId}',
   async (event) => {
     const change = event.data;
-    const { userId, profileId, postId } = event.params;
+    const { userId, postId } = event.params;
     
     try {
       console.log(`[RAG Trigger] Social media post change detected: ${postId} for user: ${userId}`);
@@ -137,7 +135,7 @@ export const autoVectorizeBlogPost = onDocumentWritten(
   'users/{userId}/brandProfiles/{profileId}/blogPosts/{postId}',
   async (event) => {
     const change = event.data;
-    const { userId, profileId, postId } = event.params;
+    const { userId, postId } = event.params;
     
     try {
       console.log(`[RAG Trigger] Blog post change detected: ${postId} for user: ${userId}`);
@@ -191,7 +189,7 @@ export const autoVectorizeAdCampaign = onDocumentWritten(
   'users/{userId}/brandProfiles/{profileId}/adCampaigns/{campaignId}',
   async (event) => {
     const change = event.data;
-    const { userId, profileId, campaignId } = event.params;
+    const { userId, campaignId } = event.params;
     
     try {
       console.log(`[RAG Trigger] Ad campaign change detected: ${campaignId} for user: ${userId}`);
@@ -245,7 +243,7 @@ export const autoVectorizeSavedImage = onDocumentWritten(
   'users/{userId}/brandProfiles/{profileId}/savedLibraryImages/{imageId}',
   async (event) => {
     const change = event.data;
-    const { userId, profileId, imageId } = event.params;
+    const { userId, imageId } = event.params;
     
     try {
       console.log(`[RAG Trigger] Saved image change detected: ${imageId} for user: ${userId}`);
@@ -299,7 +297,7 @@ export const autoVectorizeBrandLogo = onDocumentWritten(
   'users/{userId}/brandProfiles/{profileId}/brandLogos/{logoId}',
   async (event) => {
     const change = event.data;
-    const { userId, profileId, logoId } = event.params;
+    const { userId, logoId } = event.params;
     
     try {
       console.log(`[RAG Trigger] Brand logo change detected: ${logoId} for user: ${userId}`);
@@ -342,7 +340,7 @@ export const cleanupOldVectors = onSchedule(
       console.log(`[RAG Cleanup] Starting weekly vector cleanup`);
       
       // Get all users
-      const usersSnapshot = await db.collection('users').get();
+      const usersSnapshot = await getFirestore().collection('users').get();
       
       let cleanupCount = 0;
       
@@ -351,7 +349,7 @@ export const cleanupOldVectors = onSchedule(
         
         try {
           // Import ragEngine here to avoid circular dependencies
-          const { ragEngine } = await import('../../src/lib/rag-engine');
+          const { ragEngine } = await import('./rag-engine');
           await ragEngine.cleanupOldVectors(userId, 90); // Keep 90 days
           cleanupCount++;
         } catch (error) {
@@ -385,7 +383,7 @@ export const updateUserBrandContext = onDocumentWritten(
       }
       
       // Debounce: Only update context every 5 minutes to avoid excessive updates
-      const contextDocRef = db.doc(`users/${userId}/ragContext/summary`);
+      const contextDocRef = getFirestore().doc(`users/${userId}/ragContext/summary`);
       const contextDoc = await contextDocRef.get();
       
       if (contextDoc.exists) {
