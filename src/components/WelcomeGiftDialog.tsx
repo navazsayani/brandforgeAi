@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Loader2, Wand2, Download, Save, Gift, CheckCircle } from 'lucide-react';
+import { Loader2, Wand2, Save, Gift, CheckCircle } from 'lucide-react';
 import { handleWelcomeGiftImageGenerationAction, handleSaveGeneratedImagesAction, FormState } from '@/lib/actions';
 import { useBrand } from '@/contexts/BrandContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -126,7 +126,7 @@ export function WelcomeGiftDialog({ isOpen, onOpenChange }: WelcomeGiftDialogPro
              </div>
         ) : generatedImages.length > 0 ? (
           <div className="py-4 space-y-6 flex-1 overflow-y-auto">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {generatedImages.map((src, index) => (
                 <div key={index} className="relative aspect-square rounded-lg overflow-hidden border bg-muted">
                   <NextImage src={src} alt={`Generated Image ${index + 1}`} fill style={{ objectFit: 'contain' }} className="p-2" />
