@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useActionState, startTransition, useRef, useMemo } from 'react';
@@ -60,9 +61,7 @@ const ImprovedImageGrid = ({
   className?: string;
 }) => {
   const gridClass = imageUrls.length > 1 
-    ? (imageUrls.length > 2 
-      ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4' 
-      : 'grid-cols-1 sm:grid-cols-2') 
+    ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3' // Fewer columns for better spacing
     : 'grid-cols-1';
 
   return (
@@ -199,7 +198,7 @@ const ImageGridItem = ({
         </div>
         <div className="p-3 bg-card rounded-b-md flex flex-col sm:flex-row gap-2">
             <Button
-                className="w-full btn-gradient-primary"
+                className="w-full sm:flex-1 btn-gradient-primary"
                 size="sm"
                 onClick={() => onRefine(displayUrl)}
                 disabled={!isDisplayableImage}
@@ -209,7 +208,7 @@ const ImageGridItem = ({
             <Button
                 variant="secondary"
                 size="sm"
-                className="w-full"
+                className="w-full sm:flex-1"
                 onClick={() => onDownload(displayUrl, `generated-image-${index + 1}.png`)}
                 disabled={!isDisplayableImage}
             >
@@ -1049,7 +1048,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
 - **Brand Storytelling**: The image should instantly communicate the brand's core value proposition
 - **Target Audience Appeal**: Consider who this brand serves and what resonates with them
 - **Social Media Optimization**: Design for maximum engagement on platforms like Instagram, TikTok, Facebook
-- **Conversion Focus**: Include elements that encourage viewers to learn more or take action
+- **Conversion Focus**: Include elements that encourage viewers to take action
 - **Brand Differentiation**: Highlight what makes this brand unique in its market
 
 **VISUAL EXECUTION STYLE**: "${combinedStyle}"
