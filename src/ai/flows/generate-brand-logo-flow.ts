@@ -358,6 +358,26 @@ async function _generateLogoWithImagen(params: {
   }
 }
 
+// Helper to make a generation attempt
+async function makeGenerationAttempt(promptText: string, textToImageModel: string) {
+    const isImagen = isImagenModel(textToImageModel);
+    if (isImagen) {
+        return _generateLogoWithImagen({
+            model: textToImageModel,
+            prompt: promptText,
+            logoType: 'logomark' // Assuming default, this could be passed in if needed
+        });
+    } else {
+        const { media } = await ai.generate({
+            model: textToImageModel,
+            prompt: promptText,
+            config: { responseModalities: ['TEXT', 'IMAGE'] },
+        });
+        return media?.url;
+    }
+}
+
+
 const generateBrandLogoFlow = ai.defineFlow(
   {
     name: 'generateBrandLogoFlow',
@@ -376,35 +396,28 @@ const generateBrandLogoFlow = ai.defineFlow(
     console.log(`[Logo Gen] Prompt preview:`, promptText.substring(0, 300) + "...");
 
     try {
-      if (isImagen) {
-        // Use Imagen API directly
-        const logoDataUri = await _generateLogoWithImagen({
-          model: textToImageModel,
-          prompt: promptText,
-          logoType: input.logoType || 'logomark'
-        });
-        return { logoDataUri };
-      } else {
-        // Use Genkit for Gemini models
-        const {media} = await ai.generate({
-          model: textToImageModel,
-          prompt: promptText,
-          config: {
-            responseModalities: ['TEXT', 'IMAGE'],
-          },
-        });
+        let logoDataUri = await makeGenerationAttempt(promptText, textToImageModel);
 
-        if (!media || !media.url || !media.url.startsWith('data:')) {
-          console.error('Gemini logo generation failed or returned invalid data URI. Response media:', JSON.stringify(media, null, 2));
-          throw new Error('AI failed to generate a valid logo image or the format was unexpected.');
+        // If the first attempt fails, try a simplified prompt as a fallback
+        if (!logoDataUri || !logoDataUri.startsWith('data:')) {
+            console.warn("[Logo Gen] First attempt failed or returned invalid data. Retrying with a simplified prompt...");
+            
+            const simplifiedPrompt = `A simple, clean logo for "${input.brandName}". Style: ${input.logoStyle || 'modern'}. Colors: ${input.logoColors || 'blue and silver'}. No text.`;
+            
+            logoDataUri = await makeGenerationAttempt(simplifiedPrompt, textToImageModel);
+
+            if (!logoDataUri || !logoDataUri.startsWith('data:')) {
+                console.error('Gemini logo generation failed on both attempts. Last response:', logoDataUri);
+                throw new Error('AI failed to generate a valid logo image after multiple attempts. Please try rephrasing your description.');
+            }
         }
         
         // Compress the image if it's too large
-        const compressedDataUri = compressDataUriServer(media.url, 800 * 1024); // 800KB limit
-        console.log(`[Logo Gen] Gemini image compression: Original ${media.url.length} bytes, Final ${compressedDataUri.length} bytes`);
+        const compressedDataUri = compressDataUriServer(logoDataUri, 800 * 1024); // 800KB limit
+        console.log(`[Logo Gen] Final image compression: Original ${logoDataUri.length} bytes, Final ${compressedDataUri.length} bytes`);
         
         return { logoDataUri: compressedDataUri };
-      }
+
     } catch (error: any) {
       console.error("Error during logo generation:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
       throw new Error(`Error during logo generation: ${error.message || 'Unknown error'}`);

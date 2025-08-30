@@ -30,18 +30,24 @@ const enhanceBrandDescriptionPrompt = ai.definePrompt({
   name: 'enhanceBrandDescriptionPrompt',
   input: {schema: EnhanceBrandDescriptionInputSchema},
   output: {schema: EnhanceBrandDescriptionOutputSchema},
-  prompt: `You are an expert brand strategist and copywriter. Your task is to take the following brand description and enhance it.
+  prompt: `You are an expert brand strategist and marketing copywriter. A user has provided a description for their brand. Your task is to analyze and enhance it to be more compelling, clear, and ready for marketing purposes.
 
-Original Description:
+**Original User-Provided Description:**
 "{{{brandDescription}}}"
 
-Instructions:
-1.  Rewrite the description to be more compelling, clear, and engaging.
-2.  Focus on capturing the brand's essence, value proposition, and target audience if discernible.
-3.  The final output should be a single, cohesive paragraph of 2-4 sentences.
-4.  Maintain a professional but approachable tone. Do not use placeholders like "[Brand Name]".
+**Your Instructions:**
+1.  **Identify the Core Essence:** What is the fundamental product, service, or value proposition?
+2.  **Clarify the Target Audience:** Who is this brand for? If it's not explicit, infer a likely audience.
+3.  **Refine the Tone:** Elevate the language to be more professional, engaging, and confident.
+4.  **Strengthen the Value Proposition:** Clearly articulate what makes the brand unique or valuable.
+5.  **Synthesize and Rewrite:** Combine your analysis into a single, cohesive paragraph of 2-4 powerful sentences. The result should be a description that could be used on a website's "About Us" section or in a marketing brochure.
 
-Produce only the enhanced description text.
+**Do Not:**
+-   Use placeholders like "[Brand Name]".
+-   Simply rephrase sentences. Your goal is to add strategic value.
+-   Make it overly long. Brevity with impact is key.
+
+Produce only the final, enhanced description text in the 'enhancedDescription' field.
 `,
 });
 
