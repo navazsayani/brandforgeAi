@@ -104,7 +104,7 @@ export function WelcomeGiftDialog({ isOpen, onOpenChange }: WelcomeGiftDialogPro
 
   return (
     <Dialog open={isOpen} onOpenChange={closeAndFinalize}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3 text-2xl">
             <Gift className="w-7 h-7 text-primary" />
@@ -125,8 +125,8 @@ export function WelcomeGiftDialog({ isOpen, onOpenChange }: WelcomeGiftDialogPro
                 <p className="text-muted-foreground">Your new brand images are waiting for you in the Image Library.</p>
              </div>
         ) : generatedImages.length > 0 ? (
-          <div className="py-4 space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="py-4 space-y-6 flex-1 overflow-y-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {generatedImages.map((src, index) => (
                 <div key={index} className="relative aspect-square rounded-lg overflow-hidden border bg-muted">
                   <NextImage src={src} alt={`Generated Image ${index + 1}`} fill style={{ objectFit: 'contain' }} className="p-2" />
@@ -161,14 +161,15 @@ export function WelcomeGiftDialog({ isOpen, onOpenChange }: WelcomeGiftDialogPro
         )}
         
         {!isComplete && (
-            <DialogFooter>
-                 <Button variant="ghost" onClick={closeAndFinalize}>
+            <DialogFooter className="flex-col sm:flex-row">
+                 <Button variant="ghost" onClick={closeAndFinalize} className="w-full sm:w-auto">
                    {generatedImages.length > 0 ? "Close" : "Maybe Later"}
                 </Button>
                 {generatedImages.length > 0 && (
                     <SubmitButton 
                         onClick={handleSaveImages}
                         loadingText="Saving..."
+                        className="w-full sm:w-auto"
                     >
                         <Save className="mr-2 h-4 w-4" />
                         Save All to Library

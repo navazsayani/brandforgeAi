@@ -87,8 +87,10 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         dataToSave.userEmail = data.userEmail;
       }
 
-      const brandDocRef = doc(db, "users", userIdToSaveFor, "brandProfiles", userIdToSaveFor); 
-      await setDoc(brandDocRef, dataToSave, { merge: true }); 
+      const brandDocRef = doc(db, "users", userIdToSaveFor, "brandProfiles", userIdToSaveFor);
+      const oldDocSnap = await getDoc(brandDocRef);
+      const oldBrand = oldDocSnap.exists() ? (oldDocSnap.data() as BrandData) : null;
+      await setDoc(brandDocRef, dataToSave, { merge: true });
 
       // ADDED: Update the central user index
       const userIndexRef = doc(db, "userIndex", "profiles");
@@ -99,6 +101,24 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
           }
       };
       await setDoc(userIndexRef, indexUpdateData, { merge: true });
+
+      // Fire-and-forget server-side vectorization with threshold and logo handling
+      // Uses a Next.js API route to ensure this runs on the server, avoiding client-side OpenAI usage
+      try {
+        if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_RAG_USE_CLOUD_FUNCTIONS !== 'true') {
+          fetch('/api/rag/vectorize-brand-profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: userIdToSaveFor,
+              oldBrand,
+              newBrand: dataToSave
+            })
+          }).catch(() => {});
+        }
+      } catch (vecErr) {
+        console.warn('[BrandContext] Non-blocking: failed to trigger brand profile vectorization', vecErr);
+      }
 
       if (currentUser && userIdToSaveFor === currentUser.uid) {
         setBrandDataState(dataToSave); 

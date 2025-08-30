@@ -1,5 +1,7 @@
 import { ragEngine } from './rag-engine';
 import type { BrandData, GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedAdCampaign, SavedGeneratedImage } from '@/types';
+import { db } from '@/lib/firebaseConfig';
+import { collection, getDocs, query as fsQuery, where, limit as fsLimit } from 'firebase/firestore';
 
 /**
  * Auto-vectorization functions for different content types
@@ -10,6 +12,10 @@ import type { BrandData, GeneratedSocialMediaPost, GeneratedBlogPost, GeneratedA
  * Vectorize brand profile data
  */
 export async function vectorizeBrandProfile(userId: string, brandData: BrandData): Promise<void> {
+  if (process.env.NEXT_PUBLIC_RAG_USE_CLOUD_FUNCTIONS === 'true') {
+    console.log(`[RAG Auto-Vectorizer] Skipping brand_profile vectorization - Cloud Functions flag enabled`);
+    return;
+  }
   try {
     console.log(`[RAG Auto-Vectorizer] Processing brand profile for user: ${userId}`);
     
@@ -28,23 +34,69 @@ export async function vectorizeBrandProfile(userId: string, brandData: BrandData
       return;
     }
 
-    await ragEngine.storeContentVector(
-      userId,
-      'brand_profile',
-      `brand_${userId}`, // Unique content ID
-      textContent,
-      {
-        industry: brandData.industry,
-        performance: 1.0, // Brand profile is always high importance
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        version: 1
-      },
-      'brandProfiles',
-      userId
-    );
+    const contentId = `brand_${userId}`;
 
-    console.log(`[RAG Auto-Vectorizer] Successfully vectorized brand profile for user: ${userId}`);
+    // Upsert behavior: if a brand_profile vector with this contentId already exists, update it.
+    // Otherwise, create it fresh.
+    try {
+      const vectorsRef = collection(db, `users/${userId}/ragVectors`);
+      const existingQ = fsQuery(
+        vectorsRef,
+        where('contentType', '==', 'brand_profile'),
+        where('contentId', '==', contentId),
+        fsLimit(1)
+      );
+      const existingSnap = await getDocs(existingQ);
+
+      if (!existingSnap.empty) {
+        // Update in place (embedding + metadata), preserving existing createdAt in the doc
+        await ragEngine.updateContentVector(
+          userId,
+          contentId,
+          textContent,
+          {
+            industry: brandData.industry,
+            performance: 1.0
+          }
+        );
+        console.log(`[RAG Auto-Vectorizer] Updated existing brand profile vector for user: ${userId}`);
+      } else {
+        // First-time create
+        await ragEngine.storeContentVector(
+          userId,
+          'brand_profile',
+          contentId,
+          textContent,
+          {
+            industry: brandData.industry,
+            performance: 1.0, // Brand profile is always high importance
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            version: 1
+          },
+          'brandProfiles',
+          userId
+        );
+        console.log(`[RAG Auto-Vectorizer] Created brand profile vector for user: ${userId}`);
+      }
+    } catch (upsertErr) {
+      console.warn(`[RAG Auto-Vectorizer] Upsert check for brand profile failed, attempting create as fallback`, upsertErr);
+      await ragEngine.storeContentVector(
+        userId,
+        'brand_profile',
+        contentId,
+        textContent,
+        {
+          industry: brandData.industry,
+          performance: 1.0,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          version: 1
+        },
+        'brandProfiles',
+        userId
+      );
+    }
   } catch (error) {
     console.error(`[RAG Auto-Vectorizer] Error vectorizing brand profile:`, error);
   }
@@ -54,10 +106,14 @@ export async function vectorizeBrandProfile(userId: string, brandData: BrandData
  * Vectorize social media post
  */
 export async function vectorizeSocialMediaPost(
-  userId: string, 
+  userId: string,
   postData: GeneratedSocialMediaPost,
   docId: string
 ): Promise<void> {
+  if (process.env.NEXT_PUBLIC_RAG_USE_CLOUD_FUNCTIONS === 'true') {
+    console.log(`[RAG Auto-Vectorizer] Skipping social_media vectorization - Cloud Functions flag enabled`);
+    return;
+  }
   try {
     console.log(`[RAG Auto-Vectorizer] Processing social media post: ${docId}`);
     
@@ -111,10 +167,14 @@ export async function vectorizeSocialMediaPost(
  * Vectorize blog post
  */
 export async function vectorizeBlogPost(
-  userId: string, 
+  userId: string,
   blogData: GeneratedBlogPost,
   docId: string
 ): Promise<void> {
+  if (process.env.NEXT_PUBLIC_RAG_USE_CLOUD_FUNCTIONS === 'true') {
+    console.log(`[RAG Auto-Vectorizer] Skipping blog_post vectorization - Cloud Functions flag enabled`);
+    return;
+  }
   try {
     console.log(`[RAG Auto-Vectorizer] Processing blog post: ${docId}`);
     
@@ -173,10 +233,14 @@ export async function vectorizeBlogPost(
  * Vectorize ad campaign
  */
 export async function vectorizeAdCampaign(
-  userId: string, 
+  userId: string,
   campaignData: GeneratedAdCampaign,
   docId: string
 ): Promise<void> {
+  if (process.env.NEXT_PUBLIC_RAG_USE_CLOUD_FUNCTIONS === 'true') {
+    console.log(`[RAG Auto-Vectorizer] Skipping ad_campaign vectorization - Cloud Functions flag enabled`);
+    return;
+  }
   try {
     console.log(`[RAG Auto-Vectorizer] Processing ad campaign: ${docId}`);
     
@@ -233,10 +297,14 @@ export async function vectorizeAdCampaign(
  * Vectorize saved library image
  */
 export async function vectorizeSavedImage(
-  userId: string, 
+  userId: string,
   imageData: SavedGeneratedImage,
   docId: string
 ): Promise<void> {
+  if (process.env.NEXT_PUBLIC_RAG_USE_CLOUD_FUNCTIONS === 'true') {
+    console.log(`[RAG Auto-Vectorizer] Skipping saved_image vectorization - Cloud Functions flag enabled`);
+    return;
+  }
   try {
     console.log(`[RAG Auto-Vectorizer] Processing saved image: ${docId}`);
     
@@ -285,10 +353,14 @@ export async function vectorizeSavedImage(
  * Vectorize brand logo
  */
 export async function vectorizeBrandLogo(
-  userId: string, 
+  userId: string,
   logoData: { logoData: string; createdAt?: any },
   docId: string
 ): Promise<void> {
+  if (process.env.NEXT_PUBLIC_RAG_USE_CLOUD_FUNCTIONS === 'true') {
+    console.log(`[RAG Auto-Vectorizer] Skipping brand_logo vectorization - Cloud Functions flag enabled`);
+    return;
+  }
   try {
     console.log(`[RAG Auto-Vectorizer] Processing brand logo: ${docId}`);
     

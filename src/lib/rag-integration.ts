@@ -340,6 +340,12 @@ export async function storeContentForRAG(
   try {
     console.log(`[RAG Integration] Storing content for future RAG: ${contentType} - ${contentId}`);
     
+    // Unified Cloud Functions gate to prevent duplicate vectorization
+    if (process.env.NEXT_PUBLIC_RAG_USE_CLOUD_FUNCTIONS === 'true') {
+      console.log(`[RAG Integration] Skipping storeContentForRAG due to Cloud Functions flag`);
+      return { success: true, message: 'Skipped: Cloud Functions mode' };
+    }
+    
     // Create text content for vectorization
     const textContent = [
       content.prompt ? `Prompt: ${content.prompt}` : '',

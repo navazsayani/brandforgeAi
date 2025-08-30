@@ -27,9 +27,11 @@ import {
   vectorizeBlogPost,
   vectorizeAdCampaign,
   vectorizeSavedImage,
-  vectorizeBrandLogo
+  vectorizeBrandLogo,
+  shouldReVectorize
 } from './rag-auto-vectorizer';
 import { getModelConfig, clearModelConfigCache } from './model-config';
+import { ragEngine } from './rag-engine';
 import { getPlansConfig, clearPlansConfigCache } from './plans-config';
 import { DEFAULT_PLANS_CONFIG } from './constants';
 import { decodeHtmlEntitiesInUrl, verifyImageUrlExists, compressDataUriServer } from './utils';
@@ -1859,28 +1861,136 @@ export async function handleUpdateContentAction(
   
   try {
     const docRef = doc(db, docPath);
-    const updateData: { [key: string]: any } = {};
 
+    // Build partial update payload from form
+    const updateData: { [key: string]: any } = {};
     switch (contentType) {
-        case 'social':
-            updateData.caption = formData.get('caption') as string;
-            updateData.hashtags = formData.get('hashtags') as string;
-            break;
-        case 'blog':
-            updateData.title = formData.get('title') as string;
-            updateData.content = formData.get('content') as string;
-            updateData.tags = formData.get('tags') as string;
-            break;
-        case 'ad':
-            updateData.campaignConcept = formData.get('campaignConcept') as string;
-            updateData.headlines = formData.getAll('headlines[]') as string[];
-            updateData.bodyTexts = formData.getAll('bodyTexts[]') as string[];
-            break;
-        default:
-            return { error: "Invalid content type for update." };
+      case 'social':
+        updateData.caption = formData.get('caption') as string;
+        updateData.hashtags = formData.get('hashtags') as string;
+        break;
+      case 'blog':
+        updateData.title = formData.get('title') as string;
+        updateData.content = formData.get('content') as string;
+        updateData.tags = formData.get('tags') as string;
+        break;
+      case 'ad':
+        updateData.campaignConcept = formData.get('campaignConcept') as string;
+        updateData.headlines = formData.getAll('headlines[]') as string[];
+        updateData.bodyTexts = formData.getAll('bodyTexts[]') as string[];
+        break;
+      default:
+        return { error: "Invalid content type for update." };
     }
 
+    // Read old document BEFORE update for threshold comparison
+    const oldSnap = await getDoc(docRef);
+    const oldData = oldSnap.exists() ? (oldSnap.data() as any) : {};
+
+    // Merge to compute the would-be new document state
+    const mergedData = { ...oldData, ...updateData };
+
+    // Persist the update
     await setDoc(docRef, updateData, { merge: true });
+
+    // Threshold-based re-embedding for updates (skip if Cloud Functions flag is on)
+    if (process.env.NEXT_PUBLIC_RAG_USE_CLOUD_FUNCTIONS !== 'true') {
+      try {
+        const contentId = docRef.id;
+
+        if (contentType === 'social') {
+          const oldContent = `${oldData.caption || ''} ${oldData.hashtags || ''}`;
+          const newContent = `${mergedData.caption || ''} ${mergedData.hashtags || ''}`;
+          if (shouldReVectorize(oldContent, newContent)) {
+            // Build text content similar to vectorizeSocialMediaPost
+            const textContent = [
+              `Platform: ${mergedData.platform || ''}`,
+              `Caption: ${mergedData.caption || ''}`,
+              `Hashtags: ${mergedData.hashtags || ''}`,
+              `Tone: ${mergedData.tone || ''}`,
+              `Goal: ${mergedData.postGoal || ''}`,
+              `Target Audience: ${mergedData.targetAudience || ''}`,
+              `Call to Action: ${mergedData.callToAction || ''}`,
+              `Image Description: ${mergedData.imageDescription || ''}`
+            ].filter(item => item.split(': ')[1]).join('\n');
+
+            const tags = mergedData.hashtags
+              ? mergedData.hashtags.split('#').filter((t: string) => t.trim()).map((t: string) => t.trim().toLowerCase())
+              : [];
+
+            await ragEngine.updateContentVector(
+              userId,
+              contentId,
+              textContent,
+              { platform: mergedData.platform, tags }
+            );
+          }
+        } else if (contentType === 'blog') {
+          const oldContent = `${oldData.title || ''} ${oldData.content || ''}`;
+          const newContent = `${mergedData.title || ''} ${mergedData.content || ''}`;
+          if (shouldReVectorize(oldContent, newContent)) {
+            const contentPreview = (mergedData.content || '').length > 1000
+              ? mergedData.content.substring(0, 1000) + '...'
+              : (mergedData.content || '');
+
+            const textContent = [
+              `Title: ${mergedData.title || ''}`,
+              `Platform: ${mergedData.platform || ''}`,
+              `Style: ${mergedData.articleStyle || ''}`,
+              `Tone: ${mergedData.blogTone || ''}`,
+              `Target Audience: ${mergedData.targetAudience || ''}`,
+              `Tags: ${mergedData.tags || ''}`,
+              `Outline: ${mergedData.outline || ''}`,
+              `Content Preview: ${contentPreview}`
+            ].filter(item => item.split(': ')[1]).join('\n');
+
+            const keywords = mergedData.tags
+              ? mergedData.tags.split(',').map((t: string) => t.trim().toLowerCase())
+              : [];
+
+            await ragEngine.updateContentVector(
+              userId,
+              contentId,
+              textContent,
+              { platform: mergedData.platform, style: mergedData.articleStyle, tags: keywords }
+            );
+          }
+        } else if (contentType === 'ad') {
+          const oldContent = `${oldData.campaignConcept || ''} ${(oldData.headlines || []).join(' ')}`;
+          const newContent = `${mergedData.campaignConcept || ''} ${(mergedData.headlines || []).join(' ')}`;
+          if (shouldReVectorize(oldContent, newContent)) {
+            const textContent = [
+              `Campaign Concept: ${mergedData.campaignConcept || ''}`,
+              `Headlines: ${(mergedData.headlines || []).join(' | ')}`,
+              `Body Texts: ${(mergedData.bodyTexts || []).join(' | ')}`,
+              `Platform Guidance: ${mergedData.platformGuidance || ''}`,
+              `Target Platforms: ${(mergedData.platforms || mergedData.targetPlatforms || []).join(', ')}`,
+              `Brand: ${mergedData.brandName || ''}`,
+              `Industry: ${mergedData.industry || ''}`,
+              `Goal: ${mergedData.campaignGoal || ''}`,
+              `Target Audience: ${mergedData.targetAudience || ''}`,
+              `Call to Action: ${mergedData.callToAction || ''}`,
+              `Keywords: ${mergedData.targetKeywords || ''}`
+            ].filter(item => item.split(': ')[1]).join('\n');
+
+            const targetPlatforms = (mergedData.platforms || mergedData.targetPlatforms || []).join(',');
+            const keywords = mergedData.targetKeywords
+              ? mergedData.targetKeywords.split(',').map((k: string) => k.trim().toLowerCase())
+              : [];
+
+            await ragEngine.updateContentVector(
+              userId,
+              contentId,
+              textContent,
+              { platform: targetPlatforms, tags: keywords }
+            );
+          }
+        }
+      } catch (reVecErr) {
+        console.warn('[RAG] Non-blocking: failed to re-vectorize on update', reVecErr);
+      }
+    }
+
     return { data: { success: true }, message: `Content updated successfully.` };
   } catch (e: any) {
     console.error('Error in handleUpdateContentAction:', e);

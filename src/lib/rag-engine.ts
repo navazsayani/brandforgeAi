@@ -295,25 +295,40 @@ export class RAGEngine {
 
       const existingDoc = existingDocs.docs[0];
       const existingData = existingDoc.data() as RAGVector;
-      
-      // Generate new embedding
-      const newEmbedding = await this.embeddingService.generateEmbedding(textContent);
-      
-      // Update vector
-      const updatedVector: Partial<RAGVector> = {
-        embedding: newEmbedding,
-        textContent,
-        metadata: {
-          ...existingData.metadata,
-          ...metadata,
-          updatedAt: serverTimestamp(),
-          version: (existingData.metadata.version || 1) + 1
-        }
-      };
+
+      // Determine if we are updating text content (and thus need a new embedding),
+      // or only updating metadata (performance, engagement, etc.)
+      const hasNewText = typeof textContent === 'string' && textContent.trim().length > 0;
+
+      let updatedVector: Partial<RAGVector>;
+      if (hasNewText) {
+        // Generate new embedding only when we actually have new non-empty text content
+        const newEmbedding = await this.embeddingService.generateEmbedding(textContent);
+        updatedVector = {
+          embedding: newEmbedding,
+          textContent,
+          metadata: {
+            ...existingData.metadata,
+            ...metadata,
+            updatedAt: serverTimestamp(),
+            version: (existingData.metadata.version || 1) + 1
+          }
+        };
+      } else {
+        // Metadata-only update: do NOT overwrite textContent/embedding
+        updatedVector = {
+          metadata: {
+            ...existingData.metadata,
+            ...metadata,
+            updatedAt: serverTimestamp(),
+            version: (existingData.metadata.version || 1) + 1
+          }
+        };
+      }
 
       await setDoc(doc(db, `users/${userId}/ragVectors`, existingDoc.id), updatedVector, { merge: true });
       
-      console.log(`[RAG] Successfully updated vector for ${contentId}`);
+      console.log(`[RAG] Successfully updated vector for ${contentId} (${hasNewText ? 'text+embedding' : 'metadata-only'})`);
     } catch (error) {
       console.error(`[RAG] Error updating vector:`, error);
     }
