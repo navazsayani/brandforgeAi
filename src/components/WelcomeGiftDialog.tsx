@@ -64,6 +64,7 @@ export function WelcomeGiftDialog({ isOpen, onOpenChange }: WelcomeGiftDialogPro
     const formData = new FormData();
     formData.append('userId', userId);
     formData.append('prompt', prompt);
+    // Use the brand profile data for context
     formData.append('brandDescription', brandData.brandDescription || '');
     formData.append('imageStyle', brandData.imageStyleNotes || 'modern, professional');
 
@@ -126,7 +127,7 @@ export function WelcomeGiftDialog({ isOpen, onOpenChange }: WelcomeGiftDialogPro
              </div>
         ) : generatedImages.length > 0 ? (
           <div className="py-4 space-y-6 flex-1 overflow-y-auto">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {generatedImages.map((src, index) => (
                 <div key={index} className="relative aspect-square rounded-lg overflow-hidden border bg-muted">
                   <NextImage src={src} alt={`Generated Image ${index + 1}`} fill style={{ objectFit: 'contain' }} className="p-2" />
@@ -161,7 +162,7 @@ export function WelcomeGiftDialog({ isOpen, onOpenChange }: WelcomeGiftDialogPro
         )}
         
         {!isComplete && (
-            <DialogFooter className="flex-col sm:flex-row">
+            <DialogFooter className="flex-col sm:flex-row pt-4 border-t">
                  <Button variant="ghost" onClick={closeAndFinalize} className="w-full sm:w-auto">
                    {generatedImages.length > 0 ? "Close" : "Maybe Later"}
                 </Button>
