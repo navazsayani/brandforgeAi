@@ -196,9 +196,9 @@ const ImageGridItem = ({
                 </div>
             )}
         </div>
-        <div className="p-3 bg-card rounded-b-md flex flex-col sm:flex-row gap-2">
+        <div className="p-3 bg-card rounded-b-md flex flex-col lg:flex-row gap-2">
             <Button
-                className="w-full sm:flex-1 btn-gradient-primary"
+                className="w-full lg:flex-1 btn-gradient-primary"
                 size="sm"
                 onClick={() => onRefine(displayUrl)}
                 disabled={!isDisplayableImage}
@@ -208,7 +208,7 @@ const ImageGridItem = ({
             <Button
                 variant="secondary"
                 size="sm"
-                className="w-full sm:flex-1"
+                className="w-full lg:flex-1"
                 onClick={() => onDownload(displayUrl, `generated-image-${index + 1}.png`)}
                 disabled={!isDisplayableImage}
             >
@@ -2637,3 +2637,4 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     </div>
   );
 }
+
