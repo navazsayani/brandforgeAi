@@ -148,27 +148,24 @@ const editImageFlow = ai.defineFlow(
     }
 
     // Enhanced prompt for image editing
-    const enhancedPrompt = `You are a master AI photo editor and digital artist. Your primary goal is to perform precise, high-fidelity edits on a provided image based on a user's instruction, preserving the original image's integrity as much as possible.
+    const enhancedPrompt = `You are an elite digital artist and photo retoucher, known for your meticulous attention to detail and ability to make seamless, photorealistic edits. A client has provided an image and a specific instruction. Your task is to execute this instruction with the highest level of quality, as if preparing it for a high-end marketing campaign.
 
-**//-- EXECUTION HIERARCHY --//**
-Your execution must follow these rules in order of importance:
+**Your Core Philosophy:**
+Your primary directive is to **preserve the integrity of the original image**. Your edits should be so well-integrated that they feel like they were part of the original shot. Only the specific elements mentioned in the instruction should change.
 
-1.  **PRESERVE UNEDITED ELEMENTS (Highest Priority):** Do NOT change any part of the image that is not directly targeted by the user's instruction. The core subject, background elements, and overall composition must remain identical unless the instruction explicitly asks to change them.
+**Execution Guide:**
 
-2.  **EXECUTE THE INSTRUCTION PRECISELY:** Fulfill the user's request with surgical precision.
-    *   **Addition:** If asked to "add a cat," integrate a cat that matches the image's lighting, perspective, and style seamlessly.
-    *   **Modification:** If asked to "make the dress red," only change the dress color, carefully maintaining its texture, shadows, and highlights.
-    *   **Style Change:** If asked to "make it look like a watercolor painting," apply the watercolor style while preserving the original subjects and composition.
+1.  **Analyze the Instruction:** First, deeply understand the user's request: "{{{instruction}}}" What is the creative goal?
 
-3.  **MAINTAIN VISUAL COHERENCE:** The final image must be believable and internally consistent. Ensure lighting, shadows, reflections, and perspective are logical and harmonious after the edit. The edit should not look "pasted on."
+2.  **Apply with Precision:**
+    *   **Modification:** If changing a color or texture, maintain the original object's shadows, highlights, and form. A red dress should still look like it's made of the same fabric.
+    *   **Addition:** If adding an element (e.g., "add steam to the coffee"), it must perfectly match the existing lighting, perspective, and style.
+    *   **Style Change:** If applying a new style (e.g., "make it watercolor"), the underlying composition and subjects must remain perfectly recognizable.
 
-**//-- FINAL OUTPUT REQUIREMENTS --//**
--   The output must be ONLY the final, edited image.
--   Do not add any text, watermarks, or annotations.
--   The image resolution and quality must be equal to or higher than the original.
+3.  **Ensure Photorealism & Coherence:** The final image must be visually flawless. Shadows must be cast correctly, reflections must be accurate, and the overall physics of the scene must make sense.
 
-**Instruction to execute:**
-"${input.instruction}"
+**Final Output Requirement:**
+- Produce ONLY the edited image. Do not add text, watermarks, or any other artifacts.
 `;
 
     // Helper function to get mode-specific parameters
@@ -240,7 +237,7 @@ Your execution must follow these rules in order of importance:
           // Use Fireworks for img2img editing with mode-specific parameters
           const editedImages = await generateImageWithFireworks({
             model: modelName,
-            prompt: enhancedPrompt,
+            prompt: input.instruction,
             image: base64Image, // img2img input
             strength: input.fireworksImg2ImgStrength || modeParams.strength,
             guidance_scale: input.fireworksGuidanceScale || modeParams.guidance_scale,
@@ -276,7 +273,7 @@ Your execution must follow these rules in order of importance:
         model: imageGenerationModel,
         prompt: [
             { media: { url: imageDataUri } },
-            { text: enhancedPrompt }
+            { text: enhancedPrompt.replace('{{{instruction}}}', input.instruction) }
         ],
         config: {
           responseModalities: ['TEXT', 'IMAGE'],
