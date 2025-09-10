@@ -35,7 +35,25 @@ export type GenerateSocialMediaCaptionOutput = z.infer<typeof GenerateSocialMedi
 
 const generateSocialMediaCaptionPrompt = ai.definePrompt({
   name: 'generateSocialMediaCaptionPrompt',
-  input: {schema: GenerateSocialMediaCaptionInputSchema},
+  input: {schema: z.object({
+      ...GenerateSocialMediaCaptionInputSchema.shape,
+      // Add boolean flags for Handlebars logic
+      isInstagram: z.boolean().optional(),
+      isLinkedIn: z.boolean().optional(),
+      isTwitter: z.boolean().optional(),
+      isFacebook: z.boolean().optional(),
+      isYouTube: z.boolean().optional(),
+      isTikTok: z.boolean().optional(),
+      isMultiPlatform: z.boolean().optional(),
+      isHinglish: z.boolean().optional(),
+      isSpanish: z.boolean().optional(),
+      isFrench: z.boolean().optional(),
+      isGerman: z.boolean().optional(),
+      isHindi: z.boolean().optional(),
+      isJapanese: z.boolean().optional(),
+      isEnglish: z.boolean().optional(),
+    })
+  },
   output: {schema: GenerateSocialMediaCaptionOutputSchema},
   prompt: `You are an expert social media manager specializing in crafting platform-optimized, culturally-aware social media content.
 
@@ -44,43 +62,49 @@ Your task is to generate an engaging caption and relevant hashtags based on the 
 **Platform-Specific Optimization:**
 {{#if platform}}
 **Target Platform:** {{{platform}}}
-{{#if (eq platform "instagram")}}
+{{#if isInstagram}}
 - **Instagram Focus:** Visual storytelling, authentic, lifestyle-focused content
 - **Character Limit:** Up to 2200 characters (use wisely)
 - **Hashtag Strategy:** Mix of trending and niche hashtags (20-30 total)
 - **Content Style:** Story-driven, behind-the-scenes, aesthetic appeal
 - **CTA Style:** Subtle, encourage saves/shares, ask engaging questions
-{{else if (eq platform "linkedin")}}
+{{/if}}
+{{#if isLinkedIn}}
 - **LinkedIn Focus:** Professional insights, industry expertise, business value
 - **Character Limit:** Up to 1300 characters (concise but informative)
 - **Hashtag Strategy:** Professional hashtags (3-5 max, industry-focused)
 - **Content Style:** Authority-building, thought leadership, professional networking
 - **CTA Style:** Professional engagement, discussion-provoking questions
-{{else if (eq platform "twitter")}}
+{{/if}}
+{{#if isTwitter}}
 - **Twitter Focus:** Quick insights, conversational, trending topics
 - **Character Limit:** 280 characters MAX (be concise)
 - **Hashtag Strategy:** Trending hashtags (1-3 max, highly relevant)
 - **Content Style:** Quick wit, breaking news, conversation starters
 - **CTA Style:** Encourage retweets, replies, threaded discussions
-{{else if (eq platform "facebook")}}
+{{/if}}
+{{#if isFacebook}}
 - **Facebook Focus:** Community building, inclusive content, events
 - **Character Limit:** Up to 2000 characters (community-focused)
 - **Hashtag Strategy:** Relevant hashtags (5-10, community-building)
 - **Content Style:** Community-oriented, event announcements, inclusive
 - **CTA Style:** Community engagement, event participation
-{{else if (eq platform "youtube")}}
+{{/if}}
+{{#if isYouTube}}
 - **YouTube Focus:** Video-supporting content, educational, entertainment
 - **Character Limit:** Up to 1000 characters (video-centric)
 - **Hashtag Strategy:** Video-related hashtags (5-8, discoverable)
 - **Content Style:** Educational/entertainment value, behind-the-scenes
 - **CTA Style:** Subscribe, watch, comment encouragement
-{{else if (eq platform "tiktok")}}
+{{/if}}
+{{#if isTikTok}}
 - **TikTok Focus:** Trendy, authentic, Gen-Z appeal, viral potential
 - **Character Limit:** 150 characters MAX (very concise)
 - **Hashtag Strategy:** Trending hashtags (3-5 mix of viral/niche)
 - **Content Style:** Trend-aware, authentic, energetic, fun
 - **CTA Style:** Encourage follows, duets, shares
-{{else}}
+{{/if}}
+{{#if isMultiPlatform}}
 - **Multi-Platform Focus:** Universal appeal, professional quality
 - **Character Limit:** 280 characters (safe for all platforms)
 - **Hashtag Strategy:** Universal hashtags (3-5, broadly appealing)
@@ -97,31 +121,37 @@ Your task is to generate an engaging caption and relevant hashtags based on the 
 **Language & Cultural Context:**
 {{#if language}}
 **Target Language:** {{{language}}}
-{{#if (eq language "hinglish")}}
+{{#if isHinglish}}
 - **Hinglish Style:** Mix English and Hindi naturally, use colloquial expressions
 - **Cultural Context:** Modern Indian lifestyle, relatable to urban millennials/Gen-Z
 - **Tone:** Casual, trendy, "yaar/bro" culture, Bollywood references when appropriate
-{{else if (eq language "spanish")}}
+{{/if}}
+{{#if isSpanish}}
 - **Spanish Style:** Warm, expressive, family-oriented language
 - **Cultural Context:** Community-focused, celebratory, relationship-centered
 - **Tone:** More emotional, expressive connections, cultural celebrations
-{{else if (eq language "french")}}
+{{/if}}
+{{#if isFrench}}
 - **French Style:** Sophisticated, elegant, culturally refined
 - **Cultural Context:** Art, culture, lifestyle appreciation
 - **Tone:** Sophisticated language, cultural nuances, elegance
-{{else if (eq language "german")}}
+{{/if}}
+{{#if isGerman}}
 - **German Style:** Precise, efficient, quality-focused
 - **Cultural Context:** Engineering excellence, sustainability, innovation
 - **Tone:** Detailed, quality-emphasizing, structured approach
-{{else if (eq language "hindi")}}
+{{/if}}
+{{#if isHindi}}
 - **Hindi Style:** Respectful, family-oriented, traditional values
 - **Cultural Context:** Family, festivals, respect, traditions
 - **Tone:** Respectful language, cultural sensitivity, family focus
-{{else if (eq language "japanese")}}
+{{/if}}
+{{#if isJapanese}}
 - **Japanese Style:** Polite, respectful, detail-oriented
 - **Cultural Context:** Respect, quality, seasonal awareness, craftsmanship
 - **Tone:** Polite forms, seasonal sensitivity, quality focus
-{{else}}
+{{/if}}
+{{#if isEnglish}}
 - **Standard English:** Professional, clear, globally accessible
 - **Cultural Context:** Universal business communication
 - **Tone:** Professional yet approachable, culturally neutral
@@ -176,7 +206,7 @@ const generateSocialMediaCaptionFlow = ai.defineFlow(
     const { fastModel } = await getModelConfig();
     
     // 🔥 RAG ENHANCEMENT: Get adaptive RAG context with insights
-    let enhancedInput = input;
+    let enhancedInput: any = { ...input };
     let ragInsights: any[] = [];
     let wasRAGEnhanced = false;
     
@@ -196,7 +226,9 @@ const generateSocialMediaCaptionFlow = ai.defineFlow(
             minPerformance: 0.7,
             limit: 10,
             includeIndustryPatterns: true,
-            timeframe: '30days'
+            timeframe: '30days',
+            platform: input.platform,
+            language: input.language,
           }
         );
         
@@ -210,6 +242,9 @@ const generateSocialMediaCaptionFlow = ai.defineFlow(
           if (context.voicePatterns) ragContextText += `\nSUCCESSFUL VOICE PATTERNS:\n${context.voicePatterns}`;
           if (context.effectiveHashtags) ragContextText += `\nEFFECTIVE HASHTAGS:\n${context.effectiveHashtags}`;
           if (context.performanceInsights) ragContextText += `\nPERFORMANCE INSIGHTS:\n${context.performanceInsights}`;
+          if (context.platformPatterns) ragContextText += `\nPLATFORM-SPECIFIC PATTERNS:\n${context.platformPatterns}`;
+          if (context.languagePatterns) ragContextText += `\nLANGUAGE-SPECIFIC PATTERNS:\n${context.languagePatterns}`;
+
           
           enhancedInput = {
             ...input,
@@ -223,6 +258,25 @@ const generateSocialMediaCaptionFlow = ai.defineFlow(
       }
     }
     
+    // Add boolean flags for Handlebars logic
+    const platform = input.platform || 'all';
+    enhancedInput.isInstagram = platform === 'instagram';
+    enhancedInput.isLinkedIn = platform === 'linkedin';
+    enhancedInput.isTwitter = platform === 'twitter';
+    enhancedInput.isFacebook = platform === 'facebook';
+    enhancedInput.isYouTube = platform === 'youtube';
+    enhancedInput.isTikTok = platform === 'tiktok';
+    enhancedInput.isMultiPlatform = platform === 'all';
+    
+    const language = input.language || 'english';
+    enhancedInput.isHinglish = language === 'hinglish';
+    enhancedInput.isSpanish = language === 'spanish';
+    enhancedInput.isFrench = language === 'french';
+    enhancedInput.isGerman = language === 'german';
+    enhancedInput.isHindi = language === 'hindi';
+    enhancedInput.isJapanese = language === 'japanese';
+    enhancedInput.isEnglish = language === 'english';
+
     const {output} = await generateSocialMediaCaptionPrompt(enhancedInput, { model: fastModel });
     if (!output) {
         throw new Error("AI failed to generate a social media caption.");
@@ -241,7 +295,7 @@ const generateSocialMediaCaptionFlow = ai.defineFlow(
             result: `${output.caption}\nHashtags: ${output.hashtags}`,
             style: input.tone,
             metadata: {
-              platform: input.platform || 'instagram',
+              platform: input.platform || 'all',
               language: input.language || 'english',
               postGoal: input.postGoal,
               targetAudience: input.targetAudience,
