@@ -281,6 +281,24 @@ export const socialMediaPlatforms = [
   { value: "tiktok", label: "TikTok" },
 ];
 
+// Language-specific content nuances for global markets
+export const supportedLanguages = [
+  { value: "english", label: "English", code: "en" },
+  { value: "spanish", label: "Español (Spanish)", code: "es" },
+  { value: "french", label: "Français (French)", code: "fr" },
+  { value: "german", label: "Deutsch (German)", code: "de" },
+  { value: "italian", label: "Italiano (Italian)", code: "it" },
+  { value: "portuguese", label: "Português (Portuguese)", code: "pt" },
+  { value: "hindi", label: "हिंदी (Hindi - Devanagari Script)", code: "hi" },
+  { value: "hindi_transliterated", label: "Hindi (Roman Script)", code: "hi-ro" },
+  { value: "hinglish", label: "Hinglish (Hindi-English Mix)", code: "hi-en" },
+  { value: "japanese", label: "日本語 (Japanese)", code: "ja" },
+  { value: "korean", label: "한국어 (Korean)", code: "ko" },
+  { value: "chinese_simplified", label: "简体中文 (Chinese Simplified)", code: "zh-cn" },
+  { value: "arabic", label: "العربية (Arabic)", code: "ar" },
+  { value: "russian", label: "Русский (Russian)", code: "ru" },
+];
+
 // Platform-specific configurations for image-focused content
 export const platformConfigurations = {
   instagram: {
@@ -362,24 +380,6 @@ export const platformConfigurations = {
   }
 };
 
-// Multi-language support for global markets
-export const supportedLanguages = [
-  { value: "english", label: "English", code: "en" },
-  { value: "spanish", label: "Español (Spanish)", code: "es" },
-  { value: "french", label: "Français (French)", code: "fr" },
-  { value: "german", label: "Deutsch (German)", code: "de" },
-  { value: "italian", label: "Italiano (Italian)", code: "it" },
-  { value: "portuguese", label: "Português (Portuguese)", code: "pt" },
-  { value: "hindi", label: "हिंदी (Hindi)", code: "hi" },
-  { value: "hinglish", label: "Hinglish (Hindi-English Mix)", code: "hi-en" },
-  { value: "japanese", label: "日本語 (Japanese)", code: "ja" },
-  { value: "korean", label: "한국어 (Korean)", code: "ko" },
-  { value: "chinese_simplified", label: "简体中文 (Chinese Simplified)", code: "zh-cn" },
-  { value: "arabic", label: "العربية (Arabic)", code: "ar" },
-  { value: "russian", label: "Русский (Russian)", code: "ru" },
-];
-
-// Language-specific content nuances for global markets
 export const languageConfigurations = {
   english: {
     name: "English",
@@ -429,6 +429,13 @@ export const languageConfigurations = {
     culturalContext: "Family, festivals, respect for elders, traditions",
     hashtagStyle: "Hindi hashtags, cultural festivals",
     contentStyle: "Respectful language, cultural sensitivity, family focus"
+  },
+  hindi_transliterated: {
+    name: "Hindi (Roman)",
+    tone: "Modern, conversational Hindi",
+    culturalContext: "Urban Indian context, everyday communication",
+    hashtagStyle: "Mix of Hindi (Romanized) and English hashtags",
+    contentStyle: "Pure Hindi written in English script"
   },
   hinglish: {
     name: "Hinglish",

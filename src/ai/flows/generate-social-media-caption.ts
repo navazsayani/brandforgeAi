@@ -52,6 +52,7 @@ const generateSocialMediaCaptionPrompt = ai.definePrompt({
       isHindi: z.boolean().optional(),
       isJapanese: z.boolean().optional(),
       isEnglish: z.boolean().optional(),
+      isHindiTransliterated: z.boolean().optional(),
     })
   },
   output: {schema: GenerateSocialMediaCaptionOutputSchema},
@@ -126,6 +127,11 @@ Your task is to generate an engaging caption and relevant hashtags based on the 
 - **Cultural Context:** Modern Indian lifestyle, relatable to urban millennials/Gen-Z
 - **Tone:** Casual, trendy, "yaar/bro" culture, Bollywood references when appropriate
 {{/if}}
+{{#if isHindiTransliterated}}
+- **Hindi (Roman) Style:** Write entirely in Hindi but use the English alphabet (Roman script). For example: "Aap kaise hain?" instead of "आप कैसे हैं?".
+- **Cultural Context:** Modern Indian context, but the language should be pure Hindi, not a mix like Hinglish.
+- **Tone:** Adapt tone as requested, from formal Hindi to casual spoken Hindi.
+{{/if}}
 {{#if isSpanish}}
 - **Spanish Style:** Warm, expressive, family-oriented language
 - **Cultural Context:** Community-focused, celebratory, relationship-centered
@@ -142,7 +148,7 @@ Your task is to generate an engaging caption and relevant hashtags based on the 
 - **Tone:** Detailed, quality-emphasizing, structured approach
 {{/if}}
 {{#if isHindi}}
-- **Hindi Style:** Respectful, family-oriented, traditional values
+- **Hindi Style:** Respectful, family-oriented, traditional values (using Devanagari script: नमस्ते)
 - **Cultural Context:** Family, festivals, respect, traditions
 - **Tone:** Respectful language, cultural sensitivity, family focus
 {{/if}}
@@ -276,6 +282,7 @@ const generateSocialMediaCaptionFlow = ai.defineFlow(
     enhancedInput.isHindi = language === 'hindi';
     enhancedInput.isJapanese = language === 'japanese';
     enhancedInput.isEnglish = language === 'english';
+    enhancedInput.isHindiTransliterated = language === 'hindi_transliterated';
 
     const {output} = await generateSocialMediaCaptionPrompt(enhancedInput, { model: fastModel });
     if (!output) {

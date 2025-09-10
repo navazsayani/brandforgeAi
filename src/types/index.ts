@@ -46,7 +46,7 @@ export interface SavedGeneratedImage {
 
 export interface GeneratedSocialMediaPost {
   id: string;
-  platform: 'Instagram';
+  platform: 'Instagram' | 'LinkedIn' | 'Twitter' | 'Facebook' | 'all';
   imageSrc: string | null;
   imageDescription: string;
   caption: string;
@@ -55,6 +55,7 @@ export interface GeneratedSocialMediaPost {
   postGoal?: string;
   targetAudience?: string;
   callToAction?: string;
+  language?: string;
   createdAt?: any;
   status: 'draft' | 'scheduled' | 'deployed';
   ragMetadata?: {
