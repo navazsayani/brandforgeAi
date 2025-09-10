@@ -15,6 +15,8 @@ interface ContentFeedbackWidgetProps {
     ragContextUsed?: string[];
     ragInsights?: ContentFeedback['ragInsights'];
     insights?: RAGInsight[];
+    platform?: string;
+    language?: string;
   };
   onFeedbackSubmitted?: (feedback: any) => void;
   className?: string;
@@ -59,7 +61,13 @@ export const ContentFeedbackWidget: React.FC<ContentFeedbackWidgetProps> = ({
           wasHelpful: wasHelpful ?? undefined,
           comment: comment.trim() || undefined
         },
-        ragContext
+        {
+          wasRAGEnhanced: ragContext?.wasRAGEnhanced || false,
+          ragContextUsed: ragContext?.ragContextUsed,
+          ragInsights: ragContext?.ragInsights,
+          platform: ragContext?.platform,
+          language: ragContext?.language
+        }
       );
 
       // Only set submitted to true if the submission was successful

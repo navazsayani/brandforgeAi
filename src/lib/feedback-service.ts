@@ -38,6 +38,8 @@ export class FeedbackService {
       wasRAGEnhanced: boolean;
       ragContextUsed?: string[];
       ragInsights?: ContentFeedback['ragInsights'];
+      platform?: string;
+      language?: string;
     }
   ): Promise<void> {
     try {
@@ -52,6 +54,8 @@ export class FeedbackService {
         wasRAGEnhanced: ragContext?.wasRAGEnhanced || false,
         ragContextUsed: ragContext?.ragContextUsed || [],
         userComment: feedback.comment,
+        platform: ragContext?.platform || 'unknown',
+        language: ragContext?.language || 'english',
         timestamp: new Date(),
         createdAt: new Date(),
         updatedAt: new Date()

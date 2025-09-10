@@ -32,6 +32,7 @@ export interface RAGVector {
     performance?: number;
     engagement?: number;
     platform?: string;
+    language?: string;
     tags?: string[];
     createdAt: any;
     updatedAt: any;
@@ -52,12 +53,16 @@ export interface RAGContext {
   effectiveHashtags?: string;
   seoKeywords?: string;
   performanceInsights?: string;
+  platformPatterns?: string;
+  languagePatterns?: string;
 }
 
 export interface RAGRetrievalOptions {
   userId: string;
   contentType?: string;
   industry?: string;
+  platform?: string;
+  language?: string;
   minPerformance?: number;
   limit?: number;
   includeIndustryPatterns?: boolean;
@@ -499,6 +504,16 @@ export class RAGEngine {
     if (options.contentType === 'social_media') {
       context.voicePatterns = this.extractVoicePatterns(socialVectors);
       context.effectiveHashtags = this.extractEffectiveHashtags(socialVectors);
+      
+      // Add platform-specific patterns
+      if (options.platform) {
+        context.platformPatterns = this.extractPlatformPatterns(socialVectors, options.platform);
+      }
+      
+      // Add language-specific patterns
+      if (options.language) {
+        context.languagePatterns = this.extractLanguagePatterns(socialVectors, options.language);
+      }
     }
     
     if (options.contentType === 'blog_post') {
@@ -717,6 +732,79 @@ export class RAGEngine {
     }
     
     return insights.join('. ');
+  }
+
+  /**
+   * Extract platform-specific patterns
+   */
+  private extractPlatformPatterns(socialVectors: RAGVector[], platform: string): string {
+    const platformVectors = socialVectors.filter(v =>
+      v.metadata.platform === platform && (v.metadata.performance || 0) > 0.7
+    );
+    
+    if (platformVectors.length === 0) return '';
+    
+    // Extract successful content patterns for the specific platform
+    const patterns: string[] = [];
+    
+    // Extract common successful approaches
+    const successfulContent = platformVectors
+      .map(v => v.textContent.substring(0, 100))
+      .slice(0, 3);
+    
+    if (successfulContent.length > 0) {
+      patterns.push(`Your successful ${platform} content style: ${successfulContent.join(' | ')}`);
+    }
+    
+    // Extract platform-specific hashtag patterns
+    const platformHashtags = platformVectors
+      .flatMap(v => v.metadata.tags || [])
+      .reduce((acc, tag) => {
+        acc[tag] = (acc[tag] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+    
+    const topPlatformHashtags = Object.entries(platformHashtags)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 5)
+      .map(([tag]) => `#${tag}`);
+    
+    if (topPlatformHashtags.length > 0) {
+      patterns.push(`Top ${platform} hashtags: ${topPlatformHashtags.join(' ')}`);
+    }
+    
+    return patterns.join('\n');
+  }
+  
+  /**
+   * Extract language-specific patterns
+   */
+  private extractLanguagePatterns(socialVectors: RAGVector[], language: string): string {
+    const languageVectors = socialVectors.filter(v =>
+      v.metadata.language === language && (v.metadata.performance || 0) > 0.7
+    );
+    
+    if (languageVectors.length === 0) return '';
+    
+    // Extract successful language-specific content patterns
+    const patterns: string[] = [];
+    
+    // Extract tone and style patterns for the language
+    const languageContent = languageVectors
+      .map(v => v.textContent.substring(0, 80))
+      .slice(0, 3);
+    
+    if (languageContent.length > 0) {
+      patterns.push(`Your successful ${language} content style: ${languageContent.join(' | ')}`);
+    }
+    
+    // Extract language-specific engagement patterns
+    const avgEngagement = languageVectors.reduce((sum, v) => sum + (v.metadata.engagement || 0), 0) / languageVectors.length;
+    if (avgEngagement > 0.5) {
+      patterns.push(`${language} content performs well for your audience`);
+    }
+    
+    return patterns.join('\n');
   }
 
   /**

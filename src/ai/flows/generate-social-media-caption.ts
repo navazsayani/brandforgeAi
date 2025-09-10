@@ -22,6 +22,8 @@ const GenerateSocialMediaCaptionInputSchema = z.object({
   postGoal: z.string().optional().describe("The primary goal of the post, e.g., 'Brand Awareness', 'Engagement'. This guides the overall message."),
   targetAudience: z.string().optional().describe("A description of the target audience for this post, e.g., 'Young professionals', 'Eco-conscious consumers'."),
   callToAction: z.string().optional().describe("A specific call to action to include in the post, e.g., 'Shop now', 'Learn more'."),
+  platform: z.string().optional().describe("The target social media platform (e.g., 'instagram', 'linkedin', 'twitter', 'all'). Affects character limits, hashtag strategy, and content style."),
+  language: z.string().optional().describe("The target language for the content (e.g., 'english', 'spanish', 'hinglish'). Affects language style and cultural context."),
 });
 export type GenerateSocialMediaCaptionInput = z.infer<typeof GenerateSocialMediaCaptionInputSchema>;
 
@@ -35,32 +37,123 @@ const generateSocialMediaCaptionPrompt = ai.definePrompt({
   name: 'generateSocialMediaCaptionPrompt',
   input: {schema: GenerateSocialMediaCaptionInputSchema},
   output: {schema: GenerateSocialMediaCaptionOutputSchema},
-  prompt: `You are an expert social media manager specializing in crafting compelling Instagram posts.
+  prompt: `You are an expert social media manager specializing in crafting platform-optimized, culturally-aware social media content.
 
-Your task is to generate an engaging caption and a set of relevant hashtags based on the provided information.
+Your task is to generate an engaging caption and relevant hashtags based on the provided information, optimized for the specific platform and language.
+
+**Platform-Specific Optimization:**
+{{#if platform}}
+**Target Platform:** {{{platform}}}
+{{#if (eq platform "instagram")}}
+- **Instagram Focus:** Visual storytelling, authentic, lifestyle-focused content
+- **Character Limit:** Up to 2200 characters (use wisely)
+- **Hashtag Strategy:** Mix of trending and niche hashtags (20-30 total)
+- **Content Style:** Story-driven, behind-the-scenes, aesthetic appeal
+- **CTA Style:** Subtle, encourage saves/shares, ask engaging questions
+{{else if (eq platform "linkedin")}}
+- **LinkedIn Focus:** Professional insights, industry expertise, business value
+- **Character Limit:** Up to 1300 characters (concise but informative)
+- **Hashtag Strategy:** Professional hashtags (3-5 max, industry-focused)
+- **Content Style:** Authority-building, thought leadership, professional networking
+- **CTA Style:** Professional engagement, discussion-provoking questions
+{{else if (eq platform "twitter")}}
+- **Twitter Focus:** Quick insights, conversational, trending topics
+- **Character Limit:** 280 characters MAX (be concise)
+- **Hashtag Strategy:** Trending hashtags (1-3 max, highly relevant)
+- **Content Style:** Quick wit, breaking news, conversation starters
+- **CTA Style:** Encourage retweets, replies, threaded discussions
+{{else if (eq platform "facebook")}}
+- **Facebook Focus:** Community building, inclusive content, events
+- **Character Limit:** Up to 2000 characters (community-focused)
+- **Hashtag Strategy:** Relevant hashtags (5-10, community-building)
+- **Content Style:** Community-oriented, event announcements, inclusive
+- **CTA Style:** Community engagement, event participation
+{{else if (eq platform "youtube")}}
+- **YouTube Focus:** Video-supporting content, educational, entertainment
+- **Character Limit:** Up to 1000 characters (video-centric)
+- **Hashtag Strategy:** Video-related hashtags (5-8, discoverable)
+- **Content Style:** Educational/entertainment value, behind-the-scenes
+- **CTA Style:** Subscribe, watch, comment encouragement
+{{else if (eq platform "tiktok")}}
+- **TikTok Focus:** Trendy, authentic, Gen-Z appeal, viral potential
+- **Character Limit:** 150 characters MAX (very concise)
+- **Hashtag Strategy:** Trending hashtags (3-5 mix of viral/niche)
+- **Content Style:** Trend-aware, authentic, energetic, fun
+- **CTA Style:** Encourage follows, duets, shares
+{{else}}
+- **Multi-Platform Focus:** Universal appeal, professional quality
+- **Character Limit:** 280 characters (safe for all platforms)
+- **Hashtag Strategy:** Universal hashtags (3-5, broadly appealing)
+- **Content Style:** Versatile, professional yet approachable
+- **CTA Style:** General engagement, broad appeal
+{{/if}}
+{{else}}
+**Default Platform:** Multi-platform optimization (Instagram focus)
+- **Character Limit:** Up to 2200 characters
+- **Hashtag Strategy:** Mix of trending and niche hashtags (15-25 total)
+- **Content Style:** Visual storytelling, authentic tone
+{{/if}}
+
+**Language & Cultural Context:**
+{{#if language}}
+**Target Language:** {{{language}}}
+{{#if (eq language "hinglish")}}
+- **Hinglish Style:** Mix English and Hindi naturally, use colloquial expressions
+- **Cultural Context:** Modern Indian lifestyle, relatable to urban millennials/Gen-Z
+- **Tone:** Casual, trendy, "yaar/bro" culture, Bollywood references when appropriate
+{{else if (eq language "spanish")}}
+- **Spanish Style:** Warm, expressive, family-oriented language
+- **Cultural Context:** Community-focused, celebratory, relationship-centered
+- **Tone:** More emotional, expressive connections, cultural celebrations
+{{else if (eq language "french")}}
+- **French Style:** Sophisticated, elegant, culturally refined
+- **Cultural Context:** Art, culture, lifestyle appreciation
+- **Tone:** Sophisticated language, cultural nuances, elegance
+{{else if (eq language "german")}}
+- **German Style:** Precise, efficient, quality-focused
+- **Cultural Context:** Engineering excellence, sustainability, innovation
+- **Tone:** Detailed, quality-emphasizing, structured approach
+{{else if (eq language "hindi")}}
+- **Hindi Style:** Respectful, family-oriented, traditional values
+- **Cultural Context:** Family, festivals, respect, traditions
+- **Tone:** Respectful language, cultural sensitivity, family focus
+{{else if (eq language "japanese")}}
+- **Japanese Style:** Polite, respectful, detail-oriented
+- **Cultural Context:** Respect, quality, seasonal awareness, craftsmanship
+- **Tone:** Polite forms, seasonal sensitivity, quality focus
+{{else}}
+- **Standard English:** Professional, clear, globally accessible
+- **Cultural Context:** Universal business communication
+- **Tone:** Professional yet approachable, culturally neutral
+{{/if}}
+{{else}}
+**Default Language:** English (global standard)
+{{/if}}
 
 **Primary Goal of this Post:** {{{postGoal}}}
-Tailor the message and structure to achieve this goal. For example, if the goal is 'Engagement', ask a question. If it's 'Promotion', create urgency.
+Tailor the message and structure to achieve this goal while respecting platform conventions.
 
 **Target Audience:** {{{targetAudience}}}
-Write in a language and style that resonates with this specific audience.
+Write in a language and style that resonates with this specific audience, considering both platform culture and language preferences.
 
 **Brand & Context:**
 - **Brand Description:** {{{brandDescription}}}
 - **Industry:** {{#if industry}}"{{{industry}}}" (Tailor language and hashtags to this sector){{else}}General{{/if}}
-- **Desired Tone:** {{{tone}}} (Apply this tone throughout the caption)
-- **Image Context:** {{#if imageDescription}}"{{{imageDescription}}}" (Directly reference the image in the caption){{else}}No image provided. Create a text-only post about the brand.{{/if}}
+- **Desired Tone:** {{{tone}}} (Apply this tone while respecting platform and language conventions)
+- **Image Context:** {{#if imageDescription}}"{{{imageDescription}}}" (Reference the image naturally in the caption){{else}}No image provided. Create engaging text-only content about the brand.{{/if}}
 
 **Call to Action (Optional):**
 {{#if callToAction}}
-Incorporate this specific call to action naturally into the caption: "{{{callToAction}}}"
+Incorporate this specific call to action naturally: "{{{callToAction}}}"
 {{else}}
-If no specific call to action is given, create a suitable one based on the post's goal (e.g., for Engagement, ask a question; for Brand Awareness, invite follows).
+Create a platform-appropriate call to action based on the post's goal and platform conventions.
 {{/if}}
 
 **Instructions:**
-1.  **Caption:** Write a compelling caption (2-4 sentences) that aligns with all the above information.
-2.  **Hashtags:** Provide a comma-separated list of 5-7 highly relevant hashtags. Include a mix of broad, niche, and branded hashtags suitable for the industry and target audience.
+1. **Caption:** Write a compelling caption that follows platform-specific character limits and cultural language preferences
+2. **Hashtags:** Provide platform-optimized hashtags as a comma-separated list, following the platform's hashtag conventions
+3. **Cultural Sensitivity:** Ensure content is appropriate for the target language and cultural context
+4. **Platform Optimization:** Follow the specific platform's content style and engagement patterns
 
 Output only the caption and hashtags in the specified format.`,
 });
@@ -148,7 +241,8 @@ const generateSocialMediaCaptionFlow = ai.defineFlow(
             result: `${output.caption}\nHashtags: ${output.hashtags}`,
             style: input.tone,
             metadata: {
-              platform: 'Instagram',
+              platform: input.platform || 'instagram',
+              language: input.language || 'english',
               postGoal: input.postGoal,
               targetAudience: input.targetAudience,
               industry: input.industry,

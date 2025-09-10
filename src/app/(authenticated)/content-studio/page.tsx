@@ -34,7 +34,7 @@ import type { PopulateSocialFormOutput } from '@/ai/flows/populate-social-form-f
 import type { PopulateBlogFormOutput } from '@/ai/flows/populate-blog-form-flow';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; 
-import { industries, imageStylePresets, freepikImagen3EffectColors, freepikImagen3EffectLightnings, freepikImagen3EffectFramings, freepikImagen3AspectRatios, generalAspectRatios, blogTones, freepikValidStyles, socialPostGoals, socialTones, blogArticleStyles, DEFAULT_PLANS_CONFIG } from '@/lib/constants';
+import { industries, imageStylePresets, freepikImagen3EffectColors, freepikImagen3EffectLightnings, freepikImagen3EffectFramings, freepikImagen3AspectRatios, generalAspectRatios, blogTones, freepikValidStyles, socialPostGoals, socialTones, blogArticleStyles, DEFAULT_PLANS_CONFIG, socialMediaPlatforms, supportedLanguages, platformConfigurations, platformAspectRatios } from '@/lib/constants';
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import SocialMediaPreviews from '@/components/SocialMediaPreviews';
@@ -287,6 +287,10 @@ export default function ContentStudioPage() {
   const [socialImageChoice, setSocialImageChoice] = useState<SocialImageChoice>(null);
   const [socialToneValue, setSocialToneValue] = useState<string>(socialTones[0].value);
   const [customSocialToneNuances, setCustomSocialToneNuances] = useState<string>("");
+  
+  // New platform and language state
+  const [selectedSocialPlatform, setSelectedSocialPlatform] = useState<string>("all");
+  const [selectedSocialLanguage, setSelectedSocialLanguage] = useState<string>("english");
 
   const [blogPlatformValue, setBlogPlatformValue] = useState<"Medium" | "Other">("Medium");
   const [selectedBlogTone, setSelectedBlogTone] = useState<string>(blogTones[0].value);
@@ -552,19 +556,61 @@ export default function ContentStudioPage() {
     }
   }, [fireworksEnabled]);
 
+  // Helper function to get optimal aspect ratio for platform
+  const getPlatformOptimalAspectRatio = (platform: string): string => {
+    const platformRatios = platformAspectRatios[platform as keyof typeof platformAspectRatios];
+    if (!platformRatios) return "1:1";
+    
+    // Try to get the main/default aspect ratio for each platform
+    if ('post' in platformRatios) return platformRatios.post;
+    if ('feed' in platformRatios) return platformRatios.feed;
+    if ('video' in platformRatios) return platformRatios.video;
+    if ('universal' in platformRatios) return platformRatios.universal;
+    
+    // Fallback to first available ratio
+    return Object.values(platformRatios)[0] || "1:1";
+  };
+
+  // Effect to update aspect ratio based on selected social platform for cross-tab integration
   useEffect(() => {
-    if (selectedImageProvider === 'FREEPIK' && (isAdmin || isPremiumActive)) { 
-      setCurrentAspectRatioOptions(freepikImagen3AspectRatios);
-      if (!freepikImagen3AspectRatios.find(ar => ar.value === selectedAspectRatio)) {
-        setSelectedAspectRatio(freepikImagen3AspectRatios[0].value);
+    if (selectedSocialPlatform && selectedSocialPlatform !== "all") {
+      const platformOptimalRatio = getPlatformOptimalAspectRatio(selectedSocialPlatform);
+      
+      // Update image generation aspect ratio to match social platform needs
+      if (selectedImageProvider === 'FREEPIK' && (isAdmin || isPremiumActive)) {
+        setCurrentAspectRatioOptions(freepikImagen3AspectRatios);
+        // Find equivalent Freepik ratio
+        const freepikEquivalent = freepikImagen3AspectRatios.find(ar =>
+          ar.value.includes(platformOptimalRatio.replace(":", "_")) ||
+          (platformOptimalRatio === "1:1" && ar.value === "square_1_1") ||
+          (platformOptimalRatio === "16:9" && ar.value === "widescreen_16_9") ||
+          (platformOptimalRatio === "9:16" && ar.value === "social_story_9_16")
+        );
+        if (freepikEquivalent) {
+          setSelectedAspectRatio(freepikEquivalent.value);
+        }
+      } else {
+        setCurrentAspectRatioOptions(generalAspectRatios);
+        const generalEquivalent = generalAspectRatios.find(ar => ar.value === platformOptimalRatio);
+        if (generalEquivalent) {
+          setSelectedAspectRatio(generalEquivalent.value);
+        }
       }
-    } else { 
-      setCurrentAspectRatioOptions(generalAspectRatios);
-      if (!generalAspectRatios.find(ar => ar.value === selectedAspectRatio)) {
-        setSelectedAspectRatio(generalAspectRatios[0].value);
+    } else {
+      // Default aspect ratio setup when no specific platform selected
+      if (selectedImageProvider === 'FREEPIK' && (isAdmin || isPremiumActive)) {
+        setCurrentAspectRatioOptions(freepikImagen3AspectRatios);
+        if (!freepikImagen3AspectRatios.find(ar => ar.value === selectedAspectRatio)) {
+          setSelectedAspectRatio(freepikImagen3AspectRatios[0].value);
+        }
+      } else {
+        setCurrentAspectRatioOptions(generalAspectRatios);
+        if (!generalAspectRatios.find(ar => ar.value === selectedAspectRatio)) {
+          setSelectedAspectRatio(generalAspectRatios[0].value);
+        }
       }
     }
-  }, [selectedImageProvider, selectedAspectRatio, isAdmin, isPremiumActive]); 
+  }, [selectedImageProvider, selectedAspectRatio, selectedSocialPlatform, isAdmin, isPremiumActive]);
 
 
   useEffect(() => {
@@ -2155,6 +2201,58 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                     required={useImageForSocialPost && !!currentSocialImagePreviewUrl}
                   />
                 </div>
+
+                {/* Platform and Language Selection */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div>
+                        <Label htmlFor="socialPlatformSelect" className="flex items-center mb-1">
+                            <MessageSquareText className="w-4 h-4 mr-2 text-blue-600" />
+                            Target Platform
+                        </Label>
+                        <Select name="platform" value={selectedSocialPlatform} onValueChange={setSelectedSocialPlatform}>
+                            <SelectTrigger id="socialPlatformSelect">
+                                <SelectValue placeholder="Select platform" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectLabel>Social Platforms</SelectLabel>
+                                    {socialMediaPlatforms.map(platform => (
+                                        <SelectItem key={platform.value} value={platform.value}>
+                                            {platform.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground mt-1">
+                            {platformConfigurations[selectedSocialPlatform as keyof typeof platformConfigurations]?.contentFocus || "Platform-optimized content generation"}
+                        </p>
+                    </div>
+                    <div>
+                        <Label htmlFor="socialLanguageSelect" className="flex items-center mb-1">
+                            <Globe className="w-4 h-4 mr-2 text-blue-600" />
+                            Content Language
+                        </Label>
+                        <Select name="language" value={selectedSocialLanguage} onValueChange={setSelectedSocialLanguage}>
+                            <SelectTrigger id="socialLanguageSelect">
+                                <SelectValue placeholder="Select language" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectLabel>Languages</SelectLabel>
+                                    {supportedLanguages.map(language => (
+                                        <SelectItem key={language.value} value={language.value}>
+                                            {language.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground mt-1">
+                            Cultural and language-specific content optimization
+                        </p>
+                    </div>
+                </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -2292,6 +2390,8 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                           imageSrc={generatedSocialPost.imageSrc}
                           brandName={brandData?.brandName || "YourBrand"}
                           brandLogoUrl={brandData?.brandLogoUrl}
+                          selectedPlatform={selectedSocialPlatform}
+                          selectedLanguage={selectedSocialLanguage}
                         />
                       </div>
 
@@ -2314,7 +2414,9 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                               voicePatterns: (socialState.data as any).ragMetadata.voicePatterns,
                               effectiveHashtags: (socialState.data as any).ragMetadata.effectiveHashtags,
                               performanceInsights: (socialState.data as any).ragMetadata.performanceInsights
-                            }) : undefined
+                            }) : undefined,
+                            platform: selectedSocialPlatform,
+                            language: selectedSocialLanguage
                           }}
                           className="mt-4"
                         />

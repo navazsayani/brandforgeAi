@@ -362,6 +362,8 @@ export async function handleGenerateSocialMediaCaptionAction(
     const postGoal = formData.get("postGoal") as string | null;
     const targetAudience = formData.get("targetAudience") as string | null;
     const callToAction = formData.get("callToAction") as string | null;
+    const platform = formData.get("platform") as string | null;
+    const language = formData.get("language") as string | null;
 
     const input: GenerateSocialMediaCaptionInput = {
       brandDescription: formData.get("brandDescription") as string,
@@ -381,6 +383,12 @@ export async function handleGenerateSocialMediaCaptionAction(
     if (callToAction && callToAction.trim() !== "") {
       input.callToAction = callToAction.trim();
     }
+    if (platform && platform.trim() !== "") {
+      input.platform = platform.trim();
+    }
+    if (language && language.trim() !== "") {
+      input.language = language.trim();
+    }
 
     if (!input.brandDescription || !input.tone) {
       return { error: "Brand description and tone are required." };
@@ -399,6 +407,8 @@ export async function handleGenerateSocialMediaCaptionAction(
       hashtags: result.hashtags || "",
       imageSrc: imageSrc,
       tone: input.tone,
+      platform: input.platform || 'all',
+      language: input.language || 'english',
       createdAt: serverTimestamp(),
       status: 'draft',
     };

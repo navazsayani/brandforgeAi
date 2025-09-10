@@ -81,32 +81,35 @@ export async function enhanceSocialMediaPrompt(
     brandDescription?: string;
     industry?: string;
     platform?: string;
+    language?: string;
     tone?: string;
     postGoal?: string;
   }
 ): Promise<string> {
   try {
-    console.log(`[RAG Integration] Enhancing social media prompt for user: ${userId}`);
+    console.log(`[RAG Integration] Enhancing social media prompt for user: ${userId}, platform: ${input.platform}, language: ${input.language}`);
     
-    // Create query text for RAG retrieval
-    const queryText = `${input.brandDescription || ''} ${input.platform || ''} social media ${input.tone || ''}`;
+    // Create query text for RAG retrieval with platform and language context
+    const queryText = `${input.brandDescription || ''} ${input.platform || ''} social media ${input.tone || ''} ${input.language || ''}`;
     
-    // Retrieve relevant context
+    // Retrieve relevant context with platform filtering
     const ragContext = await ragEngine.retrieveRelevantContext(queryText, {
       userId,
       contentType: 'social_media',
       industry: input.industry,
+      platform: input.platform,
+      language: input.language,
       minPerformance: 0.7,
       limit: 10,
       includeIndustryPatterns: true,
       timeframe: '30days'
     });
     
-    // Build enhanced prompt
+    // Build enhanced prompt with platform-specific insights
     let enhancedPrompt = basePrompt;
     
     if (ragContext.brandPatterns) {
-      enhancedPrompt += `\n\nBRAND VOICE CONTEXT:\n${ragContext.brandPatterns}`;
+      enhancedPrompt += `\n\nBRAND VOICE CONTEXT (from your successful content):\n${ragContext.brandPatterns}`;
     }
     
     if (ragContext.voicePatterns) {
@@ -114,7 +117,16 @@ export async function enhanceSocialMediaPrompt(
     }
     
     if (ragContext.effectiveHashtags) {
-      enhancedPrompt += `\n\nEFFECTIVE HASHTAGS FOR YOUR BRAND:\n${ragContext.effectiveHashtags}`;
+      const platformContext = input.platform ? ` on ${input.platform}` : '';
+      enhancedPrompt += `\n\nEFFECTIVE HASHTAGS FOR YOUR BRAND${platformContext}:\n${ragContext.effectiveHashtags}`;
+    }
+    
+    if (ragContext.platformPatterns && input.platform) {
+      enhancedPrompt += `\n\nYOUR SUCCESSFUL ${input.platform.toUpperCase()} CONTENT PATTERNS:\n${ragContext.platformPatterns}`;
+    }
+    
+    if (ragContext.languagePatterns && input.language && input.language !== 'english') {
+      enhancedPrompt += `\n\nYOUR SUCCESSFUL ${input.language.toUpperCase()} CONTENT STYLE:\n${ragContext.languagePatterns}`;
     }
     
     if (ragContext.seasonalTrends) {
@@ -125,7 +137,7 @@ export async function enhanceSocialMediaPrompt(
       enhancedPrompt += `\n\nPERFORMANCE INSIGHTS:\n${ragContext.performanceInsights}`;
     }
     
-    console.log(`[RAG Integration] Successfully enhanced social media prompt`);
+    console.log(`[RAG Integration] Successfully enhanced social media prompt with platform-specific context`);
     return enhancedPrompt;
     
   } catch (error) {

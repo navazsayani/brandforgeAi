@@ -269,3 +269,244 @@ export const DEFAULT_PLANS_CONFIG: PlansConfig = {
     },
   },
 };
+
+// Platform-specific constants for social media optimization
+export const socialMediaPlatforms = [
+  { value: "all", label: "All Platforms (Multi-optimized)" },
+  { value: "instagram", label: "Instagram" },
+  { value: "linkedin", label: "LinkedIn" },
+  { value: "twitter", label: "Twitter/X" },
+  { value: "facebook", label: "Facebook" },
+  { value: "youtube", label: "YouTube Community" },
+  { value: "tiktok", label: "TikTok" },
+];
+
+// Platform-specific configurations for image-focused content
+export const platformConfigurations = {
+  instagram: {
+    name: "Instagram",
+    maxCaptionLength: 2200,
+    hashtagStrategy: "mix of trending and niche hashtags (20-30)",
+    tone: "visual-first, story-driven, authentic",
+    preferredAspectRatios: ["1:1", "4:5", "9:16"],
+    imageStyle: "lifestyle, aesthetic, behind-the-scenes",
+    callToAction: "subtle story-based CTA, encourage saves/shares",
+    contentFocus: "Visual storytelling with complementary captions",
+    audienceExpectation: "Authentic, visually appealing, personal connection"
+  },
+  linkedin: {
+    name: "LinkedIn",
+    maxCaptionLength: 1300,
+    hashtagStrategy: "professional hashtags (3-5 max)",
+    tone: "professional, authority-building, industry insights",
+    preferredAspectRatios: ["16:9", "1.91:1", "1:1"],
+    imageStyle: "professional, clean, business-oriented",
+    callToAction: "professional engagement, thought-provoking questions",
+    contentFocus: "Business insights with supporting professional imagery",
+    audienceExpectation: "Educational, professional value, industry expertise"
+  },
+  twitter: {
+    name: "Twitter/X",
+    maxCaptionLength: 280,
+    hashtagStrategy: "trending hashtags (1-3 max)",
+    tone: "conversational, quick insights, engaging",
+    preferredAspectRatios: ["16:9", "1:1", "2:1"],
+    imageStyle: "attention-grabbing, meme-worthy, news-style",
+    callToAction: "encourage retweets, replies, engagement",
+    contentFocus: "Concise message with impactful visual support",
+    audienceExpectation: "Quick consumption, shareable, conversation starter"
+  },
+  facebook: {
+    name: "Facebook",
+    maxCaptionLength: 2000,
+    hashtagStrategy: "relevant hashtags (5-10)",
+    tone: "community-focused, conversational, inclusive",
+    preferredAspectRatios: ["16:9", "1:1", "4:5"],
+    imageStyle: "community-oriented, event photos, lifestyle",
+    callToAction: "community engagement, event participation",
+    contentFocus: "Community building with visual storytelling",
+    audienceExpectation: "Social connection, community value, inclusive content"
+  },
+  youtube: {
+    name: "YouTube Community",
+    maxCaptionLength: 1000,
+    hashtagStrategy: "video-related hashtags (5-8)",
+    tone: "engaging, educational, entertainment value",
+    preferredAspectRatios: ["16:9", "9:16", "1:1"],
+    imageStyle: "thumbnail-style, educational graphics, behind-the-scenes",
+    callToAction: "subscribe, watch, comment encouragement",
+    contentFocus: "Video-supporting content with strong visual hooks",
+    audienceExpectation: "Entertainment/educational value, video-centric"
+  },
+  tiktok: {
+    name: "TikTok",
+    maxCaptionLength: 150,
+    hashtagStrategy: "trending hashtags (3-5 mix of viral/niche)",
+    tone: "trendy, fun, authentic, energetic",
+    preferredAspectRatios: ["9:16"],
+    imageStyle: "trendy, energetic, Gen-Z aesthetic",
+    callToAction: "encourage follows, duets, shares",
+    contentFocus: "Trend-aware content with viral potential",
+    audienceExpectation: "Entertaining, trendy, authentic, quick consumption"
+  },
+  all: {
+    name: "Multi-Platform",
+    maxCaptionLength: 280, // Safe for all platforms
+    hashtagStrategy: "universal hashtags (3-5)",
+    tone: "versatile, professional yet approachable",
+    preferredAspectRatios: ["1:1", "16:9"],
+    imageStyle: "clean, professional, universally appealing",
+    callToAction: "general engagement",
+    contentFocus: "Platform-agnostic content optimized for broad appeal",
+    audienceExpectation: "Professional quality, broad appeal, versatile"
+  }
+};
+
+// Multi-language support for global markets
+export const supportedLanguages = [
+  { value: "english", label: "English", code: "en" },
+  { value: "spanish", label: "Español (Spanish)", code: "es" },
+  { value: "french", label: "Français (French)", code: "fr" },
+  { value: "german", label: "Deutsch (German)", code: "de" },
+  { value: "italian", label: "Italiano (Italian)", code: "it" },
+  { value: "portuguese", label: "Português (Portuguese)", code: "pt" },
+  { value: "hindi", label: "हिंदी (Hindi)", code: "hi" },
+  { value: "hinglish", label: "Hinglish (Hindi-English Mix)", code: "hi-en" },
+  { value: "japanese", label: "日本語 (Japanese)", code: "ja" },
+  { value: "korean", label: "한국어 (Korean)", code: "ko" },
+  { value: "chinese_simplified", label: "简体中文 (Chinese Simplified)", code: "zh-cn" },
+  { value: "arabic", label: "العربية (Arabic)", code: "ar" },
+  { value: "russian", label: "Русский (Russian)", code: "ru" },
+];
+
+// Language-specific content nuances for global markets
+export const languageConfigurations = {
+  english: {
+    name: "English",
+    tone: "Professional, clear, direct",
+    culturalContext: "Global business standard, straightforward communication",
+    hashtagStyle: "English hashtags, trending topics",
+    contentStyle: "Formal to casual depending on platform"
+  },
+  spanish: {
+    name: "Español",
+    tone: "Warm, expressive, community-oriented",
+    culturalContext: "Family-oriented, celebratory, relationship-focused",
+    hashtagStyle: "Spanish hashtags, regional variations",
+    contentStyle: "More expressive, emotional connection"
+  },
+  french: {
+    name: "Français",
+    tone: "Sophisticated, elegant, culturally refined",
+    culturalContext: "Art, culture, lifestyle appreciation",
+    hashtagStyle: "French hashtags, cultural references",
+    contentStyle: "Sophisticated language, cultural nuances"
+  },
+  german: {
+    name: "Deutsch",
+    tone: "Precise, efficient, quality-focused",
+    culturalContext: "Engineering excellence, sustainability, innovation",
+    hashtagStyle: "German hashtags, compound words",
+    contentStyle: "Detailed, quality-emphasizing, structured"
+  },
+  italian: {
+    name: "Italiano",
+    tone: "Passionate, artistic, lifestyle-focused",
+    culturalContext: "Art, food, family, craftsmanship",
+    hashtagStyle: "Italian hashtags, regional pride",
+    contentStyle: "Expressive, artistic, lifestyle-centered"
+  },
+  portuguese: {
+    name: "Português",
+    tone: "Warm, friendly, community-spirited",
+    culturalContext: "Community-focused, celebration, diversity",
+    hashtagStyle: "Portuguese hashtags, Brazilian/Portuguese variations",
+    contentStyle: "Friendly, inclusive, celebration-oriented"
+  },
+  hindi: {
+    name: "हिंदी",
+    tone: "Respectful, family-oriented, traditional values",
+    culturalContext: "Family, festivals, respect for elders, traditions",
+    hashtagStyle: "Hindi hashtags, cultural festivals",
+    contentStyle: "Respectful language, cultural sensitivity, family focus"
+  },
+  hinglish: {
+    name: "Hinglish",
+    tone: "Casual, relatable, modern Indian",
+    culturalContext: "Urban India, modern lifestyle, cultural fusion",
+    hashtagStyle: "Mix of English/Hindi hashtags, trending topics",
+    contentStyle: "Code-switching, colloquial, trendy, relatable"
+  },
+  japanese: {
+    name: "日本語",
+    tone: "Polite, respectful, detail-oriented",
+    culturalContext: "Respect, quality, seasonal awareness, craftsmanship",
+    hashtagStyle: "Japanese hashtags, seasonal references",
+    contentStyle: "Polite forms, seasonal sensitivity, quality focus"
+  },
+  korean: {
+    name: "한국어",
+    tone: "Trendy, community-focused, respectful",
+    culturalContext: "K-culture, community, respect for hierarchy",
+    hashtagStyle: "Korean hashtags, K-pop/culture references",
+    contentStyle: "Respectful language levels, trend-aware, community-focused"
+  },
+  chinese_simplified: {
+    name: "简体中文",
+    tone: "Respectful, prosperity-focused, community-minded",
+    culturalContext: "Success, community, traditional values, innovation",
+    hashtagStyle: "Chinese hashtags, cultural celebrations",
+    contentStyle: "Respectful, success-oriented, community values"
+  },
+  arabic: {
+    name: "العربية",
+    tone: "Respectful, community-oriented, traditional",
+    culturalContext: "Family, respect, hospitality, traditions",
+    hashtagStyle: "Arabic hashtags, cultural/religious sensitivity",
+    contentStyle: "Respectful language, cultural sensitivity, community focus"
+  },
+  russian: {
+    name: "Русский",
+    tone: "Direct, expressive, community-focused",
+    culturalContext: "Community, directness, cultural pride",
+    hashtagStyle: "Russian hashtags, cultural references",
+    contentStyle: "Direct communication, cultural awareness, community-oriented"
+  }
+};
+
+// Platform-specific aspect ratio mappings for image generation
+export const platformAspectRatios = {
+  instagram: {
+    feed: "1:1",
+    story: "9:16",
+    reel: "9:16",
+    carousel: "1:1"
+  },
+  linkedin: {
+    post: "16:9",
+    article: "16:9",
+    company: "1.91:1"
+  },
+  twitter: {
+    post: "16:9",
+    header: "3:1",
+    card: "2:1"
+  },
+  facebook: {
+    post: "16:9",
+    cover: "16:9",
+    story: "9:16"
+  },
+  youtube: {
+    thumbnail: "16:9",
+    community: "16:9",
+    short: "9:16"
+  },
+  tiktok: {
+    video: "9:16"
+  },
+  all: {
+    universal: "1:1",
+    landscape: "16:9"
+  }
+};
