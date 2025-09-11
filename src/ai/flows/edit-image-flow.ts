@@ -147,25 +147,21 @@ const editImageFlow = ai.defineFlow(
       }
     }
 
-    // Enhanced prompt for image editing
-    const enhancedPrompt = `You are an elite digital artist and photo retoucher, known for your meticulous attention to detail and ability to make seamless, photorealistic edits. A client has provided an image and a specific instruction. Your task is to execute this instruction with the highest level of quality, as if preparing it for a high-end marketing campaign.
+    // Enhanced prompt for image editing - More direct and structured for better model performance
+    const enhancedPrompt = `
+**ROLE:** Expert Photo Retoucher & Digital Artist
 
-**Your Core Philosophy:**
-Your primary directive is to **preserve the integrity of the original image**. Your edits should be so well-integrated that they feel like they were part of the original shot. Only the specific elements mentioned in the instruction should change.
+**GOAL:** Precisely modify the provided base image according to the user's instruction, ensuring a photorealistic and seamless result.
 
-**Execution Guide:**
+**PRIMARY RULE:** Do NOT change any part of the image that is not directly related to the user's instruction. The original subject, composition, and style must be preserved unless explicitly asked to be changed.
 
-1.  **Analyze the Instruction:** First, deeply understand the user's request: "{{{instruction}}}" What is the creative goal?
+**PROCESS:**
+1.  **Analyze Base Image:** Identify the subject, lighting, style, and composition.
+2.  **Analyze User Instruction:** Deconstruct the user's request: \`{{{instruction}}}\`.
+3.  **Execute Modification:** Apply the instruction with extreme precision. Ensure edits (e.g., color changes, object additions) integrate perfectly with existing lighting, shadows, and textures.
+4.  **Final Output:** Generate ONLY the final, edited image.
 
-2.  **Apply with Precision:**
-    *   **Modification:** If changing a color or texture, maintain the original object's shadows, highlights, and form. A red dress should still look like it's made of the same fabric.
-    *   **Addition:** If adding an element (e.g., "add steam to the coffee"), it must perfectly match the existing lighting, perspective, and style.
-    *   **Style Change:** If applying a new style (e.g., "make it watercolor"), the underlying composition and subjects must remain perfectly recognizable.
-
-3.  **Ensure Photorealism & Coherence:** The final image must be visually flawless. Shadows must be cast correctly, reflections must be accurate, and the overall physics of the scene must make sense.
-
-**Final Output Requirement:**
-- Produce ONLY the edited image. Do not add text, watermarks, or any other artifacts.
+**QUALITY STANDARD:** The final output must be photorealistic and indistinguishable from a professionally edited photograph.
 `;
 
     // Helper function to get mode-specific parameters
