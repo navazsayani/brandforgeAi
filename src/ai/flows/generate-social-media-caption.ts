@@ -186,10 +186,10 @@ Create a platform-appropriate call to action based on the post's goal and platfo
 {{/if}}
 
 **Instructions:**
-1. **Caption:** Write a compelling caption that follows platform-specific character limits and cultural language preferences
-2. **Hashtags:** Provide platform-optimized hashtags as a comma-separated list, following the platform's hashtag conventions
-3. **Cultural Sensitivity:** Ensure content is appropriate for the target language and cultural context
-4. **Platform Optimization:** Follow the specific platform's content style and engagement patterns
+1. **Caption:** Write a compelling caption. **CRITICAL: Do NOT include any hashtags in the caption field itself.** The caption should be clean text only.
+2. **Hashtags:** Provide a list of platform-optimized hashtags as a single, comma-separated string.
+3. **Cultural Sensitivity:** Ensure content is appropriate for the target language and cultural context.
+4. **Platform Optimization:** Follow the specific platform's content style and engagement patterns.
 
 Output only the caption and hashtags in the specified format.`,
 });
