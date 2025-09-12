@@ -29,7 +29,7 @@ export type GenerateSocialMediaCaptionInput = z.infer<typeof GenerateSocialMedia
 
 const GenerateSocialMediaCaptionOutputSchema = z.object({
   caption: z.string().describe('The generated caption for the social media post.'),
-  hashtags: z.string().describe('Relevant hashtags for the social media post, comma-separated.'),
+  hashtags: z.string().describe('Relevant hashtags for the social media post, space-separated, each beginning with #.'),
 });
 export type GenerateSocialMediaCaptionOutput = z.infer<typeof GenerateSocialMediaCaptionOutputSchema>;
 
@@ -65,14 +65,14 @@ Your task is to generate an engaging caption and relevant hashtags based on the 
 **Target Platform:** {{{platform}}}
 {{#if isInstagram}}
 - **Instagram Focus:** Visual storytelling, authentic, lifestyle-focused content
-- **Character Limit:** Up to 2200 characters (use wisely)
-- **Hashtag Strategy:** Mix of trending and niche hashtags (20-30 total)
+- **Character Limit:** Up to 1000 characters (use wisely)
+- **Hashtag Strategy:** Mix of trending and niche hashtags (5-7 total, highly relevant hashtags)
 - **Content Style:** Story-driven, behind-the-scenes, aesthetic appeal
 - **CTA Style:** Subtle, encourage saves/shares, ask engaging questions
 {{/if}}
 {{#if isLinkedIn}}
 - **LinkedIn Focus:** Professional insights, industry expertise, business value
-- **Character Limit:** Up to 1300 characters (concise but informative)
+- **Character Limit:** Up to 3000 characters (concise but informative)
 - **Hashtag Strategy:** Professional hashtags (3-5 max, industry-focused)
 - **Content Style:** Authority-building, thought leadership, professional networking
 - **CTA Style:** Professional engagement, discussion-provoking questions
@@ -100,7 +100,7 @@ Your task is to generate an engaging caption and relevant hashtags based on the 
 {{/if}}
 {{#if isTikTok}}
 - **TikTok Focus:** Trendy, authentic, Gen-Z appeal, viral potential
-- **Character Limit:** 150 characters MAX (very concise)
+- **Character Limit:** 2200 characters MAX (very concise)
 - **Hashtag Strategy:** Trending hashtags (3-5 mix of viral/niche)
 - **Content Style:** Trend-aware, authentic, energetic, fun
 - **CTA Style:** Encourage follows, duets, shares
@@ -114,8 +114,8 @@ Your task is to generate an engaging caption and relevant hashtags based on the 
 {{/if}}
 {{else}}
 **Default Platform:** Multi-platform optimization (Instagram focus)
-- **Character Limit:** Up to 2200 characters
-- **Hashtag Strategy:** Mix of trending and niche hashtags (15-25 total)
+- **Character Limit:** Up to 1800 characters
+- **Hashtag Strategy:** Mix of trending and niche hashtags (5-7 total, highly relevant hashtags)
 - **Content Style:** Visual storytelling, authentic tone
 {{/if}}
 
@@ -186,8 +186,9 @@ Create a platform-appropriate call to action based on the post's goal and platfo
 {{/if}}
 
 **Instructions:**
-1. **Caption:** Write a compelling caption. **CRITICAL: Do NOT include any hashtags in the caption field itself.** The caption should be clean text only.
-2. **Hashtags:** Provide a list of platform-optimized hashtags as a single, comma-separated string.
+
+1. **Caption:** Write a compelling caption that follows platform-specific character limits and cultural language preferences.**CRITICAL: Do NOT include any hashtags in the caption field itself.**.
+2. **Hashtags:** Provide platform-optimized hashtags following the platform's hashtag conventions, each starting with #, no commas, no hashtags inside the caption.
 3. **Cultural Sensitivity:** Ensure content is appropriate for the target language and cultural context.
 4. **Platform Optimization:** Follow the specific platform's content style and engagement patterns.
 
