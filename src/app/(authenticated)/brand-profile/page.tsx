@@ -46,6 +46,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 const MAX_IMAGES_PREMIUM = 5;
@@ -869,16 +870,25 @@ export default function BrandProfilePage() {
                               disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing} 
                             />
                         </FormControl>
-                        <Button 
-                            type="button" 
-                            variant="outline"
-                            className="w-full sm:w-auto mt-2"
-                            onClick={handleEnhanceDescription}
-                            disabled={isEnhancing || isExtracting || !field.value || field.value.length < 10}
-                          >
-                            {isEnhancing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wand2 className="h-4 w-4 mr-2" />}
-                            Enhance with AI
-                        </Button>
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button 
+                                        type="button" 
+                                        variant="outline"
+                                        className="w-full sm:w-auto mt-2"
+                                        onClick={handleEnhanceDescription}
+                                        disabled={isEnhancing || isExtracting || !field.value || field.value.length < 10}
+                                      >
+                                        {isEnhancing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wand2 className="h-4 w-4 mr-2" />}
+                                        Enhance with AI
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Let AI refine your description for clarity and impact.</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
                         <FormMessage />
                       </FormItem>
                     )}
