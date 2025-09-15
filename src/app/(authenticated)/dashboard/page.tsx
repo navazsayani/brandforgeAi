@@ -24,7 +24,6 @@ import SocialMediaPreviews from '@/components/SocialMediaPreviews';
 import { SafeImage } from '@/components/SafeImage';
 import { OnboardingChecklist } from '@/components/OnboardingChecklist';
 import { WelcomeCard } from '@/components/WelcomeCard';
-import { WelcomeGiftDialog } from '@/components/WelcomeGiftDialog';
 
 
 type RecentItem = {
@@ -146,7 +145,6 @@ export default function DashboardPage() {
     const { brandData, isLoading: isBrandLoading } = useBrand();
     const { currentUser, isLoading: isAuthLoading } = useAuth();
     const [paymentMode, setPaymentMode] = useState<'live' | 'test' | 'loading'>('loading');
-    const [showWelcomeGift, setShowWelcomeGift] = useState(false);
     
     useEffect(() => {
         async function fetchMode() {
@@ -160,13 +158,6 @@ export default function DashboardPage() {
         }
         fetchMode();
     }, []);
-
-    useEffect(() => {
-        // Trigger for the Welcome Gift Dialog
-        if (brandData && brandData.brandDescription && brandData.welcomeGiftOffered === false) {
-            setShowWelcomeGift(true);
-        }
-    }, [brandData]);
 
     const isLoading = isBrandLoading || isAuthLoading || paymentMode === 'loading';
     const isProfileIncomplete = !brandData?.brandDescription;
@@ -191,7 +182,6 @@ export default function DashboardPage() {
 
     return (
         <div className="space-y-8 animate-fade-in">
-            <WelcomeGiftDialog isOpen={showWelcomeGift} onOpenChange={setShowWelcomeGift} />
             <OnboardingChecklist />
             <GreetingCard isLoading={isLoading} brandData={brandData} paymentMode={paymentMode} />
 
