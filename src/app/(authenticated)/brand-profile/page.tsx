@@ -853,6 +853,9 @@ export default function BrandProfilePage() {
                             {isExtracting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="w-4 h-4" />}
                           </Button>
                         </div>
+                        <FormDescription>
+                          Optional. If you don&apos;t have a website, just describe your brand below. You can use our &apos;Enhance with AI&apos; feature to refine your description!
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1125,5 +1128,7 @@ export default function BrandProfilePage() {
     </>
   );
 }
+
+    
 
     
