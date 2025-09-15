@@ -492,24 +492,24 @@ const TikTokMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, bran
             
             {/* Bottom Content */}
             <div className="absolute bottom-4 left-4 right-16">
-              <div className="flex items-center space-x-3 mb-2">
-                <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white">
+              <div className="flex items-center space-x-2 mb-2 pr-4">
+                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white flex-shrink-0">
                   {brandLogoUrl ? (
                     <NextImage
                       src={brandLogoUrl}
                       alt={`${brandName} Logo`}
-                      width={32}
-                      height={32}
-                      className="object-contain w-full h-full"
+                      width={40}
+                      height={40}
+                      className="object-cover w-full h-full"
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-pink-500 to-red-500 flex items-center justify-center">
-                      <span className="text-white text-sm font-bold">{brandName.charAt(0).toUpperCase()}</span>
+                      <span className="text-white text-base font-bold">{brandName.charAt(0).toUpperCase()}</span>
                     </div>
                   )}
                 </div>
-                <span className="text-white font-semibold text-sm">@{username}</span>
-                <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white px-4 py-1 rounded-full text-xs">
+                <span className="text-white font-semibold text-sm truncate">@{username}</span>
+                <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-xs h-7">
                   Follow
                 </Button>
               </div>
@@ -537,6 +537,7 @@ const TikTokMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, bran
     </Card>
   );
 };
+
 
 // YouTube Community Mockup Component
 const YouTubeMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, brandName = "YourBrand", brandLogoUrl }) => {
@@ -818,3 +819,5 @@ const SocialMediaPreviews: React.FC<SocialMediaPreviewsProps> = ({
 };
 
 export default SocialMediaPreviews;
+
+    
