@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useEffect, useState, useRef, useActionState, startTransition, useMemo } from 'react';
@@ -870,25 +871,30 @@ export default function BrandProfilePage() {
                               disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing} 
                             />
                         </FormControl>
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button 
-                                        type="button" 
-                                        variant="outline"
-                                        className="w-full sm:w-auto mt-2"
-                                        onClick={handleEnhanceDescription}
-                                        disabled={isEnhancing || isExtracting || !field.value || field.value.length < 10}
-                                      >
-                                        {isEnhancing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wand2 className="h-4 w-4 mr-2" />}
-                                        Enhance with AI
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Let AI refine your description for clarity and impact.</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
+                        <div className="mt-2">
+                          <TooltipProvider>
+                              <Tooltip>
+                                  <TooltipTrigger asChild>
+                                      <Button 
+                                          type="button" 
+                                          variant="outline"
+                                          className="w-full sm:w-auto"
+                                          onClick={handleEnhanceDescription}
+                                          disabled={isEnhancing || isExtracting || !field.value || field.value.length < 10}
+                                        >
+                                          {isEnhancing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wand2 className="h-4 w-4 mr-2" />}
+                                          Enhance with AI
+                                      </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="hidden sm:block">
+                                      <p>Let AI refine your description for clarity and impact.</p>
+                                  </TooltipContent>
+                              </Tooltip>
+                          </TooltipProvider>
+                          <p className="text-xs text-muted-foreground mt-2 sm:hidden">
+                            ✨ Let AI refine your description for clarity and impact.
+                          </p>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
