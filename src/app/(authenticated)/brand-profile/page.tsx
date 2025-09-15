@@ -251,7 +251,10 @@ export default function BrandProfilePage() {
     setIsEnhancing(false);
     if (enhanceState.data?.enhancedDescription) {
         form.setValue('brandDescription', enhanceState.data.enhancedDescription, { shouldValidate: true });
-        toast({ title: "Description Enhanced", description: enhanceState.message || "The brand description has been updated by AI." });
+        if (enhanceState.data.targetKeywords) {
+          form.setValue('targetKeywords', enhanceState.data.targetKeywords, { shouldValidate: true });
+        }
+        toast({ title: "Content Enhanced", description: enhanceState.message || "Description and keywords have been updated by AI." });
     }
     if (enhanceState.error) {
         toast({ title: "Enhancement Error", description: enhanceState.error, variant: "destructive" });

@@ -231,6 +231,7 @@ export type EditImageInput = z.infer<typeof EditImageInputSchema>;
 
 export const EditImageOutputSchema = z.object({
   editedImageDataUri: z.string().describe('The edited image as a data URI.'),
+  providerUsed: z.string().optional().describe('The provider used for the image edit operation.'),
 });
 export type EditImageOutput = z.infer<typeof EditImageOutputSchema>;
 

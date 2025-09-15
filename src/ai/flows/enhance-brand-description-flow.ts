@@ -19,6 +19,7 @@ export type EnhanceBrandDescriptionInput = z.infer<typeof EnhanceBrandDescriptio
 
 const EnhanceBrandDescriptionOutputSchema = z.object({
   enhancedDescription: z.string().describe('The AI-enhanced, compelling brand description.'),
+  targetKeywords: z.string().describe('A comma-separated list of 5-7 relevant SEO keywords derived from the enhanced description.'),
 });
 export type EnhanceBrandDescriptionOutput = z.infer<typeof EnhanceBrandDescriptionOutputSchema>;
 
@@ -41,13 +42,14 @@ const enhanceBrandDescriptionPrompt = ai.definePrompt({
 3.  **Refine the Tone:** Elevate the language to be more professional, engaging, and confident.
 4.  **Strengthen the Value Proposition:** Clearly articulate what makes the brand unique or valuable.
 5.  **Synthesize and Rewrite:** Combine your analysis into a single, cohesive paragraph of 2-4 powerful sentences. The result should be a description that could be used on a website's "About Us" section or in a marketing brochure.
+6.  **Extract Keywords:** Based on your new, enhanced description, identify 5-7 of the most relevant and powerful SEO keywords. Provide these as a comma-separated list.
 
 **Do Not:**
 -   Use placeholders like "[Brand Name]".
 -   Simply rephrase sentences. Your goal is to add strategic value.
--   Make it overly long. Brevity with impact is key.
+-   Make the description overly long. Brevity with impact is key.
 
-Produce only the final, enhanced description text in the 'enhancedDescription' field.
+Produce both the final, enhanced description text in the 'enhancedDescription' field and the comma-separated keywords in the 'targetKeywords' field.
 `,
 });
 
@@ -68,4 +70,3 @@ const enhanceBrandDescriptionFlow = ai.defineFlow(
     return output;
   }
 );
-
