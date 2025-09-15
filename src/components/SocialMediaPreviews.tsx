@@ -52,12 +52,12 @@ const InstagramMockup: React.FC<MockupProps & { aspectRatio?: string }> = ({
   };
   
   return (
-    <Card className="bg-white border-0 shadow-lg rounded-xl overflow-hidden max-w-sm mx-auto">
+    <Card className="bg-card text-foreground border shadow-lg rounded-xl overflow-hidden max-w-sm mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-white">
+      <div className="flex items-center justify-between p-4 bg-card">
         <div className="flex items-center space-x-3">
-          <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-gradient-to-r from-purple-500 via-pink-500 to-orange-500 p-0.5">
-            <div className="w-full h-full rounded-full overflow-hidden bg-white flex items-center justify-center">
+          <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-offset-2 ring-offset-card ring-primary/50 p-0.5">
+            <div className="w-full h-full rounded-full overflow-hidden bg-card flex items-center justify-center">
               {brandLogoUrl ? (
                 <NextImage
                   src={brandLogoUrl}
@@ -67,28 +67,28 @@ const InstagramMockup: React.FC<MockupProps & { aspectRatio?: string }> = ({
                   className="object-contain rounded-full"
                 />
               ) : (
-                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-bold">{brandName.charAt(0).toUpperCase()}</span>
+                <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center">
+                  <span className="text-primary-foreground text-sm font-bold">{brandName.charAt(0).toUpperCase()}</span>
                 </div>
               )}
             </div>
           </div>
           <div>
             <div className="flex items-center space-x-1">
-              <p className="font-semibold text-sm text-gray-900">{username}</p>
+              <p className="font-semibold text-sm text-foreground">{username}</p>
               <div className="w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center">
                 <span className="text-white text-xs">✓</span>
               </div>
             </div>
-            <p className="text-xs text-gray-500">Sponsored</p>
+            <p className="text-xs text-muted-foreground">Sponsored</p>
           </div>
         </div>
-        <MoreHorizontal className="w-6 h-6 text-gray-600" />
+        <MoreHorizontal className="w-6 h-6 text-muted-foreground" />
       </div>
       
       {/* Image */}
       {imageSrc && (
-        <div className="relative bg-gray-50">
+        <div className="relative bg-muted/50">
           <div className={cn("relative", getAspectRatioClass(aspectRatio))}>
             <NextImage
               src={imageSrc}
@@ -99,7 +99,7 @@ const InstagramMockup: React.FC<MockupProps & { aspectRatio?: string }> = ({
             />
             {/* Instagram-style overlay elements */}
             <div className="absolute top-4 right-4">
-              <div className="bg-black/20 backdrop-blur-sm rounded-full p-2">
+              <div className="bg-black/40 backdrop-blur-sm rounded-full p-2">
                 <Volume2 className="w-4 h-4 text-white" />
               </div>
             </div>
@@ -108,29 +108,29 @@ const InstagramMockup: React.FC<MockupProps & { aspectRatio?: string }> = ({
       )}
       
       {/* Actions */}
-      <div className="p-4 bg-white">
+      <div className="p-4 bg-card">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-4">
-            <Heart className="w-7 h-7 text-gray-800 hover:text-red-500 cursor-pointer transition-colors" />
-            <MessageCircle className="w-7 h-7 text-gray-800 hover:text-gray-600 cursor-pointer transition-colors" />
-            <Send className="w-7 h-7 text-gray-800 hover:text-gray-600 cursor-pointer transition-colors" />
+            <Heart className="w-7 h-7 text-foreground hover:text-red-500 cursor-pointer transition-colors" />
+            <MessageCircle className="w-7 h-7 text-foreground hover:text-muted-foreground cursor-pointer transition-colors" />
+            <Send className="w-7 h-7 text-foreground hover:text-muted-foreground cursor-pointer transition-colors" />
           </div>
-          <Bookmark className="w-7 h-7 text-gray-800 hover:text-gray-600 cursor-pointer transition-colors" />
+          <Bookmark className="w-7 h-7 text-foreground hover:text-muted-foreground cursor-pointer transition-colors" />
         </div>
         
         <div className="space-y-2">
-          <p className="text-sm font-semibold text-gray-900">2,847 likes</p>
+          <p className="text-sm font-semibold text-foreground">2,847 likes</p>
           
-          <div className="text-sm text-gray-900 leading-relaxed">
+          <div className="text-sm text-foreground leading-relaxed">
             <span className="font-semibold">{username} </span>
             <span className="whitespace-pre-wrap">{truncatedText}</span>
             {combinedText.length > 125 && (
-              <button className="text-gray-500 ml-1 font-medium">more</button>
+              <button className="text-muted-foreground ml-1 font-medium">more</button>
             )}
           </div>
           
-          <button className="text-sm text-gray-500 font-medium">View all 47 comments</button>
-          <p className="text-xs text-gray-400 uppercase tracking-wide">2 HOURS AGO</p>
+          <button className="text-sm text-muted-foreground font-medium">View all 47 comments</button>
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">2 HOURS AGO</p>
         </div>
       </div>
     </Card>
@@ -143,11 +143,11 @@ const TwitterMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, bra
   const twitterHandle = brandName.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
   
   return (
-    <Card className="bg-white border-0 shadow-lg rounded-xl overflow-hidden max-w-sm mx-auto">
+    <Card className="bg-card text-foreground border shadow-lg rounded-xl overflow-hidden max-w-sm mx-auto">
       <div className="p-4">
         {/* Header */}
         <div className="flex items-start space-x-3 mb-3">
-          <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 bg-gray-100">
+          <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 bg-muted">
             {brandLogoUrl ? (
               <NextImage
                 src={brandLogoUrl}
@@ -157,36 +157,36 @@ const TwitterMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, bra
                 className="object-contain w-full h-full"
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                <span className="text-white text-lg font-bold">{brandName.charAt(0).toUpperCase()}</span>
+              <div className="w-full h-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+                <span className="text-primary-foreground text-lg font-bold">{brandName.charAt(0).toUpperCase()}</span>
               </div>
             )}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-1 mb-1">
-              <p className="font-bold text-base text-gray-900 truncate">{brandName}</p>
+              <p className="font-bold text-base text-foreground truncate">{brandName}</p>
               <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
                 <span className="text-white text-xs font-bold">✓</span>
               </div>
             </div>
-            <div className="flex items-center space-x-1 text-gray-500">
+            <div className="flex items-center space-x-1 text-muted-foreground">
               <p className="text-sm truncate">@{twitterHandle}</p>
               <span>·</span>
               <p className="text-sm">2h</p>
             </div>
           </div>
-          <MoreHorizontal className="w-5 h-5 text-gray-500 mt-1" />
+          <MoreHorizontal className="w-5 h-5 text-muted-foreground mt-1" />
         </div>
         
         {/* Content */}
         <div className="mb-4">
-          <p className="text-base text-gray-900 whitespace-pre-wrap leading-relaxed">{combinedText}</p>
+          <p className="text-base text-foreground whitespace-pre-wrap leading-relaxed">{combinedText}</p>
         </div>
         
         {/* Image */}
         {imageSrc && (
-          <div className="mb-4 rounded-2xl overflow-hidden border border-gray-200">
-            <div className="aspect-video relative bg-gray-100">
+          <div className="mb-4 rounded-2xl overflow-hidden border">
+            <div className="aspect-video relative bg-muted">
               <NextImage
                 src={imageSrc}
                 alt="Twitter post"
@@ -199,37 +199,37 @@ const TwitterMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, bra
         )}
         
         {/* Engagement Stats */}
-        <div className="text-sm text-gray-500 mb-3 border-b border-gray-100 pb-3">
-          <span className="font-semibold text-gray-900">12:34 PM</span>
+        <div className="text-sm text-muted-foreground mb-3 border-b border-border pb-3">
+          <span className="font-semibold text-foreground">12:34 PM</span>
           <span className="mx-1">·</span>
           <span>Dec 15, 2024</span>
           <span className="mx-1">·</span>
-          <span className="font-semibold text-gray-900">1.2M</span>
+          <span className="font-semibold text-foreground">1.2M</span>
           <span className="ml-1">Views</span>
         </div>
         
         {/* Actions */}
-        <div className="flex items-center justify-between text-gray-500 max-w-md">
+        <div className="flex items-center justify-between text-muted-foreground max-w-md">
           <div className="flex items-center space-x-2 hover:text-blue-500 cursor-pointer transition-colors group">
-            <div className="p-2 rounded-full group-hover:bg-blue-50 transition-colors">
+            <div className="p-2 rounded-full group-hover:bg-blue-500/10 transition-colors">
               <MessageCircle className="w-5 h-5" />
             </div>
             <span className="text-sm font-medium">127</span>
           </div>
           <div className="flex items-center space-x-2 hover:text-green-500 cursor-pointer transition-colors group">
-            <div className="p-2 rounded-full group-hover:bg-green-50 transition-colors">
+            <div className="p-2 rounded-full group-hover:bg-green-500/10 transition-colors">
               <Repeat2 className="w-5 h-5" />
             </div>
             <span className="text-sm font-medium">89</span>
           </div>
           <div className="flex items-center space-x-2 hover:text-red-500 cursor-pointer transition-colors group">
-            <div className="p-2 rounded-full group-hover:bg-red-50 transition-colors">
+            <div className="p-2 rounded-full group-hover:bg-red-500/10 transition-colors">
               <Heart className="w-5 h-5" />
             </div>
             <span className="text-sm font-medium">2.1K</span>
           </div>
           <div className="flex items-center space-x-2 hover:text-blue-500 cursor-pointer transition-colors group">
-            <div className="p-2 rounded-full group-hover:bg-blue-50 transition-colors">
+            <div className="p-2 rounded-full group-hover:bg-blue-500/10 transition-colors">
               <Share className="w-5 h-5" />
             </div>
           </div>
@@ -244,12 +244,12 @@ const FacebookMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, br
   const combinedText = `${caption}\n\n${hashtags}`;
   
   return (
-    <Card className="bg-white border-0 shadow-lg rounded-xl overflow-hidden max-w-sm mx-auto">
+    <Card className="bg-card text-foreground border shadow-lg rounded-xl overflow-hidden max-w-sm mx-auto">
       {/* Header */}
-      <div className="p-4 bg-white">
+      <div className="p-4 bg-card">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100">
+            <div className="w-12 h-12 rounded-full overflow-hidden bg-muted">
               {brandLogoUrl ? (
                 <NextImage
                   src={brandLogoUrl}
@@ -266,7 +266,7 @@ const FacebookMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, br
             </div>
             <div>
               <div className="flex items-center space-x-2 mb-1">
-                <p className="font-semibold text-base text-gray-900">{brandName}</p>
+                <p className="font-semibold text-base text-foreground">{brandName}</p>
                 <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
                   <span className="text-white text-xs font-bold">✓</span>
                 </div>
@@ -274,25 +274,25 @@ const FacebookMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, br
                   Sponsored
                 </Badge>
               </div>
-              <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                 <span>2h</span>
                 <span>·</span>
                 <span>🌍</span>
               </div>
             </div>
           </div>
-          <MoreHorizontal className="w-6 h-6 text-gray-600" />
+          <MoreHorizontal className="w-6 h-6 text-muted-foreground" />
         </div>
         
         {/* Content */}
         <div className="mb-3">
-          <p className="text-base text-gray-900 whitespace-pre-wrap leading-relaxed">{combinedText}</p>
+          <p className="text-base text-foreground whitespace-pre-wrap leading-relaxed">{combinedText}</p>
         </div>
       </div>
       
       {/* Image */}
       {imageSrc && (
-        <div className="relative bg-gray-100">
+        <div className="relative bg-muted">
           <div className="aspect-video relative">
             <NextImage
               src={imageSrc}
@@ -306,8 +306,8 @@ const FacebookMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, br
       )}
       
       {/* Actions */}
-      <div className="p-4 bg-white">
-        <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
+      <div className="p-4 bg-card">
+        <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
           <div className="flex items-center space-x-1">
             <div className="flex -space-x-1">
               <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs">👍</div>
@@ -322,17 +322,17 @@ const FacebookMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, br
           </div>
         </div>
         
-        <div className="border-t border-gray-100 pt-3">
+        <div className="border-t border-border pt-3">
           <div className="flex items-center justify-around">
-            <Button variant="ghost" size="sm" className="flex items-center space-x-2 text-gray-600 hover:bg-gray-50 px-4 py-2 rounded-lg transition-colors">
+            <Button variant="ghost" size="sm" className="flex items-center space-x-2 text-muted-foreground hover:bg-accent/50 px-4 py-2 rounded-lg transition-colors">
               <Heart className="w-5 h-5" />
               <span className="font-medium">Like</span>
             </Button>
-            <Button variant="ghost" size="sm" className="flex items-center space-x-2 text-gray-600 hover:bg-gray-50 px-4 py-2 rounded-lg transition-colors">
+            <Button variant="ghost" size="sm" className="flex items-center space-x-2 text-muted-foreground hover:bg-accent/50 px-4 py-2 rounded-lg transition-colors">
               <MessageCircle className="w-5 h-5" />
               <span className="font-medium">Comment</span>
             </Button>
-            <Button variant="ghost" size="sm" className="flex items-center space-x-2 text-gray-600 hover:bg-gray-50 px-4 py-2 rounded-lg transition-colors">
+            <Button variant="ghost" size="sm" className="flex items-center space-x-2 text-muted-foreground hover:bg-accent/50 px-4 py-2 rounded-lg transition-colors">
               <Share className="w-5 h-5" />
               <span className="font-medium">Share</span>
             </Button>
@@ -349,11 +349,11 @@ const LinkedInMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, br
   const truncatedText = combinedText.length > 200 ? `${combinedText.substring(0, 200)}...` : combinedText;
   
   return (
-    <Card className="bg-white border border-gray-200 shadow-sm rounded-lg overflow-hidden max-w-sm mx-auto">
+    <Card className="bg-card text-foreground border shadow-sm rounded-lg overflow-hidden max-w-sm mx-auto">
       {/* Header */}
-      <div className="p-4 bg-white border-b border-gray-100">
+      <div className="p-4 bg-card border-b">
         <div className="flex items-start space-x-3">
-          <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100">
+          <div className="w-12 h-12 rounded-full overflow-hidden bg-muted">
             {brandLogoUrl ? (
               <NextImage
                 src={brandLogoUrl}
@@ -370,20 +370,20 @@ const LinkedInMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, br
           </div>
           <div className="flex-1">
             <div className="flex items-center space-x-1 mb-1">
-              <p className="font-semibold text-sm text-gray-900">{brandName}</p>
-              <Badge variant="outline" className="text-xs px-2 py-0.5 border-blue-200 text-blue-600">
+              <p className="font-semibold text-sm text-foreground">{brandName}</p>
+              <Badge variant="outline" className="text-xs px-2 py-0.5 border-blue-500/50 text-blue-600">
                 Promoted
               </Badge>
             </div>
-            <p className="text-xs text-gray-500">{brandName} • 1st</p>
-            <p className="text-xs text-gray-500">2h • 🌍</p>
+            <p className="text-xs text-muted-foreground">{brandName} • 1st</p>
+            <p className="text-xs text-muted-foreground">2h • 🌍</p>
           </div>
-          <MoreHorizontal className="w-5 h-5 text-gray-500" />
+          <MoreHorizontal className="w-5 h-5 text-muted-foreground" />
         </div>
         
         {/* Content */}
         <div className="mt-3">
-          <p className="text-sm text-gray-900 whitespace-pre-wrap leading-relaxed">{truncatedText}</p>
+          <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{truncatedText}</p>
           {combinedText.length > 200 && (
             <button className="text-sm text-blue-600 hover:underline">...see more</button>
           )}
@@ -392,7 +392,7 @@ const LinkedInMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, br
       
       {/* Image */}
       {imageSrc && (
-        <div className="relative bg-gray-50">
+        <div className="relative bg-muted">
           <div className="aspect-[1.91/1] relative">
             <NextImage
               src={imageSrc}
@@ -406,8 +406,8 @@ const LinkedInMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, br
       )}
       
       {/* Actions */}
-      <div className="p-4 bg-white">
-        <div className="flex items-center justify-between text-sm text-gray-600 mb-3">
+      <div className="p-4 bg-card">
+        <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
           <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-1">
               <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
@@ -422,20 +422,20 @@ const LinkedInMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, br
           </div>
         </div>
         
-        <div className="border-t border-gray-100 pt-3 flex items-center justify-around">
-          <Button variant="ghost" size="sm" className="flex items-center space-x-2 text-gray-600 hover:bg-blue-50 px-3 py-2 rounded-md">
+        <div className="border-t pt-3 flex items-center justify-around">
+          <Button variant="ghost" size="sm" className="flex items-center space-x-2 text-muted-foreground hover:bg-accent/50 px-3 py-2 rounded-md">
             <Heart className="w-4 h-4" />
             <span className="text-sm font-medium">Like</span>
           </Button>
-          <Button variant="ghost" size="sm" className="flex items-center space-x-2 text-gray-600 hover:bg-blue-50 px-3 py-2 rounded-md">
+          <Button variant="ghost" size="sm" className="flex items-center space-x-2 text-muted-foreground hover:bg-accent/50 px-3 py-2 rounded-md">
             <MessageCircle className="w-4 h-4" />
             <span className="text-sm font-medium">Comment</span>
           </Button>
-          <Button variant="ghost" size="sm" className="flex items-center space-x-2 text-gray-600 hover:bg-blue-50 px-3 py-2 rounded-md">
+          <Button variant="ghost" size="sm" className="flex items-center space-x-2 text-muted-foreground hover:bg-accent/50 px-3 py-2 rounded-md">
             <Repeat2 className="w-4 h-4" />
             <span className="text-sm font-medium">Repost</span>
           </Button>
-          <Button variant="ghost" size="sm" className="flex items-center space-x-2 text-gray-600 hover:bg-blue-50 px-3 py-2 rounded-md">
+          <Button variant="ghost" size="sm" className="flex items-center space-x-2 text-muted-foreground hover:bg-accent/50 px-3 py-2 rounded-md">
             <Send className="w-4 h-4" />
             <span className="text-sm font-medium">Send</span>
           </Button>
@@ -452,7 +452,7 @@ const TikTokMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, bran
   const username = brandName.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
   
   return (
-    <Card className="bg-black border-0 shadow-lg rounded-xl overflow-hidden max-w-[280px] mx-auto">
+    <Card className="bg-black border-2 border-foreground/10 shadow-lg rounded-2xl overflow-hidden max-w-[280px] mx-auto">
       {/* Main Content Area */}
       <div className="relative">
         {/* Background Image or Video Preview */}
@@ -493,7 +493,7 @@ const TikTokMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, bran
             {/* Bottom Content */}
             <div className="absolute bottom-4 left-4 right-16">
               <div className="flex items-center space-x-3 mb-2">
-                <div className="w-8 h-8 rounded-full overflow-hidden">
+                <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white">
                   {brandLogoUrl ? (
                     <NextImage
                       src={brandLogoUrl}
@@ -544,11 +544,11 @@ const YouTubeMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, bra
   const truncatedText = combinedText.length > 300 ? `${combinedText.substring(0, 300)}...` : combinedText;
   
   return (
-    <Card className="bg-white border border-gray-200 shadow-sm rounded-lg overflow-hidden max-w-sm mx-auto">
+    <Card className="bg-card text-foreground border shadow-sm rounded-lg overflow-hidden max-w-sm mx-auto">
       {/* Header */}
-      <div className="p-4 bg-white">
+      <div className="p-4 bg-card">
         <div className="flex items-start space-x-3">
-          <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100">
+          <div className="w-10 h-10 rounded-full overflow-hidden bg-muted">
             {brandLogoUrl ? (
               <NextImage
                 src={brandLogoUrl}
@@ -565,19 +565,19 @@ const YouTubeMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, bra
           </div>
           <div className="flex-1">
             <div className="flex items-center space-x-2 mb-1">
-              <p className="font-semibold text-sm text-gray-900">{brandName}</p>
-              <div className="w-4 h-4 bg-gray-600 rounded-full flex items-center justify-center">
-                <span className="text-white text-xs">✓</span>
+              <p className="font-semibold text-sm text-foreground">{brandName}</p>
+              <div className="w-4 h-4 bg-muted-foreground rounded-full flex items-center justify-center">
+                <span className="text-card text-xs">✓</span>
               </div>
             </div>
-            <p className="text-xs text-gray-500">2 hours ago</p>
+            <p className="text-xs text-muted-foreground">2 hours ago</p>
           </div>
-          <MoreHorizontal className="w-5 h-5 text-gray-500" />
+          <MoreHorizontal className="w-5 h-5 text-muted-foreground" />
         </div>
         
         {/* Content */}
         <div className="mt-3 mb-4">
-          <p className="text-sm text-gray-900 whitespace-pre-wrap leading-relaxed">{truncatedText}</p>
+          <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{truncatedText}</p>
           {combinedText.length > 300 && (
             <button className="text-sm text-blue-600 hover:underline mt-1">Show more</button>
           )}
@@ -586,7 +586,7 @@ const YouTubeMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, bra
       
       {/* Image */}
       {imageSrc && (
-        <div className="relative bg-gray-100">
+        <div className="relative bg-muted">
           <div className="aspect-video relative">
             <NextImage
               src={imageSrc}
@@ -600,17 +600,17 @@ const YouTubeMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, bra
       )}
       
       {/* Actions */}
-      <div className="p-4 bg-white border-t border-gray-100">
-        <div className="flex items-center space-x-6 text-gray-600">
-          <div className="flex items-center space-x-2 hover:text-blue-600 cursor-pointer transition-colors">
+      <div className="p-4 bg-card border-t">
+        <div className="flex items-center space-x-6 text-muted-foreground">
+          <div className="flex items-center space-x-2 hover:text-foreground cursor-pointer transition-colors">
             <Heart className="w-5 h-5" />
             <span className="text-sm font-medium">1.2K</span>
           </div>
-          <div className="flex items-center space-x-2 hover:text-blue-600 cursor-pointer transition-colors">
+          <div className="flex items-center space-x-2 hover:text-foreground cursor-pointer transition-colors">
             <MessageCircle className="w-5 h-5" />
             <span className="text-sm font-medium">89</span>
           </div>
-          <div className="flex items-center space-x-2 hover:text-blue-600 cursor-pointer transition-colors">
+          <div className="flex items-center space-x-2 hover:text-foreground cursor-pointer transition-colors">
             <Share className="w-5 h-5" />
             <span className="text-sm font-medium">Share</span>
           </div>
@@ -676,13 +676,13 @@ const SocialMediaPreviews: React.FC<SocialMediaPreviewsProps> = ({
   return (
     <div className={cn("space-y-8", className)}>
       <div className="text-center space-y-2">
-        <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-purple-100 to-pink-100 px-4 py-2 rounded-full">
+        <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 px-4 py-2 rounded-full">
           <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full animate-pulse"></div>
           <h3 className="text-lg font-semibold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
             {getPreviewTitle()}
           </h3>
         </div>
-        <p className="text-sm text-gray-600 max-w-md mx-auto">
+        <p className="text-sm text-muted-foreground max-w-md mx-auto">
           {getPreviewDescription()}
         </p>
         {selectedLanguage !== "english" && (
@@ -702,7 +702,7 @@ const SocialMediaPreviews: React.FC<SocialMediaPreviewsProps> = ({
               <div className="w-6 h-6 bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 rounded-lg flex items-center justify-center">
                 <span className="text-white text-xs font-bold">IG</span>
               </div>
-              <h4 className="text-sm font-semibold text-gray-800">Instagram</h4>
+              <h4 className="text-sm font-semibold text-foreground">Instagram</h4>
             </div>
             <InstagramMockup
               caption={caption}
@@ -721,7 +721,7 @@ const SocialMediaPreviews: React.FC<SocialMediaPreviewsProps> = ({
               <div className="w-6 h-6 bg-blue-600 rounded-lg flex items-center justify-center">
                 <span className="text-white text-xs font-bold">in</span>
               </div>
-              <h4 className="text-sm font-semibold text-gray-800">LinkedIn</h4>
+              <h4 className="text-sm font-semibold text-foreground">LinkedIn</h4>
             </div>
             <LinkedInMockup
               caption={caption}
@@ -736,10 +736,10 @@ const SocialMediaPreviews: React.FC<SocialMediaPreviewsProps> = ({
         {shouldShowPlatform("twitter") && (
           <div className="space-y-4">
             <div className="flex items-center justify-center space-x-2">
-              <div className="w-6 h-6 bg-black rounded-lg flex items-center justify-center">
-                <span className="text-white text-xs font-bold">𝕏</span>
+              <div className="w-6 h-6 bg-foreground rounded-lg flex items-center justify-center">
+                <span className="text-background text-xs font-bold">𝕏</span>
               </div>
-              <h4 className="text-sm font-semibold text-gray-800">Twitter / X</h4>
+              <h4 className="text-sm font-semibold text-foreground">Twitter / X</h4>
             </div>
             <TwitterMockup
               caption={caption}
@@ -757,7 +757,7 @@ const SocialMediaPreviews: React.FC<SocialMediaPreviewsProps> = ({
               <div className="w-6 h-6 bg-blue-600 rounded-lg flex items-center justify-center">
                 <span className="text-white text-xs font-bold">f</span>
               </div>
-              <h4 className="text-sm font-semibold text-gray-800">Facebook</h4>
+              <h4 className="text-sm font-semibold text-foreground">Facebook</h4>
             </div>
             <FacebookMockup
               caption={caption}
@@ -775,7 +775,7 @@ const SocialMediaPreviews: React.FC<SocialMediaPreviewsProps> = ({
               <div className="w-6 h-6 bg-red-600 rounded-lg flex items-center justify-center">
                 <Play className="w-4 h-4 text-white" />
               </div>
-              <h4 className="text-sm font-semibold text-gray-800">YouTube Community</h4>
+              <h4 className="text-sm font-semibold text-foreground">YouTube Community</h4>
             </div>
             <YouTubeMockup
               caption={caption}
@@ -793,7 +793,7 @@ const SocialMediaPreviews: React.FC<SocialMediaPreviewsProps> = ({
               <div className="w-6 h-6 bg-gradient-to-br from-pink-500 to-red-500 rounded-lg flex items-center justify-center">
                 <span className="text-white text-xs font-bold">TT</span>
               </div>
-              <h4 className="text-sm font-semibold text-gray-800">TikTok</h4>
+              <h4 className="text-sm font-semibold text-foreground">TikTok</h4>
             </div>
             <TikTokMockup
               caption={caption}
@@ -807,7 +807,7 @@ const SocialMediaPreviews: React.FC<SocialMediaPreviewsProps> = ({
       </div>
       
       <div className="text-center">
-        <p className="text-xs text-gray-500 bg-gray-50 px-4 py-2 rounded-full inline-block">
+        <p className="text-xs text-muted-foreground bg-muted/50 px-4 py-2 rounded-full inline-block">
           💡 {selectedPlatform === "all"
             ? "These previews show how your content will appear to your audience"
             : `Preview shows ${selectedPlatform}-optimized dimensions and styling`}
@@ -818,5 +818,3 @@ const SocialMediaPreviews: React.FC<SocialMediaPreviewsProps> = ({
 };
 
 export default SocialMediaPreviews;
-
-    
