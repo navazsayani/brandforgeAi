@@ -13,6 +13,7 @@ import {z} from 'genkit';
 import { getModelConfig } from '@/lib/model-config';
 
 const EnhanceBrandDescriptionInputSchema = z.object({
+  brandName: z.string().optional().describe('The name of the brand for context.'),
   brandDescription: z.string().min(10, { message: "Brand description must be at least 10 characters." }).describe('The user-provided brand description to be enhanced.'),
 });
 export type EnhanceBrandDescriptionInput = z.infer<typeof EnhanceBrandDescriptionInputSchema>;
@@ -31,7 +32,10 @@ const enhanceBrandDescriptionPrompt = ai.definePrompt({
   name: 'enhanceBrandDescriptionPrompt',
   input: {schema: EnhanceBrandDescriptionInputSchema},
   output: {schema: EnhanceBrandDescriptionOutputSchema},
-  prompt: `You are an expert brand strategist and marketing copywriter. A user has provided a description for their brand. Your task is to analyze and enhance it to be more compelling, clear, and ready for marketing purposes.
+  prompt: `You are an expert brand strategist and marketing copywriter. Your task is to analyze and enhance a brand description to be more compelling, clear, and ready for marketing purposes.
+
+**Brand Name (for context):**
+"{{{brandName}}}"
 
 **Original User-Provided Description:**
 "{{{brandDescription}}}"
@@ -39,13 +43,13 @@ const enhanceBrandDescriptionPrompt = ai.definePrompt({
 **Your Instructions:**
 1.  **Identify the Core Essence:** What is the fundamental product, service, or value proposition?
 2.  **Clarify the Target Audience:** Who is this brand for? If it's not explicit, infer a likely audience.
-3.  **Refine the Tone:** Elevate the language to be more professional, engaging, and confident.
+3.  **Refine the Tone:** Elevate the language to be more professional, engaging, and confident, suitable for the brand name provided.
 4.  **Strengthen the Value Proposition:** Clearly articulate what makes the brand unique or valuable.
 5.  **Synthesize and Rewrite:** Combine your analysis into a single, cohesive paragraph of 2-4 powerful sentences. The result should be a description that could be used on a website's "About Us" section or in a marketing brochure.
 6.  **Extract Keywords:** Based on your new, enhanced description, identify 5-7 of the most relevant and powerful SEO keywords. Provide these as a comma-separated list.
 
 **Do Not:**
--   Use placeholders like "[Brand Name]".
+-   Use placeholders like "[Brand Name]". Incorporate the actual brand name naturally if it fits.
 -   Simply rephrase sentences. Your goal is to add strategic value.
 -   Make the description overly long. Brevity with impact is key.
 
@@ -70,3 +74,5 @@ const enhanceBrandDescriptionFlow = ai.defineFlow(
     return output;
   }
 );
+
+    

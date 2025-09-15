@@ -685,12 +685,13 @@ export async function handleEnhanceBrandDescriptionAction(
   prevState: FormState<EnhanceBrandDescriptionOutput>,
   formData: FormData
 ): Promise<FormState<EnhanceBrandDescriptionOutput>> {
+  const brandName = formData.get("brandName") as string;
   const brandDescription = formData.get("brandDescription") as string;
   if (!brandDescription || brandDescription.length < 10) {
     return { error: "Brand description must be at least 10 characters long to enhance." };
   }
   try {
-    const input: EnhanceBrandDescriptionInput = { brandDescription };
+    const input: EnhanceBrandDescriptionInput = { brandName, brandDescription };
     const result = await enhanceBrandDescription(input);
     return { data: result, message: "Description enhanced successfully." };
   } catch (e: any) {
@@ -1231,7 +1232,7 @@ export async function handleWelcomeGiftImageGenerationAction(
       numberOfImages: 3,
     };
     
-    // Note: We are NOT calling checkAndIncrementUsage here
+    // Note: We are NOT calling checkAndIncrementUsage here - this is free
     const result = await generateImages(input);
 
     // After successfully generating, mark the gift as offered
@@ -1758,7 +1759,7 @@ export async function getPaymentMode(): Promise<{
       socialMediaConnectionsEnabled: true,
       fireworksEnabled: false,
       fireworksSDXLTurboEnabled: false,
-      fireworksSDXL3Enabled: false,
+      fireworksSDXL3DEnabled: false,
       intelligentModelSelection: false,
       showAdvancedImageControls: false,
       error: `Could not retrieve payment mode configuration.`
@@ -3043,3 +3044,5 @@ export async function handleDeleteUserByAdminAction(
     return { error: `Failed to delete user: ${e.message || "Unknown error occurred during user deletion."}` };
   }
 }
+
+    

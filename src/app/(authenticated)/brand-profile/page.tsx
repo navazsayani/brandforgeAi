@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useEffect, useState, useRef, useActionState, startTransition, useMemo } from 'react';
@@ -339,6 +338,7 @@ export default function BrandProfilePage() {
   };
   
   const handleEnhanceDescription = () => {
+    const brandName = form.getValues("brandName");
     const brandDescription = form.getValues("brandDescription");
     if (!brandDescription || brandDescription.length < 10) {
         toast({ title: "Not Enough Text", description: "Please provide at least 10 characters in the description to enhance.", variant: "default" });
@@ -346,6 +346,7 @@ export default function BrandProfilePage() {
     }
     setIsEnhancing(true);
     const formData = new FormData();
+    formData.append("brandName", brandName);
     formData.append("brandDescription", brandDescription);
     startTransition(() => {
         enhanceAction(formData);
@@ -1124,3 +1125,5 @@ export default function BrandProfilePage() {
     </>
   );
 }
+
+    
