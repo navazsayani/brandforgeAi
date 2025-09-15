@@ -578,7 +578,7 @@ export default function BrandProfilePage() {
 
       // Redirect if it was the first time completing the profile
       if (wasProfileIncomplete && finalData.brandDescription) {
-        router.push('/dashboard');
+        router.push('/content-studio');
       }
     } catch (error: any) {
       toast({ title: "Save Error", description: error.message || "Failed to save profile.", variant: "destructive" });
@@ -854,7 +854,7 @@ export default function BrandProfilePage() {
                           </Button>
                         </div>
                         <FormDescription>
-                          Optional. If you don&apos;t have a website, just describe your brand below. You can use our &apos;Enhance with AI&apos; feature to refine your description!
+                          Optional. If you don&apos;t have a website, just describe your brand below. The AI works great with just a description!
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
