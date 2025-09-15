@@ -861,29 +861,24 @@ export default function BrandProfilePage() {
                       <FormItem>
                         <FormLabel className="flex items-center text-base"><FileText className="w-5 h-5 mr-2 text-primary"/>Brand Description <span className="text-destructive ml-1">*</span></FormLabel>
                         <FormDescription>This is the most important field! The AI uses this to understand your brand's voice and style.</FormDescription>
-                        <div className="relative">
-                          <FormControl>
+                        <FormControl>
                             <Textarea 
                               placeholder="Describe brand, values, audience..." 
                               rows={5} 
                               {...field} 
                               disabled={isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing} 
-                              className="pr-12"
                             />
-                          </FormControl>
-                          <Button 
+                        </FormControl>
+                        <Button 
                             type="button" 
-                            variant="ghost"
-                            size="icon"
-                            className="absolute bottom-2 right-2 h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                            variant="outline"
+                            className="w-full sm:w-auto mt-2"
                             onClick={handleEnhanceDescription}
                             disabled={isEnhancing || isExtracting || !field.value || field.value.length < 10}
-                            title="Enhance description with AI"
                           >
-                            {isEnhancing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Wand2 className="h-5 w-5" />}
-                            <span className="sr-only">Enhance description with AI</span>
-                          </Button>
-                        </div>
+                            {isEnhancing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wand2 className="h-4 w-4 mr-2" />}
+                            Enhance with AI
+                        </Button>
                         <FormMessage />
                       </FormItem>
                     )}
