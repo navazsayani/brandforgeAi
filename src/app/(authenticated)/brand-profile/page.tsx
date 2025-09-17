@@ -91,7 +91,7 @@ const defaultFormValues: BrandProfileFormData = {
   logoStyle: "modern",
   logoType: 'logomark',
   logoColors: '',
-  logoBackground: 'white',
+  logoBackground: 'dark',
   brandLogoUrl: "",
   plan: 'free',
   userEmail: "",
@@ -1029,7 +1029,7 @@ export default function BrandProfilePage() {
                             )} />
                            <FormField control={form.control} name="logoBackground" render={({ field }) => (
                             <FormItem><FormLabel className="flex items-center text-sm"><ImagePlay className="w-4 h-4 mr-2"/>Background</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value ?? 'white'}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                              <Select onValueChange={field.onChange} value={field.value ?? 'dark'}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                                 <SelectContent><SelectGroup><SelectLabel>Backgrounds</SelectLabel><SelectItem value="white">White</SelectItem><SelectItem value="transparent">Transparent</SelectItem><SelectItem value="dark">Dark</SelectItem></SelectGroup></SelectContent>
                               </Select>
                             </FormItem>
