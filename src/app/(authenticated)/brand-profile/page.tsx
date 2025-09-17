@@ -60,9 +60,9 @@ const brandProfileSchema = z.object({
   imageStyleNotes: z.string().optional(),
   exampleImages: z.array(z.string().url({ message: "Each image must be a valid URL." })).optional(),
   targetKeywords: z.string().optional(),
+  logoType: z.enum(['logomark', 'logotype', 'monogram']).optional(),
   logoShape: z.enum(['circle', 'square', 'shield', 'hexagon', 'diamond', 'custom']).optional(),
   logoStyle: z.enum(['minimalist', 'modern', 'classic', 'playful', 'bold', 'elegant']).optional(),
-  logoType: z.enum(['logomark', 'logotype', 'monogram']).optional(),
   logoColors: z.string().optional(),
   logoBackground: z.enum(['white', 'transparent', 'dark']).optional(),
   brandLogoUrl: z.union([
@@ -87,9 +87,9 @@ const defaultFormValues: BrandProfileFormData = {
   imageStyleNotes: "",
   exampleImages: [],
   targetKeywords: "",
+  logoType: 'logomark',
   logoShape: "circle",
   logoStyle: "modern",
-  logoType: 'logomark',
   logoColors: '',
   logoBackground: 'dark',
   brandLogoUrl: "",
@@ -324,11 +324,16 @@ export default function BrandProfilePage() {
   };
 
   const handleAutoFill = () => {
-    const websiteUrl = form.getValues("websiteUrl");
+    let websiteUrl = form.getValues("websiteUrl");
     if (!websiteUrl) {
       toast({ title: "Missing URL", description: "Please enter a website URL.", variant: "destructive" });
       return;
     }
+    // Prepend https:// if no protocol is present
+    if (!/^https?:\/\//i.test(websiteUrl)) {
+      websiteUrl = 'https://' + websiteUrl;
+    }
+
     setIsExtracting(true);
     startTransition(() => {
       const formData = new FormData();
@@ -854,7 +859,7 @@ export default function BrandProfilePage() {
                           </Button>
                         </div>
                         <FormDescription>
-                          Optional. If you don&apos;t have a website, just describe your brand below. The AI works great with just a description!
+                          Optional. If you don&apos;t have a website, just describe your brand below. The AI works great with just a description and you can use the ✨ Enhance with AI button!
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -1054,7 +1059,7 @@ export default function BrandProfilePage() {
                   />
                   <FormItem>
                     <FormLabel className="flex items-center text-base"><UploadCloud className="w-5 h-5 mr-2 text-primary"/>Example Images</FormLabel>
-                    <FormDescription>Plan allows {maxImagesAllowed} images. Current: {(form.getValues("exampleImages")?.length || 0)}/{maxImagesAllowed}.</FormDescription>
+                    <FormDescription>Plan allows ${maxImagesAllowed} images. Current: ${(form.getValues("exampleImages")?.length || 0)}/${maxImagesAllowed}.</FormDescription>
                     <FormControl>
                       <div className="flex items-center justify-center w-full">
                         <Label htmlFor="dropzone-file" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer border-border bg-card hover:bg-secondary ${isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing || !canUploadMoreImages ? 'opacity-50 cursor-not-allowed' : ''}`}>
@@ -1071,11 +1076,11 @@ export default function BrandProfilePage() {
                     </FormControl>
                     {isUploading && <Progress value={uploadProgress} className="w-full h-2 mt-2" />}
                     <FormField control={form.control} name="exampleImages" render={() => <FormMessage />} />
-                    {!canUploadMoreImages && !isUploading && <p className="text-xs text-destructive mt-1">Max {maxImagesAllowed} images for your current plan.</p>}
+                    {!canUploadMoreImages && !isUploading && <p className="text-xs text-destructive mt-1">Max ${maxImagesAllowed} images for your current plan.</p>}
                   </FormItem>
                   {previewImages.length > 0 && (
                     <div className="mt-2 space-y-3">
-                      <p className="text-sm text-muted-foreground mb-1">Previews ({previewImages.length}/{maxImagesAllowed}):</p>
+                      <p className="text-sm text-muted-foreground mb-1">Previews (${previewImages.length}/${maxImagesAllowed}):</p>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {previewImages.map((src, index) => (
                           <div key={src || index} className="relative group aspect-square">
@@ -1132,3 +1137,4 @@ export default function BrandProfilePage() {
     
 
     
+
