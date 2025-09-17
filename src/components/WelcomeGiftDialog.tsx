@@ -1,12 +1,10 @@
 
 "use client";
 
-import React, { useState, useActionState, startTransition } from 'react';
+import React, { useState, useActionState, startTransition, useEffect } from 'react';
 import NextImage from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { Loader2, Wand2, Save, Gift, CheckCircle } from 'lucide-react';
 import { handleWelcomeGiftImageGenerationAction, handleSaveGeneratedImagesAction, FormState } from '@/lib/actions';
 import { useBrand } from '@/contexts/BrandContext';
@@ -29,23 +27,44 @@ export function WelcomeGiftDialog({ isOpen, onOpenChange }: WelcomeGiftDialogPro
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [prompt, setPrompt] = useState('');
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
   const [isComplete, setIsComplete] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const [generationState, generationAction] = useActionState(handleWelcomeGiftImageGenerationAction, initialGenerationState);
   const [saveState, saveAction] = useActionState(handleSaveGeneratedImagesAction, initialSaveState);
 
-  React.useEffect(() => {
+  // Auto-trigger generation when the dialog opens with valid data
+  useEffect(() => {
+    if (isOpen && !isGenerating && generatedImages.length === 0 && !isComplete) {
+      if (userId && brandData?.brandDescription) {
+        setIsGenerating(true);
+        const formData = new FormData();
+        formData.append('userId', userId);
+        formData.append('brandDescription', brandData.brandDescription);
+        formData.append('imageStyle', brandData.imageStyleNotes || 'modern, professional');
+        
+        startTransition(() => {
+          generationAction(formData);
+        });
+      }
+    }
+  }, [isOpen, userId, brandData, isGenerating, generatedImages, isComplete, generationAction]);
+
+  useEffect(() => {
     if (generationState.data) {
       setGeneratedImages(generationState.data.generatedImages);
+      setIsGenerating(false);
     }
     if (generationState.error) {
       toast({ title: "Generation Failed", description: generationState.error, variant: "destructive" });
+      setIsGenerating(false);
+      // Close dialog on failure to prevent user being stuck
+      setTimeout(() => onOpenChange(false), 2000);
     }
-  }, [generationState, toast]);
+  }, [generationState, toast, onOpenChange]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (saveState.data) {
       toast({ title: "Images Saved!", description: `${saveState.data.savedCount} images have been saved to your library.` });
       setIsComplete(true);
@@ -57,28 +76,12 @@ export function WelcomeGiftDialog({ isOpen, onOpenChange }: WelcomeGiftDialogPro
     }
   }, [saveState, toast, queryClient, userId]);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!prompt.trim() || !userId || !brandData) return;
-
-    const formData = new FormData();
-    formData.append('userId', userId);
-    formData.append('prompt', prompt);
-    // Use the brand profile data for context
-    formData.append('brandDescription', brandData.brandDescription || '');
-    formData.append('imageStyle', brandData.imageStyleNotes || 'modern, professional');
-
-    startTransition(() => {
-      generationAction(formData);
-    });
-  };
-
   const handleSaveImages = () => {
     if (generatedImages.length === 0 || !userId) return;
 
     const imagesToSave = generatedImages.map(url => ({
       dataUri: url,
-      prompt: prompt,
+      prompt: "AI-generated welcome gift: Brand Starter Kit",
       style: brandData?.imageStyleNotes || 'modern, professional',
     }));
 
@@ -112,72 +115,54 @@ export function WelcomeGiftDialog({ isOpen, onOpenChange }: WelcomeGiftDialogPro
             Your Welcome Gift!
           </DialogTitle>
           <DialogDescription>
-            {generatedImages.length === 0 
-                ? "Describe your first brand image, and we'll generate 3 options for you, completely free."
-                : "Here are your free images! Save them to your library to use them later."
+            {isComplete
+                ? "Your new brand images are ready for you in your Image Library!"
+                : generatedImages.length > 0
+                ? "Here are 3 on-brand images generated just for you. Save them to start creating!"
+                : "As a thank you for setting up your brand, we're generating a starter kit of 3 free images for you..."
             }
           </DialogDescription>
         </DialogHeader>
 
-        {isComplete ? (
-             <div className="text-center py-10 space-y-4">
-                <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
-                <h3 className="text-xl font-semibold">Images Saved!</h3>
-                <p className="text-muted-foreground">Your new brand images are waiting for you in the Image Library.</p>
-             </div>
-        ) : generatedImages.length > 0 ? (
-          <div className="py-4 space-y-6 flex-1 overflow-y-auto">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {generatedImages.map((src, index) => (
-                <div key={index} className="relative aspect-square rounded-lg overflow-hidden border bg-muted">
-                  <NextImage src={src} alt={`Generated Image ${index + 1}`} fill style={{ objectFit: 'contain' }} className="p-2" />
+        <div className="py-4 space-y-6 flex-1 overflow-y-auto">
+            {isComplete ? (
+                 <div className="text-center py-10 space-y-4">
+                    <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
+                    <h3 className="text-xl font-semibold">Images Saved!</h3>
+                    <p className="text-muted-foreground">Your new brand images are waiting for you in the Image Library.</p>
+                 </div>
+            ) : isGenerating ? (
+                <div className="flex flex-col items-center justify-center h-full min-h-[300px]">
+                    <Loader2 className="w-12 h-12 animate-spin text-primary mb-4"/>
+                    <p className="font-semibold">Generating your brand starter kit...</p>
+                    <p className="text-sm text-muted-foreground">This may take a moment.</p>
                 </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            <div className="py-4 space-y-4">
-              <Label htmlFor="welcome-prompt">Image Idea</Label>
-              <Textarea
-                id="welcome-prompt"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="e.g., a modern logo for a coffee brand"
-                rows={3}
-                required
-              />
-            </div>
-            <DialogFooter>
-                <SubmitButton
-                    className="w-full"
-                    loadingText="Generating..."
-                    disabled={!prompt.trim()}
-                >
-                    <Wand2 className="mr-2 h-4 w-4" />
-                    Generate My Free Images
-                </SubmitButton>
-            </DialogFooter>
-          </form>
-        )}
+            ) : generatedImages.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {generatedImages.map((src, index) => (
+                    <div key={index} className="relative aspect-square rounded-lg overflow-hidden border bg-muted">
+                      <NextImage src={src} alt={`Generated Image ${index + 1}`} fill style={{ objectFit: 'contain' }} className="p-2" />
+                    </div>
+                  ))}
+                </div>
+            ) : null }
+        </div>
         
-        {!isComplete && (
-            <DialogFooter className="flex-col sm:flex-row pt-4 border-t">
-                 <Button variant="ghost" onClick={closeAndFinalize} className="w-full sm:w-auto">
-                   {generatedImages.length > 0 ? "Close" : "Maybe Later"}
-                </Button>
-                {generatedImages.length > 0 && (
-                    <SubmitButton 
-                        onClick={handleSaveImages}
-                        loadingText="Saving..."
-                        className="w-full sm:w-auto"
-                    >
-                        <Save className="mr-2 h-4 w-4" />
-                        Save All to Library
-                    </SubmitButton>
-                )}
-            </DialogFooter>
-        )}
+        <DialogFooter className="flex-col sm:flex-row pt-4 border-t">
+            <Button variant="ghost" onClick={closeAndFinalize} className="w-full sm:w-auto">
+                Close
+            </Button>
+            {!isComplete && generatedImages.length > 0 && (
+                <SubmitButton
+                    onClick={handleSaveImages}
+                    loadingText="Saving..."
+                    className="w-full sm:w-auto"
+                >
+                    <Save className="mr-2 h-4 w-4" />
+                    Save All to Library
+                </SubmitButton>
+            )}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

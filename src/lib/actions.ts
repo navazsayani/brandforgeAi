@@ -800,7 +800,7 @@ export async function handleEditImageAction(
 
     // If the image is a URL, fetch it on the server and convert to data URI
     if (imageDataUri.startsWith('http')) {
-        // Decode HTML entities that might be present in the URL (e.g., &amp; -> &)
+        // Decode HTML entities that might have been present in the URL (e.g., &amp; -> &)
         const decodedUrl = decodeHtmlEntitiesInUrl(imageDataUri);
         
         console.log(`[handleEditImageAction] Received URL, fetching image data from: ${decodedUrl}`);
@@ -1216,11 +1216,10 @@ export async function handleWelcomeGiftImageGenerationAction(
   formData: FormData
 ): Promise<FormState<{ generatedImages: string[] }>> {
   const userId = formData.get("userId") as string;
-  const prompt = formData.get("prompt") as string;
   const brandDescription = formData.get("brandDescription") as string;
   const imageStyle = formData.get("imageStyle") as string;
 
-  if (!userId || !prompt || !brandDescription) {
+  if (!userId || !brandDescription) {
     return { error: "Missing required information for welcome gift." };
   }
 
@@ -1228,16 +1227,11 @@ export async function handleWelcomeGiftImageGenerationAction(
     const input: GenerateImagesInput = {
       brandDescription: brandDescription,
       imageStyle: imageStyle,
-      finalizedTextPrompt: prompt,
+      finalizedTextPrompt: `A set of three modern, professional, on-brand background images for a brand described as: "${brandDescription}". The style should be ${imageStyle}.`,
       numberOfImages: 3,
     };
     
-    // Note: We are NOT calling checkAndIncrementUsage here - this is free
     const result = await generateImages(input);
-
-    // After successfully generating, mark the gift as offered
-    const brandProfileRef = doc(db, 'users', userId, 'brandProfiles', userId);
-    await setDoc(brandProfileRef, { welcomeGiftOffered: true }, { merge: true });
 
     return { data: { generatedImages: result.generatedImages }, message: "Your free images have been generated!" };
   } catch (e: any) {
@@ -1569,7 +1563,7 @@ export async function handleUpdateSettingsAction(
       fireworksSDXL3Enabled: formData.get("fireworksSDXL3Enabled") === 'true',
       intelligentModelSelection: formData.get("intelligentModelSelection") === 'true',
       showAdvancedImageControls: formData.get("showAdvancedImageControls") === 'true',
-      // Admin-configurable model names
+      // Admin-configurable Fireworks model names
       fireworksSDXLTurboModel: formData.get("fireworksSDXLTurboModel") as string || 'sdxl-turbo',
       fireworksSDXL3Model: formData.get("fireworksSDXL3Model") as string || 'stable-diffusion-xl-1024-v1-0',
     };
@@ -1759,7 +1753,7 @@ export async function getPaymentMode(): Promise<{
       socialMediaConnectionsEnabled: true,
       fireworksEnabled: false,
       fireworksSDXLTurboEnabled: false,
-      fireworksSDXL3DEnabled: false,
+      fireworksSDXL3Enabled: false,
       intelligentModelSelection: false,
       showAdvancedImageControls: false,
       error: `Could not retrieve payment mode configuration.`
