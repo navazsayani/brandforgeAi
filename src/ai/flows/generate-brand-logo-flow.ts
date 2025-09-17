@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview An AI agent that generates a brand logo concept.
@@ -359,13 +358,13 @@ async function _generateLogoWithImagen(params: {
 }
 
 // Helper to make a generation attempt
-async function makeGenerationAttempt(promptText: string, textToImageModel: string) {
+async function makeGenerationAttempt(promptText: string, textToImageModel: string, logoType: string) {
     const isImagen = isImagenModel(textToImageModel);
     if (isImagen) {
         return _generateLogoWithImagen({
             model: textToImageModel,
             prompt: promptText,
-            logoType: 'logomark' // Assuming default, this could be passed in if needed
+            logoType: logoType
         });
     } else {
         const { media } = await ai.generate({
@@ -396,7 +395,7 @@ const generateBrandLogoFlow = ai.defineFlow(
     console.log(`[Logo Gen] Prompt preview:`, promptText.substring(0, 300) + "...");
 
     try {
-        let logoDataUri = await makeGenerationAttempt(promptText, textToImageModel);
+        let logoDataUri = await makeGenerationAttempt(promptText, textToImageModel, input.logoType || 'logomark');
 
         // If the first attempt fails, try a simplified prompt as a fallback
         if (!logoDataUri || !logoDataUri.startsWith('data:')) {
@@ -404,10 +403,10 @@ const generateBrandLogoFlow = ai.defineFlow(
             
             const simplifiedPrompt = `A simple, clean logo for "${input.brandName}". Style: ${input.logoStyle || 'modern'}. Colors: ${input.logoColors || 'blue and silver'}. No text.`;
             
-            logoDataUri = await makeGenerationAttempt(simplifiedPrompt, textToImageModel);
+            logoDataUri = await makeGenerationAttempt(simplifiedPrompt, textToImageModel, input.logoType || 'logomark');
 
             if (!logoDataUri || !logoDataUri.startsWith('data:')) {
-                console.error('Gemini logo generation failed on both attempts. Last response:', logoDataUri);
+                console.error('Logo generation failed on both attempts. Last response:', logoDataUri);
                 throw new Error('AI failed to generate a valid logo image after multiple attempts. Please try rephrasing your description.');
             }
         }
