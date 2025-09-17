@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview An AI agent that generates a brand logo concept.
@@ -18,11 +19,11 @@ const GenerateBrandLogoInputSchema = z.object({
   brandDescription: z.string().describe('A detailed description of the brand, its values, and target audience.'),
   industry: z.string().optional().describe('The industry of the brand (e.g., Fashion, Technology).'),
   targetKeywords: z.string().optional().describe('Comma-separated list of target keywords for the brand.'),
-  logoType: z.enum(['logomark', 'logotype', 'monogram']).optional().default('logomark').describe('The type of logo to generate (Symbol, Wordmark, or Initials).'),
-  logoShape: z.enum(['circle', 'square', 'shield', 'hexagon', 'diamond', 'custom']).optional().default('circle').describe('Preferred logo shape/form factor.'),
+  logoType: z.enum(['logomark', 'logotype', 'monogram']).optional().default('logotype').describe('The type of logo to generate (Symbol, Wordmark, or Initials).'),
+  logoShape: z.enum(['circle', 'square', 'shield', 'hexagon', 'diamond', 'custom']).optional().default('custom').describe('Preferred logo shape/form factor.'),
   logoStyle: z.enum(['minimalist', 'modern', 'classic', 'playful', 'bold', 'elegant']).optional().default('modern').describe('Preferred logo style aesthetic.'),
   logoColors: z.string().optional().describe('A text description of the desired color palette (e.g., "deep teal, soft gold").'),
-  logoBackground: z.enum(['white', 'transparent', 'dark']).optional().default('white').describe('The desired background for the logo.'),
+  logoBackground: z.enum(['white', 'transparent', 'dark']).optional().default('dark').describe('The desired background for the logo.'),
 });
 export type GenerateBrandLogoInput = z.infer<typeof GenerateBrandLogoInputSchema>;
 
@@ -35,12 +36,12 @@ export type GenerateBrandLogoOutput = z.infer<typeof GenerateBrandLogoOutputSche
 
 function getStyleGuidance(style: string): string {
   const guidance = {
-    minimalist: 'STYLE: Clean, simple design with plenty of white space and minimal elements.',
-    modern: 'STYLE: Contemporary look with clean lines and current design trends.',
-    classic: 'STYLE: Timeless, traditional design with elegant proportions.',
-    playful: 'STYLE: Friendly, approachable design with personality.',
-    bold: 'STYLE: Strong, confident design with high contrast and impact.',
-    elegant: 'STYLE: Sophisticated, refined design with graceful elements.'
+    minimalist: 'STYLE: Emphasize a clean, simple design with generous use of negative space and minimal elements. The focus is on pure, essential forms.',
+    modern: 'STYLE: Create a contemporary, sleek look using clean lines, sharp edges, and current design trends. The result should feel fresh and forward-thinking.',
+    classic: 'STYLE: Design a timeless, traditional logo with elegant proportions and a sense of heritage and enduring quality.',
+    playful: 'STYLE: Develop a friendly, approachable design with a distinct personality. Use rounded shapes and dynamic elements to evoke fun and accessibility.',
+    bold: 'STYLE: Construct a strong, confident design with high contrast, thick lines, and significant visual impact. The logo must command attention.',
+    elegant: 'STYLE: Craft a sophisticated and refined logo with graceful lines and a sense of luxury and high quality.'
   };
   return guidance[style as keyof typeof guidance] || guidance.modern;
 }
@@ -51,56 +52,56 @@ function getEnhancedIndustryGuidance(industry: string, brandDescription: string)
   let brandSpecificElements = '';
   
   if (industryLower.includes('tech') || industryLower.includes('saas')) {
-    baseGuidance = 'INDUSTRY CONTEXT: Technology/Software - Consider clean geometric shapes, connectivity concepts, innovation symbols, digital transformation themes.';
-    brandSpecificElements = 'Tech brands should convey trust, innovation, scalability, and forward-thinking. Consider circuit patterns, network nodes, abstract data flows, or minimalist geometric forms that reflect the brand\'s specific technology focus.';
+    baseGuidance = 'INDUSTRY CONTEXT: Technology/Software - Incorporate clean geometric shapes, abstract connectivity concepts, symbols of innovation, or themes of digital transformation.';
+    brandSpecificElements = 'Tech brands should convey trust, innovation, and scalability. Visually, this could be represented through circuit patterns, network nodes, abstract data flows, or minimalist geometric forms that reflect the brand\'s specific technology focus.';
   } else if (industryLower.includes('health') || industryLower.includes('wellness')) {
-    baseGuidance = 'INDUSTRY CONTEXT: Health/Wellness - Consider balance, vitality, care, growth, healing, and holistic well-being concepts.';
-    brandSpecificElements = 'Health brands should evoke trust, care, professionalism, and positive outcomes. Consider organic shapes, growth symbols, protective elements, or calming elements that align with the brand\'s healthcare approach.';
+    baseGuidance = 'INDUSTRY CONTEXT: Health/Wellness - Use visual motifs that suggest balance, vitality, care, growth, healing, and holistic well-being.';
+    brandSpecificElements = 'Health brands must evoke trust, care, and professionalism. Consider organic shapes, growth symbols (like a leaf or sprout), protective forms (like hands or a shield), or calming elements that align with the brand\'s specific healthcare approach.';
   } else if (industryLower.includes('food') || industryLower.includes('beverage')) {
-    baseGuidance = 'INDUSTRY CONTEXT: Food/Beverage - Consider freshness, quality, nourishment, culinary excellence, and appetite appeal.';
-    brandSpecificElements = 'Food brands should suggest quality, freshness, taste, and satisfaction. Consider organic shapes, natural elements, or stylized food symbols that reflect the brand\'s culinary identity.';
+    baseGuidance = 'INDUSTRY CONTEXT: Food/Beverage - The design should evoke freshness, quality, nourishment, culinary excellence, and appetite appeal.';
+    brandSpecificElements = 'Food brands should visually suggest quality, freshness, and taste. This can be achieved through organic shapes, natural elements, or stylized symbols of food/ingredients that directly reflect the brand’s culinary identity.';
   } else if (industryLower.includes('finance') || industryLower.includes('fintech')) {
-    baseGuidance = 'INDUSTRY CONTEXT: Finance - Consider trust, security, growth, stability, prosperity, and financial success.';
-    brandSpecificElements = 'Financial brands must convey reliability, security, and growth. Consider upward arrows, shield symbols, stable geometric forms, or abstract representations of progress and security.';
+    baseGuidance = 'INDUSTRY CONTEXT: Finance/Fintech - Visuals should communicate trust, security, growth, stability, and financial success.';
+    brandSpecificElements = 'Financial brands must convey reliability and growth. Utilize visual elements like upward-trending arrows, shield symbols, stable geometric forms (like pillars or blocks), or abstract representations of progress and security.';
   } else if (industryLower.includes('education')) {
-    baseGuidance = 'INDUSTRY CONTEXT: Education - Consider growth, knowledge, development, learning, enlightenment, and academic excellence.';
-    brandSpecificElements = 'Educational brands should inspire learning and growth. Consider book symbols, growth elements, light/illumination concepts, or abstract representations of knowledge and development.';
+    baseGuidance = 'INDUSTRY CONTEXT: Education - The logo should represent growth, knowledge, development, learning, and academic excellence.';
+    brandSpecificElements = 'Educational brands should inspire learning. Consider symbols like books, graduation caps, trees of knowledge, lightbulbs (for ideas), or abstract forms representing pathways and development.';
   } else if (industryLower.includes('fashion') || industryLower.includes('apparel')) {
-    baseGuidance = 'INDUSTRY CONTEXT: Fashion/Apparel - Consider style, elegance, craftsmanship, personal expression, and aesthetic appeal.';
-    brandSpecificElements = 'Fashion brands should reflect style and sophistication. Consider elegant lines, fabric textures, fashion silhouettes, or abstract style elements that capture the brand\'s fashion identity.';
+    baseGuidance = 'INDUSTRY CONTEXT: Fashion/Apparel - The design must reflect style, elegance, craftsmanship, and personal expression.';
+    brandSpecificElements = 'Fashion brands need a logo that is as stylish as their products. Think elegant lines, abstract representations of fabric or stitches, or a sophisticated typographic treatment that captures the brand’s aesthetic.';
   } else if (industryLower.includes('real estate')) {
-    baseGuidance = 'INDUSTRY CONTEXT: Real Estate - Consider homes, community, stability, investment, shelter, and property value.';
-    brandSpecificElements = 'Real estate brands should suggest stability and home. Consider house symbols, architectural elements, key concepts, or abstract representations of shelter and community.';
+    baseGuidance = 'INDUSTRY CONTEXT: Real Estate - The logo should suggest homes, community, stability, and property value.';
+    brandSpecificElements = 'Real estate logos need to evoke feelings of home and security. Common successful motifs include rooflines, keys, architectural elements, or abstract shapes that suggest shelter and community.';
   } else {
     baseGuidance = `INDUSTRY CONTEXT: ${industry} - Consider concepts and visual elements relevant to this industry.`;
     brandSpecificElements = 'Ensure the logo reflects industry-appropriate symbolism and appeals to the target market within this sector.';
   }
   
-  return `${baseGuidance}\n${brandSpecificElements}\nBRAND ALIGNMENT: The logo must authentically represent the specific brand essence: "${brandDescription}" while fitting industry expectations.`;
+  return `${baseGuidance}\n${brandSpecificElements}\nBRAND ALIGNMENT: The final logo must authentically represent the specific brand essence described here: "${brandDescription}" while fitting within the visual expectations of its industry.`;
 }
 
 function getShapeGuidance(shape: string): string {
   const shapeGuidance = {
-    circle: 'SHAPE: Design to fit within a circular boundary - the logo should work well in a round frame and convey unity, completeness, and harmony.',
-    square: 'SHAPE: Design to fit within a square/rectangular boundary - the logo should work well in a square frame and convey stability, balance, and reliability.',
-    shield: 'SHAPE: Design to fit within a shield-shaped boundary - the logo should work well in a shield-like frame and convey protection, security, and strength.',
-    hexagon: 'SHAPE: Design to fit within a hexagonal boundary - the logo should work well in a hexagon frame and convey efficiency, structure, and innovation.',
-    diamond: 'SHAPE: Design to fit within a diamond/rhombus boundary - the logo should work well in a diamond frame and convey luxury, precision, and uniqueness.',
-    custom: 'SHAPE: Create a unique, organic shape that perfectly fits the brand identity - break free from standard geometric boundaries while maintaining professional appeal. The logo itself can define its own optimal shape.'
+    circle: 'SHAPE CONSTRAINT: The final logo must be designed to fit perfectly within a circular boundary. It should feel balanced and complete when enclosed in a circle, conveying unity and harmony.',
+    square: 'SHAPE CONSTRAINT: The final logo must be designed to fit perfectly within a square boundary. It should feel stable, balanced, and reliable when enclosed in a square frame.',
+    shield: 'SHAPE CONSTRAINT: The final logo must be designed to fit within a shield-shaped boundary. It should evoke feelings of protection, security, and strength.',
+    hexagon: 'SHAPE CONSTRAINT: The final logo must be designed to fit within a hexagonal boundary. It should convey a sense of structure, efficiency, and innovation.',
+    diamond: 'SHAPE CONSTRAINT: The final logo must be designed to fit within a diamond or rhombus-shaped boundary. It should suggest luxury, precision, and uniqueness.',
+    custom: 'SHAPE CONSTRAINT: Create a unique, organic, or abstract shape for the logo itself. It should break free from standard geometric boundaries while maintaining a professional and balanced form factor.'
   };
-  return shapeGuidance[shape as keyof typeof shapeGuidance] || shapeGuidance.circle;
+  return shapeGuidance[shape as keyof typeof shapeGuidance] || shapeGuidance.custom;
 }
 
 function getLogoTypeInstruction(logoType: string, brandName: string): string {
     switch (logoType) {
         case 'logotype':
-            return `**Design Focus: Logotype/Wordmark** - The primary focus MUST be on the stylized text of the brand name: "${brandName}". Create a unique, memorable typographic treatment. A small, simple icon can accompany the text, but the text itself must be the hero.`;
+            return `**Design Focus: Logotype/Wordmark** - The absolute primary focus MUST be on the stylized text of the brand name: "${brandName}". Create a unique, memorable typographic treatment that acts as the logo itself. A very small, simple icon can *accompany* the text, but the text must be the hero and stand alone as the logo.`;
         case 'monogram':
             const initials = brandName.split(' ').map(n => n[0]).join('');
-            return `**Design Focus: Monogram/Lettermark** - Create a powerful and creative monogram using the initials "${initials}". The initials should be artfully combined into a single, cohesive symbol.`;
+            return `**Design Focus: Monogram/Lettermark** - The design MUST be a creative monogram using ONLY the initials "${initials}". The letters should be artfully combined into a single, cohesive, and memorable symbol. Do not include the full brand name.`;
         case 'logomark':
         default:
-            return `**Design Focus: Logomark/Icon** - Create a compelling, abstract, or symbolic icon that represents the essence of "${brandName}". The icon should be clean, recognizable, and memorable on its own, optionally accompanied by the brand name in a clean font.`;
+            return `**Design Focus: Logomark/Icon** - Create a compelling, abstract, or symbolic icon that represents the essence of "${brandName}". The icon must be the primary focus and should be clean, recognizable, and memorable on its own. It can be optionally accompanied by the brand name in a clean, standard font below or to the side.`;
     }
 }
 
