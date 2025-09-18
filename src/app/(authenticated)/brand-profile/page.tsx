@@ -1059,7 +1059,7 @@ export default function BrandProfilePage() {
                   />
                   <FormItem>
                     <FormLabel className="flex items-center text-base"><UploadCloud className="w-5 h-5 mr-2 text-primary"/>Example Images</FormLabel>
-                    <FormDescription>Plan allows ${maxImagesAllowed} images. Current: ${(form.getValues("exampleImages")?.length || 0)}/${maxImagesAllowed}.</FormDescription>
+                    <FormDescription>Plan allows {maxImagesAllowed} images. Current: {(form.getValues("exampleImages")?.length || 0)}/{maxImagesAllowed}.</FormDescription>
                     <FormControl>
                       <div className="flex items-center justify-center w-full">
                         <Label htmlFor="dropzone-file" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer border-border bg-card hover:bg-secondary ${isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing || !canUploadMoreImages ? 'opacity-50 cursor-not-allowed' : ''}`}>
@@ -1076,11 +1076,11 @@ export default function BrandProfilePage() {
                     </FormControl>
                     {isUploading && <Progress value={uploadProgress} className="w-full h-2 mt-2" />}
                     <FormField control={form.control} name="exampleImages" render={() => <FormMessage />} />
-                    {!canUploadMoreImages && !isUploading && <p className="text-xs text-destructive mt-1">Max ${maxImagesAllowed} images for your current plan.</p>}
+                    {!canUploadMoreImages && !isUploading && <p className="text-xs text-destructive mt-1">Max {maxImagesAllowed} images for your current plan.</p>}
                   </FormItem>
                   {previewImages.length > 0 && (
                     <div className="mt-2 space-y-3">
-                      <p className="text-sm text-muted-foreground mb-1">Previews (${previewImages.length}/${maxImagesAllowed}):</p>
+                      <p className="text-sm text-muted-foreground mb-1">Previews ({previewImages.length}/{maxImagesAllowed}):</p>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {previewImages.map((src, index) => (
                           <div key={src || index} className="relative group aspect-square">
@@ -1138,3 +1138,6 @@ export default function BrandProfilePage() {
 
     
 
+
+
+    
