@@ -37,7 +37,7 @@ Suddenly, you have five rich, emotional territories to explore instead of one bo
 
 ### 2. The Visual Style Brainstormer
 
-You need an image, but you're tired of the same old look. Use AI to explore visual styles you hadn't considered.
+You need an image, but you're tired of the same old look. Use AI to explore visual styles you hadn't considered. Our guide on [AI image refinement](/blog/ai-image-refinement-step-by-step-guide) can help you perfect these new ideas.
 
 **Your Goal:** An image for a luxury watch brand.
 **Your Block:** You keep imagining the same "man in a suit looking at his watch" shot.
@@ -55,7 +55,7 @@ These concepts are instantly more interesting and provide a much stronger creati
 
 ### 3. The Headline Machine: Defeating Writer's Block
 
-You've written a great blog post, but the headline is flat. A great headline can make or break your content's performance.
+You've written a great blog post, but the headline is flat. A great headline can make or break your content's performance. For more on this, check out our guide on [writing SEO content with AI](/blog/writing-seo-content-with-ai).
 
 **Your Goal:** A headline for an article about the benefits of remote work.
 **Your Block:** "The Benefits of Remote Work." (Yawn.)
@@ -75,7 +75,7 @@ This technique gives you a range of powerful, clickable headlines to choose from
 
 ### Using BrandForge AI's "Quick Start" as a Brainstorming Tool
 
-In **BrandForge AI's Content Studio**, the "AI Quick Start" feature is your built-in brainstorming partner. Instead of filling out every field, just type your core idea into the Quick Start box.
+In **BrandForge AI's [Content Studio](/content-studio)**, the "AI Quick Start" feature is your built-in brainstorming partner. Instead of filling out every field, just type your core idea into the Quick Start box.
 
 **Your Idea:** `An Instagram post about our new coffee flavor.`
 
@@ -92,4 +92,4 @@ This gives you a complete, structured starting point that you can then refine, s
 
 Creative block isn't a lack of creativity; it's a lack of stimulus. AI is the ultimate stimulus machine. It can provide endless starting points, challenge your assumptions, and offer fresh perspectives.
 
-Next time you're stuck, don't just stare at the screen. Ask your AI partner, "What if?" You might be surprised by the creative doors it unlocks.
+Next time you're stuck, don't just stare at the screen. Ask your AI partner, "What if?" You might be surprised by the creative doors it unlocks. [Sign up for BrandForge AI](/signup) and try it for yourself.

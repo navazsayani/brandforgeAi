@@ -15,7 +15,7 @@ The old way? Start over. Write a new prompt, cross your fingers, and hope for th
 
 The new way? **Refine.**
 
-Iterative AI image refinement is the single most powerful technique for moving beyond generic AI outputs to creating stunning, professional-grade visuals that match your exact vision. In this guide, we'll walk you through a real-world example using a tool like **BrandForge AI's Refinement Studio**.
+Iterative AI image refinement is the single most powerful technique for moving beyond generic AI outputs to creating stunning, professional-grade visuals that match your exact vision. In this guide, we'll walk you through a real-world example using a tool like **BrandForge AI's [Refinement Studio](/features#ai-refinement-studio)**.
 
 ### Our Goal: A Hero Image for an Eco-Friendly Coffee Brand
 
@@ -45,7 +45,7 @@ Instantly better! The scene now has depth, warmth, and a specific time of day. T
 
 #### Step 3: Refinement - Adding Context and Brand Elements
 
-Now, let's connect the image to our brand, "TerraBrew."
+Now, let's connect the image to our brand, "TerraBrew." This step is crucial for maintaining [brand consistency](/blog/ai-powered-brand-consistency-across-all-platforms).
 
 **Instruction:** `Place a few scattered coffee beans and a small, green plant in a terracotta pot near the cup.`
 
@@ -83,7 +83,7 @@ This tiny detail makes all the difference. It brings the image to life, suggesti
 
 Compare our starting point to our final image. We went from a generic stock photo to a rich, story-driven brand asset in five simple, iterative steps.
 
-This is the power of AI refinement. It puts you in the driver's seat, allowing you to act as the art director for your own brand.
+This is the power of AI refinement. It puts you in the driver's seat, allowing you to act as the art director for your own brand. This is a core part of the [BrandForge AI platform's philosophy](/features).
 
 **Key Takeaways for Your Own Refinements:**
 
@@ -92,4 +92,4 @@ This is the power of AI refinement. It puts you in the driver's seat, allowing y
 3.  **Use Descriptive Language:** Instead of "make it better," say "add dramatic shadows" or "enhance the warm tones."
 4.  **Connect to Your Brand:** Think about how each refinement can reinforce your brand's story, values, or aesthetic.
 
-Ready to stop generating and start refining? Try the **AI Refinement Studio** in [BrandForge AI](/features#ai-refinement-studio) and experience the difference for yourself.
+Ready to stop generating and start refining? Try the **AI Refinement Studio** in [BrandForge AI](/signup) and experience the difference for yourself.
