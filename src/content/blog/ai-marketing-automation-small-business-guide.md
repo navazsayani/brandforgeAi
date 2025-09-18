@@ -65,4 +65,4 @@ The beauty of modern AI marketing tools is their accessibility. Here's how to be
 ### Your Competitive Advantage Awaits
 The businesses that embrace marketing automation for entrepreneurs today will have a significant advantage. While your competitors are still manually posting on social media, you'll be delivering personalized, timely, and effective marketing at scale.
 
-The technology exists. The tools are accessible. Start your journey at **Brandforge.me** and discover what you can build.
+The technology exists. The tools are accessible. Start your journey at [Brandforge.me](/signup) and discover what you can build.

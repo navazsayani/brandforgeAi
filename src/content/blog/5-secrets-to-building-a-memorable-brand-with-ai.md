@@ -57,4 +57,4 @@ The most innovative brands use AI for more than just output; they use it for ins
 -   **Listen to Your Customers:** Feed customer reviews into an AI to get a clear summary of what people love and what they want you to improve.
 -   **Test and Learn:** Use AI-generated headlines and ad copy variations to A/B test your way to the perfect message.
 
-By pairing the incredible creative power of AI with your own strategic vision, you can build a brand that isn't just memorable—it's unforgettable. Start building today at **Brandforge.me**.
+By pairing the incredible creative power of AI with your own strategic vision, you can build a brand that isn't just memorable—it's unforgettable. Start building today at [Brandforge.me](/signup).

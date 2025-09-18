@@ -191,7 +191,3 @@ The key is to start now. Every piece of content you create and rate is an invest
 Ready to experience the future of content creation? The sooner you begin providing feedback, the sooner you'll have an AI system that truly understands and serves your unique brand needs.
 
 [Explore feedback-driven AI today](/signup) and see how personalized content creation can transform your marketing efforts.
-
----
-
-*What aspects of feedback-driven AI are you most excited about? Share your thoughts and questions in the comments – we'd love to discuss how this technology could impact your specific industry or use case.*

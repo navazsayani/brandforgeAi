@@ -284,7 +284,3 @@ Stop settling for "good enough." Start refining your way to perfect.
 The images that stop people scrolling, that make them remember your brand, that drive them to take action—those aren't accidents. They're the result of thoughtful, skillful refinement.
 
 Your audience deserves perfect. Your brand deserves perfect. And now you have the tools to deliver it.
-
----
-
-*Ready to transform your visual content from good to perfect? Start with one image today and see how far refinement can take you. Share your before-and-after results—we'd love to see your refinement success stories.*

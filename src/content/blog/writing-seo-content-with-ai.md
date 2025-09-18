@@ -52,4 +52,4 @@ Stop writing into the void. With AI, your workflow becomes smarter:
 3.  **Generate:** Let the AI write the full draft based on your perfected outline, maintaining your brand's unique voice.
 4.  **Publish:** Add your final human touches and publish content you *know* is built to perform.
 
-This is how you get off the content treadmill and start creating assets that work for you long after you hit "publish." Start creating at **Brandforge.me**.
+This is how you get off the content treadmill and start creating assets that work for you long after you hit "publish." Start creating at [Brandforge.me](/signup).

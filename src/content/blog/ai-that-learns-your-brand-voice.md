@@ -139,7 +139,3 @@ Ready to experience AI that truly gets your brand voice? Smart Learning AI is in
 The sooner you start rating and providing feedback, the sooner you'll have an AI assistant that sounds authentically like your brand.
 
 [Try Smart Learning AI today](/signup) and discover what it's like to have consistent, on-brand content at scale.
-
----
-
-*What's your biggest challenge with maintaining brand voice consistency? Share your experiences in the comments below – we'd love to hear how Smart Learning AI could help your specific situation.*

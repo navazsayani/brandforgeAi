@@ -48,4 +48,4 @@ AI-powered chatbots are now your 24/7 front-line support. They can answer common
 
 AI isn't here to replace marketers. It's here to empower them. By automating the repetitive tasks and providing deep data insights, AI frees up human creativity to focus on what matters most: **strategy, storytelling, and building genuine relationships.**
 
-The future of social media marketing is a partnership between human ingenuity and artificial intelligence. And with tools like **BrandForge AI**, that future is accessible to everyone. See how it works at **Brandforge.me**. For more on this, check out our guide on [AI and Brand Consistency](/blog/ai-powered-brand-consistency-across-all-platforms).
+The future of social media marketing is a partnership between human ingenuity and artificial intelligence. And with tools like **BrandForge AI**, that future is accessible to everyone. See how it works at [Brandforge.me](/signup). For more on this, check out our guide on [AI and Brand Consistency](/blog/ai-powered-brand-consistency-across-all-platforms).

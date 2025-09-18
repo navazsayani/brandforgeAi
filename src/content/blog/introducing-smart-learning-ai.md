@@ -78,6 +78,3 @@ Smart Learning AI is now available to all BrandForge AI users at no additional c
 
 Ready to experience AI that gets smarter with every post? [Start your free trial today](/signup) and see the difference personalized AI can make for your brand.
 
----
-
-*Have questions about Smart Learning AI? We'd love to hear from you. Share your thoughts and experiences in the comments below.*

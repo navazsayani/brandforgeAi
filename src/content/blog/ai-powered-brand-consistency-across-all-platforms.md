@@ -70,4 +70,4 @@ AI-powered design tools can:
 
 AI-powered brand consistency isn't just a nice-to-have—it's becoming essential for any competitive business. As customers interact with brands across more channels than ever before, the companies that can deliver a consistent, professional experience will win.
 
-The technology exists today to solve this challenge. Tools like **BrandForge AI** are making it possible for any business to maintain the kind of professional brand presence that builds trust and drives recognition. See what you can create at **Brandforge.me**.
+The technology exists today to solve this challenge. Tools like **BrandForge AI** are making it possible for any business to maintain the kind of professional brand presence that builds trust and drives recognition. See what you can create at [Brandforge.me](/features).

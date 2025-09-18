@@ -41,4 +41,4 @@ Ready to try it? The process is refreshingly simple.
 
 An AI-generated logo isn't a shortcut to a generic design. It's a shortcut to a *better process*. It empowers you to be the creative director of your own brand, using powerful technology to bring your vision to life.
 
-For small businesses, this is a game-changer. It means a professional, memorable brand identity is no longer a luxury—it's your new starting point. Try it now at **Brandforge.me**.
+For small businesses, this is a game-changer. It means a professional, memorable brand identity is no longer a luxury—it's your new starting point. Try it now at [Brandforge.me](/signup).
