@@ -3,7 +3,7 @@ title: "The ROI of AI: Calculating the True Value of Your Marketing Tools"
 date: "2025-08-25"
 author: "Rajesh Kumar"
 excerpt: "Is investing in AI marketing tools worth it? This guide breaks down how to calculate the real return on investment, looking beyond vanity metrics to focus on time saved, increased output, and improved brand consistency."
-image: "/blog/roi-of-ai.png"
+image: "/blog/roi.png"
 tags: ["ROI", "AI Marketing", "Business Strategy", "Cost Savings", "Productivity"]
 ---
 

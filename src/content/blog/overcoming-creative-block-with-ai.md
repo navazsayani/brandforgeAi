@@ -3,7 +3,7 @@ title: "Overcoming Creative Block with AI: A Brainstorming Super-Guide"
 date: "2025-09-05"
 author: "Aisha Begum"
 excerpt: "Staring at a blank page? AI can be your ultimate brainstorming partner. This guide provides practical prompts and techniques to break through creative blocks and generate fresh ideas for campaigns, visuals, and content."
-image: "/blog/creative-block.png"
+image: "/blog/creative block.png"
 tags: ["Creative Block", "Brainstorming", "AI Prompts", "Content Ideas", "Creativity"]
 ---
 

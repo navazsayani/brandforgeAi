@@ -3,7 +3,7 @@ title: "AI Image Refinement: A Step-by-Step Guide"
 date: "2025-08-20"
 author: "Priya Sharma"
 excerpt: "Your first AI-generated image is just the beginning. This practical guide walks you through the iterative process of refining a good image into a perfect, on-brand visual using simple text commands."
-image: "/blog/refinement-steps.png"
+image: "/blog/ai_refine.png"
 tags: ["AI Image Refinement", "Generative AI", "Design Tutorial", "Content Creation"]
 ---
 
