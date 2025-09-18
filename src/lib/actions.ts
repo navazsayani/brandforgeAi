@@ -1240,50 +1240,6 @@ export async function handleWelcomeGiftImageGenerationAction(
   }
 }
 
-export async function handlePreviewModeImageGenerationAction(
-  prevState: FormState<{ generatedImages: string[] }>,
-  formData: FormData
-): Promise<FormState<{ generatedImages: string[] }>> {
-  const userId = formData.get("userId") as string;
-  const prompt = formData.get("prompt") as string;
-
-  if (!prompt) {
-    return { error: "Missing prompt for preview mode." };
-  }
-
-  try {
-    // If a user is logged in, check if they have already used preview mode
-    if (userId) {
-      const brandProfileRef = doc(db, 'users', userId, 'brandProfiles', userId);
-      const brandProfileSnap = await getDoc(brandProfileRef);
-      if (brandProfileSnap.exists()) {
-        const brandData = brandProfileSnap.data() as BrandData;
-        if (brandData.hasUsedPreviewMode) {
-          return { error: "Preview mode can only be used once. Please complete your brand profile to continue generating content." };
-        }
-      }
-    }
-
-    const input: GenerateImagesInput = {
-      brandDescription: "A modern, professional business", // Default description for preview
-      imageStyle: "modern, professional, clean",
-      finalizedTextPrompt: prompt,
-      numberOfImages: 1, // Only 1 image in preview mode
-    };
-    
-    // Note: We are NOT calling checkAndIncrementUsage here - this is free
-    const result = await generateImages(input);
-    
-    return {
-      data: { generatedImages: result.generatedImages },
-      message: "Preview image generated! Complete your brand profile to unlock unlimited generations and better quality."
-    };
-  } catch (e: any) {
-    console.error("Error in handlePreviewModeImageGenerationAction:", e);
-    return { error: `Failed to generate preview image: ${e.message || "Unknown error."}` };
-  }
-}
-
 export async function handleGenerateBrandForgeAppLogoAction(
   prevState: FormState<GenerateBrandForgeAppLogoOutput>,
   formData: FormData 

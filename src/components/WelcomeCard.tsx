@@ -1,19 +1,11 @@
-
 "use client";
 
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Rocket, ArrowRight, Sparkles, Eye } from 'lucide-react';
-import { useState } from 'react';
-import { PreviewModeDialog } from './PreviewModeDialog';
-import { useBrand } from '@/contexts/BrandContext';
-import { cn } from '@/lib/utils';
+import { Rocket, ArrowRight, Sparkles } from 'lucide-react';
 
 export function WelcomeCard() {
-  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
-  const { brandData } = useBrand();
-  const hasUsedPreview = brandData?.hasUsedPreviewMode || false;
 
   return (
     <div className="flex items-center justify-center h-full">
@@ -41,7 +33,7 @@ export function WelcomeCard() {
                     <div className="flex items-center justify-center space-x-2">
                         <Sparkles className="w-5 h-5 text-primary" />
                         <p className="font-semibold text-foreground">
-                            Complete your profile to receive <strong className="text-primary">3 FREE AI-generated brand images!</strong>
+                            Complete your profile to receive a <strong className="text-primary">Brand Starter Kit</strong> of 3 free images!
                         </p>
                     </div>
                 </div>
@@ -53,28 +45,9 @@ export function WelcomeCard() {
                             <ArrowRight className="w-5 h-5 ml-2" />
                         </Link>
                     </Button>
-                    <Button
-                        variant="outline"
-                        size="lg"
-                        className={cn(
-                            "flex-1 border-primary/20 hover:bg-primary/5 relative",
-                            !hasUsedPreview && "animate-gradient-pulse"
-                        )}
-                        onClick={() => setShowPreviewDialog(true)}
-                        disabled={hasUsedPreview}
-                    >
-                        <Eye className="w-5 h-5 mr-2" />
-                        {hasUsedPreview ? 'Preview Used' : 'Try AI Preview'}
-                    </Button>
                 </div>
-                
-                <PreviewModeDialog
-                    isOpen={showPreviewDialog}
-                    onOpenChange={setShowPreviewDialog}
-                />
             </CardContent>
         </Card>
     </div>
   );
 }
-
