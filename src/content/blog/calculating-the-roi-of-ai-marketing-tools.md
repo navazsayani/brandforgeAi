@@ -36,22 +36,22 @@ For any entrepreneur or small team, time is the most limited resource. This is o
     *   Brainstorming ad copy: `__ hours`
     *   **Total Weekly Hours:** `__`
 
-2.  **Assign a Value to Your Time:** What is an hour of your time worth? A conservative estimate for a skilled professional could be anywhere from ₹2,000 to ₹5,000 ($25-$60) per hour. Let's use ₹3,000 ($35) for this example.
+2.  **Assign a Value to Your Time:** What is an hour of your time worth? A conservative estimate for a skilled professional could be anywhere from $25 to $60 per hour. Let's use $35 for this example.
 
 3.  **Calculate Your "After" Time:** After implementing an AI tool, track your time for the same tasks. You'll likely find that tasks that took hours now take minutes.
 
 **The ROI Calculation (Example):**
 
 *   **Before:** 10 hours/week on content creation.
-*   **Value of Time:** 10 hours x ₹3,000/hour = **₹30,000/week**.
+*   **Value of Time:** 10 hours x $35/hour = **$350/week**.
 *   **After using AI:** 2 hours/week on reviewing and refining AI-generated content.
 *   **Time Saved:** 8 hours/week.
-*   **Weekly Value Gained:** 8 hours x ₹3,000/hour = **₹24,000**.
-*   **Monthly Value Gained:** ₹24,000 x 4 = **₹96,000**.
+*   **Weekly Value Gained:** 8 hours x $35/hour = **$280**.
+*   **Monthly Value Gained:** $280 x 4 = **$1,120**.
 
-If your AI tool costs ₹4,000/month (see our [pricing plans](/plans)), your time-based ROI is:
+If your AI tool costs $29/month (see our [pricing plans](/plans)), your time-based ROI is:
 
-`((₹96,000 - ₹4,000) / ₹4,000) * 100% = **2,200% ROI**`
+`(($1,120 - $29) / $29) * 100% = **3,762% ROI**`
 
 ---
 
