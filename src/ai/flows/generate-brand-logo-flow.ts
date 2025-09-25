@@ -101,7 +101,7 @@ function getLogoTypeInstruction(logoType: string, brandName: string): string {
             return `**Design Focus: Monogram/Lettermark** - The design MUST be a creative monogram using ONLY the initials "${initials}". The letters should be artfully combined into a single, cohesive, and memorable symbol. Do not include the full brand name.`;
         case 'logomark':
         default:
-            return `**Design Focus: Logomark/Icon** - Create a compelling, abstract, or symbolic icon that represents the essence of "${brandName}". The icon must be the primary focus and should be clean, recognizable, and memorable on its own. It can be optionally accompanied by the brand name in a clean, standard font below or to the side.`;
+            return `**Design Focus: Logomark/Icon** - Create a compelling, abstract, or symbolic icon that represents the essence of "${brandName}". The icon must be the primary focus and should be clean, recognizable, and memorable on its own. If the brand name is included, set it in Montserrat Medium, all-caps, with slight letter spacing, positioned below or to the side of the icon to maintain balance and harmony.`;
     }
 }
 
