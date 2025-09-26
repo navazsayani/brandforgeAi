@@ -1703,7 +1703,7 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                         setUseExampleImageForGen(checked as boolean);
                       }}
                     />
-                    <Label htmlFor="useExampleImageForGen" className="text-sm font-medium">
+                    <Label htmlFor="useExampleImageForGen" className="text-base font-medium">
                       Use an image as a style reference?
                     </Label>
                   </div>
