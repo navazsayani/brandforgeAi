@@ -19,7 +19,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { useAuth } from '@/contexts/AuthContext'; 
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
@@ -1714,7 +1713,7 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                         <Label className="flex items-center mb-1">
                             <ImageIcon className="w-4 h-4 mr-2 text-primary" />Style Reference from Brand Profile
                         </Label>
-                        <FormDescription className="mb-2">The AI will use this image as inspiration for the visual style, composition, and subject matter of the new image.</FormDescription>
+                        <p className="text-sm text-muted-foreground mb-2">The AI will use this image as inspiration for the visual style, composition, and subject matter of the new image.</p>
                           {brandData?.exampleImages && brandData.exampleImages.length > 0 ? (
                             <div className="mt-2 space-y-2">
                                 {brandData.exampleImages.length > 1 ? (
