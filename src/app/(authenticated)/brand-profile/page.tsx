@@ -1058,8 +1058,8 @@ export default function BrandProfilePage() {
                     )}
                   />
                   <FormItem>
-                    <FormLabel className="flex items-center text-base"><UploadCloud className="w-5 h-5 mr-2 text-primary"/>Example Images</FormLabel>
-                    <FormDescription>Plan allows {maxImagesAllowed} images. Current: {(form.getValues("exampleImages")?.length || 0)}/{maxImagesAllowed}.</FormDescription>
+                    <FormLabel className="flex items-center text-base"><UploadCloud className="w-5 h-5 mr-2 text-primary"/>Visual Style & Content Reference</FormLabel>
+                    <FormDescription>Upload images that represent your brand's aesthetic. The AI will use these as inspiration in the Content Studio to generate new images in your style and to write relevant social media captions about them. Plan allows {maxImagesAllowed} images. Current: {form.getValues("exampleImages")?.length || 0}/{maxImagesAllowed}.</FormDescription>
                     <FormControl>
                       <div className="flex items-center justify-center w-full">
                         <Label htmlFor="dropzone-file" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer border-border bg-card hover:bg-secondary ${isBrandContextLoading || isAdminLoadingTargetProfile || isUploading || isExtracting || isGeneratingLogo || isUploadingLogo || isEnhancing || !canUploadMoreImages ? 'opacity-50 cursor-not-allowed' : ''}`}>
@@ -1139,5 +1139,7 @@ export default function BrandProfilePage() {
     
 
 
+
+    
 
     

@@ -53,3 +53,9 @@ Stop writing into the void. With AI, your workflow becomes smarter:
 4.  **Publish:** Add your final human touches and publish content you *know* is built to perform.
 
 This is how you get off the content treadmill and start creating assets that work for you long after you hit "publish." Start creating at [Brandforge.me](/signup).
+
+### Related reading
+
+- [Branding with AI: Strategy, Tools, and an AI Branding Kit (2025 Guide)](/blog/branding-with-ai-complete-guide)
+- [AI and Brand Consistency: Maintaining a Unified Voice Across All Platforms](/blog/ai-powered-brand-consistency-across-all-platforms)
+- [How AI Can Learn Your Brand Voice](/blog/ai-that-learns-your-brand-voice)

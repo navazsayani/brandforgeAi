@@ -42,3 +42,11 @@ Ready to try it? The process is refreshingly simple.
 An AI-generated logo isn't a shortcut to a generic design. It's a shortcut to a *better process*. It empowers you to be the creative director of your own brand, using powerful technology to bring your vision to life.
 
 For small businesses, this is a game-changer. It means a professional, memorable brand identity is no longer a luxury—it's your new starting point. Try it now at [Brandforge.me](/signup).
+
+
+### Related reading
+
+- [Can ChatGPT Create a Logo?](/blog/can-chatgpt-create-a-logo)
+- [Where to Create a Logo for Free](/blog/where-to-create-a-logo-for-free)
+- [Logo Create App: Best Apps for iOS, Android, and Web](/blog/logo-create-app)
+- [How to Create a Logo in Photoshop](/blog/how-to-create-a-logo-in-photoshop)
