@@ -252,7 +252,7 @@ const fetchSavedLibraryImages = async (userId: string | undefined): Promise<Save
 
 export default function ContentStudioPage() {
   const { currentUser, userId } = useAuth(); 
-  const { brandData, addGeneratedImage, addGeneratedSocialPost, addGeneratedBlogPost, sessionLastImageGenerationResult, setSessionLastImageGenerationResult } = useBrand();
+  const { brandData, addGeneratedImage, addGeneratedSocialPost, addGeneratedBlogPost, addGeneratedAdCampaign, sessionLastImageGenerationResult, setSessionLastImageGenerationResult } = useBrand();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -1513,7 +1513,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle>Generate Brand Images</CardTitle>
-              <CardDescription>Create unique images. Uses brand description and style. Optionally use an example image from your Brand Profile.</CardDescription>
+              <CardDescription>Create unique visuals for your brand. The AI uses your brand description and optional style references to generate images.</CardDescription>
                 {lastUsedImageProvider && <p className="text-xs text-primary mt-1">Image(s) last generated using: {lastUsedImageProvider}</p>}
             </CardHeader>
             <div className="px-6 mb-6">
@@ -1674,20 +1674,20 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                       }}
                     />
                     <Label htmlFor="useExampleImageForGen" className="text-sm font-medium">
-                      Use Example Image from Profile as Reference?
+                      Use a Profile Image as a Style Reference
                     </Label>
                   </div>
 
                   {useExampleImageForGen && (
                     <div>
                         <Label className="flex items-center mb-1">
-                            <ImageIcon className="w-4 h-4 mr-2 text-primary" />Example Image from Profile
+                            <ImageIcon className="w-4 h-4 mr-2 text-primary" />Style Reference from Brand Profile
                         </Label>
+                        <FormDescription className="mb-2">The AI will use this image as inspiration for the visual style, composition, and subject matter of the new image.</FormDescription>
                           {brandData?.exampleImages && brandData.exampleImages.length > 0 ? (
                             <div className="mt-2 space-y-2">
                                 {brandData.exampleImages.length > 1 ? (
                                     <>
-                                    <p className="text-xs text-muted-foreground">Select Profile Image to Use as Reference:</p>
                                     <div className="flex space-x-2 overflow-x-auto pb-2">
                                         {brandData.exampleImages.map((imgSrc, index) => (
                                             <button
@@ -2066,7 +2066,7 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
                           <div className="flex items-center space-x-2">
                               <RadioGroupItem value="profile" id="social-profile" disabled={!brandData?.exampleImages || brandData.exampleImages.length === 0} />
                               <Label htmlFor="social-profile" className={(!brandData?.exampleImages || brandData.exampleImages.length === 0) ? "text-muted-foreground" : ""}>
-                                  Use Brand Profile Example Image {!brandData?.exampleImages || brandData.exampleImages.length === 0 ? "(None available)" : `(${(brandData?.exampleImages?.length || 0)} available)`}
+                                Use Visual Style Reference from Brand Profile {!brandData?.exampleImages || brandData.exampleImages.length === 0 ? "(None available)" : `(${(brandData?.exampleImages?.length || 0)} available)`}
                               </Label>
                           </div>
                           <div className="flex items-center space-x-2">
@@ -2739,4 +2739,5 @@ Create a compelling visual that represents: "${imageGenBrandDescription}"${indus
     </div>
   );
 }
+
 
