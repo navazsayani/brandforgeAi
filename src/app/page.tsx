@@ -643,10 +643,10 @@ export default function LandingPage() {
                     <div className="p-1.5 bg-primary/15 rounded-lg">
                       <Lightbulb className="h-4 w-4 text-primary" />
                     </div>
-                    <span className="text-sm font-medium text-primary">Smart Learning AI</span>
+                    <span className="text-sm font-medium text-primary">Smart Learning AI (RAG)</span>
                   </div>
                   <p className="text-sm text-muted-foreground text-center">
-                    Our AI learns from your feedback to create better content over time.{' '}
+                    Our Retrieval‑Augmented Generation (RAG) learns from your feedback and best‑performing content to personalize future results.{' '}
                     <Link href="/features#smart-learning" className="text-primary hover:underline">
                       See how it works →
                     </Link>
@@ -781,13 +781,13 @@ export default function LandingPage() {
             <div className="text-center max-w-3xl mx-auto mb-12">
               <div className="inline-flex items-center space-x-2 bg-primary/10 px-3 py-1.5 rounded-full text-sm font-medium text-primary mb-6">
                 <Lightbulb className="w-4 h-4" />
-                <span>Smart Learning AI</span>
+                <span>Smart Learning AI (RAG)</span>
               </div>
               <h2 className="text-3xl md:text-4xl font-bold text-balance">
                 AI That <span className="text-gradient-brand">Learns Your Style</span>
               </h2>
               <p className="mt-4 text-lg text-muted-foreground text-balance">
-                Unlike generic AI tools, BrandForge AI learns from your feedback to create increasingly personalized content that matches your proven successful patterns.
+                Unlike generic AI tools, BrandForge AI uses Retrieval‑Augmented Generation (RAG) plus your feedback to amplify patterns that work for your brand—so results get more on‑brand and effective over time.
               </p>
             </div>
             

@@ -1978,6 +1978,14 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                     </Button>
 
                     {/* Content Feedback Widget for Image Generation */}
+                    {userId && !sessionLastImageGenerationResult?.ragMetadata && (
+                      <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center">
+                        <SparklesIcon className="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2" />
+                        <span className="text-sm text-blue-800 dark:text-blue-200">
+                          Smart Learning is warming up. Rate a few items to unlock personalized patterns automatically.
+                        </span>
+                      </div>
+                    )}
                     {userId && (
                       <ContentFeedbackWidget
                         contentId={`image-gen-${sessionLastImageGenerationResult?.promptUsed?.slice(0, 20) || Date.now()}`}
@@ -2370,6 +2378,14 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                           className="mb-4"
                         />
                       )}
+                      {!(socialState.data as any)?.ragMetadata && (
+                        <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center">
+                          <SparklesIcon className="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2" />
+                          <span className="text-sm text-blue-800 dark:text-blue-200">
+                            Smart Learning is warming up. Rate a few items to unlock personalized patterns automatically.
+                          </span>
+                        </div>
+                      )}
 
                       <p className="text-sm text-muted-foreground">
                         Image and text ready! Download the image (if applicable) and copy the caption/hashtags to post on Instagram.
@@ -2416,19 +2432,6 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                           </Button>
                       </div>
                       
-                      {/* Social Media Previews */}
-                      <div className="mt-6 pt-6 border-t border-gray-200">
-                        <SocialMediaPreviews
-                          caption={generatedSocialPost.caption}
-                          hashtags={generatedSocialPost.hashtags}
-                          imageSrc={generatedSocialPost.imageSrc}
-                          brandName={brandData?.brandName || "YourBrand"}
-                          brandLogoUrl={brandData?.brandLogoUrl}
-                          selectedPlatform={selectedSocialPlatform}
-                          selectedLanguage={selectedSocialLanguage}
-                        />
-                      </div>
-
                       {/* Content Feedback Widget for Social Media */}
                       {userId && (
                         <ContentFeedbackWidget
@@ -2455,6 +2458,19 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                           className="mt-4"
                         />
                       )}
+
+                      {/* Social Media Previews */}
+                      <div className="mt-6 pt-6 border-t border-gray-200">
+                        <SocialMediaPreviews
+                          caption={generatedSocialPost.caption}
+                          hashtags={generatedSocialPost.hashtags}
+                          imageSrc={generatedSocialPost.imageSrc}
+                          brandName={brandData?.brandName || "YourBrand"}
+                          brandLogoUrl={brandData?.brandLogoUrl}
+                          selectedPlatform={selectedSocialPlatform}
+                          selectedLanguage={selectedSocialLanguage}
+                        />
+                      </div>
                   </CardContent>
                 </Card>
             )}
@@ -2709,6 +2725,14 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                           })}
                           className="mb-4"
                         />
+                      )}
+                      {!(blogState.data as any)?.ragMetadata && (
+                        <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center">
+                          <SparklesIcon className="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2" />
+                          <span className="text-sm text-blue-800 dark:text-blue-200">
+                            Smart Learning is warming up. Rate a few items to unlock personalized patterns automatically.
+                          </span>
+                        </div>
                       )}
 
                       <div>

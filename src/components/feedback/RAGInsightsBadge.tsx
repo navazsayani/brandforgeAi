@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Brain, CheckCircle, TrendingUp, Hash, Palette, MessageCircle } from 'lucide-react';
 import type { RAGInsight } from '@/types/feedback';
 
@@ -45,6 +45,22 @@ export const RAGInsightsBadge: React.FC<RAGInsightsBadgeProps> = ({
   };
 
   const activeInsights = insights.filter(insight => insight.isActive);
+
+  // Auto-expand once for first-time users to highlight RAG value
+  useEffect(() => {
+    try {
+      if (activeInsights.length > 0 && typeof window !== 'undefined') {
+        const key = 'rag_insights_auto_opened';
+        if (!localStorage.getItem(key)) {
+          setIsExpanded(true);
+          localStorage.setItem(key, '1');
+        }
+      }
+    } catch {
+      // no-op
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeInsights.length]);
 
   if (activeInsights.length === 0) {
     return null;
