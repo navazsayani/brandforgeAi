@@ -3,7 +3,6 @@
 
 import { useFormStatus } from "react-dom";
 import { Button, type ButtonProps } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
 
 interface SubmitButtonProps extends ButtonProps {
   loadingText?: string;
@@ -16,8 +15,14 @@ export function SubmitButton({ children, loadingText = "Submitting...", loading,
 
   return (
     <Button {...props} type="submit" disabled={isPending || props.disabled}>
-      {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-      {isPending ? loadingText : children}
+      {isPending ? (
+        <>
+          <div className="mr-2 w-4 h-4 border-2 border-transparent rounded-full animate-spin-gradient" />
+          <span className="animate-pulse">{loadingText}</span>
+        </>
+      ) : (
+        children
+      )}
     </Button>
   );
 }

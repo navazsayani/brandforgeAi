@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { UserCircle, Paintbrush, Send, Rocket, ArrowRight, CheckCircle, Wand2, Lightbulb, Zap } from 'lucide-react';
+import { UserCircle, Paintbrush, Send, Rocket, ArrowRight, CheckCircle, Wand2, Lightbulb, Zap, X } from 'lucide-react';
 import PublicHeader from '@/components/PublicHeader';
 
 
@@ -141,6 +141,97 @@ export default function FeaturesPage() {
                             { text: "Edit and refine any generated content before it goes live.", icon: CheckCircle }
                         ]}
                      />
+                </div>
+            </div>
+        </section>
+
+        {/* Why Refinement Beats One-Shot AI Section */}
+        <section className="py-20 bg-gradient-to-br from-accent/10 to-primary/10">
+            <div className="container-responsive">
+                <div className="max-w-4xl mx-auto">
+                    <div className="text-center mb-12">
+                        <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                            Why <span className="text-gradient-brand">Refinement</span> Beats One-Shot AI
+                        </h2>
+                        <p className="text-lg text-muted-foreground">
+                            The difference between "good enough" and "perfect" is iteration. Here's why our refinement approach wins.
+                        </p>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-8">
+                        {/* Traditional AI */}
+                        <Card className="border-destructive/30">
+                            <CardHeader>
+                                <CardTitle className="text-xl flex items-center text-destructive">
+                                    <X className="w-6 h-6 mr-2" />
+                                    Traditional AI (One-Shot)
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4 text-sm text-muted-foreground">
+                                <div>
+                                    <p className="font-semibold text-foreground mb-2">The Problem:</p>
+                                    <ol className="list-decimal pl-5 space-y-2">
+                                        <li>Generate image with prompt</li>
+                                        <li>❌ Not quite right? Start completely over</li>
+                                        <li>Write a new, better prompt from scratch</li>
+                                        <li>Generate again, hope it's better</li>
+                                        <li>Repeat 5-10 times until frustrated</li>
+                                    </ol>
+                                </div>
+                                <div className="border-t border-border pt-4">
+                                    <p className="font-semibold text-destructive">Result: Wasted time, credits, and patience</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* BrandForge AI */}
+                        <Card className="border-primary">
+                            <CardHeader>
+                                <CardTitle className="text-xl flex items-center text-primary">
+                                    <CheckCircle className="w-6 h-6 mr-2" />
+                                    BrandForge AI (Refinement)
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4 text-sm">
+                                <div>
+                                    <p className="font-semibold text-foreground mb-2">The Solution:</p>
+                                    <ol className="list-decimal pl-5 space-y-2 text-foreground">
+                                        <li>Generate initial image</li>
+                                        <li>✅ "Make the sky darker" → Refine</li>
+                                        <li>✅ "Add mountains in background" → Refine</li>
+                                        <li>✅ "Change lighting to golden hour" → Refine</li>
+                                        <li>Perfect! Done in minutes.</li>
+                                    </ol>
+                                </div>
+                                <div className="border-t border-border pt-4">
+                                    <p className="font-semibold text-primary">Result: Perfect images, faster, with less frustration</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <div className="mt-12 text-center">
+                        <Card className="inline-block bg-gradient-to-r from-primary/5 to-accent/5 border-primary/20">
+                            <CardContent className="p-6">
+                                <p className="text-lg font-semibold mb-2">
+                                    <Zap className="inline w-5 h-5 text-primary mr-2" />
+                                    The BrandForge Advantage
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                    Early beta users typically refine 3-5 times per image to achieve their perfect result—<strong className="text-primary">without starting over</strong>.
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <div className="mt-8 text-center">
+                        <Button size="lg" className="btn-gradient-primary btn-lg-enhanced" asChild>
+                            <Link href="/signup">
+                                Try Refinement Studio Free
+                                <ArrowRight className="ml-2 h-5 w-5" />
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
             </div>
         </section>

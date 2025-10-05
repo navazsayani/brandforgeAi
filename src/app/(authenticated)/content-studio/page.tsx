@@ -282,6 +282,7 @@ export default function ContentStudioPage() {
   const [generatedSocialPost, setGeneratedSocialPost] = useState<{caption: string, hashtags: string, imageSrc: string | null} | null>(null);
   const [generatedBlogPost, setGeneratedBlogPost] = useState<{title: string, content: string, tags: string, outline: string} | null>(null);
   const [generatedBlogOutline, setGeneratedBlogOutline] = useState<string>("");
+  const [isGeneratingSocialPost, setIsGeneratingSocialPost] = useState(false);
 
   const [useImageForSocialPost, setUseImageForSocialPost] = useState<boolean>(false);
   const [socialImageChoice, setSocialImageChoice] = useState<SocialImageChoice>(null);
@@ -684,8 +685,12 @@ export default function ContentStudioPage() {
       };
       addGeneratedSocialPost(newPost);
       toast({ title: "Success", description: socialState.message });
+      setIsGeneratingSocialPost(false);
     }
-    if (socialState.error) toast({ title: "Error generating social post", description: socialState.error, variant: "destructive" });
+    if (socialState.error) {
+      toast({ title: "Error generating social post", description: socialState.error, variant: "destructive" });
+      setIsGeneratingSocialPost(false);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socialState, toast, addGeneratedSocialPost, socialToneValue, customSocialToneNuances]);
 
@@ -1356,6 +1361,7 @@ Your mission is to create a compelling, brand-aligned visual asset that:
 
 
   const handleSocialSubmit = async (formData: FormData) => {
+    setIsGeneratingSocialPost(true);
     let imageSrc = formData.get("selectedImageSrcForSocialPost") as string | null;
 
     if (imageSrc && imageSrc.startsWith('data:')) {
@@ -1366,8 +1372,8 @@ Your mission is to create a compelling, brand-aligned visual asset that:
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
 
-            const maxWidth = 1920; 
-            const maxHeight = 1080; 
+            const maxWidth = 1920;
+            const maxHeight = 1080;
             let width = img.width;
             let height = img.height;
 
@@ -1403,9 +1409,10 @@ Your mission is to create a compelling, brand-aligned visual asset that:
               variant: "destructive",
               duration: 8000,
           });
-          return; 
+          setIsGeneratingSocialPost(false);
+          return;
         }
-        
+
         formData.set("selectedImageSrcForSocialPost", compressedImageUri);
         toast({
             title: "Image Processed",
@@ -1420,10 +1427,11 @@ Your mission is to create a compelling, brand-aligned visual asset that:
             variant: "destructive",
             duration: 8000,
         });
-        return; 
+        setIsGeneratingSocialPost(false);
+        return;
       }
     }
-    
+
     startTransition(() => {
         socialAction(formData);
     });
@@ -1944,12 +1952,33 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                             {`Clear Image${lastSuccessfulGeneratedImageUrls.length > 1 ? 's' : ''}`}
                         </Button>
                     </div>
-                    <ImprovedImageGrid 
+                    <ImprovedImageGrid
                         imageUrls={lastSuccessfulGeneratedImageUrls}
                         onDownload={downloadImage}
                         onRefine={handleOpenRefineModal}
                         className="w-full"
                     />
+
+                    {/* RAG Insights Badge for Image Generation */}
+                    {userId && sessionLastImageGenerationResult?.ragMetadata && (
+                      <RAGInsightsBadge
+                        insights={createRAGInsights({
+                          brandPatterns: sessionLastImageGenerationResult.ragMetadata.brandPatterns,
+                          successfulStyles: sessionLastImageGenerationResult.ragMetadata.successfulStyles,
+                          performanceInsights: sessionLastImageGenerationResult.ragMetadata.performanceInsights
+                        })}
+                        className="mt-4 mb-4"
+                      />
+                    )}
+                    {userId && !sessionLastImageGenerationResult?.ragMetadata && (
+                      <div className="mt-4 mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center">
+                        <SparklesIcon className="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2" />
+                        <span className="text-sm text-blue-800 dark:text-blue-200">
+                          Smart Learning is warming up. Rate a few items to unlock personalized patterns automatically.
+                        </span>
+                      </div>
+                    )}
+
                     {(isAdmin) && lastUsedImageGenPrompt && ( 
                       <div className="mt-4">
                           <div className="flex justify-between items-center mb-1">
@@ -1978,14 +2007,6 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                     </Button>
 
                     {/* Content Feedback Widget for Image Generation */}
-                    {userId && !sessionLastImageGenerationResult?.ragMetadata && (
-                      <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center">
-                        <SparklesIcon className="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2" />
-                        <span className="text-sm text-blue-800 dark:text-blue-200">
-                          Smart Learning is warming up. Rate a few items to unlock personalized patterns automatically.
-                        </span>
-                      </div>
-                    )}
                     {userId && (
                       <ContentFeedbackWidget
                         contentId={`image-gen-${sessionLastImageGenerationResult?.promptUsed?.slice(0, 20) || Date.now()}`}
@@ -2227,8 +2248,17 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                               onClick={handleAIDescribeImage}
                               disabled={isGeneratingDescription}
                           >
-                              {isGeneratingDescription ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-                              AI Describe Image
+                              {isGeneratingDescription ? (
+                                <>
+                                  <div className="mr-2 w-4 h-4 border-2 border-transparent rounded-full animate-spin-gradient" />
+                                  <span className="animate-pulse">Analyzing...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Wand2 className="mr-2 h-4 w-4" />
+                                  AI Describe Image
+                                </>
+                              )}
                           </Button>
                       )}
                   </div>
@@ -2354,7 +2384,7 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                 </div>
               </CardContent>
               <CardFooter>
-                <SubmitButton className="w-full" loadingText="Generating Content..." disabled={socialSubmitDisabled}>Generate Social Post</SubmitButton>
+                <SubmitButton className="w-full" loadingText="Generating Content..." loading={isGeneratingSocialPost} disabled={socialSubmitDisabled}>Generate Social Post</SubmitButton>
               </CardFooter>
             </form>
               {generatedSocialPost && (
@@ -2634,8 +2664,17 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                                       disabled={isGeneratingOutline}
                                       className="w-full sm:w-auto"
                                   >
-                                      {isGeneratingOutline ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-                                      Generate New Outline
+                                      {isGeneratingOutline ? (
+                                        <>
+                                          <div className="mr-2 w-4 h-4 border-2 border-transparent rounded-full animate-spin-gradient" />
+                                          <span className="animate-pulse">Generating...</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Wand2 className="mr-2 h-4 w-4" />
+                                          Generate New Outline
+                                        </>
+                                      )}
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>

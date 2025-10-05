@@ -8,7 +8,7 @@ import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Check, ArrowRight, Star, X, Loader2, Info, RefreshCcw, TestTube, Copy, Globe } from 'lucide-react';
+import { Check, ArrowRight, Star, X, Loader2, Info, RefreshCcw, TestTube, Copy, Globe, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PlanDetails } from '@/types';
 import type { FormState } from '@/lib/actions';
@@ -289,9 +289,13 @@ export default function PricingPageClient() {
              <main className={cn("pb-12 section-spacing", !currentUser && "pt-24")}>
                 <div className="container-responsive max-w-5xl mx-auto">
                     <header className="text-center mb-12">
-                        <h1 className="text-4xl md:text-5xl font-bold mb-4">Find the Perfect Plan</h1>
+                        <div className="inline-flex items-center space-x-2 bg-primary/10 px-4 py-2 rounded-full text-sm font-semibold text-primary mb-4">
+                          <CheckCircle className="w-4 h-4" />
+                          <span>100% Free to Start - No Credit Card Required</span>
+                        </div>
+                        <h1 className="text-4xl md:text-5xl font-bold mb-4">Choose Your <span className="text-gradient-brand">Plan</span></h1>
                         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                            Start for free and scale as you grow. Unlock powerful AI features to forge your brand identity.
+                            Start building your brand completely free. Most users never need to upgrade. Scale only when you're ready.
                         </p>
                     </header>
                     

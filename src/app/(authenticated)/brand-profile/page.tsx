@@ -598,7 +598,19 @@ export default function BrandProfilePage() {
   };
 
   const handleAcceptRefinement = (originalUrl: string, newUrl: string) => {
-    // This is for Brand Profile images. The logic for Image Library is different.
+    // Check if this is a logo refinement (original URL matches current logo)
+    const currentLogo = generatedLogoPreview || currentProfileBeingEdited?.brandLogoUrl;
+    if (originalUrl === currentLogo) {
+      // Logo refinement - directly update the logo preview
+      setGeneratedLogoPreview(newUrl);
+      toast({
+        title: "Logo Refined",
+        description: "Logo has been updated. Click 'Save Brand Profile' to finalize.",
+      });
+      return;
+    }
+
+    // This is for Brand Profile example images
     setAcceptedRefinement({ originalUrl, newUrl });
     setShowAcceptDialog(true);
   };
@@ -975,7 +987,10 @@ export default function BrandProfilePage() {
                         {/* Logo Preview */}
                         <div className="relative w-32 h-32 sm:w-36 sm:h-36 border rounded-md flex items-center justify-center bg-muted overflow-hidden flex-shrink-0">
                           {isGeneratingLogo ? (
-                            <Loader2 className="w-12 h-12 sm:w-14 sm:h-14 text-primary animate-spin" />
+                            <div className="flex flex-col items-center gap-2">
+                              <div className="w-12 h-12 sm:w-14 sm:h-14 border-4 border-transparent rounded-full animate-spin-gradient" />
+                              <p className="text-xs text-muted-foreground animate-pulse">Generating...</p>
+                            </div>
                           ) : currentLogoToDisplay ? (
                             <div className="relative w-full h-full">
                                 <BrandProfileImage src={currentLogoToDisplay} alt="Brand Logo Preview" fill className="object-contain p-2 sm:p-2.5" data-ai-hint="brand logo"/>
@@ -984,16 +999,30 @@ export default function BrandProfilePage() {
                             <ImageIconLucide className="w-12 h-12 sm:w-14 sm:h-14 text-muted-foreground" />
                           )}
                         </div>
-                        {/* Generation and Download Buttons */}
+                        {/* Generation, Refine, and Download Buttons */}
                         <div className="flex-1 text-center sm:text-left">
                           <div className="flex flex-col sm:flex-row gap-2">
                             <Button type="button" onClick={handleGenerateLogo} disabled={isGeneratingLogo || isUploadingLogo || !form.getValues("brandName") || !form.getValues("brandDescription")} className="w-full sm:w-auto">
-                              {isGeneratingLogo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />} Generate Logo
+                              {isGeneratingLogo ? (
+                                <>
+                                  <div className="mr-2 w-4 h-4 border-2 border-transparent rounded-full animate-spin-gradient" />
+                                  <span className="animate-pulse">Generating Logo...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="mr-2 h-4 w-4" /> Generate Logo
+                                </>
+                              )}
                             </Button>
                             {currentLogoToDisplay && (
-                              <Button type="button" onClick={handleDownloadLogo} variant="outline" disabled={isGeneratingLogo || isUploadingLogo} className="w-full sm:w-auto">
-                                <Download className="mr-2 h-4 w-4" /> Download
-                              </Button>
+                              <>
+                                <Button type="button" onClick={() => handleOpenRefineModal(currentLogoToDisplay)} variant="outline" disabled={isGeneratingLogo || isUploadingLogo} className="w-full sm:w-auto btn-gradient-primary">
+                                  <Wand2 className="mr-2 h-4 w-4" /> Refine with AI
+                                </Button>
+                                <Button type="button" onClick={handleDownloadLogo} variant="outline" disabled={isGeneratingLogo || isUploadingLogo} className="w-full sm:w-auto">
+                                  <Download className="mr-2 h-4 w-4" /> Download
+                                </Button>
+                              </>
                             )}
                           </div>
                           {!currentLogoToDisplay && !isGeneratingLogo && <p className="text-xs text-muted-foreground mt-2">Fill Brand Name & Description for logo.</p>}

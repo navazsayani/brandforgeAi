@@ -264,6 +264,56 @@
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
   }
+
+  /* Loading Animation Options */
+  @keyframes sparkle-pulse {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.5;
+      transform: scale(1.2);
+    }
+  }
+
+  .animate-sparkle-pulse {
+    animation: sparkle-pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes spin-gradient {
+    0% {
+      transform: rotate(0deg);
+      border-color: hsl(var(--primary)) transparent transparent transparent;
+    }
+    25% {
+      border-color: hsl(var(--accent)) hsl(var(--primary)) transparent transparent;
+    }
+    50% {
+      transform: rotate(180deg);
+      border-color: transparent hsl(var(--accent)) hsl(var(--primary)) transparent;
+    }
+    75% {
+      border-color: transparent transparent hsl(var(--accent)) hsl(var(--primary));
+    }
+    100% {
+      transform: rotate(360deg);
+      border-color: hsl(var(--primary)) transparent transparent transparent;
+    }
+  }
+
+  .animate-spin-gradient {
+    animation: spin-gradient 1.2s linear infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .animate-shimmer {
+    animation: shimmer 2s ease-in-out infinite;
+  }
 }
 
 @layer components {
