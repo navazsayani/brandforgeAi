@@ -199,6 +199,7 @@ export const DEFAULT_PLANS_CONFIG: PlansConfig = {
       description: 'Perfect for getting started and exploring core features.',
       price: { amount: '$0', unit: '/ month' },
       features: [
+        { name: '20+ Industry Templates', included: true },
         { name: 'Brand Profile Setup', included: true },
         { name: 'AI-Powered Idea Generation', included: true },
         { name: 'Blog Outline Generation', included: true },
@@ -237,6 +238,7 @@ export const DEFAULT_PLANS_CONFIG: PlansConfig = {
       description: 'Perfect for getting started and exploring core features.',
       price: { amount: '₹0', unit: '/ month' },
       features: [
+        { name: '20+ Industry Templates', included: true },
         { name: 'Brand Profile Setup', included: true },
         { name: 'AI-Powered Idea Generation', included: true },
         { name: 'Blog Outline Generation', included: true },

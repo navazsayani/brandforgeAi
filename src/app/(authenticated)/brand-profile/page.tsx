@@ -20,8 +20,9 @@ import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
-import { UserCircle, LinkIcon, FileText, UploadCloud, Tag, Brain, Loader2, Trash2, Edit, Briefcase, Image as ImageIconLucide, Sparkles, Star, ShieldCheck, UserSearch, Users, Wand2, Type as TypeIcon, Palette, ImagePlay, Download } from 'lucide-react';
+import { UserCircle, LinkIcon, FileText, UploadCloud, Tag, Brain, Loader2, Trash2, Edit, Briefcase, Image as ImageIconLucide, Sparkles, Star, ShieldCheck, UserSearch, Users, Wand2, Type as TypeIcon, Palette, ImagePlay, Download, Rocket } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { brandTemplates, getAllCategories, getTemplatesByCategory, type BrandTemplate } from '@/lib/templates';
 import { handleExtractBrandInfoFromUrlAction, handleGenerateBrandLogoAction, handleGetAllUserProfilesForAdminAction, handleEnhanceBrandDescriptionAction, type FormState as ExtractFormState, type FormState as GenerateLogoFormState, type FormState as AdminFetchProfilesState, type FormState as EnhanceDescriptionState } from '@/lib/actions';
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject, uploadString } from 'firebase/storage';
@@ -143,6 +144,9 @@ export default function BrandProfilePage() {
   const [imageToRefine, setImageToRefine] = useState<string | null>(null);
   const [showAcceptDialog, setShowAcceptDialog] = useState(false);
   const [acceptedRefinement, setAcceptedRefinement] = useState<{ originalUrl: string, newUrl: string } | null>(null);
+
+  // Template selection state
+  const [showTemplates, setShowTemplates] = useState(false);
 
   const currentProfileBeingEdited = isAdmin && adminTargetUserId && adminLoadedProfileData ? adminLoadedProfileData : contextBrandData;
   const effectiveUserIdForStorage = isAdmin && adminTargetUserId ? adminTargetUserId : userId;
@@ -321,6 +325,24 @@ export default function BrandProfilePage() {
       setAdminSelectedUserIdFromDropdown("");
       form.reset(contextBrandData || defaultFormValues);
       toast({ title: "My Profile", description: "Displaying your own brand profile." });
+  };
+
+  // Apply brand template to form
+  const applyTemplate = (template: BrandTemplate) => {
+    form.setValue('brandDescription', template.brandDescription, { shouldValidate: true });
+    form.setValue('industry', template.industry, { shouldValidate: true });
+    form.setValue('imageStyleNotes', template.imageStyleNotes || '', { shouldValidate: true });
+    form.setValue('targetKeywords', template.targetKeywords || '', { shouldValidate: true });
+    if (template.logoType) form.setValue('logoType', template.logoType, { shouldValidate: true });
+    if (template.logoShape) form.setValue('logoShape', template.logoShape, { shouldValidate: true });
+    if (template.logoStyle) form.setValue('logoStyle', template.logoStyle, { shouldValidate: true });
+    if (template.logoColors) form.setValue('logoColors', template.logoColors, { shouldValidate: true });
+
+    setShowTemplates(false);
+    toast({
+      title: "Template Applied",
+      description: `${template.name} template loaded! Customize it to match your brand.`,
+    });
   };
 
   const handleAutoFill = () => {
@@ -815,6 +837,67 @@ export default function BrandProfilePage() {
                   </Button>
                 )}
               </CardContent>
+            </Card>
+          )}
+
+          {/* Template Selection - Only show if no existing brand description */}
+          {!currentProfileBeingEdited?.brandDescription && !isAdmin && (
+            <Card className="mb-6 bg-gradient-to-br from-primary/5 via-background to-accent/5 border-primary/20">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-full">
+                      <Rocket className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">Quick Start with Templates</CardTitle>
+                      <CardDescription>Choose a template to get started in seconds</CardDescription>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant={showTemplates ? "ghost" : "outline"}
+                    size="sm"
+                    onClick={() => setShowTemplates(!showTemplates)}
+                  >
+                    {showTemplates ? 'Hide Templates' : 'Browse Templates'}
+                  </Button>
+                </div>
+              </CardHeader>
+              {showTemplates && (
+                <CardContent>
+                  <div className="space-y-6">
+                    {getAllCategories().map((category) => {
+                      const templates = getTemplatesByCategory(category);
+                      return (
+                        <div key={category}>
+                          <h4 className="text-sm font-semibold text-muted-foreground mb-3">{category}</h4>
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                            {templates.map((template) => (
+                              <Button
+                                key={template.id}
+                                type="button"
+                                variant="outline"
+                                className="h-auto flex flex-col items-center p-4 gap-2 hover:border-primary hover:bg-primary/5 transition-all"
+                                onClick={() => applyTemplate(template)}
+                              >
+                                <span className="text-3xl">{template.icon}</span>
+                                <span className="text-sm font-medium text-center">{template.name}</span>
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground text-center">
+                      <Sparkles className="w-4 h-4 inline mr-1" />
+                      Templates pre-fill your brand profile. You can customize everything before saving!
+                    </p>
+                  </div>
+                </CardContent>
+              )}
             </Card>
           )}
 

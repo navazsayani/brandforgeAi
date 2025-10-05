@@ -26,10 +26,55 @@ interface MockupProps {
   imageSrc?: string | null;
   brandName?: string;
   brandLogoUrl?: string | null;
+  aspectRatio?: string;
 }
 
+// Helper function to truncate text at word boundaries
+const truncateAtWord = (text: string, maxLength: number): string => {
+  if (text.length <= maxLength) return text;
+  const truncated = text.substring(0, maxLength);
+  const lastSpace = truncated.lastIndexOf(' ');
+  return lastSpace > 0 ? truncated.substring(0, lastSpace) + '...' : truncated + '...';
+};
+
+// Helper function to determine aspect ratio class
+const getAspectRatioClass = (ratio?: string) => {
+  switch (ratio) {
+    case "1:1": return "aspect-square";
+    case "4:5": return "aspect-[4/5]";
+    case "9:16": return "aspect-[9/16]";
+    case "16:9": return "aspect-video";
+    case "1.91:1": return "aspect-[1.91/1]";
+    default: return "aspect-square";
+  }
+};
+
+// Helper function to generate realistic engagement metrics
+const getRealisticEngagement = (platform: string, seed: string = '') => {
+  // Use caption/hashtags as seed for consistent but varied numbers
+  const hash = seed.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const base = 1000 + (hash % 4000);
+
+  const multipliers: Record<string, number> = {
+    instagram: 1.2,
+    facebook: 1.5,
+    twitter: 0.8,
+    linkedin: 0.6,
+    tiktok: 3.0,
+    youtube: 1.0
+  };
+
+  const mult = multipliers[platform] || 1;
+  return {
+    likes: Math.floor(base * mult),
+    comments: Math.floor(base * mult * 0.05),
+    shares: Math.floor(base * mult * 0.02),
+    views: Math.floor(base * mult * 100)
+  };
+};
+
 // Instagram Mockup Component
-const InstagramMockup: React.FC<MockupProps & { aspectRatio?: string }> = ({
+const InstagramMockup: React.FC<MockupProps> = ({
   caption,
   hashtags,
   imageSrc,
@@ -38,25 +83,16 @@ const InstagramMockup: React.FC<MockupProps & { aspectRatio?: string }> = ({
   aspectRatio = "1:1"
 }) => {
   const combinedText = `${caption}\n\n${hashtags}`;
-  const truncatedText = combinedText.length > 125 ? `${combinedText.substring(0, 125)}...` : combinedText;
+  const truncatedText = truncateAtWord(combinedText, 125);
   const username = brandName.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
-  
-  // Determine aspect ratio class based on platform requirements
-  const getAspectRatioClass = (ratio: string) => {
-    switch (ratio) {
-      case "1:1": return "aspect-square";
-      case "4:5": return "aspect-[4/5]";
-      case "9:16": return "aspect-[9/16]";
-      default: return "aspect-square";
-    }
-  };
+  const engagement = getRealisticEngagement('instagram', combinedText);
   
   return (
-    <Card className="bg-card text-foreground border shadow-lg rounded-xl overflow-hidden max-w-sm mx-auto">
+    <Card className="bg-card text-foreground border shadow-lg rounded-xl overflow-hidden max-w-sm mx-auto hover:shadow-xl transition-shadow duration-300">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-card">
+      <div className="flex items-center justify-between px-4 py-3 bg-card">
         <div className="flex items-center space-x-3">
-          <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-offset-2 ring-offset-card ring-primary/50 p-0.5">
+          <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 p-0.5">
             <div className="w-full h-full rounded-full overflow-hidden bg-card flex items-center justify-center">
               {brandLogoUrl ? (
                 <NextImage
@@ -108,7 +144,7 @@ const InstagramMockup: React.FC<MockupProps & { aspectRatio?: string }> = ({
       )}
       
       {/* Actions */}
-      <div className="p-4 bg-card">
+      <div className="px-4 py-3 bg-card">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-4">
             <Heart className="w-7 h-7 text-foreground hover:text-red-500 cursor-pointer transition-colors" />
@@ -117,9 +153,9 @@ const InstagramMockup: React.FC<MockupProps & { aspectRatio?: string }> = ({
           </div>
           <Bookmark className="w-7 h-7 text-foreground hover:text-muted-foreground cursor-pointer transition-colors" />
         </div>
-        
+
         <div className="space-y-2">
-          <p className="text-sm font-semibold text-foreground">2,847 likes</p>
+          <p className="text-sm font-semibold text-foreground">{engagement.likes.toLocaleString()} likes</p>
           
           <div className="text-sm text-foreground leading-relaxed">
             <span className="font-semibold">{username} </span>
@@ -129,7 +165,7 @@ const InstagramMockup: React.FC<MockupProps & { aspectRatio?: string }> = ({
             )}
           </div>
           
-          <button className="text-sm text-muted-foreground font-medium">View all 47 comments</button>
+          <button className="text-sm text-muted-foreground font-medium">View all {engagement.comments} comments</button>
           <p className="text-xs text-muted-foreground uppercase tracking-wide">2 HOURS AGO</p>
         </div>
       </div>
@@ -138,12 +174,13 @@ const InstagramMockup: React.FC<MockupProps & { aspectRatio?: string }> = ({
 };
 
 // Twitter/X Mockup Component
-const TwitterMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, brandName = "YourBrand", brandLogoUrl }) => {
+const TwitterMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, brandName = "YourBrand", brandLogoUrl, aspectRatio = "16:9" }) => {
   const combinedText = `${caption} ${hashtags}`;
   const twitterHandle = brandName.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
-  
+  const engagement = getRealisticEngagement('twitter', combinedText);
+
   return (
-    <Card className="bg-card text-foreground border shadow-lg rounded-xl overflow-hidden max-w-sm mx-auto">
+    <Card className="bg-card text-foreground border shadow-lg rounded-xl overflow-hidden max-w-sm mx-auto hover:shadow-xl transition-shadow duration-300">
       <div className="p-4">
         {/* Header */}
         <div className="flex items-start space-x-3 mb-3">
@@ -177,16 +214,16 @@ const TwitterMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, bra
           </div>
           <MoreHorizontal className="w-5 h-5 text-muted-foreground mt-1" />
         </div>
-        
+
         {/* Content */}
         <div className="mb-4">
-          <p className="text-base text-foreground whitespace-pre-wrap leading-relaxed">{combinedText}</p>
+          <p className="text-[15px] text-foreground whitespace-pre-wrap leading-relaxed">{combinedText}</p>
         </div>
-        
+
         {/* Image */}
         {imageSrc && (
           <div className="mb-4 rounded-2xl overflow-hidden border">
-            <div className="aspect-video relative bg-muted">
+            <div className={cn("relative bg-muted", getAspectRatioClass(aspectRatio))}>
               <NextImage
                 src={imageSrc}
                 alt="Twitter post"
@@ -197,14 +234,14 @@ const TwitterMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, bra
             </div>
           </div>
         )}
-        
+
         {/* Engagement Stats */}
         <div className="text-sm text-muted-foreground mb-3 border-b border-border pb-3">
           <span className="font-semibold text-foreground">12:34 PM</span>
           <span className="mx-1">·</span>
           <span>Dec 15, 2024</span>
           <span className="mx-1">·</span>
-          <span className="font-semibold text-foreground">1.2M</span>
+          <span className="font-semibold text-foreground">{(engagement.views / 1000).toFixed(1)}K</span>
           <span className="ml-1">Views</span>
         </div>
         
@@ -214,19 +251,19 @@ const TwitterMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, bra
             <div className="p-2 rounded-full group-hover:bg-blue-500/10 transition-colors">
               <MessageCircle className="w-5 h-5" />
             </div>
-            <span className="text-sm font-medium">127</span>
+            <span className="text-sm font-medium">{engagement.comments}</span>
           </div>
           <div className="flex items-center space-x-2 hover:text-green-500 cursor-pointer transition-colors group">
             <div className="p-2 rounded-full group-hover:bg-green-500/10 transition-colors">
               <Repeat2 className="w-5 h-5" />
             </div>
-            <span className="text-sm font-medium">89</span>
+            <span className="text-sm font-medium">{engagement.shares}</span>
           </div>
           <div className="flex items-center space-x-2 hover:text-red-500 cursor-pointer transition-colors group">
             <div className="p-2 rounded-full group-hover:bg-red-500/10 transition-colors">
               <Heart className="w-5 h-5" />
             </div>
-            <span className="text-sm font-medium">2.1K</span>
+            <span className="text-sm font-medium">{(engagement.likes / 1000).toFixed(1)}K</span>
           </div>
           <div className="flex items-center space-x-2 hover:text-blue-500 cursor-pointer transition-colors group">
             <div className="p-2 rounded-full group-hover:bg-blue-500/10 transition-colors">
@@ -240,11 +277,12 @@ const TwitterMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, bra
 };
 
 // Facebook Mockup Component
-const FacebookMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, brandName = "YourBrand", brandLogoUrl }) => {
+const FacebookMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, brandName = "YourBrand", brandLogoUrl, aspectRatio = "16:9" }) => {
   const combinedText = `${caption}\n\n${hashtags}`;
-  
+  const engagement = getRealisticEngagement('facebook', combinedText);
+
   return (
-    <Card className="bg-card text-foreground border shadow-lg rounded-xl overflow-hidden max-w-sm mx-auto">
+    <Card className="bg-card text-foreground border shadow-lg rounded-xl overflow-hidden max-w-sm mx-auto hover:shadow-xl transition-shadow duration-300">
       {/* Header */}
       <div className="p-4 bg-card">
         <div className="flex items-center justify-between mb-3">
@@ -293,7 +331,7 @@ const FacebookMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, br
       {/* Image */}
       {imageSrc && (
         <div className="relative bg-muted">
-          <div className="aspect-video relative">
+          <div className={cn("relative", getAspectRatioClass(aspectRatio))}>
             <NextImage
               src={imageSrc}
               alt="Facebook post"
@@ -304,7 +342,7 @@ const FacebookMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, br
           </div>
         </div>
       )}
-      
+
       {/* Actions */}
       <div className="p-4 bg-card">
         <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
@@ -314,11 +352,11 @@ const FacebookMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, br
               <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs">❤️</div>
               <div className="w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center text-white text-xs">😊</div>
             </div>
-            <span className="ml-2">You and 1,847 others</span>
+            <span className="ml-2">You and {engagement.likes.toLocaleString()} others</span>
           </div>
           <div className="flex items-center space-x-3">
-            <span>156 comments</span>
-            <span>23 shares</span>
+            <span>{engagement.comments} comments</span>
+            <span>{engagement.shares} shares</span>
           </div>
         </div>
         
@@ -344,12 +382,13 @@ const FacebookMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, br
 };
 
 // LinkedIn Mockup Component
-const LinkedInMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, brandName = "YourBrand", brandLogoUrl }) => {
+const LinkedInMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, brandName = "YourBrand", brandLogoUrl, aspectRatio = "1.91:1" }) => {
   const combinedText = `${caption}\n\n${hashtags}`;
-  const truncatedText = combinedText.length > 200 ? `${combinedText.substring(0, 200)}...` : combinedText;
-  
+  const truncatedText = truncateAtWord(combinedText, 200);
+  const engagement = getRealisticEngagement('linkedin', combinedText);
+
   return (
-    <Card className="bg-card text-foreground border shadow-sm rounded-lg overflow-hidden max-w-sm mx-auto">
+    <Card className="bg-card text-foreground border shadow-sm rounded-lg overflow-hidden max-w-sm mx-auto hover:shadow-xl transition-shadow duration-300">
       {/* Header */}
       <div className="p-4 bg-card border-b">
         <div className="flex items-start space-x-3">
@@ -393,7 +432,7 @@ const LinkedInMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, br
       {/* Image */}
       {imageSrc && (
         <div className="relative bg-muted">
-          <div className="aspect-[1.91/1] relative">
+          <div className={cn("relative", getAspectRatioClass(aspectRatio))}>
             <NextImage
               src={imageSrc}
               alt="LinkedIn post"
@@ -404,7 +443,7 @@ const LinkedInMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, br
           </div>
         </div>
       )}
-      
+
       {/* Actions */}
       <div className="p-4 bg-card">
         <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
@@ -413,12 +452,12 @@ const LinkedInMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, br
               <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
                 <span className="text-white text-xs">👍</span>
               </div>
-              <span>Sarah Johnson and 284 others</span>
+              <span>Sarah Johnson and {engagement.likes} others</span>
             </div>
           </div>
           <div className="flex items-center space-x-3">
-            <span>47 comments</span>
-            <span>12 reposts</span>
+            <span>{engagement.comments} comments</span>
+            <span>{engagement.shares} reposts</span>
           </div>
         </div>
         
@@ -446,18 +485,19 @@ const LinkedInMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, br
 };
 
 // TikTok Mockup Component
-const TikTokMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, brandName = "YourBrand", brandLogoUrl }) => {
+const TikTokMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, brandName = "YourBrand", brandLogoUrl, aspectRatio = "9:16" }) => {
   const combinedText = `${caption} ${hashtags}`;
-  const truncatedText = combinedText.length > 80 ? `${combinedText.substring(0, 80)}...` : combinedText;
+  const truncatedText = truncateAtWord(combinedText, 80);
   const username = brandName.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
-  
+  const engagement = getRealisticEngagement('tiktok', combinedText);
+
   return (
-    <Card className="bg-black border-2 border-foreground/10 shadow-lg rounded-2xl overflow-hidden max-w-[280px] mx-auto">
+    <Card className="bg-black border-2 border-foreground/10 shadow-lg rounded-2xl overflow-hidden max-w-[280px] mx-auto hover:shadow-2xl transition-shadow duration-300">
       {/* Main Content Area */}
       <div className="relative">
         {/* Background Image or Video Preview */}
         {imageSrc ? (
-          <div className="aspect-[9/16] relative bg-gray-900">
+          <div className={cn("relative bg-gray-900", getAspectRatioClass(aspectRatio))}>
             <NextImage
               src={imageSrc}
               alt="TikTok video thumbnail"
@@ -474,13 +514,13 @@ const TikTokMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, bran
                 <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mb-1">
                   <Heart className="w-6 h-6 text-white" />
                 </div>
-                <p className="text-white text-xs font-medium">12.3K</p>
+                <p className="text-white text-xs font-medium">{(engagement.likes / 1000).toFixed(1)}K</p>
               </div>
               <div className="text-center">
                 <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mb-1">
                   <MessageCircle className="w-6 h-6 text-white" />
                 </div>
-                <p className="text-white text-xs font-medium">2,847</p>
+                <p className="text-white text-xs font-medium">{(engagement.comments / 1000).toFixed(1)}K</p>
               </div>
               <div className="text-center">
                 <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mb-1">
@@ -540,12 +580,13 @@ const TikTokMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, bran
 
 
 // YouTube Community Mockup Component
-const YouTubeMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, brandName = "YourBrand", brandLogoUrl }) => {
+const YouTubeMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, brandName = "YourBrand", brandLogoUrl, aspectRatio = "16:9" }) => {
   const combinedText = `${caption}\n\n${hashtags}`;
-  const truncatedText = combinedText.length > 300 ? `${combinedText.substring(0, 300)}...` : combinedText;
-  
+  const truncatedText = truncateAtWord(combinedText, 300);
+  const engagement = getRealisticEngagement('youtube', combinedText);
+
   return (
-    <Card className="bg-card text-foreground border shadow-sm rounded-lg overflow-hidden max-w-sm mx-auto">
+    <Card className="bg-card text-foreground border shadow-sm rounded-lg overflow-hidden max-w-sm mx-auto hover:shadow-xl transition-shadow duration-300">
       {/* Header */}
       <div className="p-4 bg-card">
         <div className="flex items-start space-x-3">
@@ -588,7 +629,7 @@ const YouTubeMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, bra
       {/* Image */}
       {imageSrc && (
         <div className="relative bg-muted">
-          <div className="aspect-video relative">
+          <div className={cn("relative", getAspectRatioClass(aspectRatio))}>
             <NextImage
               src={imageSrc}
               alt="YouTube community post"
@@ -599,17 +640,17 @@ const YouTubeMockup: React.FC<MockupProps> = ({ caption, hashtags, imageSrc, bra
           </div>
         </div>
       )}
-      
+
       {/* Actions */}
       <div className="p-4 bg-card border-t">
         <div className="flex items-center space-x-6 text-muted-foreground">
           <div className="flex items-center space-x-2 hover:text-foreground cursor-pointer transition-colors">
             <Heart className="w-5 h-5" />
-            <span className="text-sm font-medium">1.2K</span>
+            <span className="text-sm font-medium">{(engagement.likes / 1000).toFixed(1)}K</span>
           </div>
           <div className="flex items-center space-x-2 hover:text-foreground cursor-pointer transition-colors">
             <MessageCircle className="w-5 h-5" />
-            <span className="text-sm font-medium">89</span>
+            <span className="text-sm font-medium">{engagement.comments}</span>
           </div>
           <div className="flex items-center space-x-2 hover:text-foreground cursor-pointer transition-colors">
             <Share className="w-5 h-5" />
@@ -694,7 +735,7 @@ const SocialMediaPreviews: React.FC<SocialMediaPreviewsProps> = ({
       </div>
       
       <div className={cn(
-        "grid gap-8",
+        "grid gap-6 md:gap-8",
         selectedPlatform === "all" ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3" : "grid-cols-1 max-w-sm mx-auto"
       )}>
         {shouldShowPlatform("instagram") && (

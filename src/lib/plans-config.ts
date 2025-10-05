@@ -14,14 +14,54 @@ export async function getPlansConfig(forceRefresh = false): Promise<PlansConfig>
 
     if (docSnap.exists()) {
       const config = docSnap.data() as PlansConfig;
-      // Merge with defaults to ensure all keys are present
-      // Note: This is a shallow merge. A deep merge might be needed if structure is complex.
-      return {
-        ...DEFAULT_PLANS_CONFIG,
-        ...config,
-        USD: { ...DEFAULT_PLANS_CONFIG.USD, ...(config.USD || {}) },
-        INR: { ...DEFAULT_PLANS_CONFIG.INR, ...(config.INR || {}) },
+      // Deep merge to ensure new default features are added to existing Firestore configs
+      const mergedConfig: PlansConfig = {
+        USD: {
+          free: {
+            ...DEFAULT_PLANS_CONFIG.USD.free,
+            ...(config.USD?.free || {}),
+            features: [
+              ...DEFAULT_PLANS_CONFIG.USD.free.features,
+              ...(config.USD?.free?.features || []).filter(
+                f => !DEFAULT_PLANS_CONFIG.USD.free.features.some(df => df.name === f.name)
+              )
+            ],
+          },
+          pro: {
+            ...DEFAULT_PLANS_CONFIG.USD.pro,
+            ...(config.USD?.pro || {}),
+            features: [
+              ...DEFAULT_PLANS_CONFIG.USD.pro.features,
+              ...(config.USD?.pro?.features || []).filter(
+                f => !DEFAULT_PLANS_CONFIG.USD.pro.features.some(df => df.name === f.name)
+              )
+            ],
+          },
+        },
+        INR: {
+          free: {
+            ...DEFAULT_PLANS_CONFIG.INR.free,
+            ...(config.INR?.free || {}),
+            features: [
+              ...DEFAULT_PLANS_CONFIG.INR.free.features,
+              ...(config.INR?.free?.features || []).filter(
+                f => !DEFAULT_PLANS_CONFIG.INR.free.features.some(df => df.name === f.name)
+              )
+            ],
+          },
+          pro: {
+            ...DEFAULT_PLANS_CONFIG.INR.pro,
+            ...(config.INR?.pro || {}),
+            features: [
+              ...DEFAULT_PLANS_CONFIG.INR.pro.features,
+              ...(config.INR?.pro?.features || []).filter(
+                f => !DEFAULT_PLANS_CONFIG.INR.pro.features.some(df => df.name === f.name)
+              )
+            ],
+          },
+        },
       };
+      return mergedConfig;
     } else {
       console.log("No plans configuration in Firestore, using default plans. A new one can be saved from the admin panel.");
       return DEFAULT_PLANS_CONFIG;

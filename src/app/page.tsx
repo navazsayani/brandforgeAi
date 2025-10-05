@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, UserCircle, Rocket, Paintbrush, Send, ArrowRight, Wand2, Layers, Target, CheckCircle, TrendingUp, Users, Clock, Star, X, Lightbulb, Zap, Building, RefreshCcw, Globe, Eye } from 'lucide-react';
+import { Loader2, UserCircle, Rocket, Paintbrush, Send, ArrowRight, Wand2, Layers, Target, CheckCircle, TrendingUp, Users, Clock, Star, X, Lightbulb, Zap, Building, RefreshCcw, Globe, Eye, Sparkles } from 'lucide-react';
 import PublicHeader from '@/components/PublicHeader';
 
 
@@ -825,6 +825,66 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Templates Section */}
+        <section className="py-12 sm:py-16 bg-gradient-to-br from-primary/5 via-background to-accent/5">
+          <div className="container-responsive">
+            <div className="text-center max-w-3xl mx-auto mb-12">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
+                <Rocket className="w-4 h-4" />
+                <span>Start in Seconds</span>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-balance">
+                20+ Industry Templates to Get You Started
+              </h2>
+              <p className="text-lg text-muted-foreground text-balance">
+                No blank canvas anxiety. Choose a professional template tailored to your industry and customize it to match your brand.
+              </p>
+            </div>
+
+            {/* Template Grid - Show 8 popular ones */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-8">
+              {[
+                { icon: '☕', name: 'Coffee Shop', color: 'from-amber-500/10 to-orange-500/10 border-amber-500/20' },
+                { icon: '💻', name: 'Tech Startup', color: 'from-blue-500/10 to-cyan-500/10 border-blue-500/20' },
+                { icon: '🏋️', name: 'Fitness Coach', color: 'from-green-500/10 to-emerald-500/10 border-green-500/20' },
+                { icon: '👗', name: 'Online Boutique', color: 'from-pink-500/10 to-rose-500/10 border-pink-500/20' },
+                { icon: '🎨', name: 'Designer', color: 'from-purple-500/10 to-violet-500/10 border-purple-500/20' },
+                { icon: '🎥', name: 'Content Creator', color: 'from-red-500/10 to-pink-500/10 border-red-500/20' },
+                { icon: '💅', name: 'Beauty Salon', color: 'from-rose-500/10 to-pink-500/10 border-rose-500/20' },
+                { icon: '🐾', name: 'Pet Services', color: 'from-orange-500/10 to-amber-500/10 border-orange-500/20' },
+              ].map((template, idx) => (
+                <div
+                  key={idx}
+                  className={`p-6 rounded-xl bg-gradient-to-br ${template.color} border text-center hover:scale-105 transition-transform duration-300 cursor-default`}
+                >
+                  <div className="text-4xl mb-2">{template.icon}</div>
+                  <p className="text-sm font-medium">{template.name}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="text-center">
+              <p className="text-muted-foreground mb-4">
+                Plus 12 more templates for Real Estate, Consulting, E-commerce, Events, and more!
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button asChild size="lg" className="btn-gradient-primary text-base sm:text-lg">
+                  <Link href="/templates">
+                    <Sparkles className="w-5 h-5 mr-2" />
+                    Browse All Templates
+                  </Link>
+                </Button>
+                <Button asChild size="lg" variant="outline" className="text-base sm:text-lg">
+                  <Link href="/signup">
+                    Start For Free
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* What You Can Create Section */}
         <section className="py-16 bg-secondary/20">
           <div className="container-responsive">
@@ -1032,7 +1092,7 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
-        
+
         {/* How It Works Section */}
         <section id="how-it-works" className="py-12 sm:py-16 scroll-mt-24">
             <div className="container-responsive">
@@ -1210,6 +1270,27 @@ export default function LandingPage() {
                 </Button>
                  <Button variant="link" asChild className="text-muted-foreground">
                     <Link href="/vs/chatgpt">vs. ChatGPT</Link>
+                </Button>
+                 <Button variant="link" asChild className="text-muted-foreground">
+                    <Link href="/vs/canva">vs. Canva</Link>
+                </Button>
+                 <Button variant="link" asChild className="text-muted-foreground">
+                    <Link href="/vs/jasper">vs. Jasper</Link>
+                </Button>
+                 <Button variant="link" asChild className="text-muted-foreground">
+                    <Link href="/vs/copyai">vs. Copy.ai</Link>
+                </Button>
+                 <Button variant="link" asChild className="text-muted-foreground">
+                    <Link href="/vs/writesonic">vs. Writesonic</Link>
+                </Button>
+                 <Button variant="link" asChild className="text-muted-foreground">
+                    <Link href="/vs/simplified">vs. Simplified</Link>
+                </Button>
+                 <Button variant="link" asChild className="text-muted-foreground">
+                    <Link href="/vs/adcreative">vs. AdCreative</Link>
+                </Button>
+                 <Button variant="link" asChild className="text-muted-foreground">
+                    <Link href="/vs/rytr">vs. Rytr</Link>
                 </Button>
                  <Button variant="link" asChild className="text-muted-foreground">
                     <Link href="/terms-of-service">Terms</Link>
