@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -834,7 +833,7 @@ export default function LandingPage() {
                 <span>Start in Seconds</span>
               </div>
               <h2 className="text-3xl md:text-4xl font-bold mb-4 text-balance">
-                20+ Industry Templates to Get You Started
+                <span className="text-gradient-brand">20+ Industry Templates</span> to Get You Started
               </h2>
               <p className="text-lg text-muted-foreground text-balance">
                 No blank canvas anxiety. Choose a professional template tailored to your industry and customize it to match your brand.
@@ -916,7 +915,7 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-xl font-bold mb-2">AI Images</h3>
                 <p className="text-sm text-muted-foreground">
-                  Stunning visuals with unlimited refinement—never start over again
+                  Generate stunning visuals from scratch or transform your own photos into professional quality
                 </p>
               </div>
 

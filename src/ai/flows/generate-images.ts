@@ -62,6 +62,9 @@ const GenerateImagesInputSchema = z.object({
   
   // Quality mode for intelligent model selection
   qualityMode: z.enum(['fast', 'balanced', 'premium']).optional().describe("Quality preference for intelligent model selection"),
+
+  // Image mode: reference (use as inspiration) or enhance (preserve and improve uploaded image)
+  imageMode: z.enum(['reference', 'enhance']).optional().describe("How to use the uploaded image: 'reference' creates new inspired content, 'enhance' preserves and improves the uploaded image"),
 });
 export type GenerateImagesInput = z.infer<typeof GenerateImagesInputSchema>;
 
@@ -805,6 +808,7 @@ const generateImagesFlow = ai.defineFlow(
       fireworksScheduler,
       fireworksNumInferenceSteps,
       qualityMode = 'balanced',
+      imageMode = 'reference', // Default to reference mode for backward compatibility
     } = input;
 
     const { imageGenerationModel, textToImageModel, fireworksEnabled, intelligentModelSelection } = await getModelConfig();
@@ -1053,10 +1057,80 @@ const generateImagesFlow = ai.defineFlow(
                 if (!brandDescription || !imageStyle) {
                     throw new Error("Brand description and image style are required if not providing/using a finalized text prompt.");
                 }
-                
+
                 let coreInstructions = "";
 
-                if (exampleImage && chosenProvider === 'GEMINI') {
+                // Check if we should enhance the uploaded image (preserve subjects)
+                const shouldEnhanceImage = imageMode === 'enhance' && exampleImage && chosenProvider === 'GEMINI';
+
+                if (shouldEnhanceImage) {
+                    // ENHANCE MODE: AI Photoshoot - Transform into professional marketing image
+                    coreInstructions = `You are a world-class commercial photographer creating a professional marketing photoshoot using the subjects from the provided image.
+
+**YOUR MISSION:**
+Transform this image into a professional marketing asset worthy of magazine covers and premium advertising campaigns, while preserving the exact subjects (people, products, brand elements).
+
+**CRITICAL FOUNDATION - PRESERVE THESE:**
+- ✅ **People**: Keep exact faces, identities, expressions, poses, and positioning
+- ✅ **Products**: Preserve the exact product, its appearance, branding, and features
+- ✅ **Brand Elements**: Maintain logos, packaging, and identifying characteristics
+- ✅ **Subject Composition**: Keep the general arrangement and positioning of key subjects
+
+**PROFESSIONAL PHOTOSHOOT TRANSFORMATION:**
+Think: "A $5000 professional photographer re-shot this using the same subjects"
+
+1. **Background Upgrade**:
+   - Replace casual/amateur backgrounds with professional studio or brand-appropriate settings
+   - Options: Clean studio backdrop, luxury environment, or branded context
+   - Ensure background complements subjects without distracting
+
+2. **Studio Lighting**:
+   - Apply professional three-point lighting or dramatic commercial lighting
+   - Perfect exposure, balanced highlights and shadows
+   - Create depth and dimension with professional lighting techniques
+   - Eliminate harsh shadows and unflattering light
+
+3. **Marketing-Grade Quality**:
+   - Ultra-high definition, razor-sharp clarity
+   - Professional color grading and calibration
+   - Magazine-quality resolution and detail
+   - Perfect white balance and color accuracy
+
+4. **Brand Integration**:
+   Brand: ${brandDescription}${industryContext}
+   Visual Style: ${imageStyle}
+
+   Apply brand aesthetics through:
+   - Color palette aligned with brand identity
+   - Mood and atmosphere matching brand personality
+   - Professional styling that reflects brand values
+   - Visual language consistent with brand positioning
+
+5. **Commercial Polish**:
+   - Professional composition and framing
+   - Marketing-ready presentation
+   - Platform-optimized for social media and advertising
+   - "Hire-a-professional-photographer" quality
+
+**TRANSFORMATION CHECKLIST:**
+✅ Same people/products → Professional photoshoot environment
+✅ Amateur lighting → Studio-quality professional lighting
+✅ Casual background → Professional branded setting
+✅ Phone photo quality → Marketing campaign quality
+✅ Raw upload → Magazine-worthy final image
+
+**CRITICAL RULES:**
+❌ Do NOT change people's faces, identities, or who they are
+❌ Do NOT alter what products look like or their core features
+❌ Do NOT remove or replace the main subjects
+✅ DO transform everything else to professional marketing standards
+
+**FINAL OUTPUT:**
+Generate a professional marketing image that looks like it was shot by a top commercial photographer in a professional studio, while keeping the exact same subjects from the uploaded image.
+
+Think: "Same subjects, professional photoshoot transformation."`;
+                } else if (exampleImage && chosenProvider === 'GEMINI') {
+                    // REFERENCE MODE: Use as inspiration only (existing behavior)
                     coreInstructions = `You are creating a strategic brand marketing image designed to drive engagement, build brand awareness, and convert viewers into customers on social media platforms.
 
 **BRAND STRATEGY CONTEXT:**

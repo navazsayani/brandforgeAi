@@ -276,6 +276,38 @@ export interface OrphanedImageScanResult {
   scanTimestamp: string;
 }
 
+// Housekeeping scan results
+export interface HousekeepingScanResult {
+  oldDeployedContent: {
+    socialPosts: number;
+    blogPosts: number;
+    adCampaigns: number;
+  };
+  oldDraftContent: {
+    socialPosts: number;
+    blogPosts: number;
+    adCampaigns: number;
+  };
+  oldLibraryImages: {
+    count: number;
+    estimatedSize: number;
+  };
+  orphanedRAGVectors: {
+    count: number;
+  };
+  totalUsers: number;
+  scanTimestamp: string;
+}
+
+export interface HousekeepingCleanupResult {
+  deletedDeployedContent: number;
+  deletedDraftContent: number;
+  deletedLibraryImages: number;
+  deletedRAGVectors: number;
+  savedStorageSpace: number;
+  errors: string[];
+}
+
 // RAG metadata interface
 export interface RAGMetadata {
   wasRAGEnhanced: boolean;

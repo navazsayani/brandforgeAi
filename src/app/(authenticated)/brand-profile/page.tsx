@@ -55,7 +55,17 @@ const MAX_IMAGES_FREE = 2;
 
 const brandProfileSchema = z.object({
   brandName: z.string().min(2, { message: "Brand name must be at least 2 characters." }),
-  websiteUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+  websiteUrl: z.string()
+    .transform((val) => {
+      // If empty, return as-is
+      if (!val || val.trim() === '') return '';
+      // Add https:// if no protocol is present
+      if (!/^https?:\/\//i.test(val)) {
+        return 'https://' + val.trim();
+      }
+      return val.trim();
+    })
+    .pipe(z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal(''))),
   brandDescription: z.string().min(10, { message: "Description must be at least 10 characters." }),
   industry: z.string().optional(),
   imageStyleNotes: z.string().optional(),
@@ -536,6 +546,59 @@ export default function BrandProfilePage() {
       return;
     }
 
+    // Auto-enhance description if brand name is not mentioned in it
+    if (finalData.brandName && finalData.brandDescription) {
+      const brandNameLower = finalData.brandName.toLowerCase();
+      const descriptionLower = finalData.brandDescription.toLowerCase();
+
+      // Check if brand name is NOT in the description
+      if (!descriptionLower.includes(brandNameLower)) {
+        try {
+          setIsEnhancing(true);
+          toast({
+            title: "Personalizing Description",
+            description: "Adding your brand name to the description...",
+            duration: 3000
+          });
+
+          const formDataForEnhance = new FormData();
+          formDataForEnhance.append("brandName", finalData.brandName);
+          formDataForEnhance.append("brandDescription", finalData.brandDescription);
+
+          // Call enhance action directly
+          const enhanceResult = await handleEnhanceBrandDescriptionAction(initialEnhanceState, formDataForEnhance);
+
+          if (enhanceResult.data?.enhancedDescription) {
+            finalData.brandDescription = enhanceResult.data.enhancedDescription;
+            if (enhanceResult.data.targetKeywords) {
+              finalData.targetKeywords = enhanceResult.data.targetKeywords;
+            }
+            // Update form to show the enhanced description
+            form.setValue('brandDescription', enhanceResult.data.enhancedDescription, { shouldValidate: true });
+            if (enhanceResult.data.targetKeywords) {
+              form.setValue('targetKeywords', enhanceResult.data.targetKeywords, { shouldValidate: true });
+            }
+            toast({
+              title: "Description Enhanced",
+              description: "Your brand name has been added to the description.",
+              duration: 3000
+            });
+          }
+        } catch (error: any) {
+          console.error("Auto-enhance failed:", error);
+          // Continue with save even if enhancement fails
+          toast({
+            title: "Note",
+            description: "Could not personalize description, saving as-is.",
+            variant: "default",
+            duration: 3000
+          });
+        } finally {
+          setIsEnhancing(false);
+        }
+      }
+    }
+
     if (!isAdmin) {
       finalData.plan = currentProfileBeingEdited?.plan || 'free';
       finalData.subscriptionEndDate = currentProfileBeingEdited?.subscriptionEndDate || null;
@@ -844,14 +907,14 @@ export default function BrandProfilePage() {
           {!currentProfileBeingEdited?.brandDescription && !isAdmin && (
             <Card className="mb-6 bg-gradient-to-br from-primary/5 via-background to-accent/5 border-primary/20">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-full">
-                      <Rocket className="w-6 h-6 text-primary" />
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                    <div className="p-2 bg-primary/10 rounded-full flex-shrink-0">
+                      <Rocket className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                     </div>
-                    <div>
-                      <CardTitle className="text-xl">Quick Start with Templates</CardTitle>
-                      <CardDescription>Choose a template to get started in seconds</CardDescription>
+                    <div className="min-w-0">
+                      <CardTitle className="text-base sm:text-xl break-words">Quick Start with Templates</CardTitle>
+                      <CardDescription className="text-xs sm:text-sm line-clamp-2">Choose a template to get started in seconds</CardDescription>
                     </div>
                   </div>
                   <Button
@@ -859,8 +922,10 @@ export default function BrandProfilePage() {
                     variant={showTemplates ? "ghost" : "outline"}
                     size="sm"
                     onClick={() => setShowTemplates(!showTemplates)}
+                    className="flex-shrink-0 text-xs sm:text-sm"
                   >
-                    {showTemplates ? 'Hide Templates' : 'Browse Templates'}
+                    <span className="hidden sm:inline">{showTemplates ? 'Hide Templates' : 'Browse Templates'}</span>
+                    <span className="inline sm:hidden">{showTemplates ? 'Hide' : 'Browse'}</span>
                   </Button>
                 </div>
               </CardHeader>
@@ -872,17 +937,17 @@ export default function BrandProfilePage() {
                       return (
                         <div key={category}>
                           <h4 className="text-sm font-semibold text-muted-foreground mb-3">{category}</h4>
-                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
                             {templates.map((template) => (
                               <Button
                                 key={template.id}
                                 type="button"
                                 variant="outline"
-                                className="h-auto flex flex-col items-center p-4 gap-2 hover:border-primary hover:bg-primary/5 transition-all"
+                                className="h-auto flex flex-col items-center justify-start p-2 sm:p-3 md:p-4 gap-1.5 sm:gap-2 hover:border-primary hover:bg-primary/5 transition-all min-h-[80px] sm:min-h-[100px] overflow-hidden"
                                 onClick={() => applyTemplate(template)}
                               >
-                                <span className="text-3xl">{template.icon}</span>
-                                <span className="text-sm font-medium text-center">{template.name}</span>
+                                <span className="text-2xl sm:text-3xl flex-shrink-0">{template.icon}</span>
+                                <span className="text-xs sm:text-sm font-medium text-center break-words overflow-wrap-anywhere w-full leading-tight px-1">{template.name}</span>
                               </Button>
                             ))}
                           </div>
@@ -890,8 +955,8 @@ export default function BrandProfilePage() {
                       );
                     })}
                   </div>
-                  <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-                    <p className="text-sm text-muted-foreground text-center">
+                  <div className="mt-6 p-3 sm:p-4 bg-muted/50 rounded-lg">
+                    <p className="text-xs sm:text-sm text-muted-foreground text-center break-words">
                       <Sparkles className="w-4 h-4 inline mr-1" />
                       Templates pre-fill your brand profile. You can customize everything before saving!
                     </p>

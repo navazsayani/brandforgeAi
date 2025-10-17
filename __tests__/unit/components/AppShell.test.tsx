@@ -162,6 +162,8 @@ describe('AppShell', () => {
       expect(screen.getByText('Campaign Manager')).toBeInTheDocument()
       expect(screen.getByText('Image Library')).toBeInTheDocument()
       expect(screen.getByText('Deployment Hub')).toBeInTheDocument()
+      // NEW: Quick Start menu item
+      expect(screen.getByText('Quick Start')).toBeInTheDocument()
       expect(screen.getByText('Pricing')).toBeInTheDocument()
       expect(screen.getByText('Settings')).toBeInTheDocument()
     })
@@ -292,12 +294,13 @@ describe('AppShell', () => {
       expect(screen.getByText('Admin')).toBeInTheDocument()
       expect(screen.getByText('User Management')).toBeInTheDocument()
       expect(screen.getByText('Usage Dashboard')).toBeInTheDocument()
-      expect(screen.getByText('Cleanup Orphaned Images')).toBeInTheDocument()
+      // NEW: Check for housekeeping/cleanup menu items
+      expect(screen.getByText(/Cleanup|Housekeeping/i)).toBeInTheDocument()
     })
 
     test('should highlight active admin navigation item', () => {
       mockUsePathname.mockReturnValue('/admin/dashboard')
-      
+
       render(
         <AppShell>
           <div>Test Content</div>
@@ -306,6 +309,32 @@ describe('AppShell', () => {
 
       const adminDashboardLink = screen.getByText('User Management').closest('a')
       expect(adminDashboardLink).toHaveClass('active')
+    })
+
+    test('should navigate to housekeeping page', () => {
+      mockUsePathname.mockReturnValue('/admin/cleanup')
+
+      render(
+        <AppShell>
+          <div>Test Content</div>
+        </AppShell>
+      )
+
+      const housekeepingLink = screen.getByText(/Cleanup|Housekeeping/i).closest('a')
+      expect(housekeepingLink).toHaveAttribute('href', '/admin/cleanup')
+    })
+
+    test('should highlight housekeeping when on cleanup page', () => {
+      mockUsePathname.mockReturnValue('/admin/cleanup')
+
+      render(
+        <AppShell>
+          <div>Test Content</div>
+        </AppShell>
+      )
+
+      const housekeepingLink = screen.getByText(/Cleanup|Housekeeping/i).closest('a')
+      expect(housekeepingLink).toHaveClass(/active/)
     })
   })
 

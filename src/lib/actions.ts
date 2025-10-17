@@ -282,6 +282,7 @@ export async function handleGenerateImagesAction(
       freepikEffectColor: (formData.get("freepikEffectColor") as string === "none" ? undefined : formData.get("freepikEffectColor") as string | undefined) || undefined,
       freepikEffectLightning: (formData.get("freepikEffectLightning") as string === "none" ? undefined : formData.get("freepikEffectLightning") as string | undefined) || undefined,
       freepikEffectFraming: (formData.get("freepikEffectFraming") as string === "none" ? undefined : formData.get("freepikEffectFraming") as string | undefined) || undefined,
+      imageMode: formData.get("imageMode") as 'reference' | 'enhance' | undefined,
     };
     
     if (!input.provider) delete input.provider;
@@ -318,9 +319,9 @@ export async function handleDescribeImageAction(
 }
 
 export async function handleGenerateSocialMediaCaptionAction(
-  prevState: FormState<{ caption: string; hashtags: string; imageSrc: string | null }>,
+  prevState: FormState<{ caption: string; hashtags: string; imageSrc: string | null; docId?: string }>,
   formData: FormData
-): Promise<FormState<{ caption: string; hashtags: string; imageSrc: string | null }>> {
+): Promise<FormState<{ caption: string; hashtags: string; imageSrc: string | null; docId?: string }>> {
   try {
     const userId = formData.get('userId') as string;
     if (!userId) {
@@ -428,7 +429,7 @@ export async function handleGenerateSocialMediaCaptionAction(
       console.log(`[RAG] Failed to vectorize social media post:`, error);
     }
 
-    return { data: { ...result, imageSrc: imageSrc }, message: "Social media content generated and saved successfully!" };
+    return { data: { ...result, imageSrc: imageSrc, docId: docRef.id }, message: "Social media content generated and saved successfully!" };
   } catch (e: any)
    {
     console.error("Error in handleGenerateSocialMediaCaptionAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
@@ -912,69 +913,73 @@ export async function handleSaveGeneratedImagesAction(
       return { error: errorMsg };
     }
     
-    console.log('[Save Images Action] STEP 4: Starting loop to process and save images.');
-    const brandProfileDocId = userId; 
-    let savedCount = 0;
+    console.log('[Save Images Action] STEP 4: Starting PARALLEL processing for faster uploads...');
+    const brandProfileDocId = userId;
     const saveErrors: string[] = [];
 
-    for (const [index, image] of imagesToSave.entries()) {
+    // Process all images in parallel for much better performance
+    const savePromises = imagesToSave.map(async (image, index) => {
       console.log(`[Save Images Action] -> Processing image ${index + 1}/${imagesToSave.length}...`);
-      
+
       if (!image.dataUri || !(image.dataUri.startsWith('data:image') || image.dataUri.startsWith('image_url:') || image.dataUri.startsWith('https://'))) {
           const errorDetail = `Invalid or missing data URI for image ${index + 1}. URI starts with: ${image.dataUri?.substring(0, 30) || 'N/A'}...`;
           console.warn(`[Save Images Action] -> WARNING: ${errorDetail}. Skipping save for this image.`);
-          saveErrors.push(errorDetail);
-          continue;
+          throw new Error(errorDetail);
       }
 
-      try {
-        let imageUrlToSave = image.dataUri;
-        
-        if (image.dataUri.startsWith('data:image')) {
-            console.log(`[Save Images Action] -> Image ${index + 1} is a data URI. Preparing to upload to Storage...`);
-            const fileExtensionMatch = image.dataUri.match(/^data:image\/([a-zA-Z+]+);base64,/);
-            const fileExtension = fileExtensionMatch ? fileExtensionMatch[1] : 'png';
-            const filePath = `users/${userId}/brandProfiles/${brandProfileDocId}/generatedLibraryImages/${Date.now()}_${generateFilenamePart()}.${fileExtension}`;
-            const imageStorageRef = storageRef(storage, filePath);
-            console.log(`[Save Images Action] -> Uploading to path: ${filePath}`);
-            const snapshot = await uploadString(imageStorageRef, image.dataUri, 'data_url');
-            imageUrlToSave = await getDownloadURL(snapshot.ref);
-            console.log(`[Save Images Action] -> Image ${index + 1} uploaded to Storage. URL: ${imageUrlToSave}`);
-        } else {
-            console.log(`[Save Images Action] -> Image ${index + 1} is a URL. Saving directly.`);
-            if (image.dataUri.startsWith('image_url:')) {
-                imageUrlToSave = image.dataUri.substring(10);
-            }
-        }
+      let imageUrlToSave = image.dataUri;
 
-        const firestoreCollectionPath = `users/${userId}/brandProfiles/${brandProfileDocId}/savedLibraryImages`;
-        console.log(`[Save Images Action] -> Preparing to write image ${index + 1} metadata to Firestore at path: ${firestoreCollectionPath}`);
-        const firestoreCollectionRef = collection(db, firestoreCollectionPath);
-        const docToWrite = {
-            storageUrl: imageUrlToSave,
-            prompt: image.prompt || "N/A",
-            style: image.style || "N/A",
-            createdAt: serverTimestamp(),
-        };
-        console.log(`[Save Images Action] -> Document to write:`, docToWrite);
-        const docRef = await addDoc(firestoreCollectionRef, docToWrite);
-        console.log(`[Save Images Action] -> Successfully wrote image ${index + 1} metadata to Firestore.`);
-        
-        // 🔥 RAG ENHANCEMENT: Auto-vectorize the saved image
-        try {
-          await vectorizeSavedImage(userId, docToWrite as any, docRef.id);
-          console.log(`[RAG] Auto-vectorized saved image: ${docRef.id}`);
-        } catch (error) {
-          console.log(`[RAG] Failed to vectorize saved image:`, error);
-        }
-        savedCount++;
-      } catch (e: any) {
-        const specificError = `Failed during processing of image ${index + 1}: ${(e as Error).message?.substring(0,150)}`;
-        console.error(`[Save Images Action] -> LOOP ERROR for image ${index+1}: ${specificError}. Full error:`, JSON.stringify(e, Object.getOwnPropertyNames(e)));
-        saveErrors.push(specificError);
-        continue;
+      if (image.dataUri.startsWith('data:image')) {
+          console.log(`[Save Images Action] -> Image ${index + 1} is a data URI. Preparing to upload to Storage...`);
+          const fileExtensionMatch = image.dataUri.match(/^data:image\/([a-zA-Z+]+);base64,/);
+          const fileExtension = fileExtensionMatch ? fileExtensionMatch[1] : 'png';
+          // Add index to filename to prevent collisions in parallel uploads
+          const filePath = `users/${userId}/brandProfiles/${brandProfileDocId}/generatedLibraryImages/${Date.now()}_${generateFilenamePart()}_${index}.${fileExtension}`;
+          const imageStorageRef = storageRef(storage, filePath);
+          console.log(`[Save Images Action] -> Uploading to path: ${filePath}`);
+          const snapshot = await uploadString(imageStorageRef, image.dataUri, 'data_url');
+          imageUrlToSave = await getDownloadURL(snapshot.ref);
+          console.log(`[Save Images Action] -> Image ${index + 1} uploaded to Storage. URL: ${imageUrlToSave}`);
+      } else {
+          console.log(`[Save Images Action] -> Image ${index + 1} is a URL. Saving directly.`);
+          if (image.dataUri.startsWith('image_url:')) {
+              imageUrlToSave = image.dataUri.substring(10);
+          }
       }
-    }
+
+      const firestoreCollectionPath = `users/${userId}/brandProfiles/${brandProfileDocId}/savedLibraryImages`;
+      console.log(`[Save Images Action] -> Preparing to write image ${index + 1} metadata to Firestore at path: ${firestoreCollectionPath}`);
+      const firestoreCollectionRef = collection(db, firestoreCollectionPath);
+      const docToWrite = {
+          storageUrl: imageUrlToSave,
+          prompt: image.prompt || "N/A",
+          style: image.style || "N/A",
+          createdAt: serverTimestamp(),
+      };
+      console.log(`[Save Images Action] -> Document to write:`, docToWrite);
+      const docRef = await addDoc(firestoreCollectionRef, docToWrite);
+      console.log(`[Save Images Action] -> Successfully wrote image ${index + 1} metadata to Firestore.`);
+
+      // 🔥 RAG ENHANCEMENT: Auto-vectorize the saved image (non-blocking)
+      vectorizeSavedImage(userId, docToWrite as any, docRef.id)
+        .then(() => console.log(`[RAG] Auto-vectorized saved image: ${docRef.id}`))
+        .catch(error => console.log(`[RAG] Failed to vectorize saved image:`, error));
+
+      return { success: true, index };
+    });
+
+    // Wait for all uploads to complete in parallel
+    console.log(`[Save Images Action] -> Waiting for ${savePromises.length} parallel uploads to complete...`);
+    const results = await Promise.allSettled(savePromises);
+    const savedCount = results.filter(r => r.status === 'fulfilled').length;
+
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        const errorMsg = result.reason?.message || `Image ${index + 1} failed`;
+        console.error(`[Save Images Action] -> Image ${index + 1} failed:`, errorMsg);
+        saveErrors.push(errorMsg);
+      }
+    });
 
     console.log(`[Save Images Action] STEP 4 COMPLETE. Finished processing all images. Saved: ${savedCount}, Errors: ${saveErrors.length}`);
 
@@ -2807,6 +2812,124 @@ export async function handleAdminCleanupOrphanedImagesAction(
   } catch (e: any) {
     console.error('Error in handleAdminCleanupOrphanedImagesAction:', e);
     return { error: `Failed to cleanup orphaned images: ${e.message || "Unknown error."}` };
+  }
+}
+
+// ==================== HOUSEKEEPING ACTIONS ====================
+
+export async function handleAdminScanHousekeepingAction(
+  prevState: FormState<import('@/types').HousekeepingScanResult>,
+  formData: FormData
+): Promise<FormState<import('@/types').HousekeepingScanResult>> {
+  const adminRequesterEmail = formData.get('adminRequesterEmail') as string;
+  const deployedContentMinAge = parseInt(formData.get('deployedContentMinAge') as string || '180', 10);
+  const draftContentMinAge = parseInt(formData.get('draftContentMinAge') as string || '90', 10);
+  const libraryImagesMinAge = parseInt(formData.get('libraryImagesMinAge') as string || '90', 10);
+  const scanRAGVectors = formData.get('scanRAGVectors') !== 'false';
+
+  if (adminRequesterEmail !== 'admin@brandforge.ai') {
+    return { error: "Unauthorized: You do not have permission to perform this action." };
+  }
+
+  try {
+    console.log('[Admin Housekeeping Scan] Starting comprehensive housekeeping scan...');
+    console.log(`[Admin Housekeeping Scan] Min ages - Deployed: ${deployedContentMinAge}d, Draft: ${draftContentMinAge}d, Library: ${libraryImagesMinAge}d`);
+
+    const { scanHousekeeping } = await import('./housekeeping');
+    const scanResult = await scanHousekeeping({
+      deployedContentMinAge,
+      draftContentMinAge,
+      libraryImagesMinAge,
+      scanRAGVectors
+    });
+
+    const totalItems =
+      scanResult.oldDeployedContent.socialPosts +
+      scanResult.oldDeployedContent.blogPosts +
+      scanResult.oldDeployedContent.adCampaigns +
+      scanResult.oldDraftContent.socialPosts +
+      scanResult.oldDraftContent.blogPosts +
+      scanResult.oldDraftContent.adCampaigns +
+      scanResult.oldLibraryImages.count;
+
+    console.log(`[Admin Housekeeping Scan] Scan completed. Found ${totalItems} items that can be cleaned up.`);
+
+    return {
+      data: scanResult,
+      message: `Scan completed. Found ${totalItems} total items (${scanResult.oldDeployedContent.socialPosts + scanResult.oldDeployedContent.blogPosts + scanResult.oldDeployedContent.adCampaigns} deployed, ${scanResult.oldDraftContent.socialPosts + scanResult.oldDraftContent.blogPosts + scanResult.oldDraftContent.adCampaigns} drafts, ${scanResult.oldLibraryImages.count} library images) that can be cleaned up.`
+    };
+  } catch (e: any) {
+    console.error('Error in handleAdminScanHousekeepingAction:', e);
+    return { error: `Failed to scan housekeeping items: ${e.message || "Unknown error."}` };
+  }
+}
+
+export async function handleAdminCleanupHousekeepingAction(
+  prevState: FormState<import('@/types').HousekeepingCleanupResult>,
+  formData: FormData
+): Promise<FormState<import('@/types').HousekeepingCleanupResult>> {
+  const adminRequesterEmail = formData.get('adminRequesterEmail') as string;
+  const cleanDeployedContent = formData.get('cleanDeployedContent') === 'true';
+  const cleanDraftContent = formData.get('cleanDraftContent') === 'true';
+  const cleanLibraryImages = formData.get('cleanLibraryImages') === 'true';
+  const cleanRAGVectors = formData.get('cleanRAGVectors') === 'true';
+  const deployedContentMinAge = parseInt(formData.get('deployedContentMinAge') as string || '180', 10);
+  const draftContentMinAge = parseInt(formData.get('draftContentMinAge') as string || '90', 10);
+  const libraryImagesMinAge = parseInt(formData.get('libraryImagesMinAge') as string || '90', 10);
+  const dryRun = formData.get('dryRun') === 'true';
+
+  if (adminRequesterEmail !== 'admin@brandforge.ai') {
+    return { error: "Unauthorized: You do not have permission to perform this action." };
+  }
+
+  // Safety check: at least one option must be selected
+  if (!cleanDeployedContent && !cleanDraftContent && !cleanLibraryImages && !cleanRAGVectors) {
+    return { error: "Please select at least one cleanup option." };
+  }
+
+  try {
+    console.log('[Admin Housekeeping Cleanup] Starting comprehensive housekeeping cleanup...');
+    console.log(`[Admin Housekeeping Cleanup] Options: Deployed=${cleanDeployedContent}, Draft=${cleanDraftContent}, Library=${cleanLibraryImages}, RAG=${cleanRAGVectors}, DryRun=${dryRun}`);
+
+    const { cleanupHousekeeping } = await import('./housekeeping');
+    const cleanupResult = await cleanupHousekeeping({
+      cleanDeployedContent,
+      cleanDraftContent,
+      cleanLibraryImages,
+      cleanRAGVectors,
+      deployedContentMinAge,
+      draftContentMinAge,
+      libraryImagesMinAge,
+      dryRun
+    });
+
+    console.log('[Admin Housekeeping Cleanup] Cleanup completed:', cleanupResult);
+
+    const totalDeleted =
+      cleanupResult.deletedDeployedContent +
+      cleanupResult.deletedDraftContent +
+      cleanupResult.deletedLibraryImages +
+      cleanupResult.deletedRAGVectors;
+
+    let message = dryRun ?
+      `DRY RUN completed. Would have deleted ${totalDeleted} items.` :
+      `Successfully cleaned up ${totalDeleted} items (${cleanupResult.deletedDeployedContent} deployed, ${cleanupResult.deletedDraftContent} drafts, ${cleanupResult.deletedLibraryImages} library images).`;
+
+    if (cleanupResult.savedStorageSpace > 0) {
+      message += ` Saved ${formatBytes(cleanupResult.savedStorageSpace)} of storage space.`;
+    }
+
+    if (cleanupResult.errors.length > 0) {
+      message += ` ${cleanupResult.errors.length} errors occurred (check logs).`;
+    }
+
+    return {
+      data: cleanupResult,
+      message
+    };
+  } catch (e: any) {
+    console.error('Error in handleAdminCleanupHousekeepingAction:', e);
+    return { error: `Failed to cleanup housekeeping items: ${e.message || "Unknown error."}` };
   }
 }
 

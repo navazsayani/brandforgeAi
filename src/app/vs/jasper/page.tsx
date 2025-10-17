@@ -68,7 +68,7 @@ export default function BrandForgeVsJasperPage() {
             <div className="max-w-4xl mx-auto">
               <Badge className="mb-6" variant="outline">Comparison Guide</Badge>
               <h1 className="text-4xl md:text-6xl font-extrabold text-balance mb-6">
-                BrandForge AI vs <span className="text-gradient-brand">Jasper AI</span>
+                <span className="text-gradient-brand">BrandForge AI</span> vs <span className="text-foreground/90">Jasper AI</span>
               </h1>
               <p className="max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground text-balance">
                 Comprehensive brand building platform vs focused AI writing tool: Which delivers better ROI for your marketing?

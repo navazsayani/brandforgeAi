@@ -84,7 +84,7 @@ export default function BrandForgeVsRytr() {
             <div className="max-w-4xl mx-auto">
               <Badge className="mb-6" variant="outline">Comparison Guide</Badge>
               <h1 className="text-4xl md:text-6xl font-extrabold text-balance mb-6">
-                BrandForge AI vs <span className="text-gradient-brand">Rytr</span>
+                <span className="text-gradient-brand">BrandForge AI</span> vs <span className="text-foreground/90">Rytr</span>
               </h1>
               <p className="max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground text-balance">
                 Why complete brand identity beats budget writing tools for building lasting business value.

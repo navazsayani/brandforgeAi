@@ -30,6 +30,7 @@ export function WelcomeGiftDialog({ isOpen, onOpenChange }: WelcomeGiftDialogPro
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
   const [isComplete, setIsComplete] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [generationState, generationAction] = useActionState(handleWelcomeGiftImageGenerationAction, initialGenerationState);
   const [saveState, saveAction] = useActionState(handleSaveGeneratedImagesAction, initialSaveState);
@@ -68,16 +69,20 @@ export function WelcomeGiftDialog({ isOpen, onOpenChange }: WelcomeGiftDialogPro
     if (saveState.data) {
       toast({ title: "Images Saved!", description: `${saveState.data.savedCount} images have been saved to your library.` });
       setIsComplete(true);
+      setIsSaving(false);
       queryClient.invalidateQueries({ queryKey: ['savedLibraryImages', userId] });
       queryClient.invalidateQueries({ queryKey: ['onboarding_hasImages', userId] });
     }
     if (saveState.error) {
       toast({ title: "Save Failed", description: saveState.error, variant: "destructive" });
+      setIsSaving(false);
     }
   }, [saveState, toast, queryClient, userId]);
 
   const handleSaveImages = () => {
-    if (generatedImages.length === 0 || !userId) return;
+    if (generatedImages.length === 0 || !userId || isSaving) return;
+
+    setIsSaving(true);
 
     const imagesToSave = generatedImages.map(url => ({
       dataUri: url,
@@ -127,10 +132,16 @@ export function WelcomeGiftDialog({ isOpen, onOpenChange }: WelcomeGiftDialogPro
         <div className="py-4 space-y-6 flex-1 overflow-y-auto">
             {isComplete ? (
                  <div className="text-center py-10 space-y-4">
-                    <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
+                    <CheckCircle className="w-16 h-16 text-green-500 mx-auto animate-bounce" />
                     <h3 className="text-xl font-semibold">Images Saved!</h3>
                     <p className="text-muted-foreground">Your new brand images are waiting for you in the Image Library.</p>
                  </div>
+            ) : isSaving ? (
+                <div className="flex flex-col items-center justify-center h-full min-h-[300px]">
+                    <Loader2 className="w-12 h-12 animate-spin text-primary mb-4"/>
+                    <p className="font-semibold">Saving images to your library...</p>
+                    <p className="text-sm text-muted-foreground">Using parallel uploads for faster performance</p>
+                </div>
             ) : isGenerating ? (
                 <div className="flex flex-col items-center justify-center h-full min-h-[300px]">
                     <Loader2 className="w-12 h-12 animate-spin text-primary mb-4"/>
@@ -153,14 +164,23 @@ export function WelcomeGiftDialog({ isOpen, onOpenChange }: WelcomeGiftDialogPro
                 Close
             </Button>
             {!isComplete && generatedImages.length > 0 && (
-                <SubmitButton
+                <Button
                     onClick={handleSaveImages}
-                    loadingText="Saving..."
+                    disabled={isSaving}
                     className="w-full sm:w-auto"
                 >
-                    <Save className="mr-2 h-4 w-4" />
-                    Save All to Library
-                </SubmitButton>
+                    {isSaving ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Saving...
+                        </>
+                    ) : (
+                        <>
+                            <Save className="mr-2 h-4 w-4" />
+                            Save All to Library
+                        </>
+                    )}
+                </Button>
             )}
         </DialogFooter>
       </DialogContent>

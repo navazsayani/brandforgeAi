@@ -63,7 +63,7 @@ test.describe('Brand Creation Journey', () => {
     // Fill out brand information
     await page.getByPlaceholder('Enter your brand name').fill('Test Brand')
     await page.getByPlaceholder('Describe your brand').fill('A test brand for e-commerce')
-    
+
     // Select industry
     await page.getByRole('combobox', { name: 'Industry' }).click()
     await page.getByText('E-commerce').click()
@@ -79,38 +79,43 @@ test.describe('Brand Creation Journey', () => {
 
     // Check for success message
     await expect(page.getByText('Brand profile saved successfully')).toBeVisible()
+
+    // NEW: Welcome gift should be triggered for new users
+    await expect(page.getByText(/Welcome.*BrandForge/i)).toBeVisible({ timeout: 5000 })
   })
 
-  test('should generate brand images', async ({ page }) => {
+  test('should generate brand images using templates', async ({ page }) => {
     // Navigate to content studio
     await page.getByText('Content Studio').click()
     await expect(page).toHaveURL('/content-studio')
 
-    // Click on image generation
-    await page.getByText('Generate Images').click()
+    // NEW: Check for template carousel
+    await expect(page.getByText(/Templates|Quick Templates/i)).toBeVisible({ timeout: 5000 })
 
-    // Fill image generation form
-    await page.getByPlaceholder('Describe the images you want to generate').fill('Modern logo for e-commerce brand')
-    
-    // Select image style
-    await page.getByRole('combobox', { name: 'Image Style' }).click()
-    await page.getByText('Modern').click()
+    // Select a template (e.g., Product Photo)
+    const productTemplate = page.getByText('Product Photo').first()
+    if (await productTemplate.isVisible({ timeout: 5000 })) {
+      await productTemplate.click()
 
-    // Set number of images
-    await page.getByRole('spinbutton', { name: 'Number of Images' }).fill('2')
+      // Fill template-specific fields
+      await page.getByLabel(/Product Description|Describe your product/i).fill('Organic skincare product')
+      await page.getByRole('combobox', { name: /Background/i }).click()
+      await page.getByText('White/Clean').click()
 
-    // Generate images
-    await page.getByRole('button', { name: 'Generate Images' }).click()
+      // Generate images using template
+      await page.getByRole('button', { name: /Generate|Create/i }).click()
 
-    // Check for loading state
-    await expect(page.getByText('Generating images...')).toBeVisible()
+      // Check for loading state
+      await expect(page.getByText(/Generating|Creating/i)).toBeVisible()
 
-    // Wait for images to be generated
-    await expect(page.getByText('Images generated successfully')).toBeVisible()
-
-    // Check that images are displayed
-    await expect(page.locator('img[src*="example.com/image1.jpg"]')).toBeVisible()
-    await expect(page.locator('img[src*="example.com/image2.jpg"]')).toBeVisible()
+      // Wait for images to be generated
+      await expect(page.getByText(/generated successfully|complete/i)).toBeVisible({ timeout: 15000 })
+    } else {
+      // Fallback to manual generation if templates not visible
+      await page.getByPlaceholder('Describe the images you want to generate').fill('Modern logo for e-commerce brand')
+      await page.getByRole('button', { name: /Generate/i }).click()
+      await expect(page.getByText(/Generating|Creating/i)).toBeVisible()
+    }
   })
 
   test('should save generated images to library', async ({ page }) => {

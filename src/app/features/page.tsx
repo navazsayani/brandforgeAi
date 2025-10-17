@@ -1,10 +1,9 @@
-
 "use client";
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { UserCircle, Paintbrush, Send, Rocket, ArrowRight, CheckCircle, Wand2, Lightbulb, Zap, X } from 'lucide-react';
+import { UserCircle, Paintbrush, Send, Rocket, ArrowRight, CheckCircle, Wand2, Lightbulb, Zap, X, Sparkles, Camera } from 'lucide-react';
 import PublicHeader from '@/components/PublicHeader';
 
 
@@ -78,13 +77,14 @@ export default function FeaturesPage() {
                             { text: "Store all your core brand assets in one place to ensure consistency across all generated content.", icon: CheckCircle }
                         ]}
                      />
-                     <FeatureDetailCard 
+                     <FeatureDetailCard
                         id="content-studio"
                         icon={Paintbrush}
                         title="Unified Content Studio"
                         description="Your central hub for all AI-powered content creation."
                         benefits={[
                             { text: "Generate stunning, commercially-licensed images for marketing, social media, and blogs.", icon: CheckCircle },
+                            { text: "Transform your own photos into professional marketing images with AI Photoshoot mode.", icon: Sparkles, highlighted: true },
                             { text: "Refine any generated or uploaded image with simple text instructions to get the perfect shot.", icon: Wand2, highlighted: true },
                             { text: "Create engaging, platform-aware social media posts for Instagram, X, and more.", icon: CheckCircle },
                             { text: "Produce long-form, SEO-optimized blog articles, from outline to finished draft.", icon: CheckCircle },
@@ -102,6 +102,20 @@ export default function FeaturesPage() {
                             { text: "Version history keeps track of every change so you can revert to any previous version", icon: CheckCircle },
                             { text: "Quality modes from fast preview to premium results based on your needs", icon: CheckCircle },
                             { text: "AI prompt enhancement makes your instructions more effective automatically", icon: CheckCircle }
+                        ]}
+                     />
+                     <FeatureDetailCard
+                        id="ai-photoshoot"
+                        icon={Camera}
+                        title="AI Photoshoot Transformation"
+                        description="Turn your raw photos into professional marketing assets while preserving your subjects."
+                        benefits={[
+                            { text: "Upload your own team photos, product shots, or behind-the-scenes images", icon: CheckCircle },
+                            { text: "AI preserves your exact subjects (people, products, brand elements) while transforming everything else", icon: Sparkles, highlighted: true },
+                            { text: "Professional studio lighting, branded backgrounds, and magazine-quality color grading", icon: Camera, highlighted: true },
+                            { text: "Perfect for team introductions, product showcases, lifestyle scenes, and more", icon: CheckCircle },
+                            { text: "Choose between 'Use as Inspiration' or 'Professional Photoshoot Transform' modes", icon: CheckCircle },
+                            { text: "Works seamlessly with content templates that suggest optimal image modes", icon: CheckCircle }
                         ]}
                      />
                      <FeatureDetailCard

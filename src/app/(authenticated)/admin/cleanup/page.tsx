@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { handleAdminScanOrphanedImagesAction, handleAdminCleanupOrphanedImagesAction, type FormState } from '@/lib/actions';
 import { Loader2, ShieldCheck, AlertTriangle, CheckCircle, Trash2, Search, Database, FileX } from 'lucide-react';
 import type { OrphanedImageScanResult } from '@/types';
+import Link from 'next/link';
 
 const initialScanState: FormState<OrphanedImageScanResult> = { error: undefined, data: undefined, message: undefined };
 const initialCleanupState: FormState<{
@@ -164,17 +165,25 @@ export default function AdminCleanupPage() {
     return (
         <div className="max-w-6xl mx-auto py-6 px-4">
             <CardHeader className="px-0 mb-6">
-                <div className="flex items-center space-x-3">
-                    <Database className="w-10 h-10 text-primary" />
-                    <div>
-                        <CardTitle className="text-3xl font-bold flex items-center gap-2">
-                            <ShieldCheck className="w-8 h-8 text-primary" />
-                            Admin: Orphaned Images Cleanup
-                        </CardTitle>
-                        <CardDescription className="text-lg">
-                            Scan and clean up orphaned image references across all users.
-                        </CardDescription>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                        <Database className="w-10 h-10 text-primary" />
+                        <div>
+                            <CardTitle className="text-3xl font-bold flex items-center gap-2">
+                                <ShieldCheck className="w-8 h-8 text-primary" />
+                                Admin: Orphaned Images Cleanup
+                            </CardTitle>
+                            <CardDescription className="text-lg">
+                                Scan and clean up orphaned image references across all users.
+                            </CardDescription>
+                        </div>
                     </div>
+                    <Link href="/admin/housekeeping">
+                        <Button variant="outline" size="sm">
+                            <Database className="w-4 h-4 mr-2" />
+                            Housekeeping
+                        </Button>
+                    </Link>
                 </div>
             </CardHeader>
 

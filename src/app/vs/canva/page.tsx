@@ -68,7 +68,7 @@ export default function BrandForgeVsCanvaPage() {
             <div className="max-w-4xl mx-auto">
               <Badge className="mb-6" variant="outline">Comparison Guide</Badge>
               <h1 className="text-4xl md:text-6xl font-extrabold text-balance mb-6">
-                BrandForge AI vs <span className="text-gradient-brand">Canva</span>
+                <span className="text-gradient-brand">BrandForge AI</span> vs <span className="text-foreground/90">Canva</span>
               </h1>
               <p className="max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground text-balance">
                 AI-powered brand building vs template-based design: Which approach creates stronger, more consistent brands?

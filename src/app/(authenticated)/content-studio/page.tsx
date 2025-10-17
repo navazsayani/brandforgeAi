@@ -22,7 +22,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from '@/contexts/AuthContext'; 
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download, Library, Star, Lock, Sparkles as SparklesIcon, ChevronRight, Target, Users, Check } from 'lucide-react';
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download, Library, Star, Lock, Sparkles as SparklesIcon, ChevronRight, Target, Users, Check, Info } from 'lucide-react';
 import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, handlePopulateImageFormAction, handlePopulateSocialFormAction, handlePopulateBlogFormAction, getPaymentMode, handleGetPlansConfigAction, handleEditImageAction, handleEnhanceRefinePromptAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage, PlansConfig, LastImageGenerationResult } from '@/types';
@@ -42,6 +42,8 @@ import { RefineImageDialog } from '@/components/RefineImageDialog';
 import { Badge } from '@/components/ui/badge';
 import { FireworksImageControls } from '@/components/FireworksImageControls';
 import { ContentFeedbackWidget, RAGInsightsBadge, createRAGInsights } from '@/components/feedback';
+import { TemplateCarousel } from '@/components/TemplateCarousel';
+import { getTemplatesByCategory, buildTemplatePrompt, type ContentTemplate } from '@/lib/content-templates';
 
 
 /**
@@ -302,9 +304,10 @@ export default function ContentStudioPage() {
   const [isEditingOutline, setIsEditingOutline] = useState(true);
 
   // --- START: Refactored Image Selection State ---
-  const [useExampleImageForGen, setUseExampleImageForGen] = useState<boolean>(true);
+  const [useExampleImageForGen, setUseExampleImageForGen] = useState<boolean>(false); // Fixed: Default to false, enable when images exist
   const [selectedProfileImageIndexForGen, setSelectedProfileImageIndexForGen] = useState<number | null>(null);
   const [selectedExampleImageUrl, setSelectedExampleImageUrl] = useState<string>("");
+  const [imageMode, setImageMode] = useState<'reference' | 'enhance'>('reference'); // Image Mode: reference (create new) or enhance (build over)
   // --- END: Refactored Image Selection State ---
   
   const [selectedProfileImageIndexForSocial, setSelectedProfileImageIndexForSocial] = useState<number | null>(null);
@@ -504,6 +507,11 @@ export default function ContentStudioPage() {
   useEffect(() => {
     const hasImages = brandData?.exampleImages && brandData.exampleImages.length > 0;
 
+    // Auto-enable checkbox when images become available
+    if (hasImages && !useExampleImageForGen) {
+      setUseExampleImageForGen(true);
+    }
+
     if (useExampleImageForGen && hasImages) {
         // Ensure index is valid and not out of bounds
         let currentIndex = selectedProfileImageIndexForGen ?? 0;
@@ -511,7 +519,7 @@ export default function ContentStudioPage() {
             currentIndex = 0; // Reset to first image if index is invalid
             setSelectedProfileImageIndexForGen(0); // Also reset the index state
         }
-        
+
         if (selectedProfileImageIndexForGen === null) {
             setSelectedProfileImageIndexForGen(currentIndex);
         }
@@ -1167,8 +1175,14 @@ Your mission is to create a compelling, brand-aligned visual asset that:
             textPromptContent += `\n\nImportant for batch generation: You are generating image 1 of a set of ${numImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (1/${numImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject.`;
         }
     }
-    
-    setCurrentTextPromptForEditing(textPromptContent);
+
+    // Only set the constructed prompt if no template prompt exists
+    // (Template prompts take priority - they include user's template-specific inputs)
+    if (!currentTextPromptForEditing || currentTextPromptForEditing.trim() === "") {
+      setCurrentTextPromptForEditing(textPromptContent);
+    }
+    // If template prompt exists, preserve it (admin can see it in preview textarea)
+
     setFormSnapshot({
         provider: selectedImageProvider,
         brandDescription: imageGenBrandDescription,
@@ -1227,8 +1241,11 @@ Your mission is to create a compelling, brand-aligned visual asset that:
         const exampleImgToUse = (isAdmin || isPremiumActive) ? formSnapshot?.exampleImage : (useExampleImageForGen && selectedExampleImageUrl ? selectedExampleImageUrl : undefined);
         if (typeof exampleImgToUse === 'string' && exampleImgToUse.trim() !== "") {
           formData.set("exampleImage", exampleImgToUse);
+          // Pass imageMode only when image is present
+          formData.set("imageMode", imageMode);
         } else {
           formData.delete("exampleImage");
+          formData.delete("imageMode");
         }
 
         formData.set("aspectRatio", formSnapshot?.aspectRatio || selectedAspectRatio); 
@@ -1358,6 +1375,103 @@ Your mission is to create a compelling, brand-aligned visual asset that:
             populateBlogFormAction(formData);
         });
     };
+
+  // Template handler - applies template to form
+  const handleTemplateApply = (template: ContentTemplate, userInput: Record<string, string>) => {
+    if (!brandData) {
+      toast({
+        title: "Brand Profile Required",
+        description: "Please complete your brand profile first.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Build prompt using template + brand data + user input
+      const result = buildTemplatePrompt(template, brandData, userInput);
+
+      // Store the template-generated prompt for submission
+      // This ensures user's template inputs (like "key message", "mood") are sent to AI
+      if (result.finalPrompt && result.finalPrompt.trim()) {
+        setCurrentTextPromptForEditing(result.finalPrompt);
+      }
+
+      if (template.category === 'image') {
+        // Apply image generation template
+        if (result.autoFilledFields.imageStyle) {
+          setSelectedImageStylePreset(result.autoFilledFields.imageStyle);
+        }
+        if (result.autoFilledFields.aspectRatio) {
+          setSelectedAspectRatio(result.autoFilledFields.aspectRatio);
+        }
+        if (result.autoFilledFields.customStyleNotes) {
+          setCustomStyleNotesInput(result.autoFilledFields.customStyleNotes);
+        }
+        if (result.autoFilledFields.negativePrompt) {
+          setImageGenNegativePrompt(result.autoFilledFields.negativePrompt);
+        }
+
+        // Set imageMode if template suggests it (AI Photoshoot feature)
+        if (template.suggestedImageMode && selectedExampleImageUrl) {
+          setImageMode(template.suggestedImageMode);
+        }
+
+        toast({
+          title: "Template Applied!",
+          description: `${template.name} template settings applied. Review and generate!`,
+          duration: 3000
+        });
+
+        // Scroll to form
+        setTimeout(() => {
+          document.getElementById('imageGenerationFormFields')?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }, 300);
+
+      } else if (template.category === 'social') {
+        // Apply social post template
+        if (result.autoFilledFields.postGoal) {
+          setSocialPostGoal(result.autoFilledFields.postGoal);
+        }
+        if (result.autoFilledFields.tone) {
+          setSocialToneValue(result.autoFilledFields.tone);
+        }
+        if (result.autoFilledFields.targetAudience) {
+          setSocialTargetAudience(result.autoFilledFields.targetAudience);
+        }
+        if (result.autoFilledFields.callToAction) {
+          setSocialCallToAction(result.autoFilledFields.callToAction);
+        }
+        if (result.autoFilledFields.imageDescription) {
+          setSocialImageDescription(result.autoFilledFields.imageDescription);
+        }
+
+        toast({
+          title: "Template Applied!",
+          description: `${template.name} template settings applied. Review and generate!`,
+          duration: 3000
+        });
+
+        // Scroll to form
+        setTimeout(() => {
+          document.getElementById('socialPostFormFields')?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }, 300);
+      }
+    } catch (error) {
+      console.error('Template apply error:', error);
+      toast({
+        title: "Template Error",
+        description: "Failed to apply template. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
 
 
   const handleSocialSubmit = async (formData: FormData) => {
@@ -1554,6 +1668,7 @@ Your mission is to create a compelling, brand-aligned visual asset that:
               <CardDescription>Create unique visuals for your brand. The AI uses your brand description and optional style references to generate images.</CardDescription>
                 {lastUsedImageProvider && <p className="text-xs text-primary mt-1">Image(s) last generated using: {lastUsedImageProvider}</p>}
             </CardHeader>
+
             <div className="px-6 mb-6">
                 <Card className="bg-secondary/30 border-primary/20 shadow-inner">
                     <CardHeader>
@@ -1582,6 +1697,24 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Helpful transition text */}
+            <div className="px-6 mb-4">
+              <p className="text-sm text-center text-muted-foreground">
+                AI Quick Start works great! Or if you prefer a structured approach...
+              </p>
+            </div>
+
+            {/* TEMPLATES SECTION - Now positioned after AI Quick Start */}
+            <div className="px-6 mb-6">
+              <TemplateCarousel
+                templates={getTemplatesByCategory('image')}
+                onTemplateApply={handleTemplateApply}
+                isPremium={isPremiumActive}
+                defaultCollapsed={true}
+              />
+            </div>
+
             {(isAdmin || isPremiumActive) && isPreviewingPrompt ? (
               <form onSubmit={handleImageGenerationSubmit}>
                 <CardContent className="space-y-6">
@@ -1757,6 +1890,42 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                         ) : (
                             <p className="text-xs text-muted-foreground mt-1">No example images in Brand Profile to select.</p>
                         )}
+                    </div>
+                  )}
+
+                  {/* Image Mode Toggle - AI Photoshoot Transformation */}
+                  {useExampleImageForGen && selectedExampleImageUrl && (
+                    <div className="space-y-3 p-4 border rounded-lg bg-gradient-to-br from-primary/5 to-primary/10">
+                      <Label className="text-sm font-semibold flex items-center gap-2">
+                        <SparklesIcon className="w-4 h-4 text-primary" />
+                        How to use your uploaded image?
+                      </Label>
+                      <RadioGroup value={imageMode} onValueChange={(v) => setImageMode(v as 'reference' | 'enhance')}>
+                        <div className="flex items-start space-x-3 p-3 rounded-md hover:bg-background/50 transition-colors cursor-pointer">
+                          <RadioGroupItem value="reference" id="mode-reference" className="mt-0.5" />
+                          <Label htmlFor="mode-reference" className="cursor-pointer flex-1 space-y-1">
+                            <div className="font-medium text-sm">Use as Inspiration Only</div>
+                            <div className="text-xs text-muted-foreground leading-relaxed">
+                              Generate completely new AI content inspired by your image's style and category. Creates brand-new variations.
+                            </div>
+                          </Label>
+                        </div>
+                        <div className="flex items-start space-x-3 p-3 rounded-md hover:bg-background/50 transition-colors cursor-pointer">
+                          <RadioGroupItem value="enhance" id="mode-enhance" className="mt-0.5" />
+                          <Label htmlFor="mode-enhance" className="cursor-pointer flex-1 space-y-1">
+                            <div className="font-medium text-sm">Professional Photoshoot Transform</div>
+                            <div className="text-xs text-muted-foreground leading-relaxed">
+                              Keep your exact subjects (people/products) but transform into magazine-quality marketing image with professional studio lighting and background.
+                            </div>
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                      {imageMode === 'enhance' && (
+                        <div className="flex items-start gap-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded text-xs text-blue-700 dark:text-blue-300">
+                          <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                          <span>Same subjects, professional photoshoot quality. Your people/products are preserved, backgrounds and lighting become studio-grade.</span>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -2040,6 +2209,7 @@ Your mission is to create a compelling, brand-aligned visual asset that:
               <CardTitle className="text-xl flex items-center"><MessageSquareText className="w-6 h-6 mr-2 text-primary"/>Create Social Media Post</CardTitle>
               <CardDescription>Generate engaging captions and hashtags. Uses brand description, image description (optional), and selected tone.</CardDescription>
             </CardHeader>
+
             <div className="px-6 mb-6">
                 <Card className="bg-secondary/30 border-primary/20 shadow-inner">
                     <CardHeader>
@@ -2068,13 +2238,32 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Helpful transition text */}
+            <div className="px-6 mb-4">
+              <p className="text-sm text-center text-muted-foreground">
+                AI Quick Start works great! Or if you prefer a structured approach...
+              </p>
+            </div>
+
+            {/* TEMPLATES SECTION - Now positioned after AI Quick Start */}
+            <div className="px-6 mb-6">
+              <TemplateCarousel
+                templates={getTemplatesByCategory('social')}
+                onTemplateApply={handleTemplateApply}
+                isPremium={isPremiumActive}
+                defaultCollapsed={true}
+              />
+            </div>
+
             <form
+                id="socialPostFormFields"
                 onSubmit={(e) => {
                     e.preventDefault();
                     const currentFormData = new FormData(e.currentTarget);
                      currentFormData.append("industry", selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || "");
-                    if (userId) currentFormData.append("userId", userId); 
-                    if (currentUser?.email) currentFormData.append("userEmail", currentUser.email); 
+                    if (userId) currentFormData.append("userId", userId);
+                    if (currentUser?.email) currentFormData.append("userEmail", currentUser.email);
                     handleSocialSubmit(currentFormData);
                 }}
             >

@@ -12,10 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Sparkles, Rocket, ArrowRight, Loader2, CheckCircle } from 'lucide-react';
 import { handleGenerateSocialMediaCaptionAction, handleGenerateImagesAction, type FormState } from '@/lib/actions';
+import { db } from '@/lib/firebaseConfig';
+import { doc, setDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import NextImage from 'next/image';
 
-const initialSocialState: FormState<{ caption: string; hashtags: string; imageSrc: string | null }> = {
+const initialSocialState: FormState<{ caption: string; hashtags: string; imageSrc: string | null; docId?: string }> = {
   error: undefined,
   data: undefined,
 };
@@ -33,6 +35,7 @@ export default function QuickStartPage() {
   const [businessIdea, setBusinessIdea] = useState('');
   const [industry, setIndustry] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [savedDocId, setSavedDocId] = useState<string | null>(null);
   const [generatedContent, setGeneratedContent] = useState<{
     caption: string;
     hashtags: string;
@@ -55,6 +58,11 @@ export default function QuickStartPage() {
   // Handle social media generation completion
   useEffect(() => {
     if (socialState.data && isGenerating) {
+      // Store the document ID for later update
+      if (socialState.data.docId) {
+        setSavedDocId(socialState.data.docId);
+      }
+
       // Social post generated, now generate image
       const imageFormData = new FormData();
       imageFormData.append('userId', userId!);
@@ -75,15 +83,31 @@ export default function QuickStartPage() {
   // Handle image generation completion
   useEffect(() => {
     if (imageState.data && socialState.data && !generatedContent) {
+      const generatedImageUrl = imageState.data.generatedImages?.[0] || null;
+
       // Set content first - this prevents redirect
       setGeneratedContent({
         caption: socialState.data.caption,
         hashtags: socialState.data.hashtags,
-        image: imageState.data.generatedImages?.[0] || null,
+        image: generatedImageUrl,
       });
+
+      // Update the Firestore document with the generated image
+      if (generatedImageUrl && savedDocId && userId) {
+        const docPath = `users/${userId}/brandProfiles/${userId}/socialMediaPosts/${savedDocId}`;
+        const docRef = doc(db, docPath);
+        setDoc(docRef, { imageSrc: generatedImageUrl }, { merge: true })
+          .then(() => {
+            console.log('[Quick Start] Successfully updated social post with image');
+          })
+          .catch((error) => {
+            console.error('[Quick Start] Failed to update social post with image:', error);
+          });
+      }
+
       setIsGenerating(false);
     }
-  }, [imageState.data, socialState.data, generatedContent]);
+  }, [imageState.data, socialState.data, generatedContent, savedDocId, userId]);
 
   // No tracking needed - Quick Start is truly independent
   // Users can use it multiple times if they want

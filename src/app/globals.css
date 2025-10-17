@@ -124,11 +124,25 @@
                 box-shadow 200ms ease-in-out;
   }
   
-  /* Respect user's motion preferences */
+  /* Respect user's motion preferences with graceful fallbacks */
   @media (prefers-reduced-motion: reduce) {
     * {
       transition: none !important;
-      animation: none !important;
+      animation-duration: 0.01s !important;
+      animation-iteration-count: 1 !important;
+    }
+
+    /* Keep essential loading indicators visible with minimal motion */
+    .animate-spin,
+    [class*="animate-spin"] {
+      animation: spin 1s linear infinite !important;
+      animation-duration: 2s !important; /* Slower spin for reduced motion */
+    }
+
+    /* Keep pulse for important visual feedback */
+    .animate-pulse,
+    [class*="animate-pulse"] {
+      animation: pulse 2s ease-in-out infinite !important;
     }
   }
   
