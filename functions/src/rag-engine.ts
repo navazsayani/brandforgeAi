@@ -1,4 +1,5 @@
 import { getFirestore } from 'firebase-admin/firestore';
+import * as functions from 'firebase-functions';
 import OpenAI from 'openai';
 
 // Types for RAG system
@@ -348,7 +349,17 @@ export class EmbeddingService {
 
   constructor(ragEngine?: RAGEngine) {
     this.ragEngine = ragEngine || null;
-    this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+    // Get OpenAI API key from Firebase config or fall back to process.env for local development
+    const getOpenAIApiKey = () => {
+      try {
+        return functions.config().openai?.api_key || process.env.OPENAI_API_KEY;
+      } catch (error) {
+        return process.env.OPENAI_API_KEY;
+      }
+    };
+
+    this.openai = new OpenAI({ apiKey: getOpenAIApiKey() });
   }
 
   async generateEmbedding(text: string): Promise<number[]> {

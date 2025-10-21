@@ -13,9 +13,14 @@
     "node": "20"
   },
   "dependencies": {
+    "@react-email/components": "^0.5.7",
+    "@react-email/render": "1.0.1",
     "firebase-admin": "^12.1.1",
     "firebase-functions": "^5.0.1",
-    "openai": "^4.52.0"
+    "openai": "^4.52.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "resend": "^3.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.2",

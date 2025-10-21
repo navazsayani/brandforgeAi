@@ -1,10 +1,12 @@
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
-import { initializeApp } from 'firebase-admin/app';
+import * as admin from 'firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// Initialize Firebase Admin
-initializeApp();
+// Initialize Firebase Admin (if not already initialized)
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
 
 const db = getFirestore();
 
