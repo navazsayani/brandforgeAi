@@ -84,8 +84,9 @@ async function _generateImageWithGemini(params: {
   aiInstance: typeof ai;
   promptParts: ({text: string} | {media: {url: string}})[];
   model: string;
+  aspectRatio?: string;
 }): Promise<string> {
-  const { aiInstance, promptParts, model } = params;
+  const { aiInstance, promptParts, model, aspectRatio } = params;
 
   console.log("Final prompt parts array for Gemini _generateImageWithGemini:", JSON.stringify(promptParts, null, 2));
 
@@ -95,7 +96,12 @@ async function _generateImageWithGemini(params: {
       prompt: promptParts,
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
-        // safetySettings removed as per request
+        // Add aspect ratio configuration if provided
+        ...(aspectRatio && {
+          imageConfig: {
+            aspectRatio: aspectRatio
+          }
+        })
       },
     });
 
@@ -993,9 +999,9 @@ const generateImagesFlow = ai.defineFlow(
             if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
                 console.log(`Using finalized text prompt for image ${i+1}: "${finalizedTextPrompt.substring(0,100)}..." (Provider: ${chosenProvider})`);
                 textPromptContent = finalizedTextPrompt;
-                
+
                 // 🔥 RAG ENHANCEMENT: Enhance finalized prompt with adaptive RAG context
-                
+
                 if (userId) {
                     try {
                         const { context, insights } = await getAdaptiveRAGContext(
@@ -1011,17 +1017,17 @@ const generateImagesFlow = ai.defineFlow(
                                 timeframe: 'recent'
                             }
                         );
-                        
+
                         ragInsights = insights;
                         wasRAGEnhanced = insights.length > 0;
-                        
+
                         if (wasRAGEnhanced) {
                             let ragContextText = '';
                             if (context.brandPatterns) ragContextText += `\n\nBRAND CONTEXT:\n${context.brandPatterns}`;
                             if (context.successfulStyles) ragContextText += `\n\nPROVEN SUCCESSFUL STYLES:\n${context.successfulStyles}`;
                             if (context.avoidPatterns) ragContextText += `\n\nAVOID PATTERNS:\n${context.avoidPatterns}`;
                             if (context.performanceInsights) ragContextText += `\n\nPERFORMANCE INSIGHTS:\n${context.performanceInsights}`;
-                            
+
                             textPromptContent += ragContextText;
                             console.log(`[RAG] Enhanced finalized prompt with ${insights.length} insights`);
                         }
@@ -1029,7 +1035,65 @@ const generateImagesFlow = ai.defineFlow(
                         console.log(`[RAG] Failed to enhance prompt, using original:`, error);
                     }
                 }
-                
+
+                // Handle imageMode even when using finalizedTextPrompt (for templates with suggestedImageMode)
+                const shouldEnhanceImage = imageMode === 'enhance' && exampleImage && chosenProvider === 'GEMINI';
+                if (shouldEnhanceImage) {
+                    // ENHANCE MODE: Prepend AI Photoshoot instructions to template prompt
+                    const enhanceInstructions = `**AI PHOTOSHOOT TRANSFORMATION MODE ACTIVE**
+
+You are transforming the provided image into a professional marketing photoshoot while preserving the exact subjects (people, products, brand elements).
+
+**CRITICAL - PRESERVE THESE:**
+- ✅ Keep exact faces, identities, expressions, and positioning of people
+- ✅ Preserve products, their appearance, branding, and features
+- ✅ Maintain logos, packaging, and brand elements
+- ✅ Keep the general arrangement and composition of key subjects
+
+**PROFESSIONAL TRANSFORMATION:**
+- Replace casual/amateur backgrounds with professional studio or brand-appropriate settings
+- Apply professional three-point lighting or dramatic commercial lighting
+- Ultra-high definition, magazine-quality resolution
+- Professional color grading and calibration
+- Marketing-ready presentation quality
+
+**RULES:**
+❌ Do NOT change people's faces, identities, or who they are
+❌ Do NOT alter what products look like or their core features
+❌ Do NOT remove or replace the main subjects
+✅ DO transform everything else to professional marketing standards
+
+Think: "Same subjects, professional photoshoot transformation."
+
+---
+
+**NOW APPLY THE FOLLOWING TEMPLATE REQUIREMENTS:**
+
+`;
+                    textPromptContent = enhanceInstructions + textPromptContent;
+                    console.log(`[ImageMode] Applied 'enhance' mode to finalized template prompt`);
+                } else if (exampleImage && chosenProvider === 'GEMINI') {
+                    // REFERENCE MODE: Add reference mode context to template prompt
+                    const referenceInstructions = `**REFERENCE IMAGE MODE ACTIVE**
+
+The provided example image serves as a category/style reference only. Create a completely new, brand-aligned image inspired by the reference but not copying it.
+
+Use the reference image to understand:
+- Visual category and subject matter
+- Composition style and aesthetic approach
+- Quality level and execution style
+
+Create something new that embodies the brand essence while being inspired by (not copying) the reference.
+
+---
+
+**NOW APPLY THE FOLLOWING TEMPLATE REQUIREMENTS:**
+
+`;
+                    textPromptContent = referenceInstructions + textPromptContent;
+                    console.log(`[ImageMode] Applied 'reference' mode to finalized template prompt`);
+                }
+
                 if (chosenProvider !== 'FREEPIK') { 
                     if (aspectRatio && !finalizedTextPrompt.toLowerCase().includes("aspect ratio")) {
                       textPromptContent += `\n\n**CRITICAL REQUIREMENT**: The generated image *must* have an aspect ratio of exactly **${aspectRatio}**. The entire image canvas must conform to this ratio without any letterboxing or pillarboxing. This is a primary constraint.`;
@@ -1366,6 +1430,7 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                                 aiInstance: ai,
                                 promptParts: finalPromptPartsForGemini,
                                 model: modelForGemini,
+                                aspectRatio: aspectRatio,
                             });
                         }
                         break;
@@ -1412,6 +1477,7 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                                 aiInstance: ai,
                                 promptParts: finalPromptPartsForGemini,
                                 model: modelForGemini,
+                                aspectRatio: aspectRatio,
                             });
                         }
                         break;
@@ -1452,6 +1518,7 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                                 aiInstance: ai,
                                 promptParts: finalPromptPartsForGemini,
                                 model: modelForGemini,
+                                aspectRatio: aspectRatio,
                             });
                         }
                         break;

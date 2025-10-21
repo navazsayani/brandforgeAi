@@ -4,6 +4,7 @@
 import crypto from 'crypto';
 import { generateImages, type GenerateImagesInput } from '@/ai/flows/generate-images';
 import { generateSocialMediaCaption, type GenerateSocialMediaCaptionInput } from '@/ai/flows/generate-social-media-caption';
+import { refineSocialPost, type RefineSocialPostInput, type RefineSocialPostOutput } from '@/ai/flows/refine-social-post-flow';
 import { generateBlogContent, type GenerateBlogContentInput } from '@/ai/flows/generate-blog-content';
 import { generateAdCampaign, type GenerateAdCampaignInput, type GenerateAdCampaignOutput } from '@/ai/flows/generate-ad-campaign';
 import { extractBrandInfoFromUrl, type ExtractBrandInfoFromUrlInput, type ExtractBrandInfoFromUrlOutput } from '@/ai/flows/extract-brand-info-from-url-flow';
@@ -170,6 +171,79 @@ async function checkAndIncrementUsage(userId: string, contentType: 'imageGenerat
   }
 }
 
+/**
+ * Check and increment usage with fractional amount (e.g., 0.5 for refinements)
+ * Used for post-generation refinements that should count as partial usage
+ */
+async function checkAndIncrementUsagePartial(
+  userId: string,
+  contentType: 'socialPosts',
+  fractionalAmount: number
+): Promise<void> {
+  const plansConfig = await getPlansConfig();
+  const userProfileDocRef = doc(db, 'users', userId, 'brandProfiles', userId);
+  const userProfileSnap = await getDoc(userProfileDocRef);
+
+  if (!userProfileSnap.exists()) {
+    throw new Error("User profile not found.");
+  }
+
+  const brandData = userProfileSnap.data() as BrandData;
+  const isAdmin = brandData.userEmail === 'admin@brandforge.ai';
+  if (isAdmin) {
+    console.log(`[Usage Check] Admin user ${userId}. Skipping quota check for partial usage.`);
+    return;
+  }
+
+  const isPremiumActive = brandData.plan === 'premium' && brandData.subscriptionEndDate && (brandData.subscriptionEndDate.toDate ? brandData.subscriptionEndDate.toDate() : new Date(brandData.subscriptionEndDate)) > new Date();
+  const planKey = isPremiumActive ? 'pro' : 'free';
+  const planDetails = plansConfig.USD[planKey];
+  const quotaLimit = planDetails.quotas[contentType];
+
+  if (quotaLimit <= 0) {
+    throw new Error(`Your current plan does not allow for more ${contentType.replace(/([A-Z])/g, ' $1').toLowerCase()}. Please upgrade.`);
+  }
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const usageDocId = `${year}-${month}`;
+
+  const usageDocRef = doc(db, `users/${userId}/usage`, usageDocId);
+
+  try {
+    await runTransaction(db, async (transaction) => {
+      const usageDoc = await transaction.get(usageDocRef);
+
+      let currentUsage: MonthlyUsage = {
+        imageGenerations: 0,
+        socialPosts: 0,
+        blogPosts: 0,
+      };
+
+      if (usageDoc.exists()) {
+        currentUsage = usageDoc.data() as MonthlyUsage;
+      }
+
+      const currentCount = currentUsage[contentType] || 0;
+
+      // Check if adding fractional amount would exceed quota
+      if (currentCount + fractionalAmount > quotaLimit) {
+        throw new Error(`You have reached your monthly quota of ${quotaLimit} for ${contentType.replace(/([A-Z])/g, ' $1').toLowerCase()}. Your quota will reset next month.`);
+      }
+
+      const newCount = currentCount + fractionalAmount;
+      const updateData = { ...currentUsage, [contentType]: newCount };
+
+      transaction.set(usageDocRef, updateData, { merge: true });
+    });
+    console.log(`[Usage Check] Partial usage (${fractionalAmount}) for ${contentType} incremented for user ${userId}.`);
+  } catch (error: any) {
+    console.error(`[Usage Check] Partial transaction failed for user ${userId}:`, error.message);
+    throw error;
+  }
+}
+
 
 export async function handleGenerateImagesAction(
   prevState: FormState<{ generatedImages: string[]; promptUsed: string; providerUsed: string; }>,
@@ -282,7 +356,7 @@ export async function handleGenerateImagesAction(
       freepikEffectColor: (formData.get("freepikEffectColor") as string === "none" ? undefined : formData.get("freepikEffectColor") as string | undefined) || undefined,
       freepikEffectLightning: (formData.get("freepikEffectLightning") as string === "none" ? undefined : formData.get("freepikEffectLightning") as string | undefined) || undefined,
       freepikEffectFraming: (formData.get("freepikEffectFraming") as string === "none" ? undefined : formData.get("freepikEffectFraming") as string | undefined) || undefined,
-      imageMode: formData.get("imageMode") as 'reference' | 'enhance' | undefined,
+      imageMode: (formData.get("imageMode") as string | null) === null || (formData.get("imageMode") as string) === "" ? undefined : formData.get("imageMode") as 'reference' | 'enhance',
     };
     
     if (!input.provider) delete input.provider;
@@ -365,6 +439,7 @@ export async function handleGenerateSocialMediaCaptionAction(
     const callToAction = formData.get("callToAction") as string | null;
     const platform = formData.get("platform") as string | null;
     const language = formData.get("language") as string | null;
+    const templatePrompt = formData.get("templatePrompt") as string | null;
 
     const input: GenerateSocialMediaCaptionInput = {
       brandDescription: formData.get("brandDescription") as string,
@@ -389,6 +464,10 @@ export async function handleGenerateSocialMediaCaptionAction(
     }
     if (language && language.trim() !== "") {
       input.language = language.trim();
+    }
+    // Add template prompt if provided (from specialized social templates)
+    if (templatePrompt && templatePrompt.trim() !== "") {
+      input.templatePrompt = templatePrompt.trim();
     }
 
     if (!input.brandDescription || !input.tone) {
@@ -434,6 +513,85 @@ export async function handleGenerateSocialMediaCaptionAction(
    {
     console.error("Error in handleGenerateSocialMediaCaptionAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
     return { error: `Failed to generate social media caption: ${e.message || "Unknown error. Check server logs."}` };
+  }
+}
+
+/**
+ * Handle refinement of social media posts
+ * Counts as 0.5 usage credit (partial refinement)
+ */
+export async function handleRefineSocialPostAction(
+  prevState: FormState<{
+    caption: string;
+    hashtags: string;
+    variations?: Array<{caption: string; hashtags: string}>
+  }>,
+  formData: FormData
+): Promise<FormState<{
+  caption: string;
+  hashtags: string;
+  variations?: Array<{caption: string; hashtags: string}>
+}>> {
+  try {
+    const userId = formData.get('userId') as string;
+    if (!userId) {
+      return { error: "User ID is missing. Cannot refine social media post." };
+    }
+
+    // Increment usage by 0.5 for refinement (half of a full generation)
+    await checkAndIncrementUsagePartial(userId, 'socialPosts', 0.5);
+
+    const originalCaption = formData.get('originalCaption') as string;
+    const originalHashtags = formData.get('originalHashtags') as string;
+    const refinementType = formData.get('refinementType') as RefineSocialPostInput['refinementType'];
+    const customInstruction = formData.get('customInstruction') as string | null;
+    const platform = formData.get('platform') as string | null;
+    const language = formData.get('language') as string | null;
+    const tone = formData.get('tone') as string | null;
+
+    if (!originalCaption || !originalHashtags) {
+      return { error: "Original caption and hashtags are required for refinement." };
+    }
+
+    if (!refinementType) {
+      return { error: "Refinement type is required." };
+    }
+
+    const input: RefineSocialPostInput = {
+      originalCaption,
+      originalHashtags,
+      refinementType,
+    };
+
+    if (customInstruction && customInstruction.trim() !== "") {
+      input.customInstruction = customInstruction.trim();
+    }
+    if (platform && platform.trim() !== "") {
+      input.platform = platform.trim();
+    }
+    if (language && language.trim() !== "") {
+      input.language = language.trim();
+    }
+    if (tone && tone.trim() !== "") {
+      input.tone = tone.trim();
+    }
+
+    const result = await refineSocialPost(input);
+
+    // Return refined content (no Firestore save - user can decide to save after reviewing)
+    return {
+      data: {
+        caption: result.refinedCaption,
+        hashtags: result.refinedHashtags,
+        variations: result.variations
+      },
+      message: refinementType === 'variations'
+        ? "3 variations generated successfully!"
+        : "Post refined successfully!"
+    };
+  } catch (e: any) {
+    console.error("Error in handleRefineSocialPostAction:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
+    return { error: `Failed to refine social media post: ${e.message || "Unknown error. Check server logs."}` };
   }
 }
 
@@ -1301,6 +1459,7 @@ export async function handleGetAllUserProfilesForAdminAction(
           userEmail: data.userEmail || userData.userEmail || "No Email",
           plan: data.plan || 'free',
           subscriptionEndDate: endDate ? (endDate as any).toDate().toISOString() : null,
+          hasCompletedQuickStart: data.userActivity?.hasCompletedQuickStart || false,
         });
       } else {
         // User exists in index but hasn't created a brand profile yet
@@ -1310,6 +1469,7 @@ export async function handleGetAllUserProfilesForAdminAction(
           userEmail: userData.userEmail || "No Email",
           plan: 'free',
           subscriptionEndDate: null,
+          hasCompletedQuickStart: false,
         });
       }
     }

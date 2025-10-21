@@ -72,10 +72,10 @@ const brandProfileSchema = z.object({
   exampleImages: z.array(z.string().url({ message: "Each image must be a valid URL." })).optional(),
   targetKeywords: z.string().optional(),
   logoType: z.enum(['logomark', 'logotype', 'monogram']).optional(),
-  logoShape: z.enum(['circle', 'square', 'shield', 'hexagon', 'diamond', 'custom']).optional(),
-  logoStyle: z.enum(['minimalist', 'modern', 'classic', 'playful', 'bold', 'elegant']).optional(),
+  logoShape: z.enum(['circle', 'square', 'shield', 'hexagon', 'diamond', 'triangle', 'custom']).optional(),
+  logoStyle: z.enum(['minimalist', 'modern', 'classic', 'playful', 'bold', 'elegant', 'vintage', 'organic']).optional(),
   logoColors: z.string().optional(),
-  logoBackground: z.enum(['white', 'transparent', 'dark']).optional(),
+  logoBackground: z.enum(['white', 'light', 'transparent', 'dark']).optional(),
   brandLogoUrl: z.union([
     z.string().url({ message: "Please enter a valid URL." }),
     z.string().startsWith('data:').optional(),
@@ -1195,7 +1195,7 @@ export default function BrandProfilePage() {
                               <FormItem><FormLabel className="flex items-center text-sm"><ImagePlay className="w-4 h-4 mr-2"/>Shape</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value ?? 'circle'}>
                                   <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                  <SelectContent><SelectGroup><SelectLabel>Shapes</SelectLabel><SelectItem value="circle">Circle</SelectItem><SelectItem value="square">Square</SelectItem><SelectItem value="shield">Shield</SelectItem><SelectItem value="hexagon">Hexagon</SelectItem><SelectItem value="diamond">Diamond</SelectItem><SelectItem value="custom">Custom</SelectItem></SelectGroup></SelectContent>
+                                  <SelectContent><SelectGroup><SelectLabel>Shapes</SelectLabel><SelectItem value="circle">Circle</SelectItem><SelectItem value="square">Square</SelectItem><SelectItem value="shield">Shield</SelectItem><SelectItem value="hexagon">Hexagon</SelectItem><SelectItem value="diamond">Diamond</SelectItem><SelectItem value="triangle">Triangle</SelectItem><SelectItem value="custom">Custom</SelectItem></SelectGroup></SelectContent>
                                 </Select>
                               </FormItem>
                             )} />
@@ -1205,14 +1205,14 @@ export default function BrandProfilePage() {
                             <FormField control={form.control} name="logoStyle" render={({ field }) => (
                               <FormItem><FormLabel className="flex items-center text-sm"><Wand2 className="w-4 h-4 mr-2"/>Style</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value ?? 'modern'}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                  <SelectContent><SelectGroup><SelectLabel>Styles</SelectLabel><SelectItem value="minimalist">Minimalist</SelectItem><SelectItem value="modern">Modern</SelectItem><SelectItem value="classic">Classic</SelectItem><SelectItem value="playful">Playful</SelectItem><SelectItem value="bold">Bold</SelectItem><SelectItem value="elegant">Elegant</SelectItem></SelectGroup></SelectContent>
+                                  <SelectContent><SelectGroup><SelectLabel>Styles</SelectLabel><SelectItem value="minimalist">Minimalist</SelectItem><SelectItem value="modern">Modern</SelectItem><SelectItem value="classic">Classic</SelectItem><SelectItem value="playful">Playful</SelectItem><SelectItem value="bold">Bold</SelectItem><SelectItem value="elegant">Elegant</SelectItem><SelectItem value="vintage">Vintage</SelectItem><SelectItem value="organic">Organic</SelectItem></SelectGroup></SelectContent>
                                 </Select>
                               </FormItem>
                             )} />
                            <FormField control={form.control} name="logoBackground" render={({ field }) => (
                             <FormItem><FormLabel className="flex items-center text-sm"><ImagePlay className="w-4 h-4 mr-2"/>Background</FormLabel>
                               <Select onValueChange={field.onChange} value={field.value ?? 'dark'}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                <SelectContent><SelectGroup><SelectLabel>Backgrounds</SelectLabel><SelectItem value="white">White</SelectItem><SelectItem value="transparent">Transparent</SelectItem><SelectItem value="dark">Dark</SelectItem></SelectGroup></SelectContent>
+                                <SelectContent><SelectGroup><SelectLabel>Backgrounds</SelectLabel><SelectItem value="white">White</SelectItem><SelectItem value="light">Light</SelectItem><SelectItem value="transparent">Transparent</SelectItem><SelectItem value="dark">Dark</SelectItem></SelectGroup></SelectContent>
                               </Select>
                             </FormItem>
                           )} />

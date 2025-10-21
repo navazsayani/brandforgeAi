@@ -24,6 +24,7 @@ const GenerateSocialMediaCaptionInputSchema = z.object({
   callToAction: z.string().optional().describe("A specific call to action to include in the post, e.g., 'Shop now', 'Learn more'."),
   platform: z.string().optional().describe("The target social media platform (e.g., 'instagram', 'linkedin', 'twitter', 'all'). Affects character limits, hashtag strategy, and content style."),
   language: z.string().optional().describe("The target language for the content (e.g., 'english', 'spanish', 'hinglish'). Affects language style and cultural context."),
+  templatePrompt: z.string().optional().describe("Specialized template guidance for structured content generation (from social media templates)."),
 });
 export type GenerateSocialMediaCaptionInput = z.infer<typeof GenerateSocialMediaCaptionInputSchema>;
 
@@ -57,6 +58,18 @@ const generateSocialMediaCaptionPrompt = ai.definePrompt({
   },
   output: {schema: GenerateSocialMediaCaptionOutputSchema},
   prompt: `You are an expert social media manager specializing in crafting platform-optimized, culturally-aware social media content.
+
+{{#if templatePrompt}}
+**SPECIALIZED TEMPLATE FRAMEWORK:**
+{{{templatePrompt}}}
+
+---
+
+Follow the above template framework while incorporating the brand context and platform requirements below. The template provides strategic structure - ensure you apply it while adhering to all platform-specific guidelines.
+
+---
+
+{{/if}}
 
 Your task is to generate an engaging caption and relevant hashtags based on the provided information, optimized for the specific platform and language.
 

@@ -1,6 +1,23 @@
 
 
 import { z } from 'zod';
+import type { Timestamp } from 'firebase/firestore';
+
+// User activity tracking for email automation
+export interface UserActivity {
+  signupDate: Timestamp;
+  hasCompletedQuickStart: boolean;
+  firstGenerationAt: Timestamp | null;
+  lastActiveAt: Timestamp;
+  totalGenerations: number;
+  emailsSent: {
+    welcome: Timestamp;
+    reminder2h?: Timestamp;
+    showcase24h?: Timestamp;
+    templates3d?: Timestamp;
+    final7d?: Timestamp;
+  };
+}
 
 export interface BrandData {
   brandName?: string;
@@ -12,15 +29,16 @@ export interface BrandData {
   exampleImages?: string[]; // URLs from Firebase Storage
   brandLogoUrl?: string; // URL from Firebase Storage for the brand logo
   logoType?: 'logomark' | 'logotype' | 'monogram';
-  logoShape?: 'circle' | 'square' | 'shield' | 'hexagon' | 'diamond' | 'custom';
-  logoStyle?: 'minimalist' | 'modern' | 'classic' | 'playful' | 'bold' | 'elegant';
+  logoShape?: 'circle' | 'square' | 'shield' | 'hexagon' | 'diamond' | 'triangle' | 'custom';
+  logoStyle?: 'minimalist' | 'modern' | 'classic' | 'playful' | 'bold' | 'elegant' | 'vintage' | 'organic';
   logoColors?: string;
-  logoBackground?: 'white' | 'transparent' | 'dark';
+  logoBackground?: 'white' | 'light' | 'transparent' | 'dark';
   plan?: 'free' | 'premium';
   userEmail?: string; // Added user's email
   subscriptionEndDate?: any; // Can be a Firestore Timestamp object
   welcomeGiftOffered?: boolean; // To track if the user has received the welcome gift
   hasUsedPreviewMode?: boolean; // To track if user has used AI preview before profile completion
+  userActivity?: UserActivity; // Track user activity for email automation
 }
 
 export interface GeneratedImage {
@@ -118,6 +136,7 @@ export interface UserProfileSelectItem {
   userEmail: string;
   plan?: 'free' | 'premium';
   subscriptionEndDate?: string | null;
+  hasCompletedQuickStart?: boolean;
 }
 
 export interface ModelConfig {

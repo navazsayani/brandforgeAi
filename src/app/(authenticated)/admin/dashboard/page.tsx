@@ -123,6 +123,7 @@ export default function AdminDashboardPage() {
                                     <TableHead>Brand Name</TableHead>
                                     <TableHead>Email</TableHead>
                                     <TableHead>Plan</TableHead>
+                                    <TableHead>Quick Start</TableHead>
                                     <TableHead>Subscription Ends</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
@@ -136,6 +137,16 @@ export default function AdminDashboardPage() {
                                             <Badge variant={user.plan === 'premium' ? 'default' : 'secondary'} className="capitalize">
                                                 {user.plan}
                                             </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center justify-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={user.hasCompletedQuickStart || false}
+                                                    disabled
+                                                    className="h-4 w-4 cursor-not-allowed"
+                                                />
+                                            </div>
                                         </TableCell>
                                         <TableCell>
                                             {user.subscriptionEndDate

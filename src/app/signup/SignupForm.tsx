@@ -17,6 +17,7 @@ import { AlertCircle, UserPlus, Sparkles, Loader2 } from 'lucide-react';
 import { SubmitButton } from '@/components/SubmitButton';
 import NextImage from 'next/image'; // For Google icon
 import PublicHeader from '@/components/PublicHeader';
+import { sendWelcomeEmailAction } from '@/lib/email-actions';
 
 const signupSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -43,18 +44,29 @@ export default function SignupForm() {
     },
   });
 
-  useEffect(() => {
-    if (authUser && !isLoading) {
-      router.push('/dashboard');
-    }
-  }, [authUser, isLoading, router]);
+  // Redirect is now handled manually in onSubmit and handleGoogleSignUp
+  // This prevents race conditions between auth state change and manual redirect
 
   const onSubmit: SubmitHandler<SignupFormValues> = async (data) => {
     // setFormError(null);
-    setAuthError(null); 
+    setAuthError(null);
     const user = await signUp(data.email, data.password);
     if (user) {
-      // router.push('/dashboard'); // Redirect handled by useEffect in AuthContext now
+      // Send welcome email after successful signup
+      try {
+        await sendWelcomeEmailAction({
+          email: data.email,
+          userName: undefined, // Generic greeting for email signups
+          userId: user.uid,
+        });
+        console.log('[Signup] Welcome email sent to:', data.email);
+      } catch (error) {
+        console.error('[Signup] Failed to send welcome email:', error);
+        // Don't block signup if email fails - just log it
+      }
+
+      // Redirect to Quick Start instead of dashboard
+      router.push('/quick-start?welcome=true');
     } else {
       // authError from context will be set by signUp function
     }
@@ -64,7 +76,21 @@ export default function SignupForm() {
     setAuthError(null);
     const user = await signInWithGoogle();
     if (user) {
-      // router.push('/dashboard'); // Redirect handled by useEffect in AuthContext now
+      // Send welcome email after successful Google signup
+      try {
+        await sendWelcomeEmailAction({
+          email: user.email || '',
+          userName: user.displayName || undefined, // Use Google name or generic greeting
+          userId: user.uid,
+        });
+        console.log('[Signup] Welcome email sent to:', user.email);
+      } catch (error) {
+        console.error('[Signup] Failed to send welcome email:', error);
+        // Don't block signup if email fails - just log it
+      }
+
+      // Redirect to Quick Start instead of dashboard
+      router.push('/quick-start?welcome=true');
     }
   };
 

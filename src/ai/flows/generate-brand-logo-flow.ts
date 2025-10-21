@@ -20,10 +20,10 @@ const GenerateBrandLogoInputSchema = z.object({
   industry: z.string().optional().describe('The industry of the brand (e.g., Fashion, Technology).'),
   targetKeywords: z.string().optional().describe('Comma-separated list of target keywords for the brand.'),
   logoType: z.enum(['logomark', 'logotype', 'monogram']).optional().default('logotype').describe('The type of logo to generate (Symbol, Wordmark, or Initials).'),
-  logoShape: z.enum(['circle', 'square', 'shield', 'hexagon', 'diamond', 'custom']).optional().default('custom').describe('Preferred logo shape/form factor.'),
-  logoStyle: z.enum(['minimalist', 'modern', 'classic', 'playful', 'bold', 'elegant']).optional().default('modern').describe('Preferred logo style aesthetic.'),
+  logoShape: z.enum(['circle', 'square', 'shield', 'hexagon', 'diamond', 'triangle', 'custom']).optional().default('custom').describe('Preferred logo shape/form factor.'),
+  logoStyle: z.enum(['minimalist', 'modern', 'classic', 'playful', 'bold', 'elegant', 'vintage', 'organic']).optional().default('modern').describe('Preferred logo style aesthetic.'),
   logoColors: z.string().optional().describe('A text description of the desired color palette (e.g., "deep teal, soft gold").'),
-  logoBackground: z.enum(['white', 'transparent', 'dark']).optional().default('dark').describe('The desired background for the logo.'),
+  logoBackground: z.enum(['white', 'light', 'transparent', 'dark']).optional().default('dark').describe('The desired background for the logo.'),
 });
 export type GenerateBrandLogoInput = z.infer<typeof GenerateBrandLogoInputSchema>;
 
@@ -41,7 +41,9 @@ function getStyleGuidance(style: string): string {
     classic: 'STYLE: Design a timeless, traditional logo with elegant proportions and a sense of heritage and enduring quality.',
     playful: 'STYLE: Develop a friendly, approachable design with a distinct personality. Use rounded shapes and dynamic elements to evoke fun and accessibility.',
     bold: 'STYLE: Construct a strong, confident design with high contrast, thick lines, and significant visual impact. The logo must command attention.',
-    elegant: 'STYLE: Craft a sophisticated and refined logo with graceful lines and a sense of luxury and high quality.'
+    elegant: 'STYLE: Craft a sophisticated and refined logo with graceful lines and a sense of luxury and high quality.',
+    vintage: 'STYLE: Create a nostalgic, retro-inspired design with classic design elements from past eras. The logo should evoke heritage, authenticity, and timeless appeal with vintage aesthetics.',
+    organic: 'STYLE: Develop a natural, earth-inspired design with flowing, organic shapes and elements from nature. The logo should feel warm, sustainable, and connected to natural forms.'
   };
   return guidance[style as keyof typeof guidance] || guidance.modern;
 }
@@ -87,6 +89,7 @@ function getShapeGuidance(shape: string): string {
     shield: 'SHAPE CONSTRAINT: The final logo must be designed to fit within a shield-shaped boundary. It should evoke feelings of protection, security, and strength.',
     hexagon: 'SHAPE CONSTRAINT: The final logo must be designed to fit within a hexagonal boundary. It should convey a sense of structure, efficiency, and innovation.',
     diamond: 'SHAPE CONSTRAINT: The final logo must be designed to fit within a diamond or rhombus-shaped boundary. It should suggest luxury, precision, and uniqueness.',
+    triangle: 'SHAPE CONSTRAINT: The final logo must be designed to fit within a triangular boundary. It should convey dynamism, direction, stability, and forward movement.',
     custom: 'SHAPE CONSTRAINT: Create a unique, organic, or abstract shape for the logo itself. It should break free from standard geometric boundaries while maintaining a professional and balanced form factor.'
   };
   return shapeGuidance[shape as keyof typeof shapeGuidance] || shapeGuidance.custom;
@@ -107,37 +110,95 @@ function getLogoTypeInstruction(logoType: string, brandName: string): string {
 
 // --- END: Helper functions ---
 
+// New helper function for detailed style guidance (expanded for Gemini)
+function getDetailedStyleGuidance(style: string): string {
+  const detailedGuidance = {
+    minimalist: 'Clean, simple design with generous negative space and minimal elements. Pure essential forms with restrained color palette. Emphasis on clarity and simplicity through reduction to core visual elements.',
+    modern: 'Contemporary, sleek design with clean lines, sharp edges, and current design trends. Fresh, forward-thinking aesthetic with balanced proportions and sophisticated simplicity.',
+    classic: 'Timeless, traditional design with elegant proportions and heritage quality. Refined composition conveying enduring reliability, sophistication, and established authority.',
+    playful: 'Friendly, approachable design with rounded shapes and dynamic elements. Fun, accessible aesthetic with distinctive personality, warmth, and inviting character.',
+    bold: 'Strong, confident design with high contrast, thick lines, and significant visual impact. Commanding presence with assertive composition and powerful visual statement.',
+    elegant: 'Sophisticated, refined design with graceful lines and luxurious quality. Flowing curves and balanced proportions suggesting premium status and refined taste.',
+    vintage: 'Nostalgic, retro-inspired design with classic elements from past design eras. Heritage aesthetic evoking authenticity, tradition, and timeless appeal through vintage styling.',
+    organic: 'Natural, earth-inspired design with flowing shapes and elements from nature. Warm, sustainable aesthetic featuring organic curves, natural forms, and eco-friendly character.'
+  };
+  return detailedGuidance[style as keyof typeof detailedGuidance] || detailedGuidance.modern;
+}
 
-// Helper function for creating Gemini-optimized prompts (conversational style)
+// New helper function for text rendering specifications
+function getTextRenderingSpecs(logoType: string, brandName: string): string {
+  if (logoType === 'logotype') {
+    return `Brand Text: "${brandName}" (complete brand name rendered as text)
+Typography: Professional sans-serif or serif font with medium to bold weight, custom stylized letterforms
+Text Quality: Crystal clear, sharp, perfectly legible text rendering with smooth edges
+Letter Spacing: Appropriate tracking for readability and visual balance, professional kerning
+Text as Hero: Brand name occupies 70-80% of composition as primary visual element
+Text Rendering: Crisp, high-resolution text with smooth anti-aliasing and perfect letter definition
+Font Treatment: Unique typographic styling that transforms the text into a distinctive logo mark`;
+  } else if (logoType === 'monogram') {
+    const initials = brandName.split(' ').map(n => n[0]).join('');
+    return `Initials: "${initials}" only (lettermark monogram design)
+Typography: Artistic letterforms creatively combined into unified symbol, bold distinctive characters
+Text Quality: Sharp, perfectly rendered letters with clear definition and crisp edges
+Letter Integration: Initials artfully merged, interlocked, or stacked while maintaining legibility
+Scale: Letters as primary element occupying 60-70% of composition
+Text Rendering: Crisp, vector-quality letterforms with perfect edges and smooth curves
+Monogram Style: Creative typographic fusion making letters work together as cohesive symbol`;
+  }
+  return '';
+}
+
+// New helper function for visual logo description
+function getVisualLogoDescription(logoType: string, brandName: string, brandDescription: string, industry?: string): string {
+  const industryVisual = industry && industry !== '_none_' ? getIndustryVisualConcepts(industry, brandDescription) : 'geometric shapes representing innovation and growth';
+
+  if (logoType === 'logomark') {
+    return `Pure symbolic icon design featuring ${industryVisual}. The icon serves as the primary brand identifier, designed to be instantly recognizable and memorable. Clean, scalable symbol that works standalone without requiring text support. Abstract or representational visual mark embodying brand essence.`;
+  } else if (logoType === 'logotype') {
+    return `Wordmark logo design with "${brandName}" rendered in custom stylized typography as the primary element. The text treatment itself forms the complete logo through unique typographic design. Professional lettering with distinctive character that embodies the brand personality. Typography is the logo - text styled to be memorable and ownable.`;
+  } else if (logoType === 'monogram') {
+    const initials = brandName.split(' ').map(n => n[0]).join('');
+    return `Monogram lettermark design combining only the initials "${initials}" into a unified artistic symbol. Letters are creatively interwoven, stacked, or merged to form a single cohesive mark. Sophisticated typographic integration creating memorable brand identifier through artistic letter combination.`;
+  }
+  return '';
+}
+
+// Helper function for creating Gemini-optimized prompts (descriptive narrative style)
 function _createGeminiLogoPrompt(input: GenerateBrandLogoInput): string {
     const { brandName, brandDescription, industry, targetKeywords, logoType, logoShape, logoStyle, logoColors, logoBackground } = input;
-    
-    const conversationalPrompt = `I need you to design a compelling and memorable logo for "${brandName}". Let me tell you about this brand and what I'm envisioning:
 
-**About the Brand:**
-${brandDescription}
+    const descriptivePrompt = `A professional ${logoStyle || 'modern'} logo design for "${brandName}"
 
-${industry && industry !== '_none_' ? `This brand operates in the ${industry} industry, so the logo should feel authentic to that space while standing out from competitors.` : ''}
+LOGO DESCRIPTION:
+${getVisualLogoDescription(logoType || 'logomark', brandName, brandDescription, industry)}
 
-${targetKeywords ? `Key themes that should influence the design: ${targetKeywords}` : ''}
+BRAND CONTEXT (CRITICAL):
+Brand: ${brandName}
+Brand Story: ${brandDescription}
+${industry && industry !== '_none_' ? `Industry: ${industry}` : ''}
+${targetKeywords ? `Key Themes: ${targetKeywords}` : ''}
 
-**Design Vision:**
-${getLogoTypeInstruction(logoType || 'logomark', brandName)}
+${logoType === 'logotype' || logoType === 'monogram' ? `TEXT RENDERING REQUIREMENTS:
+${getTextRenderingSpecs(logoType || 'logomark', brandName)}
 
-I'm thinking the overall aesthetic should be ${logoStyle || 'modern'} - something that really captures the brand's personality. ${getShapeGuidance(logoShape || 'circle')}
-
-${logoColors ? `For colors, I'd love to see a palette based on: ${logoColors}. These colors should reflect the brand's character.` : 'Please choose colors that authentically represent the brand\'s personality and appeal to their target audience.'}
-
-The logo will be used on a ${logoBackground || 'white'} background, so please design accordingly.
-
+` : ''}DESIGN SPECIFICATIONS:
+Style: ${getDetailedStyleGuidance(logoStyle || 'modern')}
+Shape: ${getShapeGuidance(logoShape || 'custom')}
+Color Palette: ${logoColors || 'Professional color scheme authentically representing the brand personality, 2-3 complementary colors'}
+Background: ${logoBackground || 'dark'} background providing optimal contrast
 ${industry && industry !== '_none_' ? getEnhancedIndustryGuidance(industry, brandDescription) : ''}
 
-**What I'm Looking For:**
-Can you create something that not only looks professional and polished, but also tells this brand's story at first glance? The logo should feel like it truly belongs to this specific brand - not something generic that could work for anyone. I want people to see it and immediately understand what this brand is about and feel drawn to it.
+RENDERING QUALITY:
+Professional vector-quality rendering with crisp edges and sharp details
+High-resolution output suitable for business cards to billboards
+Clean, scalable design maintaining clarity at all sizes from favicon to outdoor signage
+Polished, publication-ready professional logo with commercial-grade quality
+Perfect edge definition and smooth curves throughout all logo elements
 
-Make it memorable, authentic, and perfectly suited for all business applications - from business cards to billboards.`;
-    
-    return conversationalPrompt;
+OUTPUT REQUIREMENTS:
+The final logo must be memorable, unique, and authentically represent ${brandName}'s brand identity. ${logoType === 'logomark' ? 'Pure icon design without any text, letters, words, or typography elements - symbol only.' : ''}${logoType === 'logotype' ? `Text "${brandName}" must be rendered clearly with professional typography as the primary logo element.` : ''}${logoType === 'monogram' ? `Initials must be artistically combined with crystal-clear letterforms as the complete logo.` : ''} Professional quality suitable for immediate business use across all applications including print, digital, merchandise, and signage.`;
+
+    return descriptivePrompt;
 }
 
 // Helper function for creating Imagen-optimized prompts (direct descriptive style)
@@ -212,7 +273,9 @@ function getStyleDescription(style: string): string {
         classic: 'timeless elegant design with refined proportions',
         playful: 'friendly rounded design with approachable elements',
         bold: 'strong impactful design with thick lines',
-        elegant: 'sophisticated graceful design with flowing curves'
+        elegant: 'sophisticated graceful design with flowing curves',
+        vintage: 'nostalgic retro design with heritage aesthetics',
+        organic: 'natural flowing design with earth-inspired shapes'
     };
     return styleMap[style as keyof typeof styleMap] || styleMap.modern;
 }
@@ -225,6 +288,7 @@ function getShapeDescription(shape: string): string {
         shield: 'shield-shaped composition conveying protection',
         hexagon: 'hexagonal composition with structured angles',
         diamond: 'diamond-shaped composition with precise geometry',
+        triangle: 'triangular composition with dynamic directional flow',
         custom: 'organic custom shape following natural proportions'
     };
     return shapeMap[shape as keyof typeof shapeMap] || shapeMap.circle;
@@ -371,7 +435,12 @@ async function makeGenerationAttempt(promptText: string, textToImageModel: strin
         const { media } = await ai.generate({
             model: textToImageModel,
             prompt: promptText,
-            config: { responseModalities: ['TEXT', 'IMAGE'] },
+            config: {
+                responseModalities: ['IMAGE'],  // Only image output needed for logos
+                imageConfig: {
+                    aspectRatio: "1:1"  // Logos are square format
+                }
+            },
         });
         return media?.url;
     }

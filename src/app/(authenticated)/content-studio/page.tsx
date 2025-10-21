@@ -22,8 +22,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from '@/contexts/AuthContext'; 
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download, Library, Star, Lock, Sparkles as SparklesIcon, ChevronRight, Target, Users, Check, Info } from 'lucide-react';
-import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, handlePopulateImageFormAction, handlePopulateSocialFormAction, handlePopulateBlogFormAction, getPaymentMode, handleGetPlansConfigAction, handleEditImageAction, handleEnhanceRefinePromptAction, type FormState } from '@/lib/actions';
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download, Library, Star, Lock, Sparkles as SparklesIcon, ChevronRight, Target, Users, Check, Info, Scissors, ChevronsUpDown, Smile, Shuffle } from 'lucide-react';
+import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleRefineSocialPostAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, handlePopulateImageFormAction, handlePopulateSocialFormAction, handlePopulateBlogFormAction, getPaymentMode, handleGetPlansConfigAction, handleEditImageAction, handleEnhanceRefinePromptAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage, PlansConfig, LastImageGenerationResult } from '@/types';
 import type { DescribeImageOutput } from "@/ai/flows/describe-image-flow";
@@ -266,6 +266,7 @@ export default function ContentStudioPage() {
   const [imageState, imageAction] = useActionState(handleGenerateImagesAction, initialImageFormState);
   const prevImageStateRef = useRef(imageState);
   const [socialState, socialAction] = useActionState(handleGenerateSocialMediaCaptionAction, initialSocialFormState);
+  const [refineState, refineAction] = useActionState(handleRefineSocialPostAction, { error: null, data: null, message: null } as FormState<{caption: string; hashtags: string; variations?: Array<{caption: string; hashtags: string}>}>);
   const [blogState, blogAction] = useActionState(handleGenerateBlogContentAction, initialBlogFormState);
   const [describeImageState, describeImageAction] = useActionState(handleDescribeImageAction, initialDescribeImageState);
   const [blogOutlineState, blogOutlineAction] = useActionState(handleGenerateBlogOutlineAction, initialBlogOutlineState);
@@ -356,6 +357,11 @@ export default function ContentStudioPage() {
   const [socialTargetAudience, setSocialTargetAudience] = useState<string>("");
   const [socialCallToAction, setSocialCallToAction] = useState<string>("");
   const [socialImageDescription, setSocialImageDescription] = useState<string>("");
+  const [currentSocialTemplatePrompt, setCurrentSocialTemplatePrompt] = useState<string>("");
+
+  // Refinement state
+  const [isRefining, setIsRefining] = useState(false);
+  const [refinedVariations, setRefinedVariations] = useState<Array<{caption: string; hashtags: string}> | null>(null);
 
   // Blog form fields state
   const [blogArticleStyle, setBlogArticleStyle] = useState<string>(blogArticleStyles[0].value);
@@ -506,11 +512,6 @@ export default function ContentStudioPage() {
   // --- START: NEW Robust Image Selection Effect ---
   useEffect(() => {
     const hasImages = brandData?.exampleImages && brandData.exampleImages.length > 0;
-
-    // Auto-enable checkbox when images become available
-    if (hasImages && !useExampleImageForGen) {
-      setUseExampleImageForGen(true);
-    }
 
     if (useExampleImageForGen && hasImages) {
         // Ensure index is valid and not out of bounds
@@ -701,6 +702,44 @@ export default function ContentStudioPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socialState, toast, addGeneratedSocialPost, socialToneValue, customSocialToneNuances]);
+
+  // Handle refinement results
+  useEffect(() => {
+    if (refineState.data) {
+      // Check if this is a variations response
+      if (refineState.data.variations && refineState.data.variations.length > 0) {
+        setRefinedVariations(refineState.data.variations);
+        toast({
+          title: "Variations Generated!",
+          description: refineState.message || "Choose your favorite variation below.",
+          duration: 4000
+        });
+      } else {
+        // Single refinement - update the generated post
+        setGeneratedSocialPost({
+          ...generatedSocialPost,
+          caption: refineState.data.caption,
+          hashtags: refineState.data.hashtags
+        });
+        toast({
+          title: "Post Refined!",
+          description: refineState.message || "Your post has been refined successfully.",
+          duration: 3000
+        });
+      }
+      setIsRefining(false);
+    }
+    if (refineState.error) {
+      toast({
+        title: "Refinement Error",
+        description: refineState.error,
+        variant: "destructive",
+        duration: 5000
+      });
+      setIsRefining(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refineState, toast]);
 
   useEffect(() => {
     if (blogState.data) {
@@ -1413,8 +1452,22 @@ Your mission is to create a compelling, brand-aligned visual asset that:
         }
 
         // Set imageMode if template suggests it (AI Photoshoot feature)
-        if (template.suggestedImageMode && selectedExampleImageUrl) {
-          setImageMode(template.suggestedImageMode);
+        // This is a ONE-TIME action when template is applied - user can uncheck/change afterward
+        if (template.suggestedImageMode) {
+          // Check if user has uploaded images
+          if (brandData.exampleImages && brandData.exampleImages.length > 0) {
+            // Auto-enable checkbox for templates that work best with image enhancement
+            // User can still uncheck if desired - this is just a helpful default
+            setUseExampleImageForGen(true);
+            setImageMode(template.suggestedImageMode);
+          } else {
+            // No images available - show helpful message
+            toast({
+              title: "Tip: Image Recommended",
+              description: `The "${template.name}" template works best with an uploaded image. You can still use it without an image, or upload brand images in your Brand Profile for better results.`,
+              variant: "default"
+            });
+          }
         }
 
         toast({
@@ -1433,6 +1486,12 @@ Your mission is to create a compelling, brand-aligned visual asset that:
 
       } else if (template.category === 'social') {
         // Apply social post template
+        // Store the specialized template prompt (like image generation templates)
+        if (result.finalPrompt && result.finalPrompt.trim()) {
+          setCurrentSocialTemplatePrompt(result.finalPrompt);
+        }
+
+        // Apply field auto-fills
         if (result.autoFilledFields.postGoal) {
           setSocialPostGoal(result.autoFilledFields.postGoal);
         }
@@ -1548,6 +1607,34 @@ Your mission is to create a compelling, brand-aligned visual asset that:
 
     startTransition(() => {
         socialAction(formData);
+    });
+  };
+
+  // Handler for post refinement
+  const handleRefinePost = async (refinementType: 'shorten' | 'lengthen' | 'more_casual' | 'more_professional' | 'add_emojis' | 'remove_emojis' | 'variations') => {
+    if (!generatedSocialPost || !userId) {
+      toast({
+        title: "Error",
+        description: "No post to refine. Please generate a post first.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsRefining(true);
+    setRefinedVariations(null); // Clear any previous variations
+
+    const formData = new FormData();
+    formData.append('userId', userId);
+    formData.append('originalCaption', generatedSocialPost.caption);
+    formData.append('originalHashtags', generatedSocialPost.hashtags);
+    formData.append('refinementType', refinementType);
+    formData.append('platform', selectedSocialPlatform);
+    formData.append('language', selectedSocialLanguage);
+    formData.append('tone', socialToneValue);
+
+    startTransition(() => {
+      refineAction(formData);
     });
   };
 
@@ -2267,8 +2354,9 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                     handleSocialSubmit(currentFormData);
                 }}
             >
-              
+
               <input type="hidden" name="selectedImageSrcForSocialPost" value={useImageForSocialPost && currentSocialImagePreviewUrl ? currentSocialImagePreviewUrl : ""} />
+              <input type="hidden" name="templatePrompt" value={currentSocialTemplatePrompt} />
               <CardContent className="space-y-6">
                 <div className="space-y-3">
                   <div className="flex items-center space-x-2">
@@ -2650,7 +2738,81 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                               <Copy className="w-3 h-3 mr-1" /> Copy Hashtags
                           </Button>
                       </div>
-                      
+
+                      {/* Refinement Buttons */}
+                      <div className="mt-6 pt-4 border-t">
+                        <Label className="text-sm font-medium mb-2 flex items-center">
+                          <Zap className="w-4 h-4 mr-2 text-primary" />
+                          Refine Your Post:
+                        </Label>
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          <Button onClick={() => handleRefinePost('shorten')} variant="outline" size="sm" disabled={isRefining}>
+                            <Scissors className="mr-2 h-4 w-4" />
+                            Shorten
+                          </Button>
+                          <Button onClick={() => handleRefinePost('lengthen')} variant="outline" size="sm" disabled={isRefining}>
+                            <ChevronsUpDown className="mr-2 h-4 w-4" />
+                            Lengthen
+                          </Button>
+                          <Button onClick={() => handleRefinePost('more_casual')} variant="outline" size="sm" disabled={isRefining}>
+                            <Smile className="mr-2 h-4 w-4" />
+                            More Casual
+                          </Button>
+                          <Button onClick={() => handleRefinePost('more_professional')} variant="outline" size="sm" disabled={isRefining}>
+                            <Briefcase className="mr-2 h-4 w-4" />
+                            More Professional
+                          </Button>
+                          <Button onClick={() => handleRefinePost('add_emojis')} variant="outline" size="sm" disabled={isRefining}>
+                            <SparklesIcon className="mr-2 h-4 w-4" />
+                            Add Emojis
+                          </Button>
+                          <Button onClick={() => handleRefinePost('variations')} variant="outline" size="sm" disabled={isRefining}>
+                            <Shuffle className="mr-2 h-4 w-4" />
+                            Generate 3 Variations
+                          </Button>
+                        </div>
+                        {isRefining && (
+                          <p className="text-xs text-muted-foreground mt-2 flex items-center">
+                            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                            Refining... (uses 0.5 credit)
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Variations Display */}
+                      {refinedVariations && refinedVariations.length > 0 && (
+                        <div className="mt-4 space-y-3">
+                          <Label className="text-sm font-medium">Choose a Variation:</Label>
+                          {refinedVariations.map((variant, index) => (
+                            <Card key={index} className="cursor-pointer hover:border-primary transition-colors" onClick={() => {
+                              setGeneratedSocialPost({...generatedSocialPost, caption: variant.caption, hashtags: variant.hashtags});
+                              setRefinedVariations(null);
+                              toast({
+                                title: "Variation Selected",
+                                description: `Variation ${index + 1} is now your active post.`,
+                                duration: 2000
+                              });
+                            }}>
+                              <CardHeader className="pb-2">
+                                <CardTitle className="text-sm">Variation {index + 1}</CardTitle>
+                              </CardHeader>
+                              <CardContent className="pt-0">
+                                <p className="text-sm mb-2 whitespace-pre-wrap">{variant.caption}</p>
+                                <p className="text-xs text-muted-foreground break-words">{variant.hashtags}</p>
+                              </CardContent>
+                            </Card>
+                          ))}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setRefinedVariations(null)}
+                            className="w-full mt-2"
+                          >
+                            Close Variations
+                          </Button>
+                        </div>
+                      )}
+
                       {/* Content Feedback Widget for Social Media */}
                       {userId && (
                         <ContentFeedbackWidget

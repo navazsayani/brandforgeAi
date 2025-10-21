@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useActionState, startTransition, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBrand } from '@/contexts/BrandContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +13,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Sparkles, Rocket, ArrowRight, Loader2, CheckCircle } from 'lucide-react';
 import { handleGenerateSocialMediaCaptionAction, handleGenerateImagesAction, type FormState } from '@/lib/actions';
 import { db } from '@/lib/firebaseConfig';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, increment } from 'firebase/firestore';
 import Link from 'next/link';
 import NextImage from 'next/image';
 
@@ -30,6 +30,8 @@ const initialImageFormState: FormState<{ generatedImages: string[]; promptUsed: 
 
 export default function QuickStartPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isWelcome = searchParams.get('welcome') === 'true';
   const { userId, currentUser } = useAuth();
   const { brandData, setBrandData } = useBrand();
   const [businessIdea, setBusinessIdea] = useState('');
@@ -103,6 +105,23 @@ export default function QuickStartPage() {
           .catch((error) => {
             console.error('[Quick Start] Failed to update social post with image:', error);
           });
+
+        // Track Quick Start completion in user activity
+        const userDocRef = doc(db, `users/${userId}/brandProfiles/${userId}`);
+        setDoc(userDocRef, {
+          userActivity: {
+            hasCompletedQuickStart: true,
+            firstGenerationAt: serverTimestamp(),
+            lastActiveAt: serverTimestamp(),
+            totalGenerations: increment(1),
+          },
+        }, { merge: true })
+          .then(() => {
+            console.log('[Quick Start] User activity updated - Quick Start completed');
+          })
+          .catch((error) => {
+            console.error('[Quick Start] Failed to update user activity:', error);
+          });
       }
 
       setIsGenerating(false);
@@ -166,28 +185,49 @@ export default function QuickStartPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-accent/10 flex items-center justify-center p-4">
-      <div className="max-w-3xl w-full space-y-6 animate-fade-in">
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="w-fit mx-auto p-4 bg-primary/10 rounded-full mb-4">
-            <Sparkles className="h-12 w-12 text-primary" />
-          </div>
-          <h1 className="text-3xl font-bold text-gradient-brand">
-            Welcome to BrandForge AI!
-          </h1>
-          <p className="text-lg text-muted-foreground">
-            Let's create your first AI-generated post in 30 seconds
-          </p>
+    <div className="container-responsive py-8 space-y-8 animate-fade-in">
+      {/* Header Section */}
+      <div className="text-center space-y-4">
+        <div className="w-fit mx-auto p-4 bg-primary/10 rounded-full">
+          <Rocket className="h-10 w-10 text-primary" />
         </div>
+        {isWelcome ? (
+          <>
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold text-balance mb-2">
+                Welcome to BrandForge AI! 🎉
+              </h1>
+              <p className="text-lg text-muted-foreground text-balance">
+                Let's create your first AI-generated Instagram post in 30 seconds
+              </p>
+            </div>
+            <Alert className="max-w-2xl mx-auto border-primary/30 bg-primary/5">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <AlertTitle className="text-base font-semibold">No setup needed!</AlertTitle>
+              <AlertDescription>
+                Just describe your business below and watch AI create a complete post with image and caption.
+              </AlertDescription>
+            </Alert>
+          </>
+        ) : (
+          <>
+            <h1 className="text-3xl md:text-4xl font-bold text-balance">
+              Quick Start: Your First Instagram Post
+            </h1>
+            <p className="text-lg text-muted-foreground text-balance">
+              Generate a complete Instagram post with AI in 30 seconds
+            </p>
+          </>
+        )}
+      </div>
 
-        {/* Main Card */}
+      {/* Main Card */}
+      <div className="max-w-3xl mx-auto">
         <Card className="card-enhanced">
           <CardHeader>
-            <CardTitle className="text-2xl">🚀 Quick Start: Your First Instagram Post</CardTitle>
+            <CardTitle className="text-2xl">Describe Your Business</CardTitle>
             <CardDescription>
               Tell us about your business and we'll generate a complete Instagram post with image and caption.
-              No setup required!
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -401,7 +441,7 @@ export default function QuickStartPage() {
 
         {/* Trust Indicators */}
         {!generatedContent && (
-          <div className="text-center space-y-2">
+          <div className="text-center">
             <p className="text-sm text-muted-foreground">
               ✨ No credit card required • 🔒 100% free to start • ⚡ Takes 30 seconds
             </p>
