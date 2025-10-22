@@ -1,0 +1,20 @@
+{
+  "image": "/showcase/examples/elevate-consulting/posts/post-1-image.png",
+  "caption": "Is your startup ready to scale efficiently.",
+  "hashtags": "#BusinessConsulting #StartupGrowth #SmallBusinessTips #ScalingUp #DataDriven",
+  "generationTime": "32 seconds",
+  "platformScreenshots": {
+    "instagram": "/showcase/examples/elevate-consulting/posts/post-1-instagram.png",
+    "facebook": "/showcase/examples/elevate-consulting/posts/post-1-facebook.png",
+    "linkedin": "/showcase/examples/elevate-consulting/posts/post-1-linkedin.png",
+    "twitter": "/showcase/examples/elevate-consulting/posts/post-1-twitter.png"
+  },
+  "previewProps": {
+    "caption": "Is your startup ready to scale efficiently.",
+    "hashtags": "#BusinessConsulting #StartupGrowth #SmallBusinessTips #ScalingUp #DataDriven",
+    "imageSrc": "/showcase/examples/elevate-consulting/posts/post-1-image.png",
+    "brandName": "Elevate Consulting",
+    "brandLogoUrl": "/showcase/examples/elevate-consulting/logo.png",
+    "selectedPlatform": "all"
+  }
+}

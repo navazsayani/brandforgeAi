@@ -1,0 +1,20 @@
+{
+  "image": "/showcase/examples/glow-skincare/posts/post-2-image.png",
+  "caption": "Imagine skincare that feels as good as it looks on your skin.",
+  "hashtags": "#NaturalSkincare #CleanBeauty #HealthySkin #RadiantSkin #SustainableBeauty",
+  "generationTime": "32 seconds",
+  "platformScreenshots": {
+    "instagram": "/showcase/examples/glow-skincare/posts/post-2-instagram.png",
+    "facebook": "/showcase/examples/glow-skincare/posts/post-2-facebook.png",
+    "linkedin": "/showcase/examples/glow-skincare/posts/post-2-linkedin.png",
+    "twitter": "/showcase/examples/glow-skincare/posts/post-2-twitter.png"
+  },
+  "previewProps": {
+    "caption": "Imagine skincare that feels as good as it looks on your skin.",
+    "hashtags": "#NaturalSkincare #CleanBeauty #HealthySkin #RadiantSkin #SustainableBeauty",
+    "imageSrc": "/showcase/examples/glow-skincare/posts/post-2-image.png",
+    "brandName": "Glow Skincare",
+    "brandLogoUrl": "/showcase/examples/glow-skincare/logo.png",
+    "selectedPlatform": "all"
+  }
+}

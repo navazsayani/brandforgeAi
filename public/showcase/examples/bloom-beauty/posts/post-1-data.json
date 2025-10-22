@@ -1,0 +1,20 @@
+{
+  "image": "/showcase/examples/bloom-beauty/posts/post-1-image.png",
+  "caption": "Step into a world where beauty meets unparalleled luxury and every visit is a journey of transformation.",
+  "hashtags": "#LuxurySalon #BeautyPampering #HairTransformation #NailArtistry #PersonalizedBeauty #SalonExperience",
+  "generationTime": "32 seconds",
+  "platformScreenshots": {
+    "instagram": "/showcase/examples/bloom-beauty/posts/post-1-instagram.png",
+    "facebook": "/showcase/examples/bloom-beauty/posts/post-1-facebook.png",
+    "linkedin": "/showcase/examples/bloom-beauty/posts/post-1-linkedin.png",
+    "twitter": "/showcase/examples/bloom-beauty/posts/post-1-twitter.png"
+  },
+  "previewProps": {
+    "caption": "Step into a world where beauty meets unparalleled luxury and every visit is a journey of transformation.",
+    "hashtags": "#LuxurySalon #BeautyPampering #HairTransformation #NailArtistry #PersonalizedBeauty #SalonExperience",
+    "imageSrc": "/showcase/examples/bloom-beauty/posts/post-1-image.png",
+    "brandName": "Bloom Beauty Bar",
+    "brandLogoUrl": "/showcase/examples/bloom-beauty/logo.png",
+    "selectedPlatform": "all"
+  }
+}

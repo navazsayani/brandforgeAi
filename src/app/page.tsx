@@ -13,7 +13,21 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, UserCircle, Rocket, Paintbrush, Send, ArrowRight, Wand2, Layers, Target, CheckCircle, TrendingUp, Users, Clock, Star, X, Lightbulb, Zap, Building, RefreshCcw, Globe, Eye, Sparkles } from 'lucide-react';
 import PublicHeader from '@/components/PublicHeader';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import ShowcasePreviewModal from '@/components/ShowcasePreviewModal';
+import { showcaseExamples } from '@/lib/showcase/showcase-data';
 
+// Template ID to Showcase ID mapping
+const templateShowcaseMap: Record<string, string> = {
+  'coffee_shop': 'daily-grind-coffee',
+  'yoga_studio': 'zen-flow-yoga',
+  'beauty_salon': 'bloom-beauty',
+  'online_boutique': 'chic-boutique',
+  'restaurant': 'artisan-table',
+  'fitness_coach': 'fitlife-performance',
+  'skincare_brand': 'glow-skincare',
+};
 
 const FeatureCard = ({ icon: Icon, title, description, id }: { icon: React.ElementType, title: string, description: string, id: string }) => (
     <div id={id} className="card-compact text-left p-6 md:p-8 h-full flex flex-col group border-primary/20 hover:border-primary/50">
@@ -626,6 +640,7 @@ export default function LandingPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalStage, setModalStage] = useState<string | null>(null);
   const [userCountry, setUserCountry] = useState<string>('US');
+  const [modalShowcaseId, setModalShowcaseId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user && !isLoading) {
@@ -884,6 +899,120 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Real Examples Showcase */}
+        <section className="py-12 sm:py-16 bg-gradient-to-br from-primary/5 via-background to-accent/5">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
+                <Sparkles className="w-4 h-4" />
+                <span>Real Examples</span>
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+                Real Brands. Real Results. <span className="text-gradient-brand">Under 60 Seconds</span>
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                See exactly what BrandForge AI creates. Logos, social posts, and images - all AI-generated from our templates.
+              </p>
+            </div>
+          </div>
+
+          {/* Horizontal Scrollable Showcase */}
+          <div className="overflow-x-auto pb-4 scrollbar-hide">
+            <div className="flex gap-6 px-4 sm:px-8 lg:px-12">
+              {showcaseExamples
+                .filter(example => Object.values(templateShowcaseMap).includes(example.id))
+                .map((example, idx) => {
+                  // Use different post index for variety
+                  const postIndex = idx % example.posts.length;
+                  const post = example.posts[postIndex];
+
+                  return (
+                    <Card
+                      key={example.id}
+                      className="group cursor-pointer hover:border-primary transition-all hover:shadow-2xl shrink-0 w-[340px] sm:w-[400px] overflow-hidden"
+                      onClick={() => setModalShowcaseId(example.id)}
+                    >
+                      <CardContent className="p-6">
+                        {/* Logo Section */}
+                        <div className="flex items-center gap-4 mb-6">
+                          <div className="relative shrink-0">
+                            {/* Outer glow ring */}
+                            <div className="absolute -inset-1 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full blur-sm group-hover:from-primary/30 group-hover:to-accent/30 transition-all" />
+                            {/* Main logo container */}
+                            <div className="relative bg-gradient-to-br from-white via-primary/5 to-accent/5 rounded-full p-5 border-2 border-white shadow-lg group-hover:shadow-xl transition-all overflow-hidden">
+                              {/* Inner subtle border for depth */}
+                              <div className="absolute inset-3 border border-primary/10 rounded-full pointer-events-none z-20" />
+                              <div className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center bg-white relative z-10">
+                                <NextImage
+                                  src={example.logo}
+                                  alt={`${example.brandName} logo`}
+                                  width={56}
+                                  height={56}
+                                  className="object-cover w-full h-full"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-lg mb-1 group-hover:text-primary transition-colors truncate">
+                              {example.brandName}
+                            </h3>
+                            <p className="text-sm text-muted-foreground mb-2">{example.industry}</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {example.logoType && (
+                                <Badge variant="secondary" className="text-xs capitalize">
+                                  {example.logoType}
+                                </Badge>
+                              )}
+                              {example.logoStyle && (
+                                <Badge variant="secondary" className="text-xs capitalize">
+                                  {example.logoStyle}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Instagram Post Preview */}
+                        <div className="relative mb-4 rounded-lg overflow-hidden border-2 border-muted">
+                          <NextImage
+                            src={post.image}
+                            alt={`${example.brandName} post`}
+                            width={400}
+                            height={400}
+                            className="object-cover w-full aspect-square transition-transform group-hover:scale-105"
+                          />
+                          {/* Hover Overlay */}
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <div className="text-center text-white">
+                              <Eye className="w-10 h-10 mx-auto mb-2" />
+                              <p className="text-sm font-semibold">View Full Example</p>
+                              <p className="text-xs text-white/80 mt-1">See all platforms & posts</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="text-center">
+                          <Badge variant="outline" className="text-xs">
+                            ✨ {post.generationTime}
+                          </Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+            </div>
+          </div>
+
+          {/* Scroll Hint */}
+          <div className="text-center mt-6 px-4">
+            <p className="text-sm text-muted-foreground">
+              ← Scroll to see more examples →
+            </p>
+          </div>
+        </section>
+
         {/* What You Can Create Section */}
         <section className="py-16 bg-secondary/20">
           <div className="container-responsive">
@@ -993,101 +1122,6 @@ export default function LandingPage() {
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
-            </div>
-          </div>
-        </section>
-
-        {/* Enhanced Brand Journey Section */}
-        <section className="section-spacing bg-gradient-to-br from-secondary/20 via-background to-accent/10 relative overflow-hidden">
-          {/* Background Pattern */}
-          <div className="absolute inset-0 opacity-5">
-            <div className="absolute top-20 left-10 w-32 h-32 bg-primary rounded-full blur-3xl"></div>
-            <div className="absolute bottom-20 right-10 w-40 h-40 bg-accent rounded-full blur-3xl"></div>
-          </div>
-          
-          <div className="container-responsive relative z-10">
-            {/* Enhanced Header */}
-            <div className="text-center max-w-4xl mx-auto mb-16">
-              <div className="inline-flex items-center space-x-2 bg-primary/10 px-4 py-2 rounded-full text-sm font-medium text-primary mb-6">
-                <Users className="w-4 h-4" />
-                <span>Join Our Beta - Building the Future of AI Branding</span>
-              </div>
-              
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-balance mb-6">
-                Every Brand Has a Story. <span className="text-gradient-brand">What's Yours?</span>
-              </h2>
-              
-              <p className="text-lg md:text-xl text-muted-foreground text-balance leading-relaxed">
-                Whether you're just starting your journey, scaling your success, or optimizing for growth,
-                BrandForge AI meets you exactly where you are—and takes you where you want to go.
-              </p>
-            </div>
-
-            {/* Interactive Brand Stories */}
-            <div className="relative mb-16">
-              {/* Journey Progress Line */}
-              <div className="absolute top-20 left-0 right-0 h-1 bg-gradient-to-r from-primary/30 via-accent/30 to-primary/30 hidden lg:block z-0"></div>
-              
-              {/* Story Cards */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12 relative z-10">
-                {/* Connection Lines - positioned at grid level to avoid scaling with cards */}
-                <div className="absolute top-20 left-[calc(33.333%-2rem)] w-16 lg:w-20 xl:w-24 h-1 bg-primary/50 hidden lg:block z-0" />
-                <div className="absolute top-20 left-[calc(66.666%-2rem)] w-16 lg:w-20 xl:w-24 h-1 bg-primary/50 hidden lg:block z-0" />
-                
-                {brandStories.map((story, index) => (
-                  <BrandStoryCard
-                    key={index}
-                    {...story}
-                    index={index}
-                    isActive={activeStoryCard === index}
-                    onHover={setActiveStoryCard}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Stage Assessment */}
-            <div className="max-w-2xl mx-auto mb-16">
-              <StageAssessment onStageSelect={handleStageAssessment} selectedStage={selectedAssessmentStage} />
-            </div>
-
-            {/* Smart Recommendation Modal */}
-            <SmartRecommendationModal
-              isOpen={isModalOpen}
-              onClose={handleCloseModal}
-              selectedStage={modalStage}
-              userCountry={userCountry}
-            />
-
-            {/* Social Proof & CTA */}
-            <div className="text-center">
-              <div className="flex justify-center items-center space-x-6 mb-8 flex-wrap gap-4">
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                  <Clock className="w-4 h-4 text-primary" />
-                  <span>Quick setup: ~2 minutes</span>
-                </div>
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                  <Zap className="w-4 h-4 text-accent" />
-                  <span>Unlimited AI refinements</span>
-                </div>
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                  <Star className="w-4 h-4 text-primary" />
-                  <span>Early beta access</span>
-                </div>
-              </div>
-              
-              <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-                Ready to write your brand's next chapter?
-              </p>
-              
-              <div className="flex justify-center">
-                <Button size="lg" className="btn-gradient-primary btn-lg-enhanced" asChild>
-                  <Link href="/signup" className="flex items-center">
-                    Start Building Free
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Link>
-                </Button>
-              </div>
             </div>
           </div>
         </section>
@@ -1252,6 +1286,16 @@ export default function LandingPage() {
                  </div>
              </div>
         </section>
+
+        {/* ShowcasePreviewModal */}
+        {modalShowcaseId && (
+          <ShowcasePreviewModal
+            showcaseId={modalShowcaseId}
+            isOpen={!!modalShowcaseId}
+            onClose={() => setModalShowcaseId(null)}
+            onUseTemplate={() => router.push('/signup')}
+          />
+        )}
       </main>
 
       {/* Footer */}

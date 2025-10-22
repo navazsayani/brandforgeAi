@@ -21,7 +21,9 @@
     "test:e2e:headed": "playwright test --headed",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e",
     "playwright:install": "playwright install",
-    "deploy:functions": "firebase deploy --only functions"
+    "deploy:functions": "firebase deploy --only functions",
+    "generate-showcase": "tsx src/lib/showcase/generate-showcase.ts",
+    "generate-showcase:test": "tsx src/lib/showcase/generate-showcase.ts --test"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.7.0",

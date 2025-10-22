@@ -1,0 +1,20 @@
+{
+  "image": "/showcase/examples/fitlife-performance/posts/post-1-image.png",
+  "caption": "Unlock your full potential and achieve lasting health with our high-performance fitness coaching.",
+  "hashtags": "#FitnessCoaching #PersonalizedTraining #NutritionGuidance #SustainableHealth #LifestyleTransformation #HealthAndWellness #AchieveYourGoals",
+  "generationTime": "32 seconds",
+  "platformScreenshots": {
+    "instagram": "/showcase/examples/fitlife-performance/posts/post-1-instagram.png",
+    "facebook": "/showcase/examples/fitlife-performance/posts/post-1-facebook.png",
+    "linkedin": "/showcase/examples/fitlife-performance/posts/post-1-linkedin.png",
+    "twitter": "/showcase/examples/fitlife-performance/posts/post-1-twitter.png"
+  },
+  "previewProps": {
+    "caption": "Unlock your full potential and achieve lasting health with our high-performance fitness coaching.",
+    "hashtags": "#FitnessCoaching #PersonalizedTraining #NutritionGuidance #SustainableHealth #LifestyleTransformation #HealthAndWellness #AchieveYourGoals",
+    "imageSrc": "/showcase/examples/fitlife-performance/posts/post-1-image.png",
+    "brandName": "FitLife Performance",
+    "brandLogoUrl": "/showcase/examples/fitlife-performance/logo.png",
+    "selectedPlatform": "all"
+  }
+}

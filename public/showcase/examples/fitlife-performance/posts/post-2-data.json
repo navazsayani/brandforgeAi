@@ -1,0 +1,20 @@
+{
+  "image": "/showcase/examples/fitlife-performance/posts/post-2-image.png",
+  "caption": "Unlock your true potential with a fitness journey designed exclusively for you.",
+  "hashtags": "#FitnessCoaching #PersonalizedTraining #NutritionGuidance #HealthTransformation #SustainableLifestyle #WellnessJourney #HighPerformance",
+  "generationTime": "32 seconds",
+  "platformScreenshots": {
+    "instagram": "/showcase/examples/fitlife-performance/posts/post-2-instagram.png",
+    "facebook": "/showcase/examples/fitlife-performance/posts/post-2-facebook.png",
+    "linkedin": "/showcase/examples/fitlife-performance/posts/post-2-linkedin.png",
+    "twitter": "/showcase/examples/fitlife-performance/posts/post-2-twitter.png"
+  },
+  "previewProps": {
+    "caption": "Unlock your true potential with a fitness journey designed exclusively for you.",
+    "hashtags": "#FitnessCoaching #PersonalizedTraining #NutritionGuidance #HealthTransformation #SustainableLifestyle #WellnessJourney #HighPerformance",
+    "imageSrc": "/showcase/examples/fitlife-performance/posts/post-2-image.png",
+    "brandName": "FitLife Performance",
+    "brandLogoUrl": "/showcase/examples/fitlife-performance/logo.png",
+    "selectedPlatform": "all"
+  }
+}

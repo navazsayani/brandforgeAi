@@ -1,35 +1,14 @@
+'use client';
+
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import NextImage from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Sparkles, Zap, Check } from 'lucide-react';
 import { brandTemplates, getAllCategories, getTemplatesByCategory } from '@/lib/templates';
 import PublicHeader from '@/components/PublicHeader';
-
-export const metadata: Metadata = {
-  title: '20+ Free Brand Templates | BrandForge AI',
-  description: 'Start your brand in 60 seconds with our free industry templates. Pre-filled brand profiles for coffee shops, tech startups, fitness coaches, beauty salons, and more.',
-  keywords: [
-    'brand templates',
-    'branding templates',
-    'business branding',
-    'logo templates',
-    'brand identity templates',
-    'small business templates',
-    'startup branding',
-    'free brand templates',
-    'industry templates',
-    'brand profile templates'
-  ],
-  openGraph: {
-    title: '20+ Free Brand Templates | Start Your Brand in 60 Seconds',
-    description: 'Choose from 20+ professional brand templates tailored to your industry. Free forever.',
-    type: 'website',
-  },
-  alternates: {
-    canonical: '/templates',
-  },
-};
 
 export default function TemplatesPage() {
   const categories = getAllCategories();
@@ -146,11 +125,6 @@ export default function TemplatesPage() {
                             </div>
                             <div className="flex-1">
                               <CardTitle className="text-xl mb-2 group-hover:text-primary transition-colors">{template.name}</CardTitle>
-                              <CardDescription className="text-sm flex items-center gap-2">
-                                <span className="px-2 py-0.5 bg-muted rounded text-xs font-medium">
-                                  {template.industry}
-                                </span>
-                              </CardDescription>
                             </div>
                           </div>
                         </CardHeader>
@@ -177,9 +151,9 @@ export default function TemplatesPage() {
                             </div>
                           </div>
 
-                          <Button asChild className="w-full group-hover:btn-gradient-primary transition-all" variant="outline" size="lg">
+                          <Button asChild className="w-full btn-gradient-primary" size="lg">
                             <Link href="/signup">
-                              Use This Template
+                              Use Template
                               <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                             </Link>
                           </Button>

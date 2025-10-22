@@ -1,0 +1,28 @@
+{
+  "id": "daily-grind-coffee",
+  "brandName": "The Daily Grind",
+  "industry": "food_beverage",
+  "description": "Specialty coffee shop creating a productive haven for remote workers and coffee enthusiasts with artisan brews, cozy workspace, and vibrant community atmosphere",
+  "logo": "/showcase/examples/daily-grind-coffee/logo.png",
+  "posts": [
+    {
+      "image": "/showcase/examples/daily-grind-coffee/posts/post-1-image.png",
+      "data": "/showcase/examples/daily-grind-coffee/posts/post-1-data.json"
+    },
+    {
+      "image": "/showcase/examples/daily-grind-coffee/posts/post-2-image.png",
+      "data": "/showcase/examples/daily-grind-coffee/posts/post-2-data.json"
+    },
+    {
+      "image": "/showcase/examples/daily-grind-coffee/posts/post-3-image.png",
+      "data": "/showcase/examples/daily-grind-coffee/posts/post-3-data.json"
+    }
+  ],
+  "testimonial": {
+    "quote": "Created my first Instagram post in 40 seconds. The AI absolutely nailed my brand voice and the image quality is incredible!",
+    "author": "Sarah Martinez",
+    "role": "Coffee Shop Owner",
+    "location": "Seattle, WA",
+    "avatar": "/showcase/testimonials/avatars/daily-grind-coffee.jpg"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "image": "/showcase/examples/chic-boutique/posts/post-1-image.png",
+  "caption": "Imagine a wardrobe that truly reflects you – unique, high-quality, and effortlessly chic.",
+  "hashtags": "#FashionBoutique #ContemporaryFashion #TimelessStyle #WomensFashion #CuratedStyle #PersonalizedShopping",
+  "generationTime": "32 seconds",
+  "platformScreenshots": {
+    "instagram": "/showcase/examples/chic-boutique/posts/post-1-instagram.png",
+    "facebook": "/showcase/examples/chic-boutique/posts/post-1-facebook.png",
+    "linkedin": "/showcase/examples/chic-boutique/posts/post-1-linkedin.png",
+    "twitter": "/showcase/examples/chic-boutique/posts/post-1-twitter.png"
+  },
+  "previewProps": {
+    "caption": "Imagine a wardrobe that truly reflects you – unique, high-quality, and effortlessly chic.",
+    "hashtags": "#FashionBoutique #ContemporaryFashion #TimelessStyle #WomensFashion #CuratedStyle #PersonalizedShopping",
+    "imageSrc": "/showcase/examples/chic-boutique/posts/post-1-image.png",
+    "brandName": "Chic Boutique",
+    "brandLogoUrl": "/showcase/examples/chic-boutique/logo.png",
+    "selectedPlatform": "all"
+  }
+}

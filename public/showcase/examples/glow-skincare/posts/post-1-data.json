@@ -1,0 +1,20 @@
+{
+  "image": "/showcase/examples/glow-skincare/posts/post-1-image.png",
+  "caption": "Discover the secret to truly radiant and healthy skin with our natural skincare line.",
+  "hashtags": "#NaturalSkincare #CleanBeauty #RadiantSkin #HealthySkin #SustainableBeauty",
+  "generationTime": "32 seconds",
+  "platformScreenshots": {
+    "instagram": "/showcase/examples/glow-skincare/posts/post-1-instagram.png",
+    "facebook": "/showcase/examples/glow-skincare/posts/post-1-facebook.png",
+    "linkedin": "/showcase/examples/glow-skincare/posts/post-1-linkedin.png",
+    "twitter": "/showcase/examples/glow-skincare/posts/post-1-twitter.png"
+  },
+  "previewProps": {
+    "caption": "Discover the secret to truly radiant and healthy skin with our natural skincare line.",
+    "hashtags": "#NaturalSkincare #CleanBeauty #RadiantSkin #HealthySkin #SustainableBeauty",
+    "imageSrc": "/showcase/examples/glow-skincare/posts/post-1-image.png",
+    "brandName": "Glow Skincare",
+    "brandLogoUrl": "/showcase/examples/glow-skincare/logo.png",
+    "selectedPlatform": "all"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "id": "glow-skincare",
+  "brandName": "Glow Skincare",
+  "industry": "beauty_cosmetics",
+  "description": "Natural skincare brand creating clean, effective products for radiant healthy skin with sustainably-sourced ingredients and dermatologist-approved formulations",
+  "logo": "/showcase/examples/glow-skincare/logo.png",
+  "posts": [
+    {
+      "image": "/showcase/examples/glow-skincare/posts/post-1-image.png",
+      "data": "/showcase/examples/glow-skincare/posts/post-1-data.json"
+    },
+    {
+      "image": "/showcase/examples/glow-skincare/posts/post-2-image.png",
+      "data": "/showcase/examples/glow-skincare/posts/post-2-data.json"
+    },
+    {
+      "image": "/showcase/examples/glow-skincare/posts/post-3-image.png",
+      "data": "/showcase/examples/glow-skincare/posts/post-3-data.json"
+    }
+  ],
+  "testimonial": {
+    "quote": "The product photography is magazine-quality! Our skincare line looks so premium and professional. Sales have increased significantly!",
+    "author": "Emma Williams",
+    "role": "Skincare Brand Founder",
+    "location": "Los Angeles, CA",
+    "avatar": "/showcase/testimonials/avatars/glow-skincare.jpg"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "image": "/showcase/examples/zen-flow-yoga/posts/post-1-image.png",
+  "caption": "Feeling the daily grind.",
+  "hashtags": "#YogaLife #MindfulMovement #StressRelief #WellnessJourney #WorkLifeBalance #MeditationPractice #YogaStudio",
+  "generationTime": "32 seconds",
+  "platformScreenshots": {
+    "instagram": "/showcase/examples/zen-flow-yoga/posts/post-1-instagram.png",
+    "facebook": "/showcase/examples/zen-flow-yoga/posts/post-1-facebook.png",
+    "linkedin": "/showcase/examples/zen-flow-yoga/posts/post-1-linkedin.png",
+    "twitter": "/showcase/examples/zen-flow-yoga/posts/post-1-twitter.png"
+  },
+  "previewProps": {
+    "caption": "Feeling the daily grind.",
+    "hashtags": "#YogaLife #MindfulMovement #StressRelief #WellnessJourney #WorkLifeBalance #MeditationPractice #YogaStudio",
+    "imageSrc": "/showcase/examples/zen-flow-yoga/posts/post-1-image.png",
+    "brandName": "Zen Flow Yoga",
+    "brandLogoUrl": "/showcase/examples/zen-flow-yoga/logo.png",
+    "selectedPlatform": "all"
+  }
+}

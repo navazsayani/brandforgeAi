@@ -1,0 +1,20 @@
+{
+  "image": "/showcase/examples/chic-boutique/posts/post-2-image.png",
+  "caption": "At our boutique, we believe true style is about more than just clothes – it's about the feeling they evoke, the story they tell, and the confidence they bring.",
+  "hashtags": "#CuratedFashion #BoutiqueStyle #ModernWoman #TimelessFashion #QualityApparel #PersonalStyle",
+  "generationTime": "32 seconds",
+  "platformScreenshots": {
+    "instagram": "/showcase/examples/chic-boutique/posts/post-2-instagram.png",
+    "facebook": "/showcase/examples/chic-boutique/posts/post-2-facebook.png",
+    "linkedin": "/showcase/examples/chic-boutique/posts/post-2-linkedin.png",
+    "twitter": "/showcase/examples/chic-boutique/posts/post-2-twitter.png"
+  },
+  "previewProps": {
+    "caption": "At our boutique, we believe true style is about more than just clothes – it's about the feeling they evoke, the story they tell, and the confidence they bring.",
+    "hashtags": "#CuratedFashion #BoutiqueStyle #ModernWoman #TimelessFashion #QualityApparel #PersonalStyle",
+    "imageSrc": "/showcase/examples/chic-boutique/posts/post-2-image.png",
+    "brandName": "Chic Boutique",
+    "brandLogoUrl": "/showcase/examples/chic-boutique/logo.png",
+    "selectedPlatform": "all"
+  }
+}

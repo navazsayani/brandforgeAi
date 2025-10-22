@@ -5,12 +5,65 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Preview,
   Section,
   Text,
   Hr,
 } from '@react-email/components';
 import * as React from 'react';
+
+// Template previews from showcase
+const templatePreviews = [
+  {
+    id: 'daily-grind-coffee',
+    name: 'Coffee Shop',
+    emoji: '☕',
+    description: 'Cozy, community-focused content for cafes and coffee businesses',
+    logo: 'https://brandforge.me/showcase/examples/daily-grind-coffee/logo.png',
+    previewImage: 'https://brandforge.me/showcase/examples/daily-grind-coffee/posts/post-1-image.png',
+  },
+  {
+    id: 'zen-flow-yoga',
+    name: 'Yoga Studio',
+    emoji: '🧘‍♀️',
+    description: 'Mindful, wellness-focused posts for yoga and fitness centers',
+    logo: 'https://brandforge.me/showcase/examples/zen-flow-yoga/logo.png',
+    previewImage: 'https://brandforge.me/showcase/examples/zen-flow-yoga/posts/post-1-image.png',
+  },
+  {
+    id: 'elevate-consulting',
+    name: 'Business Consulting',
+    emoji: '💼',
+    description: 'Professional, strategic content for consultants and advisors',
+    logo: 'https://brandforge.me/showcase/examples/elevate-consulting/logo.png',
+    previewImage: 'https://brandforge.me/showcase/examples/elevate-consulting/posts/post-1-image.png',
+  },
+  {
+    id: 'artisan-table',
+    name: 'Restaurant',
+    emoji: '🍽️',
+    description: 'Mouth-watering food posts that drive reservations',
+    logo: 'https://brandforge.me/showcase/examples/artisan-table/logo.png',
+    previewImage: 'https://brandforge.me/showcase/examples/artisan-table/posts/post-1-image.png',
+  },
+  {
+    id: 'bloom-beauty',
+    name: 'Beauty Salon',
+    emoji: '💄',
+    description: 'Glamorous, transformation-focused beauty content',
+    logo: 'https://brandforge.me/showcase/examples/bloom-beauty/logo.png',
+    previewImage: 'https://brandforge.me/showcase/examples/bloom-beauty/posts/post-1-image.png',
+  },
+  {
+    id: 'fitlife-performance',
+    name: 'Gym & Fitness',
+    emoji: '🏋️',
+    description: 'Motivational, results-driven fitness content',
+    logo: 'https://brandforge.me/showcase/examples/fitlife-performance/logo.png',
+    previewImage: 'https://brandforge.me/showcase/examples/fitlife-performance/posts/post-1-image.png',
+  },
+];
 
 interface TemplateShowcaseEmailProps {
   userName?: string;
@@ -19,7 +72,7 @@ interface TemplateShowcaseEmailProps {
 
 export const TemplateShowcaseEmail = ({
   userName = 'there',
-  templatesUrl = 'https://brandforge.ai/templates',
+  templatesUrl = 'https://brandforge.me/templates',
 }: TemplateShowcaseEmailProps) => {
   return (
     <Html>
@@ -50,59 +103,40 @@ export const TemplateShowcaseEmail = ({
               Instead of starting from scratch, pick a template that matches your business. We've pre-configured everything — industry keywords, brand voice, content style — so you can start creating in seconds.
             </Text>
 
-            {/* Template Categories */}
+            {/* Template Categories with Visual Previews */}
             <div style={categoryContainer}>
-              <div style={templateCard}>
-                <Text style={templateEmoji}>☕</Text>
-                <Text style={templateName}>Coffee Shop</Text>
-                <Text style={templateDesc}>Cozy, community-focused content for cafes and coffee businesses</Text>
-              </div>
-
-              <div style={templateCard}>
-                <Text style={templateEmoji}>🧘‍♀️</Text>
-                <Text style={templateName}>Yoga Studio</Text>
-                <Text style={templateDesc}>Mindful, wellness-focused posts for yoga and fitness centers</Text>
-              </div>
-
-              <div style={templateCard}>
-                <Text style={templateEmoji}>💻</Text>
-                <Text style={templateName}>Web Developer</Text>
-                <Text style={templateDesc}>Technical, professional content for freelance developers</Text>
-              </div>
-
-              <div style={templateCard}>
-                <Text style={templateEmoji}>🍕</Text>
-                <Text style={templateName}>Restaurant</Text>
-                <Text style={templateDesc}>Mouth-watering food posts that drive reservations</Text>
-              </div>
-
-              <div style={templateCard}>
-                <Text style={templateEmoji}>💄</Text>
-                <Text style={templateName}>Beauty Salon</Text>
-                <Text style={templateDesc}>Glamorous, transformation-focused beauty content</Text>
-              </div>
-
-              <div style={templateCard}>
-                <Text style={templateEmoji}>🏋️</Text>
-                <Text style={templateName}>Gym & Fitness</Text>
-                <Text style={templateDesc}>Motivational, results-driven fitness content</Text>
-              </div>
-
-              <div style={templateCard}>
-                <Text style={templateEmoji}>🛍️</Text>
-                <Text style={templateName}>E-commerce Store</Text>
-                <Text style={templateDesc}>Product-focused posts that convert browsers into buyers</Text>
-              </div>
-
-              <div style={templateCard}>
-                <Text style={templateEmoji}>📸</Text>
-                <Text style={templateName}>Photography</Text>
-                <Text style={templateDesc}>Visual storytelling for photographers and creatives</Text>
-              </div>
+              {templatePreviews.map((template) => (
+                <div key={template.id} style={templateCard}>
+                  <div style={templatePreviewContainer}>
+                    <Img
+                      src={template.previewImage}
+                      alt={`${template.name} example`}
+                      width="100%"
+                      style={templatePreviewImage}
+                    />
+                    <div style={templateLogoOverlay}>
+                      <Img
+                        src={template.logo}
+                        alt={template.name}
+                        width="40"
+                        height="40"
+                        style={templateLogoIcon}
+                      />
+                    </div>
+                  </div>
+                  <div style={templateContent}>
+                    <div style={templateHeader}>
+                      <Text style={templateEmoji}>{template.emoji}</Text>
+                      <Text style={templateName}>{template.name}</Text>
+                    </div>
+                    <Text style={templateDesc}>{template.description}</Text>
+                  </div>
+                </div>
+              ))}
             </div>
 
             <Text style={highlightBox}>
-              <strong>+ 12 more templates</strong> covering consulting, coaching, real estate, healthcare, and more!
+              <strong>+ 2 more templates</strong> for fashion and skincare businesses!
             </Text>
 
             <Hr style={divider} />
@@ -238,34 +272,69 @@ const categoryContainer = {
 };
 
 const templateCard = {
-  backgroundColor: '#f9fafb',
-  border: '1px solid #e5e7eb',
+  backgroundColor: '#ffffff',
+  border: '2px solid #e5e7eb',
+  borderRadius: '12px',
+  marginBottom: '16px',
+  overflow: 'hidden' as const,
+};
+
+const templatePreviewContainer = {
+  position: 'relative' as const,
+  width: '100%',
+  aspectRatio: '1',
+};
+
+const templatePreviewImage = {
+  width: '100%',
+  height: 'auto',
+  display: 'block',
+  objectFit: 'cover' as const,
+};
+
+const templateLogoOverlay = {
+  position: 'absolute' as const,
+  top: '12px',
+  right: '12px',
+  backgroundColor: '#ffffff',
   borderRadius: '8px',
+  padding: '8px',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+};
+
+const templateLogoIcon = {
+  display: 'block',
+  borderRadius: '4px',
+};
+
+const templateContent = {
   padding: '16px',
-  marginBottom: '12px',
+};
+
+const templateHeader = {
   display: 'flex',
-  flexDirection: 'column' as const,
   alignItems: 'center',
-  textAlign: 'center' as const,
+  gap: '8px',
+  marginBottom: '8px',
 };
 
 const templateEmoji = {
-  fontSize: '32px',
-  margin: '0 0 8px',
+  fontSize: '24px',
+  margin: '0',
 };
 
 const templateName = {
   color: '#1a1a1a',
   fontSize: '16px',
   fontWeight: 'bold',
-  margin: '0 0 4px',
+  margin: '0',
 };
 
 const templateDesc = {
   color: '#6b7280',
   fontSize: '14px',
   margin: '0',
-  lineHeight: '1.4',
+  lineHeight: '1.5',
 };
 
 const highlightBox = {

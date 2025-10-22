@@ -1,0 +1,28 @@
+{
+  "id": "chic-boutique",
+  "brandName": "Chic Boutique",
+  "industry": "fashion_apparel",
+  "description": "Curated fashion boutique offering contemporary styles and timeless pieces for modern women who value unique quality clothing and personalized shopping experiences",
+  "logo": "/showcase/examples/chic-boutique/logo.png",
+  "posts": [
+    {
+      "image": "/showcase/examples/chic-boutique/posts/post-1-image.png",
+      "data": "/showcase/examples/chic-boutique/posts/post-1-data.json"
+    },
+    {
+      "image": "/showcase/examples/chic-boutique/posts/post-2-image.png",
+      "data": "/showcase/examples/chic-boutique/posts/post-2-data.json"
+    },
+    {
+      "image": "/showcase/examples/chic-boutique/posts/post-3-image.png",
+      "data": "/showcase/examples/chic-boutique/posts/post-3-data.json"
+    }
+  ],
+  "testimonial": {
+    "quote": "The fashion content looks like it came from a professional agency! My boutique's Instagram now rivals major brands. Absolutely love it!",
+    "author": "Olivia Bennett",
+    "role": "Fashion Boutique Owner",
+    "location": "New York, NY",
+    "avatar": "/showcase/testimonials/avatars/chic-boutique.jpg"
+  }
+}

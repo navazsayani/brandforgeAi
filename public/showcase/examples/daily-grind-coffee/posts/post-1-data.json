@@ -1,0 +1,20 @@
+{
+  "image": "/showcase/examples/daily-grind-coffee/posts/post-1-image.png",
+  "caption": "Looking for the ideal space to fuel your productivity and satisfy your coffee cravings.",
+  "hashtags": "#SpecialtyCoffee #CoffeeShop #RemoteWorkLife #WorkFromCafe #CafeVibes #ArtisanCoffee",
+  "generationTime": "32 seconds",
+  "platformScreenshots": {
+    "instagram": "/showcase/examples/daily-grind-coffee/posts/post-1-instagram.png",
+    "facebook": "/showcase/examples/daily-grind-coffee/posts/post-1-facebook.png",
+    "linkedin": "/showcase/examples/daily-grind-coffee/posts/post-1-linkedin.png",
+    "twitter": "/showcase/examples/daily-grind-coffee/posts/post-1-twitter.png"
+  },
+  "previewProps": {
+    "caption": "Looking for the ideal space to fuel your productivity and satisfy your coffee cravings.",
+    "hashtags": "#SpecialtyCoffee #CoffeeShop #RemoteWorkLife #WorkFromCafe #CafeVibes #ArtisanCoffee",
+    "imageSrc": "/showcase/examples/daily-grind-coffee/posts/post-1-image.png",
+    "brandName": "The Daily Grind",
+    "brandLogoUrl": "/showcase/examples/daily-grind-coffee/logo.png",
+    "selectedPlatform": "all"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "image": "/showcase/examples/zen-flow-yoga/posts/post-3-image.png",
+  "caption": "In the hustle of daily life, finding a moment of calm can feel like a luxury.",
+  "hashtags": "#YogaForProfessionals #MindfulLiving #StressRelief #WellnessJourney #WorkLifeBalance #MeditationPractice #HolisticHealth",
+  "generationTime": "32 seconds",
+  "platformScreenshots": {
+    "instagram": "/showcase/examples/zen-flow-yoga/posts/post-3-instagram.png",
+    "facebook": "/showcase/examples/zen-flow-yoga/posts/post-3-facebook.png",
+    "linkedin": "/showcase/examples/zen-flow-yoga/posts/post-3-linkedin.png",
+    "twitter": "/showcase/examples/zen-flow-yoga/posts/post-3-twitter.png"
+  },
+  "previewProps": {
+    "caption": "In the hustle of daily life, finding a moment of calm can feel like a luxury.",
+    "hashtags": "#YogaForProfessionals #MindfulLiving #StressRelief #WellnessJourney #WorkLifeBalance #MeditationPractice #HolisticHealth",
+    "imageSrc": "/showcase/examples/zen-flow-yoga/posts/post-3-image.png",
+    "brandName": "Zen Flow Yoga",
+    "brandLogoUrl": "/showcase/examples/zen-flow-yoga/logo.png",
+    "selectedPlatform": "all"
+  }
+}

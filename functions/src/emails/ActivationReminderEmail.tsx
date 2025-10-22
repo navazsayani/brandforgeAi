@@ -19,7 +19,7 @@ interface ActivationReminderEmailProps {
 
 export const ActivationReminderEmail = ({
   userName = 'there',
-  quickStartUrl = 'https://brandforge.ai/quick-start',
+  quickStartUrl = 'https://brandforge.me/quick-start',
 }: ActivationReminderEmailProps) => {
   return (
     <Html>

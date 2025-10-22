@@ -1,0 +1,20 @@
+{
+  "image": "/showcase/examples/zen-flow-yoga/posts/post-2-image.png",
+  "caption": "In the hustle of professional life, finding a moment of peace can feel like a luxury.",
+  "hashtags": "#YogaForProfessionals #MindfulMovement #StressRelief #WellnessJourney #YogaStudio #HolisticHealth #SelfCare",
+  "generationTime": "32 seconds",
+  "platformScreenshots": {
+    "instagram": "/showcase/examples/zen-flow-yoga/posts/post-2-instagram.png",
+    "facebook": "/showcase/examples/zen-flow-yoga/posts/post-2-facebook.png",
+    "linkedin": "/showcase/examples/zen-flow-yoga/posts/post-2-linkedin.png",
+    "twitter": "/showcase/examples/zen-flow-yoga/posts/post-2-twitter.png"
+  },
+  "previewProps": {
+    "caption": "In the hustle of professional life, finding a moment of peace can feel like a luxury.",
+    "hashtags": "#YogaForProfessionals #MindfulMovement #StressRelief #WellnessJourney #YogaStudio #HolisticHealth #SelfCare",
+    "imageSrc": "/showcase/examples/zen-flow-yoga/posts/post-2-image.png",
+    "brandName": "Zen Flow Yoga",
+    "brandLogoUrl": "/showcase/examples/zen-flow-yoga/logo.png",
+    "selectedPlatform": "all"
+  }
+}

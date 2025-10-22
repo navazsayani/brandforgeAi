@@ -189,11 +189,11 @@ Background: ${logoBackground || 'dark'} background providing optimal contrast
 ${industry && industry !== '_none_' ? getEnhancedIndustryGuidance(industry, brandDescription) : ''}
 
 RENDERING QUALITY:
-Professional vector-quality rendering with crisp edges and sharp details
+Professional high-quality rendering with sharp details
 High-resolution output suitable for business cards to billboards
-Clean, scalable design maintaining clarity at all sizes from favicon to outdoor signage
+Design maintaining clarity at all sizes from favicon to outdoor signage
 Polished, publication-ready professional logo with commercial-grade quality
-Perfect edge definition and smooth curves throughout all logo elements
+Well-crafted elements with smooth execution throughout the logo
 
 OUTPUT REQUIREMENTS:
 The final logo must be memorable, unique, and authentically represent ${brandName}'s brand identity. ${logoType === 'logomark' ? 'Pure icon design without any text, letters, words, or typography elements - symbol only.' : ''}${logoType === 'logotype' ? `Text "${brandName}" must be rendered clearly with professional typography as the primary logo element.` : ''}${logoType === 'monogram' ? `Initials must be artistically combined with crystal-clear letterforms as the complete logo.` : ''} Professional quality suitable for immediate business use across all applications including print, digital, merchandise, and signage.`;
@@ -223,7 +223,7 @@ function _createImagenLogoPrompt(input: GenerateBrandLogoInput): string {
         default:
             // For logomark, create a descriptive visual concept without mentioning text
             const industryVisuals = getIndustryVisualConcepts(industry, brandDescription);
-            visualDescription = `Pure abstract symbol design with ${industryVisuals}, text-free icon`;
+            visualDescription = `Pure symbolic design with ${industryVisuals}, professional logo icon`;
             avoidanceClause = ', completely avoid any text, letters, words, typography, writing, alphabet, numbers, characters, readable text, brand names, or any text elements whatsoever';
     }
     
@@ -233,7 +233,7 @@ function _createImagenLogoPrompt(input: GenerateBrandLogoInput): string {
     const colorDesc = logoColors || 'professional color palette with 2-3 colors';
     
     // Create direct visual prompt for Imagen with avoidance built in
-    const imagenPrompt = `${visualDescription}, ${styleDesc}, ${shapeDesc}, ${colorDesc}, ${logoBackground || 'white'} background, high quality vector-style graphic, professional logo design, clean and scalable${avoidanceClause}`;
+    const imagenPrompt = `${visualDescription}, ${styleDesc}, ${shapeDesc}, ${colorDesc}, ${logoBackground || 'white'} background, high quality professional logo design${avoidanceClause}`;
     
     return imagenPrompt;
 }

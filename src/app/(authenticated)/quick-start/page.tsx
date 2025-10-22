@@ -16,6 +16,7 @@ import { db } from '@/lib/firebaseConfig';
 import { doc, setDoc, serverTimestamp, increment } from 'firebase/firestore';
 import Link from 'next/link';
 import NextImage from 'next/image';
+import ShowcaseCarousel from '@/components/ShowcaseCarousel';
 
 const initialSocialState: FormState<{ caption: string; hashtags: string; imageSrc: string | null; docId?: string }> = {
   error: undefined,
@@ -342,6 +343,25 @@ export default function QuickStartPage() {
                     </Button>
                   </div>
                 </div>
+
+                {/* Showcase Carousel - Inspiration below the form */}
+                {!isGenerating && (
+                  <div className="mt-8 pt-8 border-t">
+                    <div className="text-center mb-6">
+                      <h3 className="text-lg font-semibold text-muted-foreground flex items-center justify-center gap-2">
+                        <Sparkles className="w-5 h-5" />
+                        Need inspiration? See what others created
+                      </h3>
+                    </div>
+                    <ShowcaseCarousel
+                      showcaseIds={['daily-grind-coffee', 'zen-flow-yoga', 'bloom-beauty', 'chic-boutique', 'glow-skincare', 'fitlife-performance']}
+                      defaultTab="instagram"
+                      showTabs={false}
+                      autoRotate={false}
+                      interval={6000}
+                    />
+                  </div>
+                )}
               </>
             ) : (
               <>

@@ -1,0 +1,28 @@
+{
+  "id": "elevate-consulting",
+  "brandName": "Elevate Consulting",
+  "industry": "professional_services",
+  "description": "Strategic business consulting firm helping startups and small businesses scale efficiently with data-driven insights, operational expertise, and proven growth strategies",
+  "logo": "/showcase/examples/elevate-consulting/logo.png",
+  "posts": [
+    {
+      "image": "/showcase/examples/elevate-consulting/posts/post-1-image.png",
+      "data": "/showcase/examples/elevate-consulting/posts/post-1-data.json"
+    },
+    {
+      "image": "/showcase/examples/elevate-consulting/posts/post-2-image.png",
+      "data": "/showcase/examples/elevate-consulting/posts/post-2-data.json"
+    },
+    {
+      "image": "/showcase/examples/elevate-consulting/posts/post-3-image.png",
+      "data": "/showcase/examples/elevate-consulting/posts/post-3-data.json"
+    }
+  ],
+  "testimonial": {
+    "quote": "As a consultant, I needed content that looks professional yet approachable. BrandForge nails it every time. Saves me hours every week!",
+    "author": "Michael Foster",
+    "role": "Business Strategy Consultant",
+    "location": "Austin, TX",
+    "avatar": "/showcase/testimonials/avatars/elevate-consulting.jpg"
+  }
+}

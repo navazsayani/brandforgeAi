@@ -1,0 +1,20 @@
+{
+  "image": "/showcase/examples/elevate-consulting/posts/post-2-image.png",
+  "caption": "Is your startup or small business truly ready to unlock its full potential.",
+  "hashtags": "#BusinessConsulting #StartupGrowth #SmallBizTips #ScaleUp #DataDrivenStrategy",
+  "generationTime": "32 seconds",
+  "platformScreenshots": {
+    "instagram": "/showcase/examples/elevate-consulting/posts/post-2-instagram.png",
+    "facebook": "/showcase/examples/elevate-consulting/posts/post-2-facebook.png",
+    "linkedin": "/showcase/examples/elevate-consulting/posts/post-2-linkedin.png",
+    "twitter": "/showcase/examples/elevate-consulting/posts/post-2-twitter.png"
+  },
+  "previewProps": {
+    "caption": "Is your startup or small business truly ready to unlock its full potential.",
+    "hashtags": "#BusinessConsulting #StartupGrowth #SmallBizTips #ScaleUp #DataDrivenStrategy",
+    "imageSrc": "/showcase/examples/elevate-consulting/posts/post-2-image.png",
+    "brandName": "Elevate Consulting",
+    "brandLogoUrl": "/showcase/examples/elevate-consulting/logo.png",
+    "selectedPlatform": "all"
+  }
+}

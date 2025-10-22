@@ -1,0 +1,28 @@
+{
+  "id": "zen-flow-yoga",
+  "brandName": "Zen Flow Yoga",
+  "industry": "health_wellness",
+  "description": "Modern yoga studio offering mindful movement, meditation, and wellness classes for busy professionals seeking balance, stress relief, and holistic health in a peaceful sanctuary",
+  "logo": "/showcase/examples/zen-flow-yoga/logo.png",
+  "posts": [
+    {
+      "image": "/showcase/examples/zen-flow-yoga/posts/post-1-image.png",
+      "data": "/showcase/examples/zen-flow-yoga/posts/post-1-data.json"
+    },
+    {
+      "image": "/showcase/examples/zen-flow-yoga/posts/post-2-image.png",
+      "data": "/showcase/examples/zen-flow-yoga/posts/post-2-data.json"
+    },
+    {
+      "image": "/showcase/examples/zen-flow-yoga/posts/post-3-image.png",
+      "data": "/showcase/examples/zen-flow-yoga/posts/post-3-data.json"
+    }
+  ],
+  "testimonial": {
+    "quote": "The posts perfectly capture the peaceful, welcoming vibe of our studio. Our Instagram engagement has doubled since using BrandForge!",
+    "author": "Maya Chen",
+    "role": "Yoga Instructor & Studio Owner",
+    "location": "Portland, OR",
+    "avatar": "/showcase/testimonials/avatars/zen-flow-yoga.jpg"
+  }
+}

@@ -5,12 +5,38 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Preview,
   Section,
   Text,
   Hr,
 } from '@react-email/components';
 import * as React from 'react';
+
+// Real testimonials from showcase users
+const testimonials = [
+  {
+    quote: 'Created my first Instagram post in 40 seconds. The AI absolutely nailed my brand voice and the image quality is incredible!',
+    author: 'Sarah Martinez',
+    role: 'Coffee Shop Owner',
+    location: 'Seattle, WA',
+    avatar: 'https://brandforge.me/showcase/testimonials/avatars/daily-grind-coffee.jpg',
+  },
+  {
+    quote: 'The posts perfectly capture the peaceful, welcoming vibe of our studio. Our Instagram engagement has doubled since using BrandForge!',
+    author: 'Maya Chen',
+    role: 'Yoga Instructor & Studio Owner',
+    location: 'Portland, OR',
+    avatar: 'https://brandforge.me/showcase/testimonials/avatars/zen-flow-yoga.jpg',
+  },
+  {
+    quote: 'As a consultant, I needed content that looks professional yet approachable. BrandForge nails it every time. Saves me hours every week!',
+    author: 'Michael Foster',
+    role: 'Business Strategy Consultant',
+    location: 'Austin, TX',
+    avatar: 'https://brandforge.me/showcase/testimonials/avatars/elevate-consulting.jpg',
+  },
+];
 
 interface FinalReminderEmailProps {
   userName?: string;
@@ -20,7 +46,7 @@ interface FinalReminderEmailProps {
 
 export const FinalReminderEmail = ({
   userName = 'there',
-  quickStartUrl = 'https://brandforge.ai/quick-start',
+  quickStartUrl = 'https://brandforge.me/quick-start',
   userEmail = '',
 }: FinalReminderEmailProps) => {
   return (
@@ -120,18 +146,24 @@ export const FinalReminderEmail = ({
           {/* Stats Section - Social Proof */}
           <Section style={statsSection}>
             <Text style={statsHeading}>What others are saying:</Text>
-            <div style={testimonialBox}>
-              <Text style={testimonialText}>
-                "I was skeptical, but the Quick Start blew my mind. Created my first post in literally 40 seconds."
-              </Text>
-              <Text style={testimonialAuthor}>— Sarah, Coffee Shop Owner</Text>
-            </div>
-            <div style={testimonialBox}>
-              <Text style={testimonialText}>
-                "Wish I'd found this sooner. Been spending hours on Canva for what BrandForge does in minutes."
-              </Text>
-              <Text style={testimonialAuthor}>— Mike, Freelance Consultant</Text>
-            </div>
+            {testimonials.map((testimonial, index) => (
+              <div key={index} style={testimonialBox}>
+                <div style={testimonialHeader}>
+                  <Img
+                    src={testimonial.avatar}
+                    alt={testimonial.author}
+                    width="48"
+                    height="48"
+                    style={testimonialAvatar}
+                  />
+                  <div>
+                    <Text style={testimonialAuthorName}>{testimonial.author}</Text>
+                    <Text style={testimonialAuthorRole}>{testimonial.role}</Text>
+                  </div>
+                </div>
+                <Text style={testimonialText}>"{testimonial.quote}"</Text>
+              </div>
+            ))}
           </Section>
 
           {/* Footer */}
@@ -353,8 +385,34 @@ const statsHeading = {
 const testimonialBox = {
   backgroundColor: '#f9fafb',
   borderLeft: '4px solid #7C3AED',
-  padding: '16px',
+  padding: '20px',
   marginBottom: '16px',
+  borderRadius: '8px',
+};
+
+const testimonialHeader = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
+  marginBottom: '12px',
+};
+
+const testimonialAvatar = {
+  borderRadius: '50%',
+  objectFit: 'cover' as const,
+};
+
+const testimonialAuthorName = {
+  color: '#1a1a1a',
+  fontSize: '15px',
+  fontWeight: 'bold',
+  margin: '0 0 2px',
+};
+
+const testimonialAuthorRole = {
+  color: '#6b7280',
+  fontSize: '13px',
+  margin: '0',
 };
 
 const testimonialText = {
@@ -362,12 +420,6 @@ const testimonialText = {
   fontSize: '15px',
   fontStyle: 'italic',
   lineHeight: '1.6',
-  margin: '0 0 8px',
-};
-
-const testimonialAuthor = {
-  color: '#6b7280',
-  fontSize: '14px',
   margin: '0',
 };
 

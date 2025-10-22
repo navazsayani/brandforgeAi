@@ -1,0 +1,28 @@
+{
+  "id": "bloom-beauty",
+  "brandName": "Bloom Beauty Bar",
+  "industry": "beauty_cosmetics",
+  "description": "Luxury beauty salon specializing in transformative hair styling, precision nail artistry, and personalized beauty treatments in an elegant, sophisticated setting where every client feels pampered",
+  "logo": "/showcase/examples/bloom-beauty/logo.png",
+  "posts": [
+    {
+      "image": "/showcase/examples/bloom-beauty/posts/post-1-image.png",
+      "data": "/showcase/examples/bloom-beauty/posts/post-1-data.json"
+    },
+    {
+      "image": "/showcase/examples/bloom-beauty/posts/post-2-image.png",
+      "data": "/showcase/examples/bloom-beauty/posts/post-2-data.json"
+    },
+    {
+      "image": "/showcase/examples/bloom-beauty/posts/post-3-image.png",
+      "data": "/showcase/examples/bloom-beauty/posts/post-3-data.json"
+    }
+  ],
+  "testimonial": {
+    "quote": "The images are so glamorous and professional! Clients keep asking where I get my social media content. Worth every penny!",
+    "author": "Isabella Rodriguez",
+    "role": "Beauty Salon Owner",
+    "location": "Miami, FL",
+    "avatar": "/showcase/testimonials/avatars/bloom-beauty.jpg"
+  }
+}

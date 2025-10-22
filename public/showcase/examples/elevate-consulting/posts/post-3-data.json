@@ -1,0 +1,20 @@
+{
+  "image": "/showcase/examples/elevate-consulting/posts/post-3-image.png",
+  "caption": "Ever wondered what it truly takes to scale your startup or small business efficiently.",
+  "hashtags": "#BusinessConsulting #StartupGrowth #SmallBusinessSuccess #ScalingUp #BusinessStrategy",
+  "generationTime": "32 seconds",
+  "platformScreenshots": {
+    "instagram": "/showcase/examples/elevate-consulting/posts/post-3-instagram.png",
+    "facebook": "/showcase/examples/elevate-consulting/posts/post-3-facebook.png",
+    "linkedin": "/showcase/examples/elevate-consulting/posts/post-3-linkedin.png",
+    "twitter": "/showcase/examples/elevate-consulting/posts/post-3-twitter.png"
+  },
+  "previewProps": {
+    "caption": "Ever wondered what it truly takes to scale your startup or small business efficiently.",
+    "hashtags": "#BusinessConsulting #StartupGrowth #SmallBusinessSuccess #ScalingUp #BusinessStrategy",
+    "imageSrc": "/showcase/examples/elevate-consulting/posts/post-3-image.png",
+    "brandName": "Elevate Consulting",
+    "brandLogoUrl": "/showcase/examples/elevate-consulting/logo.png",
+    "selectedPlatform": "all"
+  }
+}

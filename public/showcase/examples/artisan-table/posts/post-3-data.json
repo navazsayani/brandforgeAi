@@ -1,0 +1,20 @@
+{
+  "image": "/showcase/examples/artisan-table/posts/post-3-image.png",
+  "caption": "At our heart, we believe in the power of fresh, local ingredients to tell a story on every plate.",
+  "hashtags": "#FarmToTable #SeasonalEating #LocalProduce #FoodieAdventures #CulinaryJourney #RestaurantLife #GourmetFood",
+  "generationTime": "32 seconds",
+  "platformScreenshots": {
+    "instagram": "/showcase/examples/artisan-table/posts/post-3-instagram.png",
+    "facebook": "/showcase/examples/artisan-table/posts/post-3-facebook.png",
+    "linkedin": "/showcase/examples/artisan-table/posts/post-3-linkedin.png",
+    "twitter": "/showcase/examples/artisan-table/posts/post-3-twitter.png"
+  },
+  "previewProps": {
+    "caption": "At our heart, we believe in the power of fresh, local ingredients to tell a story on every plate.",
+    "hashtags": "#FarmToTable #SeasonalEating #LocalProduce #FoodieAdventures #CulinaryJourney #RestaurantLife #GourmetFood",
+    "imageSrc": "/showcase/examples/artisan-table/posts/post-3-image.png",
+    "brandName": "Artisan Table",
+    "brandLogoUrl": "/showcase/examples/artisan-table/logo.png",
+    "selectedPlatform": "all"
+  }
+}

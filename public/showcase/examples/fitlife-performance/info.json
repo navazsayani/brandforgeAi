@@ -1,0 +1,28 @@
+{
+  "id": "fitlife-performance",
+  "brandName": "FitLife Performance",
+  "industry": "health_wellness",
+  "description": "High-performance fitness coaching delivering personalized training programs, expert nutrition guidance, and sustainable lifestyle transformation for lasting health results",
+  "logo": "/showcase/examples/fitlife-performance/logo.png",
+  "posts": [
+    {
+      "image": "/showcase/examples/fitlife-performance/posts/post-1-image.png",
+      "data": "/showcase/examples/fitlife-performance/posts/post-1-data.json"
+    },
+    {
+      "image": "/showcase/examples/fitlife-performance/posts/post-2-image.png",
+      "data": "/showcase/examples/fitlife-performance/posts/post-2-data.json"
+    },
+    {
+      "image": "/showcase/examples/fitlife-performance/posts/post-3-image.png",
+      "data": "/showcase/examples/fitlife-performance/posts/post-3-data.json"
+    }
+  ],
+  "testimonial": {
+    "quote": "My clients love the motivational content! The transformation posts especially get tons of engagement. BrandForge is a game-changer!",
+    "author": "Coach Ryan Thompson",
+    "role": "Certified Fitness Coach",
+    "location": "Denver, CO",
+    "avatar": "/showcase/testimonials/avatars/fitlife-performance.jpg"
+  }
+}

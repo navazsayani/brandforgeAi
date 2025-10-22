@@ -1,0 +1,28 @@
+{
+  "id": "artisan-table",
+  "brandName": "Artisan Table",
+  "industry": "food_beverage",
+  "description": "Farm-to-table restaurant crafting seasonal dishes with locally-sourced ingredients, bringing culinary artistry and authentic flavors to every beautifully plated creation",
+  "logo": "/showcase/examples/artisan-table/logo.png",
+  "posts": [
+    {
+      "image": "/showcase/examples/artisan-table/posts/post-1-image.png",
+      "data": "/showcase/examples/artisan-table/posts/post-1-data.json"
+    },
+    {
+      "image": "/showcase/examples/artisan-table/posts/post-2-image.png",
+      "data": "/showcase/examples/artisan-table/posts/post-2-data.json"
+    },
+    {
+      "image": "/showcase/examples/artisan-table/posts/post-3-image.png",
+      "data": "/showcase/examples/artisan-table/posts/post-3-data.json"
+    }
+  ],
+  "testimonial": {
+    "quote": "The food photography is absolutely stunning. Our reservations increased 30% after consistently posting BrandForge content!",
+    "author": "Chef Daniel Park",
+    "role": "Restaurant Owner & Chef",
+    "location": "San Francisco, CA",
+    "avatar": "/showcase/testimonials/avatars/artisan-table.jpg"
+  }
+}
