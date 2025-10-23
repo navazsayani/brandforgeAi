@@ -84,29 +84,56 @@ export const FinalReminderEmail = ({
               Before you go, here's the fastest way to see what BrandForge AI can do:
             </Text>
 
-            <div style={stepBox}>
-              <div style={stepNumber}>1</div>
-              <div style={stepContent}>
-                <Text style={stepTitle}>Click the button below</Text>
-                <Text style={stepDesc}>Takes you straight to Quick Start</Text>
-              </div>
-            </div>
+            {/* Step 1 */}
+            <table width="100%" cellPadding="0" cellSpacing="0" style={stepBox}>
+              <tr>
+                <td width="48" style={stepNumberCell}>
+                  <table width="32" cellPadding="0" cellSpacing="0" style={stepNumber}>
+                    <tr>
+                      <td align="center" valign="middle" style={{color: '#ffffff', fontSize: '16px', fontWeight: 'bold'}}>1</td>
+                    </tr>
+                  </table>
+                </td>
+                <td style={stepContent}>
+                  <Text style={stepTitle}>Click the button below</Text>
+                  <Text style={stepDesc}>Takes you straight to Quick Start</Text>
+                </td>
+              </tr>
+            </table>
 
-            <div style={stepBox}>
-              <div style={stepNumber}>2</div>
-              <div style={stepContent}>
-                <Text style={stepTitle}>Describe your business in one sentence</Text>
-                <Text style={stepDesc}>Example: "Yoga studio for busy professionals"</Text>
-              </div>
-            </div>
+            {/* Step 2 */}
+            <table width="100%" cellPadding="0" cellSpacing="0" style={stepBox}>
+              <tr>
+                <td width="48" style={stepNumberCell}>
+                  <table width="32" cellPadding="0" cellSpacing="0" style={stepNumber}>
+                    <tr>
+                      <td align="center" valign="middle" style={{color: '#ffffff', fontSize: '16px', fontWeight: 'bold'}}>2</td>
+                    </tr>
+                  </table>
+                </td>
+                <td style={stepContent}>
+                  <Text style={stepTitle}>Describe your business in one sentence</Text>
+                  <Text style={stepDesc}>Example: "Yoga studio for busy professionals"</Text>
+                </td>
+              </tr>
+            </table>
 
-            <div style={stepBox}>
-              <div style={stepNumber}>3</div>
-              <div style={stepContent}>
-                <Text style={stepTitle}>Get a complete Instagram post</Text>
-                <Text style={stepDesc}>Image + caption + hashtags in 30 seconds</Text>
-              </div>
-            </div>
+            {/* Step 3 */}
+            <table width="100%" cellPadding="0" cellSpacing="0" style={stepBox}>
+              <tr>
+                <td width="48" style={stepNumberCell}>
+                  <table width="32" cellPadding="0" cellSpacing="0" style={stepNumber}>
+                    <tr>
+                      <td align="center" valign="middle" style={{color: '#ffffff', fontSize: '16px', fontWeight: 'bold'}}>3</td>
+                    </tr>
+                  </table>
+                </td>
+                <td style={stepContent}>
+                  <Text style={stepTitle}>Get a complete Instagram post</Text>
+                  <Text style={stepDesc}>Image + caption + hashtags in 30 seconds</Text>
+                </td>
+              </tr>
+            </table>
 
             <Text style={highlightBox}>
               <strong>That's it.</strong> No setup. No learning curve. Just results.
@@ -262,8 +289,6 @@ const text = {
 };
 
 const stepBox = {
-  display: 'flex',
-  alignItems: 'flex-start',
   marginBottom: '20px',
   padding: '16px',
   backgroundColor: '#f9fafb',
@@ -271,23 +296,21 @@ const stepBox = {
   border: '1px solid #e5e7eb',
 };
 
+const stepNumberCell = {
+  paddingRight: '16px',
+  verticalAlign: 'top',
+};
+
 const stepNumber = {
   backgroundColor: '#7C3AED',
-  color: '#ffffff',
+  borderRadius: '50%',
   width: '32px',
   height: '32px',
-  borderRadius: '50%',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontWeight: 'bold',
-  fontSize: '16px',
-  marginRight: '16px',
-  flexShrink: 0,
 };
 
 const stepContent = {
-  flex: 1,
+  verticalAlign: 'top',
+  paddingTop: '4px',
 };
 
 const stepTitle = {

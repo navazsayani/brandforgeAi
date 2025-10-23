@@ -107,30 +107,41 @@ export const TemplateShowcaseEmail = ({
             <div style={categoryContainer}>
               {templatePreviews.map((template) => (
                 <div key={template.id} style={templateCard}>
-                  <div style={templatePreviewContainer}>
-                    <Img
-                      src={template.previewImage}
-                      alt={`${template.name} example`}
-                      width="100%"
-                      style={templatePreviewImage}
-                    />
-                    <div style={templateLogoOverlay}>
-                      <Img
-                        src={template.logo}
-                        alt={template.name}
-                        width="40"
-                        height="40"
-                        style={templateLogoIcon}
-                      />
-                    </div>
-                  </div>
-                  <div style={templateContent}>
-                    <div style={templateHeader}>
-                      <Text style={templateEmoji}>{template.emoji}</Text>
-                      <Text style={templateName}>{template.name}</Text>
-                    </div>
-                    <Text style={templateDesc}>{template.description}</Text>
-                  </div>
+                  <Img
+                    src={template.previewImage}
+                    alt={`${template.name} example`}
+                    width="560"
+                    height="560"
+                    style={templatePreviewImage}
+                  />
+                  <table width="100%" cellPadding="0" cellSpacing="0" style={templateContent}>
+                    <tr>
+                      <td width="56" style={{paddingRight: '12px', verticalAlign: 'top'}}>
+                        <Img
+                          src={template.logo}
+                          alt={template.name}
+                          width="48"
+                          height="48"
+                          style={templateLogoIcon}
+                        />
+                      </td>
+                      <td style={{verticalAlign: 'middle'}}>
+                        <table width="100%" cellPadding="0" cellSpacing="0">
+                          <tr>
+                            <td>
+                              <Text style={templateEmoji}>{template.emoji}</Text>
+                              <Text style={templateName}>{template.name}</Text>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <Text style={templateDesc}>{template.description}</Text>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
                 </div>
               ))}
             </div>
@@ -279,48 +290,29 @@ const templateCard = {
   overflow: 'hidden' as const,
 };
 
-const templatePreviewContainer = {
-  position: 'relative' as const,
-  width: '100%',
-  aspectRatio: '1',
-};
-
 const templatePreviewImage = {
   width: '100%',
   height: 'auto',
   display: 'block',
-  objectFit: 'cover' as const,
-};
-
-const templateLogoOverlay = {
-  position: 'absolute' as const,
-  top: '12px',
-  right: '12px',
-  backgroundColor: '#ffffff',
-  borderRadius: '8px',
-  padding: '8px',
-  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+  borderTopLeftRadius: '12px',
+  borderTopRightRadius: '12px',
 };
 
 const templateLogoIcon = {
   display: 'block',
-  borderRadius: '4px',
+  borderRadius: '8px',
+  border: '2px solid #e5e7eb',
 };
 
 const templateContent = {
   padding: '16px',
 };
 
-const templateHeader = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '8px',
-  marginBottom: '8px',
-};
-
 const templateEmoji = {
-  fontSize: '24px',
-  margin: '0',
+  fontSize: '20px',
+  margin: '0 8px 0 0',
+  display: 'inline-block',
+  verticalAlign: 'middle',
 };
 
 const templateName = {
@@ -328,6 +320,8 @@ const templateName = {
   fontSize: '16px',
   fontWeight: 'bold',
   margin: '0',
+  display: 'inline-block',
+  verticalAlign: 'middle',
 };
 
 const templateDesc = {

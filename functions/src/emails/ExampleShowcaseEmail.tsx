@@ -92,45 +92,48 @@ export const ExampleShowcaseEmail = ({
 
             {showcaseExamples.map((example) => (
               <div key={example.id} style={exampleCard}>
-                <div style={brandHeader}>
-                  <Img
-                    src={example.logo}
-                    alt={example.brandName}
-                    width="48"
-                    height="48"
-                    style={brandLogo}
-                  />
-                  <div>
-                    <Text style={exampleLabel}>{example.brandName}</Text>
-                    <Text style={exampleInput}>{example.description}</Text>
-                  </div>
-                </div>
+                <table width="100%" cellPadding="0" cellSpacing="0" style={brandHeader}>
+                  <tr>
+                    <td width="60" style={{paddingRight: '12px', verticalAlign: 'top'}}>
+                      <Img
+                        src={example.logo}
+                        alt={example.brandName}
+                        width="48"
+                        height="48"
+                        style={brandLogo}
+                      />
+                    </td>
+                    <td style={{verticalAlign: 'top'}}>
+                      <Text style={exampleLabel}>{example.brandName}</Text>
+                      <Text style={exampleInput}>{example.description}</Text>
+                    </td>
+                  </tr>
+                </table>
 
                 <div style={exampleResultBox}>
                   {/* Instagram-style Preview */}
                   <div style={instagramPreview}>
                     {/* Instagram Header */}
-                    <div style={instagramHeader}>
-                      <div style={instagramHeaderLeft}>
-                        <div style={instagramAvatarRing}>
+                    <table width="100%" cellPadding="0" cellSpacing="0" style={instagramHeader}>
+                      <tr>
+                        <td width="40" style={{paddingRight: '10px', verticalAlign: 'middle'}}>
                           <Img
                             src={example.logo}
                             alt={example.brandName}
-                            width="32"
-                            height="32"
+                            width="36"
+                            height="36"
                             style={instagramAvatar}
                           />
-                        </div>
-                        <div>
-                          <div style={instagramUsernameRow}>
-                            <Text style={instagramUsername}>{example.brandName.toLowerCase().replace(/\s+/g, '')}</Text>
-                            <span style={instagramVerified}>✓</span>
-                          </div>
+                        </td>
+                        <td style={{verticalAlign: 'middle'}}>
+                          <Text style={instagramUsername}>{example.brandName.toLowerCase().replace(/\s+/g, '')} <span style={instagramVerified}>✓</span></Text>
                           <Text style={instagramSponsored}>Sponsored</Text>
-                        </div>
-                      </div>
-                      <Text style={instagramMenuDots}>⋯</Text>
-                    </div>
+                        </td>
+                        <td width="30" align="right" style={{verticalAlign: 'middle'}}>
+                          <Text style={instagramMenuDots}>⋯</Text>
+                        </td>
+                      </tr>
+                    </table>
 
                     {/* Instagram Post Image */}
                     <Img
@@ -141,14 +144,18 @@ export const ExampleShowcaseEmail = ({
                     />
 
                     {/* Instagram Actions */}
-                    <div style={instagramActions}>
-                      <div style={instagramActionIcons}>
-                        <span style={instagramIcon}>❤️</span>
-                        <span style={instagramIcon}>💬</span>
-                        <span style={instagramIcon}>📤</span>
-                      </div>
-                      <span style={instagramIcon}>🔖</span>
-                    </div>
+                    <table width="100%" cellPadding="0" cellSpacing="0" style={instagramActions}>
+                      <tr>
+                        <td>
+                          <span style={instagramIcon}>❤️</span>
+                          <span style={instagramIcon}>💬</span>
+                          <span style={instagramIcon}>📤</span>
+                        </td>
+                        <td align="right">
+                          <span style={instagramIcon}>🔖</span>
+                        </td>
+                      </tr>
+                    </table>
 
                     {/* Instagram Engagement & Caption */}
                     <div style={instagramCaptionArea}>
@@ -277,9 +284,6 @@ const exampleCard = {
 };
 
 const brandHeader = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '12px',
   marginBottom: '16px',
 };
 
@@ -318,36 +322,14 @@ const instagramPreview = {
 };
 
 const instagramHeader = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
   padding: '12px 16px',
   borderBottom: '1px solid #efefef',
 };
 
-const instagramHeaderLeft = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '10px',
-};
-
-const instagramAvatarRing = {
-  padding: '2px',
-  background: 'linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)',
-  borderRadius: '50%',
-  display: 'inline-block',
-};
-
 const instagramAvatar = {
   borderRadius: '50%',
-  border: '2px solid #ffffff',
+  border: '3px solid #e1306c',
   display: 'block',
-};
-
-const instagramUsernameRow = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '4px',
 };
 
 const instagramUsername = {
@@ -393,21 +375,13 @@ const postImage = {
 
 const instagramActions = {
   padding: '12px 16px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
   borderTop: '1px solid #efefef',
-};
-
-const instagramActionIcons = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '16px',
 };
 
 const instagramIcon = {
   fontSize: '24px',
   display: 'inline-block',
+  marginRight: '16px',
 };
 
 const instagramCaptionArea = {

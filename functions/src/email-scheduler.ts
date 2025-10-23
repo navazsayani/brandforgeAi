@@ -89,7 +89,7 @@ async function sendEmailViaResend({
       }
     };
 
-    const fromEmail = getConfigValue('from_email', 'hello@brandforge.ai');
+    const fromEmail = getConfigValue('from_email', 'hello@brandforge.me');
     const replyToEmail = getConfigValue('reply_to_email', '');
 
     const emailOptions: any = {
@@ -134,9 +134,9 @@ export const sendActivationEmails = functions.pubsub
       // Use Firebase config for app URL or fall back to default
       const getAppUrl = () => {
         try {
-          return functions.config().app?.url || 'https://brandforge.ai';
+          return functions.config().app?.url || 'https://www.brandforge.me';
         } catch {
-          return process.env.NEXT_PUBLIC_APP_URL || 'https://brandforge.ai';
+          return process.env.NEXT_PUBLIC_APP_URL || 'https://www.brandforge.me';
         }
       };
 

@@ -1200,7 +1200,7 @@ export default function BrandProfilePage() {
                               </FormItem>
                             )} />
                            <FormField control={form.control} name="logoColors" render={({ field }) => (
-                              <FormItem><FormLabel className="flex items-center text-sm"><Palette className="w-4 h-4 mr-2"/>Color Palette</FormLabel><FormControl><Input placeholder="e.g., deep teal, soft gold" {...field} /></FormControl></FormItem>
+                              <FormItem><FormLabel className="flex items-center text-sm"><Palette className="w-4 h-4 mr-2"/>Color & Style Hints</FormLabel><FormControl><Input placeholder="e.g., deep teal and gold, 3d, gradient, textured" {...field} /></FormControl></FormItem>
                             )} />
                             <FormField control={form.control} name="logoStyle" render={({ field }) => (
                               <FormItem><FormLabel className="flex items-center text-sm"><Wand2 className="w-4 h-4 mr-2"/>Style</FormLabel>
