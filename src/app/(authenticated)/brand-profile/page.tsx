@@ -1166,8 +1166,8 @@ export default function BrandProfilePage() {
                         </div>
                         {/* Generation, Refine, and Download Buttons */}
                         <div className="flex-1 text-center sm:text-left">
-                          <div className="flex flex-col sm:flex-row gap-2">
-                            <Button type="button" onClick={handleGenerateLogo} disabled={isGeneratingLogo || isUploadingLogo || !form.getValues("brandName") || !form.getValues("brandDescription")} className="w-full sm:w-auto">
+                          <div className="flex flex-col lg:flex-row gap-2">
+                            <Button type="button" onClick={handleGenerateLogo} disabled={isGeneratingLogo || isUploadingLogo || !form.getValues("brandName") || !form.getValues("brandDescription")} className="w-full lg:w-auto">
                               {isGeneratingLogo ? (
                                 <>
                                   <div className="mr-2 w-4 h-4 border-2 border-transparent rounded-full animate-spin-gradient" />
@@ -1181,10 +1181,10 @@ export default function BrandProfilePage() {
                             </Button>
                             {currentLogoToDisplay && (
                               <>
-                                <Button type="button" onClick={() => handleOpenRefineModal(currentLogoToDisplay)} variant="outline" disabled={isGeneratingLogo || isUploadingLogo} className="w-full sm:w-auto btn-gradient-primary">
+                                <Button type="button" onClick={() => handleOpenRefineModal(currentLogoToDisplay)} variant="outline" disabled={isGeneratingLogo || isUploadingLogo} className="w-full lg:w-auto btn-gradient-primary">
                                   <Wand2 className="mr-2 h-4 w-4" /> Refine with AI
                                 </Button>
-                                <Button type="button" onClick={handleDownloadLogo} variant="outline" disabled={isGeneratingLogo || isUploadingLogo} className="w-full sm:w-auto">
+                                <Button type="button" onClick={handleDownloadLogo} variant="outline" disabled={isGeneratingLogo || isUploadingLogo} className="w-full lg:w-auto">
                                   <Download className="mr-2 h-4 w-4" /> Download
                                 </Button>
                               </>

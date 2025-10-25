@@ -51,25 +51,25 @@ export function TemplateCarousel({
         <div className={cn("mb-4", className)}>
           <Button
             variant="outline"
-            className="w-full justify-between items-center h-auto py-3 px-3 sm:px-4 border-dashed hover:border-solid hover:border-primary/50 transition-all"
+            className="w-full justify-between items-center h-auto py-3 px-3 sm:px-4 border-dashed hover:border-solid hover:border-primary/50 transition-all overflow-hidden"
             onClick={() => setIsCollapsed(false)}
           >
-            <div className="flex items-center gap-2 text-left min-w-0 flex-1 mr-2">
+            <div className="flex items-center gap-2 text-left min-w-0 flex-1 mr-2 overflow-hidden">
               <Sparkles className="h-4 w-4 text-primary flex-shrink-0" />
-              <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 min-w-0">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 min-w-0 overflow-hidden flex-1">
                 <span className="text-sm font-medium truncate">
                   Need inspiration?
                 </span>
-                <span className="text-xs text-muted-foreground truncate">
+                <span className="text-xs text-muted-foreground truncate hidden sm:inline">
                   Try a pre-designed {categoryLabel.toLowerCase()} template {categoryIcon}
+                </span>
+                <span className="text-xs text-muted-foreground truncate sm:hidden">
+                  {templates.length} templates {categoryIcon}
                 </span>
               </div>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-              <Badge variant="secondary" className="text-xs hidden xs:inline-flex">
-                {templates.length} templates
-              </Badge>
-              <Badge variant="secondary" className="text-xs inline-flex xs:hidden">
+              <Badge variant="secondary" className="text-xs hidden sm:inline-flex">
                 {templates.length}
               </Badge>
               <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />

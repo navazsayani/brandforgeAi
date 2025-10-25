@@ -371,7 +371,10 @@ export default function ContentStudioPage() {
   const [blogBrandDescription, setBlogBrandDescription] = useState<string>("");
   const [blogKeywords, setBlogKeywords] = useState<string>("");
   const [blogWebsiteUrl, setBlogWebsiteUrl] = useState<string>("");
-  
+
+  // Ref for social post results card to enable smooth scrolling
+  const socialPostResultsRef = useRef<HTMLDivElement>(null);
+
   // State for config fetched from server
   const [freepikEnabled, setFreepikEnabled] = useState(false);
   const [fireworksEnabled, setFireworksEnabled] = useState(false);
@@ -742,6 +745,16 @@ export default function ContentStudioPage() {
         });
       }
       setIsRefining(false);
+
+      // Smooth scroll to results after refinement completes
+      setTimeout(() => {
+        if (socialPostResultsRef.current) {
+          socialPostResultsRef.current.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest'
+          });
+        }
+      }, 100);
     }
     if (refineState.error) {
       toast({
@@ -1651,7 +1664,9 @@ Your mission is to create a compelling, brand-aligned visual asset that:
     formData.append('language', selectedSocialLanguage);
     formData.append('tone', socialToneValue);
 
-    refineAction(formData);
+    startTransition(() => {
+      refineAction(formData);
+    });
   };
 
 
@@ -2681,7 +2696,7 @@ Your mission is to create a compelling, brand-aligned visual asset that:
               </CardFooter>
             </form>
               {generatedSocialPost && (
-                <Card className="mt-6 shadow-sm"> 
+                <Card ref={socialPostResultsRef} className="mt-6 shadow-sm">
                   <CardHeader>
                       <CardTitle className="text-xl flex items-center">
                           <MessageSquareText className="w-5 h-5 mr-2 text-primary" />
@@ -2736,21 +2751,31 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                               )}
                           </div>
                       )}
-                      <div>
+                      <div className="relative">
                           <Label htmlFor="generatedCaption" className="text-sm font-medium mb-1 text-muted-foreground">Generated Caption:</Label>
-                          <div className="p-3 border rounded-md bg-muted/50">
+                          <div className={cn("p-3 border rounded-md bg-muted/50 transition-opacity duration-200", isRefining && "opacity-50")}>
+                              {isRefining && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm rounded-md z-10">
+                                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                                </div>
+                              )}
                               <p id="generatedCaption" className="text-sm whitespace-pre-wrap">{generatedSocialPost.caption}</p>
                           </div>
-                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedSocialPost.caption, "Caption")} className="mt-1 text-muted-foreground hover:text-primary">
+                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedSocialPost.caption, "Caption")} className="mt-1 text-muted-foreground hover:text-primary" disabled={isRefining}>
                               <Copy className="w-3 h-3 mr-1" /> Copy Caption
                           </Button>
                       </div>
-                      <div>
+                      <div className="relative">
                           <Label htmlFor="generatedHashtags" className="text-sm font-medium mb-1 text-muted-foreground">Generated Hashtags:</Label>
-                          <div className="p-3 border rounded-md bg-muted/50">
+                          <div className={cn("p-3 border rounded-md bg-muted/50 transition-opacity duration-200", isRefining && "opacity-50")}>
+                              {isRefining && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm rounded-md z-10">
+                                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                                </div>
+                              )}
                               <p id="generatedHashtags" className="text-sm whitespace-pre-wrap break-words">{generatedSocialPost.hashtags}</p>
                           </div>
-                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedSocialPost.hashtags, "Hashtags")} className="mt-1 text-muted-foreground hover:text-primary">
+                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedSocialPost.hashtags, "Hashtags")} className="mt-1 text-muted-foreground hover:text-primary" disabled={isRefining}>
                               <Copy className="w-3 h-3 mr-1" /> Copy Hashtags
                           </Button>
                       </div>
