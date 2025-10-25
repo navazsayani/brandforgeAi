@@ -852,9 +852,17 @@ The final image must be a complete announcement card with "${userInput.announcem
       };
 
     default:
+      // Fallback for image templates without specific case handlers
+      // Use template presets directly to ensure aspectRatio and other fields are always defined
+      console.warn(`Template ID "${template.id}" does not have a specific case handler. Using generic template presets.`);
       return {
-        finalPrompt: '',
-        autoFilledFields: {}
+        finalPrompt: `Generate a professional, high-quality image for: ${userBrandData.brandName || 'brand marketing'}.\n\nBrand: ${userBrandData.brandDescription || 'Professional brand'}\nIndustry: ${userBrandData.industry || 'General'}\nStyle: ${template.presets.imageStyle || 'professional'}`,
+        autoFilledFields: {
+          imageStyle: template.presets.imageStyle,
+          aspectRatio: template.presets.aspectRatio,
+          customStyleNotes: '',
+          negativePrompt: 'low quality, blurry, amateur, unprofessional'
+        }
       };
   }
 }
@@ -1959,9 +1967,18 @@ Make the transformation vivid and tangible with specific details.
       };
 
     default:
+      // Fallback for social templates without specific case handlers
+      // Use template presets to ensure fields are always defined
+      console.warn(`Social template ID "${template.id}" does not have a specific case handler. Using generic template presets.`);
       return {
-        finalPrompt: '',
-        autoFilledFields: {}
+        finalPrompt: `Create an engaging social media post for: ${userBrandData.brandName || 'brand'}.\n\nBrand: ${userBrandData.brandDescription || 'Professional brand'}\nIndustry: ${userBrandData.industry || 'General'}`,
+        autoFilledFields: {
+          postGoal: template.presets.postGoal,
+          tone: template.presets.tone,
+          platform: template.presets.platform,
+          targetAudience: 'target audience',
+          callToAction: 'Learn more'
+        }
       };
   }
 }

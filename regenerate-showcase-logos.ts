@@ -2,7 +2,7 @@
  * Script to regenerate showcase logos with more colorful and distinct designs
  */
 
-import { generateBrandLogoFlow } from './src/ai/flows/generate-brand-logo-flow';
+import { generateBrandLogo } from './src/ai/flows/generate-brand-logo-flow';
 
 const brands = [
   {
@@ -10,7 +10,7 @@ const brands = [
     name: 'FitLife Performance',
     industry: 'Fitness Coaching',
     description: 'High-performance fitness coaching for athletes and fitness enthusiasts seeking results',
-    logoType: 'combination' as const,
+    logoType: 'logomark' as const,
     logoStyle: 'bold' as const,
     colors: ['energetic orange', 'electric blue', 'vibrant red'],
     background: 'white background',
@@ -21,7 +21,7 @@ const brands = [
     name: 'The Harvest Table',
     industry: 'Restaurant',
     description: 'Farm-to-table restaurant celebrating local ingredients and seasonal flavors',
-    logoType: 'combination' as const,
+    logoType: 'logomark' as const,
     logoStyle: 'organic' as const,
     colors: ['warm amber', 'forest green', 'harvest gold'],
     background: 'light cream background',
@@ -43,7 +43,7 @@ const brands = [
     name: 'Chic Boutique',
     industry: 'Fashion Boutique',
     description: 'Curated fashion boutique offering unique, stylish pieces for modern women',
-    logoType: 'wordmark' as const,
+    logoType: 'logotype' as const,
     logoStyle: 'elegant' as const,
     colors: ['deep burgundy', 'soft blush', 'rich navy'],
     background: 'dark background',
@@ -54,7 +54,7 @@ const brands = [
     name: 'Bloom Beauty',
     industry: 'Beauty Salon',
     description: 'Modern beauty salon offering hair, nails, and beauty treatments',
-    logoType: 'combination' as const,
+    logoType: 'logomark' as const,
     logoStyle: 'modern' as const,
     colors: ['coral pink', 'lavender purple', 'gold'],
     background: 'light pink background',
@@ -85,22 +85,22 @@ async function regenerateLogos() {
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
 
     try {
-      const result = await generateBrandLogoFlow({
+      const result = await generateBrandLogo({
         brandName: brand.name,
-        industry: brand.industry,
         brandDescription: brand.description,
         logoType: brand.logoType,
         logoStyle: brand.logoStyle,
-        additionalPrompt: brand.prompt,
+        logoShape: 'custom',
+        logoBackground: 'white',
       });
 
-      if (result.success && result.imageUrl) {
+      if (result.logoDataUri) {
         console.log(`✅ SUCCESS: Logo generated for ${brand.name}`);
-        console.log(`   Image URL: ${result.imageUrl}`);
+        console.log(`   Logo data available`);
         console.log(`   Save to: public/showcase/examples/${brand.id}/logo.png\n`);
       } else {
         console.log(`❌ FAILED: ${brand.name}`);
-        console.log(`   Error: ${result.error || 'Unknown error'}\n`);
+        console.log(`   Error: No logo data returned\n`);
       }
 
       // Wait 2 seconds between generations to avoid rate limits

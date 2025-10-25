@@ -54,8 +54,8 @@ function getEnhancedIndustryGuidance(industry: string, brandDescription: string)
   let brandSpecificElements = '';
   
   if (industryLower.includes('tech') || industryLower.includes('saas')) {
-    baseGuidance = 'INDUSTRY CONTEXT: Technology/Software - Incorporate clean geometric shapes, abstract connectivity concepts, symbols of innovation, or themes of digital transformation.';
-    brandSpecificElements = 'Tech brands should convey trust, innovation, and scalability. Visually, this could be represented through circuit patterns, network nodes, abstract data flows, or minimalist geometric forms that reflect the brand\'s specific technology focus.';
+    baseGuidance = 'INDUSTRY CONTEXT: Technology/Software - Modern, human-centered design that conveys innovation through simplicity and forward-thinking aesthetics.';
+    brandSpecificElements = 'Tech brands should convey trust, innovation, and scalability through clean, contemporary visual language. Consider modern geometric abstraction, dynamic shapes suggesting progress and growth, or refined letterforms. Avoid literal tech clichés like circuits, chips, or network nodes. Modern SaaS brands favor approachable, human-centered design over technical imagery.';
   } else if (industryLower.includes('health') || industryLower.includes('wellness')) {
     baseGuidance = 'INDUSTRY CONTEXT: Health/Wellness - Use visual motifs that suggest balance, vitality, care, growth, healing, and holistic well-being.';
     brandSpecificElements = 'Health brands must evoke trust, care, and professionalism. Consider organic shapes, growth symbols (like a leaf or sprout), protective forms (like hands or a shield), or calming elements that align with the brand\'s specific healthcare approach.';
@@ -247,7 +247,7 @@ function getIndustryVisualConcepts(industry: string | undefined, brandDescriptio
     const industryLower = industry.toLowerCase();
     
     if (industryLower.includes('tech') || industryLower.includes('saas')) {
-        return 'geometric shapes, circuit patterns, or connectivity symbols';
+        return 'clean geometric abstraction, dynamic shapes suggesting progress, or modern minimalist forms';
     } else if (industryLower.includes('health') || industryLower.includes('wellness')) {
         return 'organic curves, leaf shapes, or wellness symbols';
     } else if (industryLower.includes('food') || industryLower.includes('beverage')) {

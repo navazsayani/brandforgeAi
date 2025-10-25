@@ -17,6 +17,7 @@ import { doc, setDoc, serverTimestamp, increment } from 'firebase/firestore';
 import Link from 'next/link';
 import NextImage from 'next/image';
 import ShowcaseCarousel from '@/components/ShowcaseCarousel';
+import { trackQuickStartComplete, trackContentGeneration, trackImageGeneration } from '@/lib/analytics';
 
 const initialSocialState: FormState<{ caption: string; hashtags: string; imageSrc: string | null; docId?: string }> = {
   error: undefined,
@@ -94,6 +95,11 @@ export default function QuickStartPage() {
         hashtags: socialState.data.hashtags,
         image: generatedImageUrl,
       });
+
+      // Track Quick Start completion and content generation
+      trackQuickStartComplete(industry);
+      trackContentGeneration('social_post', imageState.data.providerUsed || 'google');
+      trackImageGeneration(1, imageState.data.providerUsed || 'google', '1:1');
 
       // Update the Firestore document with the generated image
       if (generatedImageUrl && savedDocId && userId) {

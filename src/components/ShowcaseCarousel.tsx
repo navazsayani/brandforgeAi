@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import SocialMediaPreviews from '@/components/SocialMediaPreviews';
-import { getShowcaseById, getRandomShowcases, type ShowcaseBrand } from '@/lib/showcase/showcase-data';
+import { getShowcaseById, getRandomShowcases } from '@/lib/showcase/showcase-data';
+import type { ShowcaseBrand } from '@/lib/showcase/types';
 import NextImage from 'next/image';
 
 interface ShowcaseCarouselProps {

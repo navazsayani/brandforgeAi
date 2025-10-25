@@ -48,6 +48,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { trackBrandProfileComplete, setAnalyticsUserProperties, trackTemplateUsed, trackContentGeneration } from '@/lib/analytics';
 
 
 const MAX_IMAGES_PREMIUM = 5;
@@ -280,6 +281,10 @@ export default function BrandProfilePage() {
     setIsGeneratingLogo(false);
     if (generateLogoState.data?.logoDataUri) {
       setGeneratedLogoPreview(generateLogoState.data.logoDataUri);
+
+      // Track logo generation
+      trackContentGeneration('logo', 'google');
+
       toast({ title: "Logo Generated!", description: "Preview new logo. Save profile to keep it." });
     }
     if (generateLogoState.error) toast({ title: "Logo Gen Error", description: generateLogoState.error, variant: "destructive" });
@@ -347,6 +352,9 @@ export default function BrandProfilePage() {
     if (template.logoShape) form.setValue('logoShape', template.logoShape, { shouldValidate: true });
     if (template.logoStyle) form.setValue('logoStyle', template.logoStyle, { shouldValidate: true });
     if (template.logoColors) form.setValue('logoColors', template.logoColors, { shouldValidate: true });
+
+    // Track template usage
+    trackTemplateUsed(template.id, template.name);
 
     setShowTemplates(false);
     toast({
@@ -666,8 +674,17 @@ export default function BrandProfilePage() {
       }
       toast({ title: "Brand Profile Saved", description: "Information saved successfully." });
 
-      // Redirect if it was the first time completing the profile
+      // Track brand profile completion (first-time only)
       if (wasProfileIncomplete && finalData.brandDescription) {
+        trackBrandProfileComplete();
+
+        // Set user properties for segmentation
+        setAnalyticsUserProperties({
+          industry: finalData.industry || 'unknown',
+          has_brand_profile: true,
+          brand_name: finalData.brandName || 'unknown',
+        });
+
         router.push('/content-studio');
       }
     } catch (error: any) {

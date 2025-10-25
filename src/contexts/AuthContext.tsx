@@ -7,6 +7,7 @@ import { onAuthStateChanged, type User, createUserWithEmailAndPassword, signInWi
 import { auth } from '@/lib/firebaseConfig';
 import type { FirebaseError } from 'firebase/app';
 import { useRouter } from 'next/navigation';
+import { trackSignup, trackLogin, setAnalyticsUserId, setAnalyticsUserProperties } from '@/lib/analytics';
 
 interface AuthContextType {
   user: User | null;
@@ -50,6 +51,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
       setUser(userCredential.user);
+
+      // Track signup event
+      trackSignup('email');
+      setAnalyticsUserId(userCredential.user.uid);
+      setAnalyticsUserProperties({
+        signup_method: 'email',
+        user_email: userCredential.user.email || 'unknown',
+      });
+
       return userCredential.user;
     } catch (e) {
       const firebaseError = e as FirebaseError;
@@ -71,6 +81,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, pass);
       setUser(userCredential.user);
+
+      // Track login event
+      trackLogin('email');
+      setAnalyticsUserId(userCredential.user.uid);
+
       return userCredential.user;
     } catch (e) {
       const firebaseError = e as FirebaseError;
@@ -93,6 +108,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const result = await signInWithPopup(auth, provider);
       setUser(result.user);
+
+      // Check if new user or returning user
+      const isNewUser = result.user.metadata.creationTime === result.user.metadata.lastSignInTime;
+      if (isNewUser) {
+        // New user signup
+        trackSignup('google');
+        setAnalyticsUserProperties({
+          signup_method: 'google',
+          user_email: result.user.email || 'unknown',
+        });
+      } else {
+        // Returning user login
+        trackLogin('google');
+      }
+      setAnalyticsUserId(result.user.uid);
+
       // The onAuthStateChanged listener will handle redirecting to dashboard
       return result.user;
     } catch (e) {

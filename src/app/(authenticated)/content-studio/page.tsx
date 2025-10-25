@@ -44,6 +44,7 @@ import { FireworksImageControls } from '@/components/FireworksImageControls';
 import { ContentFeedbackWidget, RAGInsightsBadge, createRAGInsights } from '@/components/feedback';
 import { TemplateCarousel } from '@/components/TemplateCarousel';
 import { getTemplatesByCategory, buildTemplatePrompt, type ContentTemplate } from '@/lib/content-templates';
+import { trackContentGeneration, trackImageGeneration, trackImageRefinement } from '@/lib/analytics';
 
 
 /**
@@ -266,7 +267,7 @@ export default function ContentStudioPage() {
   const [imageState, imageAction] = useActionState(handleGenerateImagesAction, initialImageFormState);
   const prevImageStateRef = useRef(imageState);
   const [socialState, socialAction] = useActionState(handleGenerateSocialMediaCaptionAction, initialSocialFormState);
-  const [refineState, refineAction] = useActionState(handleRefineSocialPostAction, { error: null, data: null, message: null } as FormState<{caption: string; hashtags: string; variations?: Array<{caption: string; hashtags: string}>}>);
+  const [refineState, refineAction] = useActionState(handleRefineSocialPostAction, { error: undefined, data: undefined, message: undefined });
   const [blogState, blogAction] = useActionState(handleGenerateBlogContentAction, initialBlogFormState);
   const [describeImageState, describeImageAction] = useActionState(handleDescribeImageAction, initialDescribeImageState);
   const [blogOutlineState, blogOutlineAction] = useActionState(handleGenerateBlogOutlineAction, initialBlogOutlineState);
@@ -652,8 +653,16 @@ export default function ContentStudioPage() {
                   prompt: imageState.data?.promptUsed || "",
                   style: selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")
               };
-              addGeneratedImage(newImage); 
+              addGeneratedImage(newImage);
           });
+
+            // Track image generation
+            trackImageGeneration(
+              displayableImages.length,
+              imageState.data.providerUsed || 'unknown',
+              selectedAspectRatio
+            );
+
             toast({ title: "Success", description: `${displayableImages.length} image(s) processed.` });
         } else if (imageState.data.generatedImages.some(url => url.startsWith('task_id:'))) {
           toast({ title: "Freepik Task Started", description: "Freepik image generation task started. Use 'Check Status' to retrieve images." });
@@ -693,6 +702,10 @@ export default function ContentStudioPage() {
         status: 'draft',
       };
       addGeneratedSocialPost(newPost);
+
+      // Track social post generation
+      trackContentGeneration('social_post');
+
       toast({ title: "Success", description: socialState.message });
       setIsGeneratingSocialPost(false);
     }
@@ -714,12 +727,13 @@ export default function ContentStudioPage() {
           description: refineState.message || "Choose your favorite variation below.",
           duration: 4000
         });
-      } else {
+      } else if (refineState.data) {
         // Single refinement - update the generated post
         setGeneratedSocialPost({
           ...generatedSocialPost,
           caption: refineState.data.caption,
-          hashtags: refineState.data.hashtags
+          hashtags: refineState.data.hashtags,
+          imageSrc: generatedSocialPost?.imageSrc || null
         });
         toast({
           title: "Post Refined!",
@@ -757,6 +771,10 @@ export default function ContentStudioPage() {
         status: 'draft',
       };
       addGeneratedBlogPost(newPost);
+
+      // Track blog generation
+      trackContentGeneration('blog');
+
       toast({ title: "Success", description: blogState.message });
     }
     if (blogState.error) toast({ title: "Error generating blog post", description: blogState.error, variant: "destructive" });
@@ -1633,9 +1651,7 @@ Your mission is to create a compelling, brand-aligned visual asset that:
     formData.append('language', selectedSocialLanguage);
     formData.append('tone', socialToneValue);
 
-    startTransition(() => {
-      refineAction(formData);
-    });
+    refineAction(formData);
   };
 
 
