@@ -57,18 +57,16 @@ const showcaseExamples = [
 interface ExampleShowcaseEmailProps {
   userName?: string;
   quickStartUrl?: string;
-  industry?: string;
 }
 
 export const ExampleShowcaseEmail = ({
   userName = 'there',
   quickStartUrl = 'https://brandforge.me/quick-start',
-  industry = 'business',
 }: ExampleShowcaseEmailProps) => {
   return (
     <Html>
       <Head />
-      <Preview>See what {industry} brands created with BrandForge AI in 30 seconds</Preview>
+      <Preview>See what brands created with BrandForge AI in 30 seconds</Preview>
       <Body style={main}>
         <Container style={container}>
           {/* Logo/Header */}
@@ -82,7 +80,7 @@ export const ExampleShowcaseEmail = ({
           <Section style={heroSection}>
             <Heading style={h1}>Still on the fence{userName ? `, ${userName}` : ''}?</Heading>
             <Text style={heroText}>
-              Check out what other {industry} brands created with BrandForge AI — in under a minute.
+              Check out what other brands created with BrandForge AI — in under a minute.
             </Text>
           </Section>
 

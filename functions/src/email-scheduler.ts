@@ -223,12 +223,11 @@ export const sendActivationEmails = functions.pubsub
             ExampleShowcaseEmail({
               userName,
               quickStartUrl: `${appUrl}/quick-start`,
-              industry,
             })
           );
           const sent = await sendEmailViaResend({
             to: userEmail,
-            subject: `See what ${industry} brands created with BrandForge AI in 30 seconds`,
+            subject: 'See what brands created with BrandForge AI in 30 seconds',
             html,
           });
 

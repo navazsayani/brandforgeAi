@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import ShowcasePreviewModal from '@/components/ShowcasePreviewModal';
 import { showcaseExamples } from '@/lib/showcase/showcase-data';
+import TestimonialSection from '@/components/testimonials/TestimonialSection';
 
 // Template ID to Showcase ID mapping
 const templateShowcaseMap: Record<string, string> = {
@@ -1013,6 +1014,21 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Testimonials Section */}
+        <TestimonialSection
+          title={<>Loved by <span className="text-gradient-brand">Entrepreneurs & Creators</span></>}
+          description="See how BrandForge AI has transformed content creation for businesses just like yours"
+          count={3}
+          featured={true}
+          layout="grid"
+          variant="default"
+          columns={3}
+          showBrandLogos={true}
+          showRating={false}
+          sectionClassName="bg-background"
+          eyebrowText="Success Stories"
+        />
+
         {/* What You Can Create Section */}
         <section className="py-16 bg-secondary/20">
           <div className="container-responsive">
@@ -1130,7 +1146,7 @@ export default function LandingPage() {
         <section id="how-it-works" className="py-12 sm:py-16 scroll-mt-24">
             <div className="container-responsive">
                 <div className="text-center max-w-2xl mx-auto">
-                    <h2 className="text-3xl md:text-4xl font-bold text-balance">Get Results in 3 Simple Steps</h2>
+                    <h2 className="text-3xl md:text-4xl font-bold text-balance">Get Results in <span className="text-gradient-brand">3 Simple Steps</span></h2>
                     <p className="mt-4 text-lg text-muted-foreground text-balance">
                         Our intuitive workflow makes powerful AI accessible to everyone.
                     </p>
