@@ -70,7 +70,7 @@ export default function ShowcasePreviewModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden p-0 flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden p-0 flex flex-col">
         {/* Sticky Header with Platform Switcher */}
         <div className="shrink-0 bg-background border-b">
           <DialogHeader className="p-4 md:p-6 pb-3">
