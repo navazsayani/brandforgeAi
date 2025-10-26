@@ -18,6 +18,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import ShowcasePreviewModal from '@/components/ShowcasePreviewModal';
 import { showcaseExamples } from '@/lib/showcase/showcase-data';
 import TestimonialSection from '@/components/testimonials/TestimonialSection';
+import GalleryCarousel from '@/components/inspiration/GalleryCarousel';
 
 // Template ID to Showcase ID mapping
 const templateShowcaseMap: Record<string, string> = {
@@ -839,6 +840,9 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
+
+        {/* Gallery Carousel - Visual Examples */}
+        <GalleryCarousel itemCount={12} autoScroll={true} scrollSpeed={30} />
 
         {/* Templates Section */}
         <section className="py-12 sm:py-16 bg-gradient-to-br from-primary/5 via-background to-accent/5">

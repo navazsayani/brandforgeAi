@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogIn, UserPlus, Sparkles, CreditCard, Newspaper, Layers, Menu } from 'lucide-react';
+import { LogIn, UserPlus, Sparkles, CreditCard, Newspaper, Layers, Menu, Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { CompactThemeToggle } from './ThemeToggle';
@@ -15,6 +15,7 @@ export default function PublicHeader() {
   const { user } = useAuth();
   const navLinks = [
     { href: '/features', label: 'Features', icon: Layers },
+    { href: '/inspiration', label: 'Inspiration', icon: Lightbulb },
     { href: '/blog', label: 'Blog', icon: Newspaper },
     { href: '/plans', label: 'Pricing', icon: CreditCard },
   ];
