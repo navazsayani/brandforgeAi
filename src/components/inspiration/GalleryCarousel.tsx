@@ -29,33 +29,48 @@ export default function GalleryCarousel({
   // Duplicate items for seamless infinite scroll
   const items = [...featuredItems, ...featuredItems];
 
-  // Auto-scroll effect
+  // Auto-scroll effect using requestAnimationFrame for smooth mobile performance
   useEffect(() => {
     if (!autoScroll || isPaused) return;
 
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    const scroll = () => {
+    let animationFrameId: number;
+    let lastTimestamp = 0;
+
+    const scroll = (timestamp: number) => {
+      if (lastTimestamp === 0) {
+        lastTimestamp = timestamp;
+      }
+
+      const deltaTime = timestamp - lastTimestamp;
+      lastTimestamp = timestamp;
+
+      // Calculate scroll increment based on actual time elapsed
+      const increment = (scrollSpeed * deltaTime) / 1000; // pixels per millisecond
+
       setScrollPosition(prev => {
-        const newPosition = prev + (scrollSpeed / 60); // 60fps
         const maxScroll = container.scrollWidth / 2;
+        const newPosition = prev + increment;
 
-        // Reset to start when we've scrolled through all items
-        if (newPosition >= maxScroll) {
-          return 0;
-        }
-
-        return newPosition;
+        // Seamless infinite scroll using modulo
+        return newPosition >= maxScroll ? newPosition - maxScroll : newPosition;
       });
+
+      animationFrameId = requestAnimationFrame(scroll);
     };
 
-    const intervalId = setInterval(scroll, 1000 / 60); // 60fps
+    animationFrameId = requestAnimationFrame(scroll);
 
-    return () => clearInterval(intervalId);
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
   }, [autoScroll, isPaused, scrollSpeed]);
 
-  // Apply scroll position
+  // Apply scroll position with direct scrollLeft update
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (container) {
@@ -101,10 +116,12 @@ export default function GalleryCarousel({
         >
           <div
             ref={scrollContainerRef}
-            className="flex gap-4 overflow-x-hidden scroll-smooth"
+            className="flex gap-4 overflow-x-scroll py-4"
             style={{
               scrollbarWidth: 'none',
               msOverflowStyle: 'none',
+              WebkitOverflowScrolling: 'touch',
+              willChange: 'scroll-position',
             }}
           >
             {items.map((item, index) => (
@@ -146,7 +163,7 @@ export default function GalleryCarousel({
                           {item.type === 'logo' ? 'Logo' : item.templateName}
                         </Badge>
 
-                        {item.trendScore && item.trendScore > 85 && (
+                        {item.trendScore && item.trendScore >= 90 && item.templateId !== 'food_photo' && (
                           <Badge variant="outline" className="text-xs">
                             🔥 Trending
                           </Badge>
@@ -164,11 +181,6 @@ export default function GalleryCarousel({
           <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-background via-background/50 to-transparent pointer-events-none" />
         </div>
 
-        {/* Scroll Hint for Mobile */}
-        <div className="text-center mt-6 text-sm text-muted-foreground md:hidden">
-          ← Scroll to see more →
-        </div>
-
         {/* CTA */}
         <div className="text-center mt-8">
           <Link href="/inspiration">
@@ -180,9 +192,9 @@ export default function GalleryCarousel({
         </div>
       </div>
 
-      <style jsx global>{`
-        .scroll-smooth {
-          scroll-behavior: smooth;
+      <style jsx>{`
+        div::-webkit-scrollbar {
+          display: none;
         }
       `}</style>
     </section>

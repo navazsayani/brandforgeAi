@@ -26,7 +26,7 @@ import { brandTemplates, getAllCategories, getTemplatesByCategory, type BrandTem
 import { handleExtractBrandInfoFromUrlAction, handleGenerateBrandLogoAction, handleGetAllUserProfilesForAdminAction, handleEnhanceBrandDescriptionAction, type FormState as ExtractFormState, type FormState as GenerateLogoFormState, type FormState as AdminFetchProfilesState, type FormState as EnhanceDescriptionState } from '@/lib/actions';
 import { storage, db } from '@/lib/firebaseConfig';
 import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject, uploadString } from 'firebase/storage';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, arrayRemove } from 'firebase/firestore';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { SubmitButton } from '@/components/SubmitButton';
 import type { GenerateBrandLogoOutput } from '@/ai/flows/generate-brand-logo-flow';
@@ -119,7 +119,7 @@ const initialEnhanceState: EnhanceDescriptionState<EnhanceBrandDescriptionOutput
 
 export default function BrandProfilePage() {
   const { currentUser, userId, isLoading: isAuthLoading } = useAuth();
-  const { brandData: contextBrandData, setBrandData: setContextBrandData, isLoading: isBrandContextLoading, error: brandContextError, setSessionLastImageGenerationResult } = useBrand();
+  const { brandData: contextBrandData, setBrandData: setContextBrandData, isLoading: isBrandContextLoading, error: brandContextError, setSessionLastImageGenerationResult, refetchBrandData } = useBrand();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -505,36 +505,72 @@ export default function BrandProfilePage() {
   const handleDeleteImage = async (imageUrlToDelete: string, indexToDelete: number) => {
     const currentImages = form.getValues("exampleImages") || [];
     const updatedFormImages = currentImages.filter((_, index) => index !== indexToDelete);
-    
+
     // First check if the image actually exists in storage
     if (imageUrlToDelete.includes("firebasestorage.googleapis.com")) {
       const imageExists = await checkFirebaseStorageUrl(imageUrlToDelete);
-      
+
       if (!imageExists) {
-        // Image is orphaned - just remove from Firestore
+        // Image is orphaned - just remove from Firestore immediately
         form.setValue("exampleImages", updatedFormImages, { shouldValidate: true });
         setPreviewImages(updatedFormImages);
         setSelectedFileNames(prev => prev.filter((_, index) => index !== indexToDelete));
-        toast({
-          title: "Orphaned Image Removed",
-          description: "Image reference was outdated and has been cleaned up. Save profile to finalize.",
-          variant: "default"
-        });
+
+        // Immediately update Firestore to remove orphaned reference
+        const userIdToUpdate = effectiveUserIdForStorage;
+        if (userIdToUpdate) {
+          try {
+            const brandDocRef = doc(db, 'users', userIdToUpdate, 'brandProfiles', userIdToUpdate);
+            await updateDoc(brandDocRef, {
+              exampleImages: arrayRemove(imageUrlToDelete)
+            });
+            await refetchBrandData();
+            toast({
+              title: "Orphaned Image Removed",
+              description: "Image reference was outdated and has been removed from your profile.",
+              variant: "default"
+            });
+          } catch (error: any) {
+            console.error("Error removing orphaned image from Firestore:", error);
+            toast({
+              title: "Warning",
+              description: "Image reference cleaned from UI. Save profile to finalize.",
+              variant: "default"
+            });
+          }
+        }
         return;
       }
     }
-    
+
     // Update UI optimistically
     form.setValue("exampleImages", updatedFormImages, { shouldValidate: true });
     setPreviewImages(updatedFormImages);
     setSelectedFileNames(prev => prev.filter((_, index) => index !== indexToDelete));
 
     try {
+      // Delete from Storage
       if (imageUrlToDelete.includes("firebasestorage.googleapis.com")) {
         const imageRef = storageRef(storage, imageUrlToDelete);
         await deleteObject(imageRef);
       }
-      toast({ title: "Image Deleted", description: "Image removed from storage. Save profile to finalize." });
+
+      // Immediately update Firestore to keep Storage and DB in sync
+      const userIdToUpdate = effectiveUserIdForStorage;
+      if (userIdToUpdate) {
+        const brandDocRef = doc(db, 'users', userIdToUpdate, 'brandProfiles', userIdToUpdate);
+        await updateDoc(brandDocRef, {
+          exampleImages: arrayRemove(imageUrlToDelete)
+        });
+
+        // Refresh brand data context so content-studio picks up the change
+        await refetchBrandData();
+      }
+
+      toast({
+        title: "Image Deleted",
+        description: "Image has been deleted and saved to your profile."
+      });
     } catch (error: any) {
       // If deletion fails, revert the UI changes
       toast({ title: "Deletion Error", description: `Failed to delete from storage: ${error.message}. Reverting.`, variant: "destructive" });
