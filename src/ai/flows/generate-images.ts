@@ -39,7 +39,7 @@ const GenerateImagesInputSchema = z.object({
   negativePrompt: z.string().optional().describe("Elements to avoid in the generated image."),
   seed: z.number().int().optional().describe("An optional seed for image generation to promote reproducibility. For Freepik/Imagen3, this is not currently passed."),
   finalizedTextPrompt: z.string().optional().describe("A complete, user-edited text prompt that should be used directly for image generation, potentially overriding constructed prompts."),
-  
+
   freepikStylingColors: z.array(z.object({
       color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a valid hex color code e.g. #FF0000"),
       weight: z.number().min(0.05).max(1).default(0.5) 
@@ -1304,7 +1304,7 @@ Your mission is to create a compelling, brand-aligned visual asset that:
 `;
                 }
                 textPromptContent = `Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.\n\n${coreInstructions}`;
-                
+
                 // 🔥 RAG ENHANCEMENT: Enhance constructed prompt with adaptive RAG context
                 
                 if (userId) {

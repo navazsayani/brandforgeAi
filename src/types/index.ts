@@ -28,7 +28,7 @@ export interface BrandData {
   targetKeywords?: string;
   exampleImages?: string[]; // URLs from Firebase Storage
   brandLogoUrl?: string; // URL from Firebase Storage for the brand logo
-  logoType?: 'logomark' | 'logotype' | 'monogram';
+  logoType?: 'logomark' | 'logotype' | 'monogram' | 'combination';
   logoShape?: 'circle' | 'square' | 'shield' | 'hexagon' | 'diamond' | 'triangle' | 'custom';
   logoStyle?: 'minimalist' | 'modern' | 'classic' | 'playful' | 'bold' | 'elegant' | 'vintage' | 'organic';
   logoColors?: string;

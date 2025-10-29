@@ -37,7 +37,7 @@ export interface ShowcaseBrand {
   industry: string;
   description: string;
   logo: string;
-  logoType?: 'logomark' | 'logotype' | 'monogram';
+  logoType?: 'logomark' | 'logotype' | 'monogram' | 'combination';
   logoStyle?: string;
   logoShape?: string;
   posts: ShowcasePost[];

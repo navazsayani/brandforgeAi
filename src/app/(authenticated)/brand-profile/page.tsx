@@ -72,7 +72,7 @@ const brandProfileSchema = z.object({
   imageStyleNotes: z.string().optional(),
   exampleImages: z.array(z.string().url({ message: "Each image must be a valid URL." })).optional(),
   targetKeywords: z.string().optional(),
-  logoType: z.enum(['logomark', 'logotype', 'monogram']).optional(),
+  logoType: z.enum(['logomark', 'logotype', 'monogram', 'combination']).optional(),
   logoShape: z.enum(['circle', 'square', 'shield', 'hexagon', 'diamond', 'triangle', 'custom']).optional(),
   logoStyle: z.enum(['minimalist', 'modern', 'classic', 'playful', 'bold', 'elegant', 'vintage', 'organic']).optional(),
   logoColors: z.string().optional(),
@@ -257,7 +257,11 @@ export default function BrandProfilePage() {
     if (extractState.data) {
       form.setValue('brandDescription', extractState.data.brandDescription, { shouldValidate: true });
       form.setValue('targetKeywords', extractState.data.targetKeywords, { shouldValidate: true });
-      toast({ title: "Success", description: extractState.message || "Brand information extracted." });
+      toast({
+        title: "Success",
+        description: extractState.message || "Brand information extracted.",
+        duration: 2000
+      });
     }
     if (extractState.error) toast({ title: "Extraction Error", description: extractState.error, variant: "destructive" });
     setIsExtracting(false);
@@ -270,7 +274,11 @@ export default function BrandProfilePage() {
         if (enhanceState.data.targetKeywords) {
           form.setValue('targetKeywords', enhanceState.data.targetKeywords, { shouldValidate: true });
         }
-        toast({ title: "Content Enhanced", description: enhanceState.message || "Description and keywords have been updated by AI." });
+        toast({
+          title: "Content Enhanced",
+          description: enhanceState.message || "Description and keywords have been updated by AI.",
+          duration: 2000
+        });
     }
     if (enhanceState.error) {
         toast({ title: "Enhancement Error", description: enhanceState.error, variant: "destructive" });
@@ -285,7 +293,11 @@ export default function BrandProfilePage() {
       // Track logo generation
       trackContentGeneration('logo', 'google');
 
-      toast({ title: "Logo Generated!", description: "Preview new logo. Save profile to keep it." });
+      toast({
+        title: "Logo Generated!",
+        description: "Preview new logo. Save profile to keep it.",
+        duration: 2000
+      });
     }
     if (generateLogoState.error) toast({ title: "Logo Gen Error", description: generateLogoState.error, variant: "destructive" });
   }, [generateLogoState, toast]);
@@ -308,7 +320,11 @@ export default function BrandProfilePage() {
         setAdminLoadedProfileData(data);
         setAdminTargetUserId(uidToLoad);
         form.reset(data); // reset form with loaded data
-        toast({ title: "Profile Loaded", description: `Displaying profile for User: ${data?.userEmail || uidToLoad.substring(0,8)}...` });
+        toast({
+          title: "Profile Loaded",
+          description: `Displaying profile for User: ${data?.userEmail || uidToLoad.substring(0,8)}...`,
+          duration: 2000
+        });
       } else {
         toast({ title: "Not Found", description: `No profile found for User ID: ${uidToLoad}`, variant: "destructive" });
         setAdminTargetUserId("");
@@ -339,7 +355,11 @@ export default function BrandProfilePage() {
       setAdminLoadedProfileData(null);
       setAdminSelectedUserIdFromDropdown("");
       form.reset(contextBrandData || defaultFormValues);
-      toast({ title: "My Profile", description: "Displaying your own brand profile." });
+      toast({
+        title: "My Profile",
+        description: "Displaying your own brand profile.",
+        duration: 2000
+      });
   };
 
   // Apply brand template to form
@@ -360,6 +380,7 @@ export default function BrandProfilePage() {
     toast({
       title: "Template Applied",
       description: `${template.name} template loaded! Customize it to match your brand.`,
+      duration: 2000
     });
   };
 
@@ -487,7 +508,11 @@ export default function BrandProfilePage() {
         form.setValue('exampleImages', updatedImages, { shouldValidate: true });
         setPreviewImages(updatedImages);
         setSelectedFileNames(updatedImages.map((_, i) => `Saved image ${i + 1}`));
-        toast({ title: "Images Uploaded", description: `${successfullyUploadedURLs.length} image(s) ready. Save profile.` });
+        toast({
+          title: "Images Uploaded",
+          description: `${successfullyUploadedURLs.length} image(s) ready. Save profile.`,
+          duration: 2000
+        });
       } catch (error: any) {
         toast({ title: "Uploads Failed", description: `Not all images uploaded: ${error.message}`, variant: "destructive" });
         const stillValidImages = form.getValues("exampleImages") || []; 
@@ -512,7 +537,7 @@ export default function BrandProfilePage() {
 
       if (!imageExists) {
         // Image is orphaned - just remove from Firestore immediately
-        form.setValue("exampleImages", updatedFormImages, { shouldValidate: true });
+        form.setValue("exampleImages", updatedFormImages, { shouldValidate: false });
         setPreviewImages(updatedFormImages);
         setSelectedFileNames(prev => prev.filter((_, index) => index !== indexToDelete));
 
@@ -524,18 +549,20 @@ export default function BrandProfilePage() {
             await updateDoc(brandDocRef, {
               exampleImages: arrayRemove(imageUrlToDelete)
             });
-            await refetchBrandData();
+            // Removed refetchBrandData() - context will sync on next save/reload
             toast({
               title: "Orphaned Image Removed",
               description: "Image reference was outdated and has been removed from your profile.",
-              variant: "default"
+              variant: "default",
+              duration: 2000
             });
           } catch (error: any) {
             console.error("Error removing orphaned image from Firestore:", error);
             toast({
               title: "Warning",
               description: "Image reference cleaned from UI. Save profile to finalize.",
-              variant: "default"
+              variant: "default",
+              duration: 3000
             });
           }
         }
@@ -544,7 +571,7 @@ export default function BrandProfilePage() {
     }
 
     // Update UI optimistically
-    form.setValue("exampleImages", updatedFormImages, { shouldValidate: true });
+    form.setValue("exampleImages", updatedFormImages, { shouldValidate: false });
     setPreviewImages(updatedFormImages);
     setSelectedFileNames(prev => prev.filter((_, index) => index !== indexToDelete));
 
@@ -563,18 +590,19 @@ export default function BrandProfilePage() {
           exampleImages: arrayRemove(imageUrlToDelete)
         });
 
-        // Refresh brand data context so content-studio picks up the change
-        await refetchBrandData();
+        // Removed refetchBrandData() to prevent full page re-render
+        // Context will sync when user saves profile or reloads page
       }
 
       toast({
         title: "Image Deleted",
-        description: "Image has been deleted and saved to your profile."
+        description: "Image has been deleted and saved to your profile.",
+        duration: 2000
       });
     } catch (error: any) {
       // If deletion fails, revert the UI changes
       toast({ title: "Deletion Error", description: `Failed to delete from storage: ${error.message}. Reverting.`, variant: "destructive" });
-      form.setValue("exampleImages", currentImages, { shouldValidate: true });
+      form.setValue("exampleImages", currentImages, { shouldValidate: false });
       setPreviewImages(currentImages);
       setSelectedFileNames(currentImages.map((_,i) => `Saved image ${i+1}`));
     }
@@ -667,7 +695,12 @@ export default function BrandProfilePage() {
     const currentImages = finalData.exampleImages || [];
     if (currentImages.length > maxImagesAllowed) {
         finalData.exampleImages = currentImages.slice(0, maxImagesAllowed);
-        toast({ title: "Image Limit Adjusted", description: `Images adjusted to ${maxImagesAllowed} for plan.`, variant: "default" });
+        toast({
+          title: "Image Limit Adjusted",
+          description: `Images adjusted to ${maxImagesAllowed} for plan.`,
+          variant: "default",
+          duration: 3000
+        });
     }
 
     if (!isAdmin || (isAdmin && userIdToSaveFor === userId)) {
@@ -692,7 +725,11 @@ export default function BrandProfilePage() {
         if (progressInterval) clearInterval(progressInterval);
         setLogoUploadProgress(100);
         finalData.brandLogoUrl = await getDownloadURL(snapshot.ref);
-        toast({ title: "Logo Uploaded", description: "New logo will be saved." });
+        toast({
+          title: "Logo Uploaded",
+          description: "New logo will be saved.",
+          duration: 2000
+        });
       } catch (error: any) {
         if (progressInterval) clearInterval(progressInterval);
         setIsUploadingLogo(false); setLogoUploadProgress(0);
@@ -708,7 +745,11 @@ export default function BrandProfilePage() {
       } else if (userId) { 
         await setContextBrandData(finalData, userId);
       }
-      toast({ title: "Brand Profile Saved", description: "Information saved successfully." });
+      toast({
+        title: "Brand Profile Saved",
+        description: "Information saved successfully.",
+        duration: 2000
+      });
 
       // Track brand profile completion (first-time only)
       if (wasProfileIncomplete && finalData.brandDescription) {
@@ -744,6 +785,7 @@ export default function BrandProfilePage() {
       toast({
         title: "Logo Refined",
         description: "Logo has been updated. Click 'Save Brand Profile' to finalize.",
+        duration: 2000
       });
       return;
     }
@@ -785,6 +827,7 @@ export default function BrandProfilePage() {
       toast({
         title: "Image Updated",
         description: "The original image has been replaced. Click 'Save Brand Profile' to finalize.",
+        duration: 2000
       });
     } catch (error) {
       toast({ title: "Upload Failed", description: "Could not upload the new image. Please try again.", variant: "destructive" });
@@ -857,7 +900,11 @@ export default function BrandProfilePage() {
       link.click();
       document.body.removeChild(link);
       
-      toast({ title: "Download Started", description: "Logo download initiated." });
+      toast({
+        title: "Download Started",
+        description: "Logo download initiated.",
+        duration: 2000
+      });
     } catch (error: any) {
       toast({ title: "Download Error", description: `Failed to download logo: ${error.message}`, variant: "destructive" });
     }
@@ -1240,7 +1287,7 @@ export default function BrandProfilePage() {
                               <FormItem><FormLabel className="flex items-center text-sm"><TypeIcon className="w-4 h-4 mr-2"/>Type</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value ?? 'logomark'}>
                                   <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                  <SelectContent><SelectGroup><SelectLabel>Logo Types</SelectLabel><SelectItem value="logomark">Logomark (Symbol/Icon)</SelectItem><SelectItem value="logotype">Logotype (Wordmark)</SelectItem><SelectItem value="monogram">Monogram (Initials)</SelectItem></SelectGroup></SelectContent>
+                                  <SelectContent><SelectGroup><SelectLabel>Logo Types</SelectLabel><SelectItem value="logomark">Logomark (Symbol/Icon)</SelectItem><SelectItem value="logotype">Logotype (Wordmark)</SelectItem><SelectItem value="monogram">Monogram (Initials)</SelectItem><SelectItem value="combination">Combination (Text + Symbol)</SelectItem></SelectGroup></SelectContent>
                                 </Select>
                               </FormItem>
                             )} />

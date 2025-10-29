@@ -19,7 +19,7 @@ const GenerateBrandLogoInputSchema = z.object({
   brandDescription: z.string().describe('A detailed description of the brand, its values, and target audience.'),
   industry: z.string().optional().describe('The industry of the brand (e.g., Fashion, Technology).'),
   targetKeywords: z.string().optional().describe('Comma-separated list of target keywords for the brand.'),
-  logoType: z.enum(['logomark', 'logotype', 'monogram']).optional().default('logotype').describe('The type of logo to generate (Symbol, Wordmark, or Initials).'),
+  logoType: z.enum(['logomark', 'logotype', 'monogram', 'combination']).optional().default('logotype').describe('The type of logo to generate (Symbol, Wordmark, Initials, or Text+Symbol combination).'),
   logoShape: z.enum(['circle', 'square', 'shield', 'hexagon', 'diamond', 'triangle', 'custom']).optional().default('custom').describe('Preferred logo shape/form factor.'),
   logoStyle: z.enum(['minimalist', 'modern', 'classic', 'playful', 'bold', 'elegant', 'vintage', 'organic']).optional().default('modern').describe('Preferred logo style aesthetic.'),
   logoColors: z.string().optional().describe('A text description of the desired color palette (e.g., "deep teal, soft gold").'),
@@ -102,6 +102,8 @@ function getLogoTypeInstruction(logoType: string, brandName: string): string {
         case 'monogram':
             const initials = brandName.split(' ').map(n => n[0]).join('');
             return `**Design Focus: Monogram/Lettermark** - The design MUST be a creative monogram using ONLY the initials "${initials}". The letters should be artfully combined into a single, cohesive, and memorable symbol. Do not include the full brand name.`;
+        case 'combination':
+            return `**Design Focus: Combination Mark** - Create a balanced logo combining BOTH a distinctive icon/symbol AND the brand name "${brandName}" as text. The icon and text should work together as a unified design - both elements are equally important. The text should be clearly readable in a professional font (like Montserrat Medium), positioned harmoniously with the icon (typically icon above text, or icon to the left of text). This creates a complete logo where symbol and wordmark complement each other.`;
         case 'logomark':
         default:
             return `**Design Focus: Logomark/Icon** - Create a compelling, abstract, or symbolic icon that represents the essence of "${brandName}". The icon must be the primary focus and should be clean, recognizable, and memorable on its own. If the brand name is included, set it in Montserrat Medium, all-caps, with slight letter spacing, positioned below or to the side of the icon to maintain balance and harmony.`;
@@ -144,6 +146,15 @@ Letter Integration: Initials artfully merged, interlocked, or stacked while main
 Scale: Letters as primary element occupying 60-70% of composition
 Text Rendering: Crisp, vector-quality letterforms with perfect edges and smooth curves
 Monogram Style: Creative typographic fusion making letters work together as cohesive symbol`;
+  } else if (logoType === 'combination') {
+    return `Brand Text: "${brandName}" (complete brand name rendered alongside icon)
+Typography: Professional sans-serif font (Montserrat Medium or similar), medium to bold weight
+Text Quality: Crystal clear, sharp, perfectly legible text rendering
+Text Positioning: Harmoniously placed with icon (typically below or to right of symbol)
+Layout Balance: Icon and text work as unified composition, both clearly visible
+Scale: Icon and text share visual importance (roughly 50-50 or 40-60 split)
+Text Rendering: Crisp, high-resolution text with smooth anti-aliasing
+Combined Design: Symbol and wordmark complement each other as complete logo system`;
   }
   return '';
 }
@@ -159,6 +170,8 @@ function getVisualLogoDescription(logoType: string, brandName: string, brandDesc
   } else if (logoType === 'monogram') {
     const initials = brandName.split(' ').map(n => n[0]).join('');
     return `Monogram lettermark design combining only the initials "${initials}" into a unified artistic symbol. Letters are creatively interwoven, stacked, or merged to form a single cohesive mark. Sophisticated typographic integration creating memorable brand identifier through artistic letter combination.`;
+  } else if (logoType === 'combination') {
+    return `Combination mark logo design featuring both a distinctive icon with ${industryVisual} AND the brand name "${brandName}" in professional typography. The symbol and text work together as a unified, balanced composition where both elements complement each other. Icon provides instant visual recognition while text ensures brand name legibility. Complete logo system combining the best of both symbolic and typographic identity.`;
   }
   return '';
 }
@@ -178,7 +191,7 @@ Brand Story: ${brandDescription}
 ${industry && industry !== '_none_' ? `Industry: ${industry}` : ''}
 ${targetKeywords ? `Key Themes: ${targetKeywords}` : ''}
 
-${logoType === 'logotype' || logoType === 'monogram' ? `TEXT RENDERING REQUIREMENTS:
+${logoType === 'logotype' || logoType === 'monogram' || logoType === 'combination' ? `TEXT RENDERING REQUIREMENTS:
 ${getTextRenderingSpecs(logoType || 'logomark', brandName)}
 
 ` : ''}DESIGN SPECIFICATIONS:
@@ -196,7 +209,7 @@ Polished, publication-ready professional logo with commercial-grade quality
 Well-crafted elements with smooth execution throughout the logo
 
 OUTPUT REQUIREMENTS:
-The final logo must be memorable, unique, and authentically represent ${brandName}'s brand identity. ${logoType === 'logomark' ? 'Pure icon design without any text, letters, words, or typography elements - symbol only.' : ''}${logoType === 'logotype' ? `Text "${brandName}" must be rendered clearly with professional typography as the primary logo element.` : ''}${logoType === 'monogram' ? `Initials must be artistically combined with crystal-clear letterforms as the complete logo.` : ''} Professional quality suitable for immediate business use across all applications including print, digital, merchandise, and signage.`;
+The final logo must be memorable, unique, and authentically represent ${brandName}'s brand identity. ${logoType === 'logomark' ? 'Pure icon design without any text, letters, words, or typography elements - symbol only.' : ''}${logoType === 'logotype' ? `Text "${brandName}" must be rendered clearly with professional typography as the primary logo element.` : ''}${logoType === 'monogram' ? `Initials must be artistically combined with crystal-clear letterforms as the complete logo.` : ''}${logoType === 'combination' ? `Both icon and text "${brandName}" must be clearly visible, balanced, and work together as a unified logo system.` : ''} Professional quality suitable for immediate business use across all applications including print, digital, merchandise, and signage.`;
 
     return descriptivePrompt;
 }
@@ -218,6 +231,11 @@ function _createImagenLogoPrompt(input: GenerateBrandLogoInput): string {
             const initials = brandName.split(' ').map(n => n[0]).join('');
             visualDescription = `Artistic monogram design combining only the letters "${initials}" into a unified symbol`;
             avoidanceClause = ', avoid full words or company names or additional text beyond the initials';
+            break;
+        case 'combination':
+            const industryVisualsCombo = getIndustryVisualConcepts(industry, brandDescription);
+            visualDescription = `Combination mark logo with both a distinctive icon featuring ${industryVisualsCombo} AND the brand name "${brandName}" in professional typography, icon and text working together as unified design`;
+            avoidanceClause = ', ensure both icon and text are clearly visible and balanced';
             break;
         case 'logomark':
         default:

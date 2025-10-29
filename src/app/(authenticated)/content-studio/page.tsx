@@ -5,8 +5,9 @@
 import React, { useState, useEffect, useActionState, startTransition, useRef, useMemo } from 'react';
 import NextImage from 'next/image';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { db } from '@/lib/firebaseConfig'; 
-import { collection, getDocs, query, orderBy } from 'firebase/firestore'; 
+import { db, storage } from '@/lib/firebaseConfig';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage'; 
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -19,10 +20,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from '@/contexts/AuthContext'; 
 import { useBrand } from '@/contexts/BrandContext';
 import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download, Library, Star, Lock, Sparkles as SparklesIcon, ChevronRight, Target, Users, Check, Info, Scissors, ChevronsUpDown, Smile, Shuffle } from 'lucide-react';
+import { ImageIcon, MessageSquareText, Newspaper, Palette, Type, ThumbsUp, Copy, Ratio, ImageUp, UserSquare, Wand2, Loader2, Trash2, Images, Globe, ExternalLink, CircleSlash, Pipette, FileText, ListOrdered, Mic2, Edit, Briefcase, Eye, Save, Tag, Paintbrush, Zap, Aperture, PaletteIcon, Server, RefreshCw, Download, Library, Star, Lock, Sparkles as SparklesIcon, ChevronRight, Target, Users, Check, Info, Scissors, ChevronsUpDown, Smile, Shuffle, Pause, Play } from 'lucide-react';
 import { handleGenerateImagesAction, handleGenerateSocialMediaCaptionAction, handleRefineSocialPostAction, handleGenerateBlogContentAction, handleDescribeImageAction, handleGenerateBlogOutlineAction, handleSaveGeneratedImagesAction, handleCheckFreepikTaskStatusAction, handlePopulateImageFormAction, handlePopulateSocialFormAction, handlePopulateBlogFormAction, getPaymentMode, handleGetPlansConfigAction, handleEditImageAction, handleEnhanceRefinePromptAction, type FormState } from '@/lib/actions';
 import { SubmitButton } from "@/components/SubmitButton";
 import type { GeneratedImage, GeneratedSocialMediaPost, GeneratedBlogPost, SavedGeneratedImage, PlansConfig, LastImageGenerationResult } from '@/types';
@@ -310,6 +312,12 @@ export default function ContentStudioPage() {
   const [selectedProfileImageIndexForGen, setSelectedProfileImageIndexForGen] = useState<number | null>(null);
   const [selectedExampleImageUrl, setSelectedExampleImageUrl] = useState<string>("");
   const [imageMode, setImageMode] = useState<'reference' | 'enhance'>('reference'); // Image Mode: reference (create new) or enhance (build over)
+
+  // Temporary upload state (local to image gen tab, not synced with brand profile)
+  const [tempUploadedImageUrl, setTempUploadedImageUrl] = useState<string>("");
+  const [isUploadingTemp, setIsUploadingTemp] = useState(false);
+  const [tempUploadProgress, setTempUploadProgress] = useState(0);
+  const tempFileInputRef = useRef<HTMLInputElement>(null);
   // --- END: Refactored Image Selection State ---
   
   const [selectedProfileImageIndexForSocial, setSelectedProfileImageIndexForSocial] = useState<number | null>(null);
@@ -398,7 +406,14 @@ export default function ContentStudioPage() {
   // State for image refinement
   const [refineModalOpen, setRefineModalOpen] = useState(false);
   const [imageToRefine, setImageToRefine] = useState<string | null>(null);
-  
+
+  // State for Beginner/Advanced Mode Toggle
+  const [isAdvancedMode, setIsAdvancedMode] = useState(false);
+
+  // State for Auto-Generation Countdown Timer
+  const [showAutoGenAlert, setShowAutoGenAlert] = useState(false);
+  const [autoGenCountdown, setAutoGenCountdown] = useState(4);
+  const [autoGenSettings, setAutoGenSettings] = useState<string[]>([]);
 
 
   const isPremiumActive = useMemo(() => {
@@ -434,7 +449,51 @@ export default function ContentStudioPage() {
     fetchConfig();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toast]);
-  
+
+  // Load Advanced Mode preference from localStorage on mount
+  useEffect(() => {
+    const savedMode = localStorage.getItem('contentStudioImageTabAdvancedMode');
+    if (savedMode !== null) {
+      setIsAdvancedMode(savedMode === 'true');
+    }
+  }, []);
+
+  // Save Advanced Mode preference to localStorage when changed
+  useEffect(() => {
+    localStorage.setItem('contentStudioImageTabAdvancedMode', isAdvancedMode.toString());
+  }, [isAdvancedMode]);
+
+  // Auto-generation countdown timer logic
+  useEffect(() => {
+    // Decrement countdown every second
+    if (showAutoGenAlert && autoGenCountdown > 0) {
+      const timer = setTimeout(() => {
+        setAutoGenCountdown(prev => prev - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+    // When countdown reaches 0, submit the form
+    else if (showAutoGenAlert && autoGenCountdown === 0) {
+      setShowAutoGenAlert(false);
+      setAutoGenCountdown(4);
+
+      const form = document.getElementById('imageGenerationFormFields') as HTMLFormElement;
+      if (form) {
+        toast({
+          title: "Generating...",
+          description: "Creating your image with AI",
+          duration: 2000
+        });
+        form.requestSubmit();
+
+        // Auto-scroll to form after submission
+        setTimeout(() => {
+          form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      }
+    }
+  }, [showAutoGenAlert, autoGenCountdown, toast]);
+
   const imageGenerationProviders = useMemo(() => [
     { value: "AUTO", label: "AUTO (Intelligent Selection)", disabled: false, premium: false },
     { value: "GEMINI", label: "Gemini (Google AI)", disabled: false, premium: false },
@@ -517,6 +576,11 @@ export default function ContentStudioPage() {
   useEffect(() => {
     const hasImages = brandData?.exampleImages && brandData.exampleImages.length > 0;
 
+    // Don't override if temp upload is selected (prevents race condition)
+    if (selectedExampleImageUrl === tempUploadedImageUrl && tempUploadedImageUrl) {
+      return;
+    }
+
     if (useExampleImageForGen && hasImages) {
         // Ensure index is valid and not out of bounds
         let currentIndex = selectedProfileImageIndexForGen ?? 0;
@@ -528,18 +592,18 @@ export default function ContentStudioPage() {
         if (selectedProfileImageIndexForGen === null) {
             setSelectedProfileImageIndexForGen(currentIndex);
         }
-        // Safely get the URL
+
+        // Only update URL if it differs from current (respects manual selections)
         const url = brandData?.exampleImages?.[currentIndex];
-        setSelectedExampleImageUrl(url || ""); // Fallback to empty string if URL is unexpectedly undefined
-    } else {
-        // If checkbox is off or no images exist, clear the URL state.
-        setSelectedExampleImageUrl("");
-        if (!hasImages) {
-          setSelectedProfileImageIndexForGen(null);
+        if (url && url !== selectedExampleImageUrl) {
+          setSelectedExampleImageUrl(url);
         }
+    } else if (!useExampleImageForGen) {
+        // Only clear if toggle is explicitly off (not just no images)
+        setSelectedExampleImageUrl("");
+        setSelectedProfileImageIndexForGen(null);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brandData?.exampleImages, useExampleImageForGen]);
+  }, [brandData?.exampleImages, useExampleImageForGen, selectedProfileImageIndexForGen, selectedExampleImageUrl, tempUploadedImageUrl]);
   // --- END: NEW Robust Image Selection Effect ---
   
   const handleSelectProfileImageForGen = (index: number) => {
@@ -547,7 +611,193 @@ export default function ContentStudioPage() {
     if (brandData?.exampleImages) {
       setSelectedExampleImageUrl(brandData.exampleImages[index] || "");
     }
+
+    // Clear form snapshot since image reference changed (prevents stale preview)
+    if (formSnapshot) {
+      setFormSnapshot(null);
+      setIsPreviewingPrompt(false);
+      toast({
+        title: "Image Selection Changed",
+        description: "Preview cleared. Click 'Preview Prompt' again to see updated prompt.",
+        duration: 3000
+      });
+    }
   };
+
+  // --- START: Temporary Upload Handlers ---
+  const handleTempImageUpload = async (file: File) => {
+    if (!userId) {
+      toast({
+        title: "Upload Error",
+        description: "User not authenticated. Please sign in.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate file size (5MB max)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      toast({
+        title: "File Too Large",
+        description: "Image must be less than 5MB. Please compress or choose a smaller image.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please upload a JPEG, PNG, or WebP image.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsUploadingTemp(true);
+    setTempUploadProgress(0);
+
+    try {
+      // Delete previous temp upload if exists
+      if (tempUploadedImageUrl) {
+        try {
+          const oldRef = storageRef(storage, tempUploadedImageUrl);
+          await deleteObject(oldRef);
+        } catch (err) {
+          console.error("Failed to delete previous temp image:", err);
+          // Continue with upload even if deletion fails
+        }
+      }
+
+      // Upload to Firebase Storage with temporary path
+      const timestamp = Date.now();
+      const filePath = `users/${userId}/temp_example_images/${timestamp}_${file.name}`;
+      const imageStorageRef = storageRef(storage, filePath);
+      const uploadTask = uploadBytesResumable(imageStorageRef, file);
+
+      // Monitor upload progress
+      await new Promise<string>((resolve, reject) => {
+        uploadTask.on(
+          'state_changed',
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            setTempUploadProgress(progress);
+          },
+          (error) => {
+            console.error("Upload error:", error);
+            reject(error);
+          },
+          async () => {
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              resolve(downloadURL);
+            } catch (error) {
+              reject(error);
+            }
+          }
+        );
+      }).then((downloadURL) => {
+        // Set as uploaded and selected
+        setTempUploadedImageUrl(downloadURL);
+        setSelectedExampleImageUrl(downloadURL);
+        setSelectedProfileImageIndexForGen(null); // Clear brand profile selection
+
+        // Clear form snapshot since image reference changed
+        setFormSnapshot(null);
+        setIsPreviewingPrompt(false);
+
+        toast({
+          title: "Image Uploaded",
+          description: "Your style reference image is ready to use.",
+          duration: 2000
+        });
+      });
+
+    } catch (error: any) {
+      console.error("Upload failed:", error);
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Failed to upload image. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploadingTemp(false);
+      setTempUploadProgress(0);
+      if (tempFileInputRef.current) {
+        tempFileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleTempFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      await handleTempImageUpload(file);
+    }
+  };
+
+  const handleDeleteTempUpload = async () => {
+    if (!tempUploadedImageUrl) return;
+
+    try {
+      const imageRef = storageRef(storage, tempUploadedImageUrl);
+      await deleteObject(imageRef);
+
+      setTempUploadedImageUrl("");
+
+      // If this was the selected image, clear selection
+      if (selectedExampleImageUrl === tempUploadedImageUrl) {
+        setSelectedExampleImageUrl("");
+      }
+
+      toast({
+        title: "Image Removed",
+        description: "Temporary upload deleted.",
+        duration: 2000
+      });
+    } catch (error: any) {
+      console.error("Delete failed:", error);
+      toast({
+        title: "Delete Failed",
+        description: "Failed to remove image. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleSelectTempUpload = () => {
+    if (tempUploadedImageUrl) {
+      setSelectedExampleImageUrl(tempUploadedImageUrl);
+      setSelectedProfileImageIndexForGen(null); // Clear brand profile selection
+
+      // Clear form snapshot since image reference changed (prevents stale preview)
+      if (formSnapshot) {
+        setFormSnapshot(null);
+        setIsPreviewingPrompt(false);
+        toast({
+          title: "Image Selection Changed",
+          description: "Preview cleared. Click 'Preview Prompt' again to see updated prompt.",
+          duration: 3000
+        });
+      }
+    }
+  };
+  // --- END: Temporary Upload Handlers ---
+
+  // Cleanup temp upload on unmount
+  useEffect(() => {
+    return () => {
+      if (tempUploadedImageUrl) {
+        const imageRef = storageRef(storage, tempUploadedImageUrl);
+        deleteObject(imageRef).catch((err) => {
+          console.error("Failed to cleanup temp upload on unmount:", err);
+        });
+      }
+    };
+  }, [tempUploadedImageUrl]);
 
 
   useEffect(() => {
@@ -878,7 +1128,27 @@ export default function ContentStudioPage() {
             setCustomStyleNotesInput(data.customStyleNotes || "");
             setImageGenNegativePrompt(data.negativePrompt || "");
             setSelectedAspectRatio(data.aspectRatio);
-            toast({ title: "Form Populated!", description: "AI has filled out the fields for you. Feel free to adjust them." });
+
+            // Build summary of populated fields for countdown banner
+            const styleLabel = imageStylePresets.find(p => p.value === data.imageStylePreset)?.label || data.imageStylePreset;
+            const ratioLabel = generalAspectRatios.find(r => r.value === data.aspectRatio)?.label || data.aspectRatio;
+            const settings = [
+              `Style Preset: ${styleLabel}`,
+              `Aspect Ratio: ${ratioLabel}`,
+            ];
+
+            if (data.customStyleNotes) {
+              settings.push(`Custom Style: ${data.customStyleNotes.substring(0, 50)}...`);
+            }
+
+            if (data.negativePrompt) {
+              settings.push(`Negative Prompt: Configured`);
+            }
+
+            // Start auto-generation countdown
+            startAutoGeneration(settings);
+
+            toast({ title: "Form Populated!", description: "AI has filled out the fields for you. Review and adjust if needed." });
         }
         if (populateImageFormState.error) {
             toast({ title: "Population Error", description: populateImageFormState.error, variant: "destructive" });
@@ -1261,7 +1531,7 @@ Your mission is to create a compelling, brand-aligned visual asset that:
         exampleImage: (useExampleImageForGen && exampleImg && exampleImg.trim() !== "") ? exampleImg : undefined,
         aspectRatio: aspect,
         numberOfImages: numImages,
-        negativePrompt: negPrompt === "" ? undefined : negPrompt, 
+        negativePrompt: negPrompt === "" ? undefined : negPrompt,
         seed: seedValue,
         freepikStylingColors: selectedImageProvider === 'FREEPIK' && freepikDominantColorsInput ? freepikDominantColorsInput.split(',').map(c => ({color: c.trim(), weight: 0.5})) : undefined,
         freepikEffectColor: selectedImageProvider === 'FREEPIK' && freepikEffectColor !== "none" ? freepikEffectColor : undefined,
@@ -1269,6 +1539,13 @@ Your mission is to create a compelling, brand-aligned visual asset that:
         freepikEffectFraming: selectedImageProvider === 'FREEPIK' && freepikEffectFraming !== "none" ? freepikEffectFraming : undefined,
     });
     setIsPreviewingPrompt(true);
+  };
+
+  // Helper function to start auto-generation countdown
+  const startAutoGeneration = (settings: string[]) => {
+    setAutoGenSettings(settings);
+    setAutoGenCountdown(4);
+    setShowAutoGenAlert(true);
   };
 
   const handleImageGenerationSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -1328,7 +1605,7 @@ Your mission is to create a compelling, brand-aligned visual asset that:
             formData.delete("negativePrompt");
         }
 
-        const seedValueNum = (isAdmin || isPremiumActive) ? formSnapshot?.seed : (imageGenSeed && !isNaN(parseInt(imageGenSeed)) ? parseInt(imageGenSeed) : undefined); 
+        const seedValueNum = (isAdmin || isPremiumActive) ? formSnapshot?.seed : (imageGenSeed && !isNaN(parseInt(imageGenSeed)) ? parseInt(imageGenSeed) : undefined);
         if (seedValueNum !== undefined) {
           formData.set("seed", String(seedValueNum));
         } else {
@@ -1787,6 +2064,45 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                 {lastUsedImageProvider && <p className="text-xs text-primary mt-1">Image(s) last generated using: {lastUsedImageProvider}</p>}
             </CardHeader>
 
+            {/* BEGINNER/ADVANCED MODE TOGGLE */}
+            <div className="px-6 mb-4">
+              <Card className="border-primary/20">
+                <CardContent className="pt-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 justify-center sm:justify-start">
+                      <Label htmlFor="mode-toggle" className="text-sm font-medium cursor-pointer whitespace-nowrap">
+                        View Mode:
+                      </Label>
+                      <div className="flex items-center gap-1.5 sm:gap-2 bg-secondary/30 rounded-full px-2.5 sm:px-3 py-1.5">
+                        <span className={cn(
+                          "text-xs font-medium transition-colors whitespace-nowrap",
+                          !isAdvancedMode ? "text-primary" : "text-muted-foreground"
+                        )}>
+                          Beginner
+                        </span>
+                        <Switch
+                          id="mode-toggle"
+                          checked={isAdvancedMode}
+                          onCheckedChange={setIsAdvancedMode}
+                        />
+                        <span className={cn(
+                          "text-xs font-medium transition-colors whitespace-nowrap",
+                          isAdvancedMode ? "text-primary" : "text-muted-foreground"
+                        )}>
+                          Advanced
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground text-center sm:text-left">
+                      {isAdvancedMode
+                        ? "All available controls visible"
+                        : "Essential controls - Quick Start and Templates auto-fill advanced fields"}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
             <div className="px-6 mb-6">
                 <Card className="bg-secondary/30 border-primary/20 shadow-inner">
                     <CardHeader>
@@ -1815,6 +2131,65 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                     </CardContent>
                 </Card>
             </div>
+
+            {/* AUTO-GENERATION COUNTDOWN BANNER */}
+            {showAutoGenAlert && (
+              <div className="px-6 mb-4">
+                <div
+                  data-auto-gen-alert
+                  className="bg-muted border border-border rounded-lg shadow-sm animate-in slide-in-from-top duration-200"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 gap-3 sm:gap-4">
+                    {/* Left side: Icon + Message + Countdown */}
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <SparklesIcon className="w-4 h-4 text-primary flex-shrink-0" />
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 flex-1 min-w-0">
+                        <span className="text-sm font-medium">
+                          AI configured settings. Generating in
+                        </span>
+                        <span className="text-lg font-semibold text-primary tabular-nums">
+                          {autoGenCountdown}s
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Right side: Action buttons */}
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-1 sm:flex-none"
+                        onClick={() => {
+                          setShowAutoGenAlert(false);
+                          setAutoGenCountdown(4);
+                          toast({
+                            title: "Cancelled",
+                            description: "Review and adjust your settings, then click Generate.",
+                            duration: 3000
+                          });
+                        }}
+                      >
+                        <Pause className="w-4 h-4 mr-1" />
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="flex-1 sm:flex-none"
+                        onClick={() => {
+                          setShowAutoGenAlert(false);
+                          setAutoGenCountdown(4);
+                          const form = document.getElementById('imageGenerationFormFields') as HTMLFormElement;
+                          if (form) form.requestSubmit();
+                        }}
+                      >
+                        <Play className="w-4 h-4 mr-1" />
+                        Generate Now
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Helpful transition text */}
             <div className="px-6 mb-4">
@@ -1870,9 +2245,9 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                   }
               }}>
                 <input type="hidden" name="industry" value={selectedBlogIndustry === "_none_" ? "" : selectedBlogIndustry || ""} />
-                <CardContent className="space-y-6">
+                <CardContent className={cn("space-y-6", showAutoGenAlert && "opacity-50 pointer-events-none")}>
                   {(isAdmin || (isPremiumActive && freepikEnabled)) && (
-                    <div>
+                    <div className={cn(!isAdvancedMode && "hidden")}>
                       <Label htmlFor="imageGenProviderSelect" className="flex items-center mb-1"><Server className="w-4 h-4 mr-2 text-primary" />Image Generation Provider</Label>
                       <Select name="provider" value={selectedImageProvider || 'AUTO'} onValueChange={(value) => setSelectedImageProvider(value as GenerateImagesInput['provider'])}>
                           <SelectTrigger id="imageGenProviderSelect">
@@ -1906,7 +2281,7 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                     </div>
                   )}
 
-                  <div>
+                  <div className={cn(!isAdvancedMode && "hidden")}>
                     <Label htmlFor="imageGenBrandDescription" className="flex items-center mb-1"><FileText className="w-4 h-4 mr-2 text-primary" />Brand Description (for context)</Label>
                     <Textarea
                       id="imageGenBrandDescription"
@@ -1918,7 +2293,7 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                     />
                   </div>
 
-                  
+
                   <div>
                     <Label htmlFor="imageGenImageStylePresetSelect" className="flex items-center mb-1"><Palette className="w-4 h-4 mr-2 text-primary" />Image Style Preset</Label>
                     <Select
@@ -1931,14 +2306,63 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                         </SelectTrigger>
                         <SelectContent>
                             <SelectGroup>
-                                <SelectLabel>Artistic Styles</SelectLabel>
-                                {imageStylePresets.map(style => (
+                                <SelectLabel>Popular & Versatile</SelectLabel>
+                                {imageStylePresets.slice(0, 8).map(style => (
+                                    <SelectItem key={style.value} value={style.value}>{style.label}</SelectItem>
+                                ))}
+                            </SelectGroup>
+
+                            <SelectGroup>
+                                <SelectLabel>Artistic & Illustrative</SelectLabel>
+                                {imageStylePresets.slice(8, 17).map(style => (
+                                    <SelectItem key={style.value} value={style.value}>{style.label}</SelectItem>
+                                ))}
+                            </SelectGroup>
+
+                            <SelectGroup>
+                                <SelectLabel>Thematic & Genre</SelectLabel>
+                                {imageStylePresets.slice(17, 25).map(style => (
+                                    <SelectItem key={style.value} value={style.value}>{style.label}</SelectItem>
+                                ))}
+                            </SelectGroup>
+
+                            <SelectGroup>
+                                <SelectLabel>Specific & Niche</SelectLabel>
+                                {imageStylePresets.slice(25, 40).map(style => (
+                                    <SelectItem key={style.value} value={style.value}>{style.label}</SelectItem>
+                                ))}
+                            </SelectGroup>
+
+                            <SelectGroup>
+                                <SelectLabel>Photography & Product</SelectLabel>
+                                {imageStylePresets.slice(40, 45).map(style => (
+                                    <SelectItem key={style.value} value={style.value}>{style.label}</SelectItem>
+                                ))}
+                            </SelectGroup>
+
+                            <SelectGroup>
+                                <SelectLabel>Modern Digital Aesthetics</SelectLabel>
+                                {imageStylePresets.slice(45, 50).map(style => (
+                                    <SelectItem key={style.value} value={style.value}>{style.label}</SelectItem>
+                                ))}
+                            </SelectGroup>
+
+                            <SelectGroup>
+                                <SelectLabel>Traditional Art Extended</SelectLabel>
+                                {imageStylePresets.slice(50, 55).map(style => (
+                                    <SelectItem key={style.value} value={style.value}>{style.label}</SelectItem>
+                                ))}
+                            </SelectGroup>
+
+                            <SelectGroup>
+                                <SelectLabel>Atmospheric & Mood</SelectLabel>
+                                {imageStylePresets.slice(55, 60).map(style => (
                                     <SelectItem key={style.value} value={style.value}>{style.label}</SelectItem>
                                 ))}
                             </SelectGroup>
                         </SelectContent>
                     </Select>
-                      <p className="text-xs text-muted-foreground mt-1">Some styles are more effective with specific providers. Notes below can add detail. Freepik styles are best with Freepik provider.</p>
+                      <p className="text-xs text-muted-foreground mt-1">Choose a style that matches your brand aesthetic. Use Custom Style Notes below to add specific details or refinements.</p>
                   </div>
 
                   <div>
@@ -1952,7 +2376,7 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                       rows={2}
                     />
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="useExampleImageForGen"
@@ -1970,44 +2394,126 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                   {useExampleImageForGen && (
                     <div>
                         <Label className="flex items-center mb-1">
-                            <ImageIcon className="w-4 h-4 mr-2 text-primary" />Style Reference from Brand Profile
+                            <ImageIcon className="w-4 h-4 mr-2 text-primary" />Style Reference Image
                         </Label>
                         <p className="text-sm text-muted-foreground mb-2">The AI will use this image as inspiration for the visual style, composition, and subject matter of the new image.</p>
-                          {brandData?.exampleImages && brandData.exampleImages.length > 0 ? (
-                            <div className="mt-2 space-y-2">
-                                {brandData.exampleImages.length > 1 ? (
-                                    <>
-                                    <div className="flex space-x-2 overflow-x-auto pb-2">
-                                        {brandData.exampleImages.map((imgSrc, index) => (
-                                            <button
-                                                type="button"
-                                                key={`gen-profile-${index}`}
-                                                onClick={() => handleSelectProfileImageForGen(index)}
-                                                className={cn(
-                                                    "w-20 h-20 rounded border-2 p-0.5 flex-shrink-0 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring",
-                                                    selectedProfileImageIndexForGen === index ? "border-primary ring-2 ring-primary" : "border-border"
-                                                )}
-                                            >
-                                                <NextImage src={imgSrc} alt={`Example ${index + 1}`} width={76} height={76} className="object-contain w-full h-full rounded-sm" data-ai-hint="style example"/>
-                                            </button>
-                                        ))}
-                                    </div>
-                                    </>
-                                  ) : ( 
-                                      <div className="w-20 h-20 rounded border-2 p-0.5 border-primary ring-2 ring-primary flex-shrink-0">
-                                          <NextImage src={brandData.exampleImages[0]} alt={`Example 1}`} width={76} height={76} className="object-contain w-full h-full rounded-sm" data-ai-hint="style example"/>
+
+                        {/* Hidden file input for temp upload */}
+                        <input
+                          ref={tempFileInputRef}
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png,image/webp"
+                          onChange={handleTempFileSelect}
+                          className="hidden"
+                        />
+
+                        <div className="mt-2 space-y-2">
+                          {/* Thumbnail Grid */}
+                          <div className="flex space-x-2 overflow-x-auto pb-2">
+                            {/* Brand Profile Images */}
+                            {brandData?.exampleImages && brandData.exampleImages.length > 0 && (
+                              brandData.exampleImages.map((imgSrc, index) => {
+                                const isSelected = selectedProfileImageIndexForGen === index && selectedExampleImageUrl === imgSrc;
+                                return (
+                                  <div key={`gen-profile-${index}`} className="relative w-20 h-20 flex-shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSelectProfileImageForGen(index)}
+                                      className={cn(
+                                        "w-full h-full rounded border-2 p-0.5 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring transition-all",
+                                        isSelected ? "border-primary ring-2 ring-primary" : "border-border"
+                                      )}
+                                    >
+                                      <NextImage src={imgSrc} alt={`Brand Profile ${index + 1}`} width={76} height={76} className="object-contain w-full h-full rounded-sm" data-ai-hint="style example"/>
+                                    </button>
+                                    {/* Checkmark indicator for selected image */}
+                                    {isSelected && (
+                                      <div className="absolute top-0 right-0 w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center m-0.5 shadow-sm">
+                                        <Check className="w-3 h-3" />
                                       </div>
-                                  )}
-                                { selectedExampleImageUrl && ( 
-                                    <p className="text-xs text-muted-foreground">
-                                        Using image {selectedProfileImageIndexForGen !== null && brandData.exampleImages && brandData.exampleImages.length > 1 ? selectedProfileImageIndexForGen + 1 : "1"} as reference.
-                                        {selectedImageProvider === 'FREEPIK' && (isAdmin || isPremiumActive) && " (Freepik/Imagen3 uses AI description of this image, not the image directly for text-to-image.)"}
-                                    </p>
+                                    )}
+                                  </div>
+                                );
+                              })
+                            )}
+
+                            {/* Temp Upload Tile */}
+                            {!tempUploadedImageUrl ? (
+                              // Show "+ Upload" button
+                              <button
+                                type="button"
+                                onClick={() => tempFileInputRef.current?.click()}
+                                disabled={isUploadingTemp}
+                                className={cn(
+                                  "w-20 h-20 rounded border-2 border-dashed flex flex-col items-center justify-center gap-1 flex-shrink-0 hover:border-primary hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-ring transition-all",
+                                  isUploadingTemp ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
                                 )}
-                            </div>
-                        ) : (
-                            <p className="text-xs text-muted-foreground mt-1">No example images in Brand Profile to select.</p>
-                        )}
+                              >
+                                {isUploadingTemp ? (
+                                  <>
+                                    <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                                    <span className="text-[10px] text-muted-foreground">{Math.round(tempUploadProgress)}%</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <ImageUp className="w-5 h-5 text-muted-foreground" />
+                                    <span className="text-[10px] text-muted-foreground">Upload</span>
+                                  </>
+                                )}
+                              </button>
+                            ) : (
+                              // Show uploaded image thumbnail
+                              <div className="relative w-20 h-20 flex-shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={handleSelectTempUpload}
+                                  className={cn(
+                                    "w-full h-full rounded border-2 p-0.5 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring transition-all group relative",
+                                    selectedExampleImageUrl === tempUploadedImageUrl ? "border-primary ring-2 ring-primary" : "border-border"
+                                  )}
+                                >
+                                  <NextImage src={tempUploadedImageUrl} alt="Uploaded" width={76} height={76} className="object-contain w-full h-full rounded-sm" data-ai-hint="style example"/>
+
+                                  {/* Checkmark indicator when selected */}
+                                  {selectedExampleImageUrl === tempUploadedImageUrl && (
+                                    <div className="absolute top-0 left-0 w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center m-0.5 shadow-sm pointer-events-none">
+                                      <Check className="w-3 h-3" />
+                                    </div>
+                                  )}
+
+                                  {/* Delete button overlay - shows on hover */}
+                                  <div
+                                    className="absolute top-0 right-0 w-6 h-6 bg-destructive/90 text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md cursor-pointer hover:bg-destructive m-0.5"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteTempUpload();
+                                    }}
+                                    title="Remove upload"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </div>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Selection status text */}
+                          { selectedExampleImageUrl && (
+                            <p className="text-xs text-muted-foreground">
+                              {selectedExampleImageUrl === tempUploadedImageUrl ? (
+                                "Using uploaded image as reference."
+                              ) : (
+                                `Using brand profile image ${selectedProfileImageIndexForGen !== null && brandData?.exampleImages && brandData?.exampleImages.length > 1 ? selectedProfileImageIndexForGen + 1 : "1"} as reference.`
+                              )}
+                              {selectedImageProvider === 'FREEPIK' && (isAdmin || isPremiumActive) && " (Freepik/Imagen3 uses AI description of this image, not the image directly for text-to-image.)"}
+                            </p>
+                          )}
+
+                          {/* No images message */}
+                          {(!brandData?.exampleImages || brandData.exampleImages.length === 0) && !tempUploadedImageUrl && !isUploadingTemp && (
+                            <p className="text-xs text-muted-foreground">No brand profile images. Upload one now or add in Brand Profile.</p>
+                          )}
+                        </div>
                     </div>
                   )}
 
@@ -2047,7 +2553,7 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                     </div>
                   )}
 
-                  <div>
+                  <div className={cn(!isAdvancedMode && "hidden")}>
                     <Label htmlFor="imageGenNegativePrompt" className="flex items-center mb-1"><CircleSlash className="w-4 h-4 mr-2 text-primary" />Negative Prompt (Optional)</Label>
                     <Textarea
                       id="imageGenNegativePrompt"
@@ -2164,7 +2670,7 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                         )}
                     </div>
                   </div>
-                  <div>
+                  <div className={cn(!isAdvancedMode && "hidden")}>
                     <Label htmlFor="imageGenSeed" className="flex items-center mb-1"><Pipette className="w-4 h-4 mr-2 text-primary" />Seed (Optional)</Label>
                     <Input
                       id="imageGenSeed"

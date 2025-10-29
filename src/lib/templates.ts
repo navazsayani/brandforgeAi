@@ -14,7 +14,7 @@ export interface BrandTemplate {
   industry: string;
   imageStyleNotes: string;
   targetKeywords: string;
-  logoType?: 'logomark' | 'logotype' | 'monogram';
+  logoType?: 'logomark' | 'logotype' | 'monogram' | 'combination';
   logoShape?: 'circle' | 'square' | 'shield' | 'hexagon' | 'diamond' | 'custom';
   logoStyle?: 'minimalist' | 'modern' | 'classic' | 'playful' | 'bold' | 'elegant';
   logoColors?: string;

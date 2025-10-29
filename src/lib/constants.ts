@@ -22,50 +22,78 @@ export const industries = [
 export const imageStylePresets = [
   // --- Popular & Versatile ---
   { value: "photorealistic", label: "Photorealistic" },
-  { value: "photo", label: "Photo (Freepik)" },
+  { value: "photo", label: "Photo" },
   { value: "cinematic", label: "Cinematic" },
   { value: "minimalist", label: "Minimalist" },
   { value: "vibrant", label: "Vibrant & Energetic" },
-  { value: "3d", label: "3D Render (Freepik)" },
-  { value: "digital-art", label: "Digital Art (Freepik)" },
-  { value: "studio-shot", label: "Studio Shot (Freepik)" },
-  
+  { value: "3d", label: "3D Render" },
+  { value: "digital-art", label: "Digital Art" },
+  { value: "studio-shot", label: "Studio Shot" },
+
   // --- Artistic & Illustrative ---
-  { value: "painting", label: "Painting (Freepik)" },
-  { value: "watercolor", label: "Watercolor (Freepik)" },
-  { value: "sketch", label: "Sketch (Freepik)" },
+  { value: "painting", label: "Painting" },
+  { value: "watercolor", label: "Watercolor" },
+  { value: "sketch", label: "Sketch" },
   { value: "impressionistic", label: "Impressionistic" },
   { value: "concept-art", label: "Concept Art" },
   { value: "line-art", label: "Line Art" },
-  { value: "vector", label: "Vector Art (Freepik)" },
-  { value: "cartoon", label: "Cartoon (Freepik)" },
-  { value: "comic", label: "Comic Book Style (Freepik)" },
-  
+  { value: "vector", label: "Vector Art" },
+  { value: "cartoon", label: "Cartoon" },
+  { value: "comic", label: "Comic Book Style" },
+
   // --- Thematic & Genre ---
-  { value: "vintage", label: "Vintage (Freepik)" },
-  { value: "dark_moody", label: "Dark & Moody (Generic)" },
-  { value: "dark", label: "Dark (Freepik)" },
-  { value: "fantasy", label: "Fantasy (Freepik)" },
-  { value: "cyberpunk", label: "Cyberpunk (Freepik)" },
+  { value: "vintage", label: "Vintage" },
+  { value: "dark_moody", label: "Dark & Moody" },
+  { value: "dark", label: "Dark" },
+  { value: "fantasy", label: "Fantasy" },
+  { value: "cyberpunk", label: "Cyberpunk" },
   { value: "steampunk", label: "Steampunk" },
   { value: "retro-futurism", label: "Retro-Futurism" },
-  { value: "surreal", label: "Surreal (Freepik)" },
-  
+  { value: "surreal", label: "Surreal" },
+
   // --- Specific & Niche ---
   { value: "abstract", label: "Abstract" },
-  { value: "mockup", label: "Mockup (Freepik)" },
+  { value: "mockup", label: "Mockup" },
   { value: "isometric", label: "Isometric" },
-  { value: "low-poly", label: "Low Poly (Freepik)" },
-  { value: "pixel-art", label: "Pixel Art (Freepik)" },
+  { value: "low-poly", label: "Low Poly" },
+  { value: "pixel-art", label: "Pixel Art" },
   { value: "pop-art", label: "Pop Art" },
   { value: "art-deco", label: "Art Deco" },
-  { value: "art-nouveau", label: "Art Nouveau (Freepik)" },
+  { value: "art-nouveau", label: "Art Nouveau" },
   { value: "claymation", label: "Claymation" },
-  { value: "origami", label: "Origami (Freepik)" },
+  { value: "origami", label: "Origami" },
   { value: "monochrome", label: "Monochrome" },
-  { value: "2000s-pone", label: "2000s Phone Aesthetic (Freepik)" },
-  { value: "70s-vibe", label: "70s Vibe (Freepik)" },
-  { value: "traditional-japan", label: "Traditional Japanese Art (Freepik)" },
+  { value: "2000s-pone", label: "2000s Phone Aesthetic" },
+  { value: "70s-vibe", label: "70s Vibe" },
+  { value: "traditional-japan", label: "Traditional Japanese Art" },
+
+  // --- Photography & Product (Professional/Commercial) ---
+  { value: "product-photography", label: "Product Photography" },
+  { value: "lifestyle-photography", label: "Lifestyle Photography" },
+  { value: "editorial-fashion", label: "Editorial Fashion" },
+  { value: "flat-lay", label: "Flat Lay" },
+  { value: "food-photography", label: "Food Photography" },
+
+  // --- Modern Digital Aesthetics ---
+  { value: "neon", label: "Neon" },
+  { value: "glitch-art", label: "Glitch Art" },
+  { value: "vaporwave", label: "Vaporwave" },
+  { value: "synthwave", label: "Synthwave" },
+  { value: "holographic", label: "Holographic" },
+
+  // --- Traditional Art Extended ---
+  { value: "oil-painting", label: "Oil Painting" },
+  { value: "anime", label: "Anime" },
+  { value: "manga", label: "Manga" },
+  { value: "charcoal", label: "Charcoal Drawing" },
+  { value: "pastel", label: "Pastel Art" },
+
+  // --- Atmospheric & Mood ---
+  { value: "ethereal", label: "Ethereal" },
+  { value: "dramatic-lighting", label: "Dramatic Lighting" },
+  { value: "soft-dreamy", label: "Soft & Dreamy" },
+  { value: "film-noir", label: "Film Noir" },
+  { value: "golden-hour", label: "Golden Hour" },
 ];
 
 export const blogTones = [
