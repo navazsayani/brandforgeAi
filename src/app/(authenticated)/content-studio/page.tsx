@@ -924,11 +924,13 @@ export default function ContentStudioPage() {
         }
         setIsPreviewingPrompt(false);
         setFormSnapshot(null);
+        setCurrentTextPromptForEditing(""); // Clear preview to prevent stale state on next generation
       }
       if (imageState.error) {
         toast({ title: "Error generating images", description: imageState.error, variant: "destructive" });
         setIsPreviewingPrompt(false);
         setFormSnapshot(null);
+        setCurrentTextPromptForEditing(""); // Clear preview even on error to prevent stale state
       }
     }
     // Always update the ref to the current state for the next render's comparison.
@@ -1346,6 +1348,20 @@ export default function ContentStudioPage() {
 
   const socialSubmitDisabled = socialState.data?.caption ? false : (useImageForSocialPost && !currentSocialImagePreviewUrl);
 
+  /**
+   * IMPORTANT: Frontend Preview Prompt Builder
+   *
+   * This preview prompt construction must stay in sync with backend PATH 2.
+   * Backend location: /src/ai/flows/generate-images.ts lines 1117-1196
+   *
+   * When updating image generation prompts, update BOTH locations:
+   * 1. Frontend preview (this function) - for admin inspection
+   * 2. Backend PATH 2 (generate-images.ts) - for actual generation
+   *
+   * The preview serves two purposes:
+   * - Admin inspection: Shows exactly what prompt will be sent to AI
+   * - Template storage: Stores template-generated prompts for submission
+   */
   const handlePreviewPromptClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
 
@@ -1390,54 +1406,54 @@ export default function ContentStudioPage() {
         
         textPromptContent += `\n\n${compositionGuidance}`;
 
-    } else { // This is Gemini and other non-Freepik providers
-        if (exampleImg) {
-            coreInstructions = `You are creating a strategic brand marketing image designed to drive engagement, build brand awareness, and convert viewers into customers on social media platforms.
+    } else {
+        /**
+         * KNOWN ISSUE / TECHNICAL DEBT:
+         *
+         * This frontend preview construction duplicates imageMode logic from backend.
+         * When templates are used, the backend ALSO prepends imageMode instructions
+         * (see generate-images.ts lines 1039-1079), creating a mismatch where:
+         *
+         * - Admin sees: Template prompt in preview (without imageMode instructions)
+         * - AI receives: Backend-modified prompt (WITH imageMode instructions prepended)
+         *
+         * This causes "Prompt Used" display after generation to differ from preview.
+         *
+         * IMPACT: Admin UX confusion only. Generation quality is CORRECT - AI gets
+         * proper instructions. Non-admin users are unaffected.
+         *
+         * TODO (Low Priority): Move imageMode prepending to frontend to eliminate
+         * duplication and make preview match generation exactly. See Issue #2 notes
+         * in generate-images.ts for full context.
+         *
+         * Related: generate-images.ts lines 1039-1079 (backend imageMode prepending)
+         */
 
-**BRAND STRATEGY CONTEXT:**
-The provided example image serves as a category reference only. Your mission is to create a completely new, brand-aligned visual asset that:
-- Captures attention in crowded social media feeds
-- Communicates brand values instantly
-- Appeals to the target demographic
-- Encourages social sharing and engagement
-- Supports the brand's marketing objectives
+        // This is Gemini and other non-Freepik providers
+        // Check imageMode to determine which instructions to use
+        // Using narrative style per Google Gemini guidelines: https://ai.google.dev/gemini-api/docs/image-generation
+        const shouldEnhanceImage = imageMode === 'enhance' && exampleImg;
 
-**CORE CREATIVE BRIEF:**
-1. **Brand Identity**: "${imageGenBrandDescription}"${industryCtx}
-   - Extract the brand's personality, values, and unique selling proposition
-   - Consider the target audience's lifestyle, aspirations, and pain points
-   - Identify what makes this brand different from competitors
-   - Think about the emotional connection the brand wants to create
+        if (shouldEnhanceImage) {
+            // ENHANCE MODE: AI Photoshoot - Transform into professional marketing image
+            coreInstructions = `You are transforming an uploaded photograph into a professional marketing photoshoot asset while maintaining complete fidelity to the original subjects.
 
-2. **Visual Execution Style**: "${combinedStyle}"
-   - This defines the aesthetic approach, mood, and technical execution
-   - For realistic styles: Create professional, market-ready visuals
-   - For artistic styles: Balance creativity with brand recognition
-   - Consider platform-specific best practices (Instagram, TikTok, etc.)
+Your primary directive is preservation: you must keep the exact people, products, and brand elements from the uploaded image completely unchanged. This means preserving faces, identities, expressions, body positions, product appearances, brand logos, packaging details, and any identifying characteristics. The people in the transformed image must be the same individuals with the same features, wearing the same clothing and accessories. Products must retain their exact appearance, colors, branding, and features. Think of this as if the same subjects were re-photographed by a professional photographer in a professional studio—the subjects themselves are identical, but everything around them and the technical quality has been elevated.
 
-**MARKETING OPTIMIZATION REQUIREMENTS:**
-- **Scroll-stopping power**: The image must stand out in social feeds
-- **Brand consistency**: Align with the brand's visual identity and messaging
-- **Target audience appeal**: Resonate with the specific demographic
-- **Conversion potential**: Include subtle elements that encourage action
-- **Shareability factor**: Create content people want to share
-- **Platform optimization**: Consider where this will be posted
+What you will transform is the environment and technical execution. Replace casual or amateur backgrounds with professional studio settings, luxury environments, or brand-appropriate contexts that complement the preserved subjects. Apply professional studio lighting techniques—three-point lighting, dramatic commercial lighting, or editorial lighting that creates depth, dimension, and visual impact while eliminating harsh shadows and unflattering light. Upgrade the overall technical quality to magazine-grade standards: ultra-high definition clarity, professional color grading and calibration, perfect white balance, and the kind of polish expected in premium advertising campaigns.
 
-**CREATIVE GUIDELINES:**
-- Use the example image ONLY for category identification
-- Create something completely new that embodies the brand essence
-- Avoid generic or cliché visual approaches
-- Include contextual elements that tell a brand story
-- Consider seasonal trends and cultural relevance
-- Ensure the image works both as standalone content and in campaigns
+The brand context for this transformation is: ${imageGenBrandDescription}${industryCtx}. The desired visual style is: ${combinedStyle}. Apply these brand aesthetics and style preferences to the background, lighting, atmosphere, and overall presentation—not to the subjects themselves. The subjects remain exactly as they appear in the uploaded image.
 
-**QUALITY STANDARDS:**
-- Professional marketing-grade quality
-- Optimized for social media engagement
-- Culturally sensitive and inclusive
-- Technically excellent (lighting, composition, clarity)
-- Brand-appropriate and on-message`;
+Your output should look as if a world-class commercial photographer conducted a professional photoshoot using these exact same subjects, delivering a marketing-ready asset worthy of magazine covers and premium brand campaigns. The viewer should recognize the identical subjects from the uploaded image but marvel at the professional quality of the presentation.`;
+        } else if (exampleImg) {
+            // REFERENCE MODE: Use as inspiration only
+            coreInstructions = `You are creating an entirely new brand marketing image inspired by the provided reference image. The reference serves only as a category identifier and aesthetic guide—you should not preserve or copy any specific subjects, people, products, or brand elements from it. Instead, create completely original content that captures a similar style, mood, or category while being entirely new.
+
+Your mission is to generate fresh marketing content for this brand: ${imageGenBrandDescription}${industryCtx}. The desired visual style is: ${combinedStyle}. Use the reference image to understand the general aesthetic direction, composition approach, or subject category, then create something completely new that embodies this brand's unique identity and appeals to their target audience.
+
+Think of the reference as inspiration, not a template. If the reference shows a lifestyle product shot, create your own original lifestyle scene with new subjects, new products, and new compositions that serve this brand's marketing objectives. Focus on creating scroll-stopping social media content that communicates brand values, resonates with the target demographic, and encourages engagement—while being entirely distinct from the reference image. The result should be professional marketing-grade quality optimized for social media platforms, culturally sensitive and inclusive, with technically excellent lighting, composition, and clarity that aligns with the brand's identity and messaging.`;
         } else {
+            // NO IMAGE: Base prompt construction
             coreInstructions = `You are creating a strategic brand marketing image designed to drive engagement, build brand awareness, and convert viewers into customers on social media platforms.
 
 **BRAND STRATEGY CONTEXT:**
@@ -1451,6 +1467,7 @@ Your mission is to create a compelling, brand-aligned visual asset that:
 
 **CORE CREATIVE BRIEF:**
 1. **Brand Identity Deep Dive**: "${imageGenBrandDescription}"${industryCtx}
+   Avoid stereotypical or cliché industry representations—use realistic, contemporary, authentic imagery.
    - Extract and amplify the brand's unique personality, values, and positioning
    - Consider the target audience's lifestyle, pain points, desires, and social behaviors
    - Identify the emotional triggers that drive purchase decisions in this market
@@ -1499,7 +1516,12 @@ Your mission is to create a compelling, brand-aligned visual asset that:
 - Market-ready quality suitable for paid advertising and organic content`;
         }
 
-        textPromptContent = `Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.\n\n${coreInstructions}`;
+        // Conditional opening line based on imageMode (per Google Gemini guidelines for clarity)
+        const openingContext = (shouldEnhanceImage)
+            ? `Transform the provided uploaded image into a professional marketing asset.\n\n`
+            : `Create a new, high-quality, visually appealing brand marketing image.\n\n`;
+
+        textPromptContent = openingContext + coreInstructions;
         
         if (negPrompt) {
             textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negPrompt}.`;
@@ -1510,8 +1532,9 @@ Your mission is to create a compelling, brand-aligned visual asset that:
         if (seedValue !== undefined) { 
             textPromptContent += `\n\nUse seed: ${seedValue}.`;
         }
-        textPromptContent +=`\n\n${compositionGuidance}`; 
-        if (numImages > 1 ) {
+        textPromptContent +=`\n\n${compositionGuidance}`;
+        // Skip batch variation instructions for enhance mode (conflicts with preservation directive)
+        if (numImages > 1 && imageMode !== 'enhance') {
             textPromptContent += `\n\nImportant for batch generation: You are generating image 1 of a set of ${numImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (1/${numImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject.`;
         }
     }
@@ -1529,6 +1552,7 @@ Your mission is to create a compelling, brand-aligned visual asset that:
         industry: currentIndustryValue === "_none_" ? "" : currentIndustryValue,
         imageStyle: combinedStyle,
         exampleImage: (useExampleImageForGen && exampleImg && exampleImg.trim() !== "") ? exampleImg : undefined,
+        imageMode: imageMode,
         aspectRatio: aspect,
         numberOfImages: numImages,
         negativePrompt: negPrompt === "" ? undefined : negPrompt,
@@ -1588,8 +1612,8 @@ Your mission is to create a compelling, brand-aligned visual asset that:
         const exampleImgToUse = (isAdmin || isPremiumActive) ? formSnapshot?.exampleImage : (useExampleImageForGen && selectedExampleImageUrl ? selectedExampleImageUrl : undefined);
         if (typeof exampleImgToUse === 'string' && exampleImgToUse.trim() !== "") {
           formData.set("exampleImage", exampleImgToUse);
-          // Pass imageMode only when image is present
-          formData.set("imageMode", imageMode);
+          // Pass imageMode only when image is present - use from formSnapshot to preserve selection from preview time
+          formData.set("imageMode", formSnapshot?.imageMode || imageMode);
         } else {
           formData.delete("exampleImage");
           formData.delete("imageMode");
@@ -1761,6 +1785,8 @@ Your mission is to create a compelling, brand-aligned visual asset that:
 
         // Set imageMode if template suggests it (AI Photoshoot feature)
         // This is a ONE-TIME action when template is applied - user can uncheck/change afterward
+        // Note: Backend will prepend enhance/reference instructions to template prompt
+        // See generate-images.ts lines 1039-1109 for imageMode prepending logic
         if (template.suggestedImageMode) {
           // Check if user has uploaded images
           if (brandData.exampleImages && brandData.exampleImages.length > 0) {

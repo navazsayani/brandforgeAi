@@ -1001,8 +1001,8 @@ const generateImagesFlow = ai.defineFlow(
                 textPromptContent = finalizedTextPrompt;
 
                 // 🔥 RAG ENHANCEMENT: Enhance finalized prompt with adaptive RAG context
-
-                if (userId) {
+                // Skip RAG when image is selected to avoid conflicting with image mode instructions
+                if (userId && !exampleImage) {
                     try {
                         const { context, insights } = await getAdaptiveRAGContext(
                             userId,
@@ -1036,34 +1036,50 @@ const generateImagesFlow = ai.defineFlow(
                     }
                 }
 
+                /**
+                 * KNOWN ISSUE / TECHNICAL DEBT:
+                 *
+                 * This backend imageMode prepending logic duplicates frontend preview logic
+                 * (see page.tsx lines 1435-1456), but is REQUIRED for templates to work.
+                 *
+                 * FLOW:
+                 * 1. Templates provide finalizedTextPrompt WITHOUT imageMode instructions
+                 * 2. This code prepends enhance/reference instructions to template prompts
+                 * 3. Admin preview shows template WITHOUT these instructions (mismatch)
+                 * 4. After generation, "Prompt Used" shows WITH instructions (confusing)
+                 *
+                 * WHY "TEMPLATE REQUIREMENTS" TEXT:
+                 * This header was designed for templates, but admin preview also uses PATH 1,
+                 * so the text appears even when no template was used (misleading).
+                 *
+                 * IMPACT: Admin UX confusion only. Generation quality is CORRECT - templates
+                 * work properly with imageMode. Non-admin users are unaffected.
+                 *
+                 * TODO (Low Priority):
+                 * Option A - Move this logic to frontend, update templates to include imageMode
+                 * Option B - Change text from "TEMPLATE REQUIREMENTS" → "BRAND REQUIREMENTS"
+                 * Option C - Add source tracking to distinguish template vs preview prompts
+                 *
+                 * DO NOT REMOVE without updating templates to handle imageMode independently.
+                 *
+                 * Related: page.tsx lines 1435-1456 (frontend imageMode construction)
+                 * Related: content-templates.ts (templates rely on this prepending)
+                 */
+
                 // Handle imageMode even when using finalizedTextPrompt (for templates with suggestedImageMode)
                 const shouldEnhanceImage = imageMode === 'enhance' && exampleImage && chosenProvider === 'GEMINI';
                 if (shouldEnhanceImage) {
                     // ENHANCE MODE: Prepend AI Photoshoot instructions to template prompt
-                    const enhanceInstructions = `**AI PHOTOSHOOT TRANSFORMATION MODE ACTIVE**
+                    // Using narrative style per Google Gemini guidelines: https://ai.google.dev/gemini-api/docs/image-generation
+                    const enhanceInstructions = `**AI PHOTOSHOOT TRANSFORMATION MODE**
 
-You are transforming the provided image into a professional marketing photoshoot while preserving the exact subjects (people, products, brand elements).
+You are transforming an uploaded photograph into a professional marketing photoshoot asset while maintaining complete fidelity to the original subjects.
 
-**CRITICAL - PRESERVE THESE:**
-- ✅ Keep exact faces, identities, expressions, and positioning of people
-- ✅ Preserve products, their appearance, branding, and features
-- ✅ Maintain logos, packaging, and brand elements
-- ✅ Keep the general arrangement and composition of key subjects
+Your primary directive is preservation: you must keep the exact people, products, and brand elements from the uploaded image completely unchanged. This means preserving faces, identities, expressions, body positions, product appearances, brand logos, packaging details, and any identifying characteristics. The people in the transformed image must be the same individuals with the same features, wearing the same clothing and accessories. Products must retain their exact appearance, colors, branding, and features. Think of this as if the same subjects were re-photographed by a professional photographer in a professional studio—the subjects themselves are identical, but everything around them and the technical quality has been elevated.
 
-**PROFESSIONAL TRANSFORMATION:**
-- Replace casual/amateur backgrounds with professional studio or brand-appropriate settings
-- Apply professional three-point lighting or dramatic commercial lighting
-- Ultra-high definition, magazine-quality resolution
-- Professional color grading and calibration
-- Marketing-ready presentation quality
+What you will transform is the environment and technical execution. Replace casual or amateur backgrounds with professional studio settings, luxury environments, or brand-appropriate contexts that complement the preserved subjects. Apply professional studio lighting techniques—three-point lighting, dramatic commercial lighting, or editorial lighting that creates depth, dimension, and visual impact while eliminating harsh shadows and unflattering light. Upgrade the overall technical quality to magazine-grade standards: ultra-high definition clarity, professional color grading and calibration, perfect white balance, and the kind of polish expected in premium advertising campaigns.
 
-**RULES:**
-❌ Do NOT change people's faces, identities, or who they are
-❌ Do NOT alter what products look like or their core features
-❌ Do NOT remove or replace the main subjects
-✅ DO transform everything else to professional marketing standards
-
-Think: "Same subjects, professional photoshoot transformation."
+Your output should look as if a world-class commercial photographer conducted a professional photoshoot using these exact same subjects, delivering a marketing-ready asset worthy of magazine covers and premium brand campaigns. The viewer should recognize the identical subjects from the uploaded image but marvel at the professional quality of the presentation.
 
 ---
 
@@ -1074,16 +1090,14 @@ Think: "Same subjects, professional photoshoot transformation."
                     console.log(`[ImageMode] Applied 'enhance' mode to finalized template prompt`);
                 } else if (exampleImage && chosenProvider === 'GEMINI') {
                     // REFERENCE MODE: Add reference mode context to template prompt
-                    const referenceInstructions = `**REFERENCE IMAGE MODE ACTIVE**
+                    // Using narrative style per Google Gemini guidelines: https://ai.google.dev/gemini-api/docs/image-generation
+                    const referenceInstructions = `**REFERENCE IMAGE MODE**
 
-The provided example image serves as a category/style reference only. Create a completely new, brand-aligned image inspired by the reference but not copying it.
+You are creating an entirely new brand marketing image inspired by the provided reference image. The reference serves only as a category identifier and aesthetic guide—you should not preserve or copy any specific subjects, people, products, or brand elements from it. Instead, create completely original content that captures a similar style, mood, or category while being entirely new.
 
-Use the reference image to understand:
-- Visual category and subject matter
-- Composition style and aesthetic approach
-- Quality level and execution style
+Use the reference image to understand the general aesthetic direction, composition approach, or subject category, then create something completely new that embodies the brand's unique identity and appeals to the target audience. Think of the reference as inspiration, not a template. If the reference shows a lifestyle product shot, create your own original lifestyle scene with new subjects, new products, and new compositions that serve the brand's marketing objectives.
 
-Create something new that embodies the brand essence while being inspired by (not copying) the reference.
+Focus on creating scroll-stopping social media content that communicates brand values, resonates with the target demographic, and encourages engagement—while being entirely distinct from the reference image. The result should be professional marketing-grade quality optimized for social media platforms, culturally sensitive and inclusive, with technically excellent lighting, composition, and clarity that aligns with the brand's identity and messaging.
 
 ---
 
@@ -1113,10 +1127,24 @@ Create something new that embodies the brand essence while being inspired by (no
                         textPromptContent += `\n\n${compositionGuidance}`;
                     }
                 }
-                 if (numberOfImages > 1 && chosenProvider !== 'FREEPIK') {
+                 // Skip batch variation instructions for enhance mode (conflicts with preservation directive)
+                 if (numberOfImages > 1 && chosenProvider !== 'FREEPIK' && imageMode !== 'enhance') {
                     textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
                 }
-            } else { 
+            } else {
+                /**
+                 * BACKEND PATH 2: Construct prompt from scratch
+                 *
+                 * IMPORTANT: This prompt construction must stay in sync with frontend preview.
+                 * Frontend location: /src/app/(authenticated)/content-studio/page.tsx lines 1363-1500 (handlePreviewPromptClick)
+                 *
+                 * When updating image generation prompts, update BOTH locations:
+                 * 1. Backend PATH 2 (this section) - for actual generation
+                 * 2. Frontend preview (page.tsx) - for admin inspection
+                 *
+                 * Regular users use THIS path directly (no preview).
+                 * Admin users see preview from frontend, but final generation still uses this logic.
+                 */
                 console.log(`Constructing prompt for image ${i+1}/${numberOfImages}. (Provider: ${chosenProvider})`);
                 if (!brandDescription || !imageStyle) {
                     throw new Error("Brand description and image style are required if not providing/using a finalized text prompt.");
@@ -1129,118 +1157,24 @@ Create something new that embodies the brand essence while being inspired by (no
 
                 if (shouldEnhanceImage) {
                     // ENHANCE MODE: AI Photoshoot - Transform into professional marketing image
-                    coreInstructions = `You are a world-class commercial photographer creating a professional marketing photoshoot using the subjects from the provided image.
+                    // Using narrative style per Google Gemini guidelines: https://ai.google.dev/gemini-api/docs/image-generation
+                    coreInstructions = `You are transforming an uploaded photograph into a professional marketing photoshoot asset while maintaining complete fidelity to the original subjects.
 
-**YOUR MISSION:**
-Transform this image into a professional marketing asset worthy of magazine covers and premium advertising campaigns, while preserving the exact subjects (people, products, brand elements).
+Your primary directive is preservation: you must keep the exact people, products, and brand elements from the uploaded image completely unchanged. This means preserving faces, identities, expressions, body positions, product appearances, brand logos, packaging details, and any identifying characteristics. The people in the transformed image must be the same individuals with the same features, wearing the same clothing and accessories. Products must retain their exact appearance, colors, branding, and features. Think of this as if the same subjects were re-photographed by a professional photographer in a professional studio—the subjects themselves are identical, but everything around them and the technical quality has been elevated.
 
-**CRITICAL FOUNDATION - PRESERVE THESE:**
-- ✅ **People**: Keep exact faces, identities, expressions, poses, and positioning
-- ✅ **Products**: Preserve the exact product, its appearance, branding, and features
-- ✅ **Brand Elements**: Maintain logos, packaging, and identifying characteristics
-- ✅ **Subject Composition**: Keep the general arrangement and positioning of key subjects
+What you will transform is the environment and technical execution. Replace casual or amateur backgrounds with professional studio settings, luxury environments, or brand-appropriate contexts that complement the preserved subjects. Apply professional studio lighting techniques—three-point lighting, dramatic commercial lighting, or editorial lighting that creates depth, dimension, and visual impact while eliminating harsh shadows and unflattering light. Upgrade the overall technical quality to magazine-grade standards: ultra-high definition clarity, professional color grading and calibration, perfect white balance, and the kind of polish expected in premium advertising campaigns.
 
-**PROFESSIONAL PHOTOSHOOT TRANSFORMATION:**
-Think: "A $5000 professional photographer re-shot this using the same subjects"
+The brand context for this transformation is: ${brandDescription}${industryContext}. The desired visual style is: ${imageStyle}. Apply these brand aesthetics and style preferences to the background, lighting, atmosphere, and overall presentation—not to the subjects themselves. The subjects remain exactly as they appear in the uploaded image.
 
-1. **Background Upgrade**:
-   - Replace casual/amateur backgrounds with professional studio or brand-appropriate settings
-   - Options: Clean studio backdrop, luxury environment, or branded context
-   - Ensure background complements subjects without distracting
-
-2. **Studio Lighting**:
-   - Apply professional three-point lighting or dramatic commercial lighting
-   - Perfect exposure, balanced highlights and shadows
-   - Create depth and dimension with professional lighting techniques
-   - Eliminate harsh shadows and unflattering light
-
-3. **Marketing-Grade Quality**:
-   - Ultra-high definition, razor-sharp clarity
-   - Professional color grading and calibration
-   - Magazine-quality resolution and detail
-   - Perfect white balance and color accuracy
-
-4. **Brand Integration**:
-   Brand: ${brandDescription}${industryContext}
-   Visual Style: ${imageStyle}
-
-   Apply brand aesthetics through:
-   - Color palette aligned with brand identity
-   - Mood and atmosphere matching brand personality
-   - Professional styling that reflects brand values
-   - Visual language consistent with brand positioning
-
-5. **Commercial Polish**:
-   - Professional composition and framing
-   - Marketing-ready presentation
-   - Platform-optimized for social media and advertising
-   - "Hire-a-professional-photographer" quality
-
-**TRANSFORMATION CHECKLIST:**
-✅ Same people/products → Professional photoshoot environment
-✅ Amateur lighting → Studio-quality professional lighting
-✅ Casual background → Professional branded setting
-✅ Phone photo quality → Marketing campaign quality
-✅ Raw upload → Magazine-worthy final image
-
-**CRITICAL RULES:**
-❌ Do NOT change people's faces, identities, or who they are
-❌ Do NOT alter what products look like or their core features
-❌ Do NOT remove or replace the main subjects
-✅ DO transform everything else to professional marketing standards
-
-**FINAL OUTPUT:**
-Generate a professional marketing image that looks like it was shot by a top commercial photographer in a professional studio, while keeping the exact same subjects from the uploaded image.
-
-Think: "Same subjects, professional photoshoot transformation."`;
+Your output should look as if a world-class commercial photographer conducted a professional photoshoot using these exact same subjects, delivering a marketing-ready asset worthy of magazine covers and premium brand campaigns. The viewer should recognize the identical subjects from the uploaded image but marvel at the professional quality of the presentation.`;
                 } else if (exampleImage && chosenProvider === 'GEMINI') {
                     // REFERENCE MODE: Use as inspiration only (existing behavior)
-                    coreInstructions = `You are creating a strategic brand marketing image designed to drive engagement, build brand awareness, and convert viewers into customers on social media platforms.
+                    // Using narrative style per Google Gemini guidelines: https://ai.google.dev/gemini-api/docs/image-generation
+                    coreInstructions = `You are creating an entirely new brand marketing image inspired by the provided reference image. The reference serves only as a category identifier and aesthetic guide—you should not preserve or copy any specific subjects, people, products, or brand elements from it. Instead, create completely original content that captures a similar style, mood, or category while being entirely new.
 
-**BRAND STRATEGY CONTEXT:**
-The provided example image serves as a category reference only. Your mission is to create a completely new, brand-aligned visual asset that:
-- Captures attention in crowded social media feeds
-- Communicates brand values instantly
-- Appeals to the target demographic
-- Encourages social sharing and engagement
-- Supports the brand's marketing objectives
+Your mission is to generate fresh marketing content for this brand: ${brandDescription}${industryContext}. The desired visual style is: ${imageStyle}. Use the reference image to understand the general aesthetic direction, composition approach, or subject category, then create something completely new that embodies this brand's unique identity and appeals to their target audience.
 
-**CORE CREATIVE BRIEF:**
-1. **Brand Identity**: "${brandDescription}"${industryContext}
-   - Extract the brand's personality, values, and unique selling proposition
-   - Consider the target audience's lifestyle, aspirations, and pain points
-   - Identify what makes this brand different from competitors
-   - Think about the emotional connection the brand wants to create
-
-2. **Visual Execution Style**: "${imageStyle}"
-   - This defines the aesthetic approach, mood, and technical execution
-   - For realistic styles: Create professional, market-ready visuals
-   - For artistic styles: Balance creativity with brand recognition
-   - Consider platform-specific best practices (Instagram, TikTok, etc.)
-
-**MARKETING OPTIMIZATION REQUIREMENTS:**
-- **Scroll-stopping power**: The image must stand out in social feeds
-- **Brand consistency**: Align with the brand's visual identity and messaging
-- **Target audience appeal**: Resonate with the specific demographic
-- **Conversion potential**: Include subtle elements that encourage action
-- **Shareability factor**: Create content people want to share
-- **Platform optimization**: Consider where this will be posted
-
-**CREATIVE GUIDELINES:**
-- Use the example image ONLY for category identification
-- Create something completely new that embodies the brand essence
-- Avoid generic or cliché visual approaches
-- Include contextual elements that tell a brand story
-- Consider seasonal trends and cultural relevance
-- Ensure the image works both as standalone content and in campaigns
-
-**QUALITY STANDARDS:**
-- Professional marketing-grade quality
-- Optimized for social media engagement
-- Culturally sensitive and inclusive
-- Technically excellent (lighting, composition, clarity)
-- Brand-appropriate and on-message
-`;
+Think of the reference as inspiration, not a template. If the reference shows a lifestyle product shot, create your own original lifestyle scene with new subjects, new products, and new compositions that serve this brand's marketing objectives. Focus on creating scroll-stopping social media content that communicates brand values, resonates with the target demographic, and encourages engagement—while being entirely distinct from the reference image. The result should be professional marketing-grade quality optimized for social media platforms, culturally sensitive and inclusive, with technically excellent lighting, composition, and clarity that aligns with the brand's identity and messaging.`;
                 } else {
                     coreInstructions = `You are creating a strategic brand marketing image designed to drive engagement, build brand awareness, and convert viewers into customers on social media platforms.
 
@@ -1255,6 +1189,7 @@ Your mission is to create a compelling, brand-aligned visual asset that:
 
 **CORE CREATIVE BRIEF:**
 1. **Brand Identity Deep Dive**: "${brandDescription}"${industryContext}
+   Avoid stereotypical or cliché industry representations—use realistic, contemporary, authentic imagery.
    - Extract and amplify the brand's unique personality, values, and positioning
    - Consider the target audience's lifestyle, pain points, desires, and social behaviors
    - Identify the emotional triggers that drive purchase decisions in this market
@@ -1303,11 +1238,17 @@ Your mission is to create a compelling, brand-aligned visual asset that:
 - Market-ready quality suitable for paid advertising and organic content
 `;
                 }
-                textPromptContent = `Generate a new, high-quality, visually appealing image suitable for social media platforms like Instagram.\n\n${coreInstructions}`;
+
+                // Conditional opening line based on imageMode (per Google Gemini guidelines for clarity)
+                const openingContext = (imageMode === 'enhance' && exampleImage)
+                    ? `Transform the provided uploaded image into a professional marketing asset.\n\n`
+                    : `Create a new, high-quality, visually appealing brand marketing image.\n\n`;
+
+                textPromptContent = openingContext + coreInstructions;
 
                 // 🔥 RAG ENHANCEMENT: Enhance constructed prompt with adaptive RAG context
-                
-                if (userId) {
+                // Skip RAG when image is selected to avoid conflicting with image mode instructions
+                if (userId && !exampleImage) {
                     try {
                         const { context, insights } = await getAdaptiveRAGContext(
                             userId,
@@ -1351,9 +1292,10 @@ Your mission is to create a compelling, brand-aligned visual asset that:
                   if (seed !== undefined) { 
                     textPromptContent += `\n\nUse seed: ${seed}.`;
                   }
-                   textPromptContent +=`\n\n${compositionGuidance}`; 
+                   textPromptContent +=`\n\n${compositionGuidance}`;
                 }
-                if (numberOfImages > 1 && chosenProvider !== 'FREEPIK') {
+                // Skip batch variation instructions for enhance mode (conflicts with preservation directive)
+                if (numberOfImages > 1 && chosenProvider !== 'FREEPIK' && imageMode !== 'enhance') {
                     textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
                 }
             }

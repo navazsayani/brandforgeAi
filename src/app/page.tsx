@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import NextImage from 'next/image';
@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, UserCircle, Rocket, Paintbrush, Send, ArrowRight, Wand2, Layers, Target, CheckCircle, TrendingUp, Users, Clock, Star, X, Lightbulb, Zap, Building, RefreshCcw, Globe, Eye, Sparkles } from 'lucide-react';
+import { Loader2, UserCircle, Rocket, Paintbrush, Send, ArrowRight, Wand2, Layers, Target, CheckCircle, TrendingUp, Users, Clock, Star, X, Lightbulb, Zap, Building, RefreshCcw, Globe, Eye, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 import PublicHeader from '@/components/PublicHeader';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -643,6 +643,9 @@ export default function LandingPage() {
   const [modalStage, setModalStage] = useState<string | null>(null);
   const [userCountry, setUserCountry] = useState<string>('US');
   const [modalShowcaseId, setModalShowcaseId] = useState<string | null>(null);
+  const showcaseScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
 
   useEffect(() => {
     if (user && !isLoading) {
@@ -664,6 +667,43 @@ export default function LandingPage() {
         setUserCountry('US');
       });
   }, []);
+
+  // Scroll handler functions for showcase carousel
+  const checkScrollButtons = useCallback(() => {
+    if (showcaseScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = showcaseScrollRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
+    }
+  }, []);
+
+  const scrollShowcase = (direction: 'left' | 'right') => {
+    if (showcaseScrollRef.current) {
+      const scrollAmount = 420; // Card width (400px) + gap (20px)
+      const newScrollLeft = direction === 'left'
+        ? showcaseScrollRef.current.scrollLeft - scrollAmount
+        : showcaseScrollRef.current.scrollLeft + scrollAmount;
+
+      showcaseScrollRef.current.scrollTo({
+        left: newScrollLeft,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  useEffect(() => {
+    const scrollContainer = showcaseScrollRef.current;
+    if (scrollContainer) {
+      checkScrollButtons();
+      scrollContainer.addEventListener('scroll', checkScrollButtons);
+      window.addEventListener('resize', checkScrollButtons);
+
+      return () => {
+        scrollContainer.removeEventListener('scroll', checkScrollButtons);
+        window.removeEventListener('resize', checkScrollButtons);
+      };
+    }
+  }, [checkScrollButtons]);
 
   const brandStories = [
     {
@@ -773,18 +813,34 @@ export default function LandingPage() {
                     Complete AI branding platform: Generate <strong className="text-foreground">logos, images, social posts, blogs, and ad campaigns</strong>—then <strong className="text-foreground">refine everything to perfection</strong> with simple text commands. Unlike DALL-E or ChatGPT, you don't start over. No design skills needed.
                 </p>
 
-                {/* Hero Video - AI Refinement Demo */}
+                {/* Hero Videos - Dual Feature Showcase */}
                 <div className="mt-10 mb-8">
-                  <div className="relative w-full max-w-4xl mx-auto">
-                    <div className="rounded-xl border-2 border-primary/20 shadow-lg overflow-hidden">
-                      <VideoPlayer
-                        videoUrl="/videos/ai refine_web.mp4"
-                        posterUrl="/videos/ai_refine_web_thumb.png"
-                      />
+                  <div className="w-full max-w-5xl mx-auto">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+                      {/* AI Refinement Video */}
+                      <div className="relative">
+                        <div className="rounded-xl border-2 border-primary/20 shadow-lg overflow-hidden">
+                          <VideoPlayer
+                            videoUrl="/videos/Ai_refine_serum.mp4"
+                          />
+                        </div>
+                        <p className="text-center text-sm text-muted-foreground mt-3">
+                          From first draft to perfect image—all with simple AI commands
+                        </p>
+                      </div>
+
+                      {/* Social Media Video */}
+                      <div className="relative">
+                        <div className="rounded-xl border-2 border-primary/20 shadow-lg overflow-hidden">
+                          <VideoPlayer
+                            videoUrl="/videos/Ai_social_serum.mp4"
+                          />
+                        </div>
+                        <p className="text-center text-sm text-muted-foreground mt-3">
+                          Generate, refine, and perfect social posts in one seamless workflow
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-center text-sm text-muted-foreground mt-3">
-                      Watch: Transform "good" AI images into "perfect" with simple commands
-                    </p>
                   </div>
                 </div>
 
@@ -922,8 +978,33 @@ export default function LandingPage() {
           </div>
 
           {/* Horizontal Scrollable Showcase */}
-          <div className="overflow-x-auto pb-4 scrollbar-hide">
-            <div className="flex gap-6 px-4 sm:px-8 lg:px-12">
+          <div className="relative">
+            {/* Left Scroll Button */}
+            <button
+              onClick={() => scrollShowcase('left')}
+              disabled={!canScrollLeft}
+              className={`hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 items-center justify-center w-12 h-12 rounded-full bg-background/90 backdrop-blur-sm border-2 border-primary/20 shadow-lg transition-all hover:scale-110 hover:border-primary/50 hover:shadow-xl ${
+                !canScrollLeft ? 'opacity-0 pointer-events-none' : 'opacity-100'
+              }`}
+              aria-label="Scroll left"
+            >
+              <ChevronLeft className="w-6 h-6 text-primary" />
+            </button>
+
+            {/* Right Scroll Button */}
+            <button
+              onClick={() => scrollShowcase('right')}
+              disabled={!canScrollRight}
+              className={`hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 items-center justify-center w-12 h-12 rounded-full bg-background/90 backdrop-blur-sm border-2 border-primary/20 shadow-lg transition-all hover:scale-110 hover:border-primary/50 hover:shadow-xl ${
+                !canScrollRight ? 'opacity-0 pointer-events-none' : 'opacity-100'
+              }`}
+              aria-label="Scroll right"
+            >
+              <ChevronRight className="w-6 h-6 text-primary" />
+            </button>
+
+            <div ref={showcaseScrollRef} className="overflow-x-auto pb-4 scrollbar-hide">
+              <div className="flex gap-6 px-4 sm:px-8 lg:px-12">
               {showcaseExamples
                 .filter(example => Object.values(templateShowcaseMap).includes(example.id))
                 .map((example, idx) => {
@@ -1007,6 +1088,7 @@ export default function LandingPage() {
                     </Card>
                   );
                 })}
+              </div>
             </div>
           </div>
 
@@ -1257,7 +1339,7 @@ export default function LandingPage() {
                             <h3 className="font-semibold mb-2">Simple Instructions</h3>
                             <p className="text-sm text-muted-foreground">"Make the sky more dramatic" or "Add morning mist"</p>
                         </div>
-                        
+
                         <div className="text-center">
                             <div className="p-3 bg-primary/10 rounded-xl w-fit mx-auto mb-3">
                                 <RefreshCcw className="h-6 w-6 text-primary" />
@@ -1265,7 +1347,7 @@ export default function LandingPage() {
                             <h3 className="font-semibold mb-2">Version History</h3>
                             <p className="text-sm text-muted-foreground">Revert to any previous version with one click</p>
                         </div>
-                        
+
                         <div className="text-center">
                             <div className="p-3 bg-accent/10 rounded-xl w-fit mx-auto mb-3">
                                 <Zap className="h-6 w-6 text-accent" />
@@ -1274,7 +1356,22 @@ export default function LandingPage() {
                             <p className="text-sm text-muted-foreground">From fast previews to premium results</p>
                         </div>
                     </div>
-                    
+
+                    {/* Refinement Demo Video */}
+                    <div className="mt-10">
+                        <div className="relative w-full max-w-3xl mx-auto">
+                            <div className="rounded-xl border-2 border-primary/20 shadow-lg overflow-hidden">
+                                <VideoPlayer
+                                    videoUrl="/videos/ai refine_web.mp4"
+                                    posterUrl="/videos/ai_refine_web_thumb.png"
+                                />
+                            </div>
+                            <p className="text-center text-sm text-muted-foreground mt-3">
+                                Watch: Transform "good" AI images into "perfect" with simple commands
+                            </p>
+                        </div>
+                    </div>
+
                     <div className="mt-8">
                         <Button size="lg" className="btn-gradient-primary btn-lg-enhanced" asChild>
                             <Link href="/signup">
