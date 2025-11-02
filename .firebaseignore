@@ -1,0 +1,42 @@
+# Firebase deployment ignore patterns
+# This file specifies intentional untracked files that Firebase should ignore
+
+# Dependencies
+**/node_modules/**
+
+# Build outputs
+.next/**
+out/**
+build/**
+
+# Version control
+.git/**
+.gitignore
+
+# Environment files
+.env*
+!.env.example
+
+# IDE and editor files
+.vscode/**
+.idea/**
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/**
+.nyc_output/**
+
+# Temporary files
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Note: public/videos/*.mp4 files are NOT ignored - they will be deployed
