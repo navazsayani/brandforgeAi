@@ -821,7 +821,7 @@ export default function LandingPage() {
                       <div className="relative">
                         <div className="rounded-xl border-2 border-primary/20 shadow-lg overflow-hidden">
                           <VideoPlayer
-                            videoUrl="/videos/Ai_refine_serum.mp4"
+                            videoUrl="https://firebasestorage.googleapis.com/v0/b/brandforge-ai-jr0z4.firebasestorage.app/o/videos%2FAi_refine_serum.mp4?alt=media"
                           />
                         </div>
                         <p className="text-center text-sm text-muted-foreground mt-3">
@@ -833,7 +833,7 @@ export default function LandingPage() {
                       <div className="relative">
                         <div className="rounded-xl border-2 border-primary/20 shadow-lg overflow-hidden">
                           <VideoPlayer
-                            videoUrl="/videos/Ai_social_serum.mp4"
+                            videoUrl="https://firebasestorage.googleapis.com/v0/b/brandforge-ai-jr0z4.firebasestorage.app/o/videos%2FAi_social_serum.mp4?alt=media"
                           />
                         </div>
                         <p className="text-center text-sm text-muted-foreground mt-3">
