@@ -339,7 +339,7 @@ export async function handleGenerateImagesAction(
         console.warn(`Could not generate description for example image (Freepik): ${descError.message}. Proceeding without it.`);
       }
     }
-    
+
     const input: GenerateImagesInput = {
       provider: formData.get("provider") as GenerateImagesInput['provider'] || undefined,
       brandDescription: formData.get("brandDescription") as string,

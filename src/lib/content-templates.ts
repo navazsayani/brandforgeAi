@@ -636,63 +636,6 @@ The final image must showcase "${userInput.contextDescription || 'product in aut
         }
       };
 
-    case 'collage_grid':
-      customStyleNotes = `Product collage, grid layout, organized aesthetic`;
-
-      return {
-        finalPrompt: `
-A photorealistic collage or grid composition featuring: ${userInput.itemsToFeature || 'multiple products or items'}
-
-**SCENE DESCRIPTION:**
-Subject: ${userInput.itemsToFeature || 'multiple products or items'} presented as organized grid or artistic collage
-Setting: Square format (1:1) multi-item composition showcasing variety and range
-Composition: Organized grid layout or artistic collage arrangement with balanced visual weight across all sections
-Layout Design: Multiple items arranged with intentional structure - either strict grid pattern or curated collage with thoughtful positioning
-
-**PHOTOGRAPHY SPECIFICATIONS:**
-Camera Angle: Consistent perspective across all grid sections creating unified visual experience, typically straight-on or overhead
-Lens: Standard focal length (50mm equivalent) maintaining consistent perspective across all elements
-Lighting: Unified lighting scheme across all sections creating cohesive feel. Even, professional illumination ensuring all items visible and well-presented
-Depth of Field: Consistent focus across all grid sections (f/8-f/11 equivalent) keeping all items sharp and clear
-
-**BRAND AUTHENTICITY (CRITICAL):**
-Brand: ${userBrandData.brandName || 'Your brand'}
-Brand Story: ${userBrandData.brandDescription || 'Professional brand presence'}
-Industry Context: ${userBrandData.industry || 'Professional services'}
-Visual Identity: ${userBrandData.imageStyleNotes || 'Professional, organized aesthetic'}
-
-**VISUAL EXECUTION:**
-Color Palette: Cohesive color story throughout grid maintaining brand aesthetic, harmonious relationships between all sections
-Visual Variety: Diverse items showcased attractively while maintaining unified visual language
-Organization: Clean, structured arrangement with intentional spacing and balanced visual weight
-Unity: Despite multiple elements, entire composition feels cohesive and professionally curated
-Section Balance: Each grid section given appropriate visual weight, no single area overwhelming others
-
-**COMPOSITION GUIDELINES:**
-${compositionGuide}
-Format: Square (1:1), social media optimized
-Grid Structure: 2x2, 3x3, or artistic collage arrangement with clear organization
-Visual Flow: Eye moves naturally across composition, balanced attention distribution
-Cohesion: Unified aesthetic despite multiple distinct elements
-
-**TECHNICAL REQUIREMENTS:**
-${technicalNotes}
-Quality: Professional multi-item photography-grade, consistent across all sections
-Consistency: Unified lighting, perspective, and style across all grid elements
-Organization: Clear, intentional structure avoiding chaotic or messy appearance
-Cultural Sensitivity: Inclusive and appropriate item selection and presentation
-
-**OUTPUT REQUIREMENTS:**
-The final image must showcase "${userInput.itemsToFeature || 'multiple products or items'}" in organized grid or collage format with professional quality and visual cohesion. All items must be well-lit, clearly visible, and arranged with intentional structure. Despite featuring multiple elements, composition must feel unified, balanced, and professionally curated while maintaining brand visual identity.
-        `.trim(),
-        autoFilledFields: {
-          imageStyle: template.presets.imageStyle,
-          aspectRatio: template.presets.aspectRatio,
-          customStyleNotes,
-          negativePrompt: 'cluttered, messy, disorganized, unprofessional, chaotic, inconsistent lighting, unbalanced, poor spacing, competing elements, lack of cohesion'
-        }
-      };
-
     case 'team_introduction':
       // Determine mood-specific atmosphere and lighting
       let teamAtmosphere = '';
@@ -848,6 +791,251 @@ The final image must be a complete announcement card with "${userInput.announcem
           aspectRatio: template.presets.aspectRatio,
           customStyleNotes,
           negativePrompt: 'cluttered, illegible, dull, boring, unprofessional, messy, low contrast, poor hierarchy, competing elements, text-unfriendly background'
+        }
+      };
+
+    case 'testimonial_card':
+      // Testimonial card with quote and attribution
+      customStyleNotes = `Testimonial card design, social proof presentation, clean and trustworthy`;
+
+      return {
+        finalPrompt: `
+A photorealistic testimonial card design featuring: ${userInput.testimonialText || 'customer testimonial'}
+
+**SCENE DESCRIPTION:**
+Subject: ${userInput.testimonialText || 'customer testimonial'} presented as professional testimonial card with quote and attribution
+Setting: Square format (1:1) minimalist graphic design optimized for trust and credibility
+Composition: Clean, uncluttered layout with testimonial quote as primary element
+Visual Focus: Testimonial text as hero element with subtle trust indicators (quote marks, attribution, optional rating)
+Text Integration: Professional typography rendering the quote clearly and authentically
+
+**PHOTOGRAPHY SPECIFICATIONS:**
+Camera Angle: Straight-on, frontal composition for graphic clarity and optimal text readability
+Lens: Standard perspective maintaining natural proportions and clean presentation
+Lighting: Soft, even lighting creating trustworthy, approachable atmosphere. Professional illumination supporting text readability without harsh shadows
+Depth of Field: Minimal depth complexity keeping focus on text content and credibility elements
+
+**BRAND AUTHENTICITY (CRITICAL):**
+Brand: ${userBrandData.brandName || 'Your brand'}
+Brand Story: ${userBrandData.brandDescription || 'Professional brand presence'}
+Industry Context: ${userBrandData.industry || 'Professional services'}
+Visual Identity: ${userBrandData.imageStyleNotes || 'Clean, trustworthy, minimalist aesthetic'}
+
+**TEXT OVERLAY REQUIREMENTS:**
+Testimonial Quote: "${userInput.testimonialText || 'customer testimonial'}"
+Attribution: ${userInput.clientName ? `"${userInput.clientName}" (displayed as secondary attribution element)` : 'Anonymous testimonial (no attribution displayed)'}
+Typography: Professional, readable font conveying trust and authenticity
+Text Placement: Centrally positioned or strategically placed for maximum readability
+Text Color: High contrast ensuring excellent legibility (clean, professional color scheme)
+Text Hierarchy: Testimonial quote as primary text, client name as supporting attribution
+Legibility: Crystal clear text rendering at all sizes
+Quote Marks: Subtle visual quote marks or formatting indicating testimonial nature
+
+**VISUAL EXECUTION:**
+Color Palette: Clean, minimal colors aligned with brand aesthetic conveying trust and professionalism
+Trust Indicators: Subtle elements like star ratings, quote marks, or credibility badges as appropriate
+Social Proof Design: Professional testimonial presentation that feels authentic and genuine
+Hierarchy: Quote text as primary element, attribution secondary, brand presence subtle
+Shareability: Clean, shareable design that maintains credibility across social platforms
+Authenticity: Design feels genuine and unforced, not overly sales-y or artificial
+
+**COMPOSITION GUIDELINES:**
+${compositionGuide}
+Format: Square (1:1), social media optimized
+Layout: Minimalist, clean visual hierarchy with quote as focal point
+Design Style: Professional, trustworthy, authentic presentation
+Balance: Centered or asymmetrical composition supporting text readability and visual flow
+
+**TECHNICAL REQUIREMENTS:**
+${technicalNotes}
+Quality: Professional graphic design-grade, social media ready
+Contrast: High readability with clear visual separation between text and background
+Text Quality: Sharp, crisp, perfectly legible text rendering
+Mood: Trustworthy, authentic, professional tone throughout
+Cultural Sensitivity: Appropriate, inclusive visual communication
+
+**OUTPUT REQUIREMENTS:**
+The final image must be a complete testimonial card with "${userInput.testimonialText || 'customer testimonial'}" rendered as professional text${userInput.clientName ? ` attributed to ${userInput.clientName}` : ''}. The design must convey trust, authenticity, and social proof while maintaining brand visual identity. Text must be highly readable and create credible impact ready for social media sharing.
+        `.trim(),
+        autoFilledFields: {
+          imageStyle: template.presets.imageStyle,
+          aspectRatio: template.presets.aspectRatio,
+          customStyleNotes,
+          negativePrompt: 'cluttered, busy, unreadable text, low contrast, unprofessional typography, fake, staged, overly promotional, sales-y, hard to read, poor hierarchy'
+        }
+      };
+
+    case 'promotional_badge':
+      // Determine urgency/promotion-specific visual approach based on offer details
+      let promotionalVisuals = '';
+      const offerDetails = userInput.offerDetails?.toLowerCase() || '';
+
+      if (offerDetails.includes('limited') || offerDetails.includes('ends')) {
+        promotionalVisuals = 'High urgency design with time-sensitive visual cues, bold colors, and dynamic composition creating immediate FOMO (fear of missing out). Energetic, action-driving aesthetic';
+      } else if (offerDetails.includes('exclusive') || offerDetails.includes('vip')) {
+        promotionalVisuals = 'Premium, exclusive aesthetic with sophisticated design elements. Upscale promotional presentation conveying special access and value';
+      } else if (offerDetails.includes('flash') || offerDetails.includes('today')) {
+        promotionalVisuals = 'Flash sale urgency with explosive, attention-grabbing design. Maximum energy and immediate action focus';
+      } else {
+        promotionalVisuals = 'Bold, value-focused promotional design with strong visual impact. Eye-catching, conversion-optimized aesthetic creating excitement and interest';
+      }
+
+      customStyleNotes = `Promotional badge design, sale announcement, ${userInput.offer || 'special offer'}, bold and conversion-focused`;
+
+      return {
+        finalPrompt: `
+A vibrant promotional badge design featuring: ${userInput.offer || 'Special Offer'}
+
+**SCENE DESCRIPTION:**
+Subject: ${userInput.offer || 'Special Offer'} presented as bold promotional badge with high-impact text overlay
+Setting: Square format (1:1) promotional graphic design optimized for social media and maximum conversion
+Composition: ${promotionalVisuals}
+Visual Focus: Offer text "${userInput.offer || 'Special Offer'}" as dominant hero element commanding immediate attention
+Text Integration: Large, bold typography rendering the offer prominently and irresistibly
+${userInput.offerDetails ? `Promotional Details: ${userInput.offerDetails} (displayed as secondary supporting text)` : ''}
+
+**PHOTOGRAPHY SPECIFICATIONS:**
+Camera Angle: Straight-on, frontal composition for maximum promotional impact and text visibility
+Lens: Standard perspective maintaining graphic clarity and promotional effectiveness
+Lighting: Bright, high-energy lighting with strong contrast creating urgency and excitement. Dynamic illumination supporting conversion psychology
+Depth of Field: Graphic focus maintaining clarity while creating visual interest and promotional energy
+
+**BRAND AUTHENTICITY (CRITICAL):**
+Brand: ${userBrandData.brandName || 'Your brand'}
+Brand Story: ${userBrandData.brandDescription || 'Professional brand presence'}
+Industry Context: ${userBrandData.industry || 'Retail'}
+Visual Identity: ${userBrandData.imageStyleNotes || 'Vibrant, energetic, conversion-focused aesthetic'}
+
+**TEXT OVERLAY REQUIREMENTS:**
+Main Offer Text: "${userInput.offer || 'Special Offer'}" (displayed as large, dominant text element)
+${userInput.offerDetails ? `Offer Details: "${userInput.offerDetails}" (displayed as secondary text providing context and urgency)` : 'Offer Details: No additional details (focus entirely on main offer)'}
+Typography: Extra bold, attention-grabbing font that screams value and urgency
+Text Placement: Centrally positioned or strategically placed as focal point for scroll-stopping impact
+Text Color: Maximum contrast ensuring instant readability (often white on bold colors, or bold text on vibrant backgrounds)
+Text Hierarchy: Offer as primary hero text (largest), details as supporting secondary text
+Legibility: Ultra-clear text rendering visible at thumbnail sizes
+Sale Indicators: Badge, label, or starburst elements emphasizing promotional nature
+
+**VISUAL EXECUTION:**
+Color Palette: High-energy, attention-grabbing colors creating urgency (reds, oranges, yellows, or brand colors amplified). High saturation and contrast
+Urgency Psychology: Visual elements triggering FOMO and immediate action desire
+Call-to-Action Focus: Design elements directing attention to offer and encouraging conversion
+Hierarchy: Offer text as dominant element, supported by promotional design elements and brand presence
+Shareability: Scroll-stopping graphic that compels sharing and drives traffic
+Promotional Energy: ${promotionalVisuals}
+
+**COMPOSITION GUIDELINES:**
+${compositionGuide}
+Format: Square (1:1), social media and advertising optimized
+Layout: Bold, dynamic visual hierarchy with offer as unmissable focal point
+Design Style: Promotional badge/label aesthetic with energetic, conversion-optimized design
+Balance: Asymmetrical dynamic composition or centered power composition maximizing offer visibility
+
+**TECHNICAL REQUIREMENTS:**
+${technicalNotes}
+Quality: Professional promotional graphic-grade, social media and advertising ready
+Contrast: Maximum readability with bold visual separation creating immediate impact
+Text Quality: Sharp, crisp, perfectly legible text rendering at all sizes
+Mood: Exciting, urgent, value-driven promotional tone throughout
+Cultural Sensitivity: Appropriate, inclusive promotional communication
+Conversion Focus: Every design element supports the goal of driving action
+
+**OUTPUT REQUIREMENTS:**
+The final image must be a scroll-stopping promotional badge featuring "${userInput.offer || 'Special Offer'}" as the dominant text element${userInput.offerDetails ? ` with supporting details "${userInput.offerDetails}"` : ''}. The design must create immediate visual impact, trigger urgency and excitement, and drive conversion. Text must be ultra-readable, bold, and create irresistible promotional appeal ready for social media, ads, and marketing campaigns.
+        `.trim(),
+        autoFilledFields: {
+          imageStyle: template.presets.imageStyle,
+          aspectRatio: template.presets.aspectRatio,
+          customStyleNotes,
+          negativePrompt: 'cluttered, confusing, hard to read, dull colors, low contrast, unprofessional, amateur design, weak call to action, boring, passive, unclear offer, small text, poor hierarchy'
+        }
+      };
+
+    case 'event_announcement':
+      // Determine event-specific atmosphere based on event name/type
+      let eventAtmosphere = '';
+      const eventName = userInput.eventName?.toLowerCase() || '';
+
+      if (eventName.includes('launch') || eventName.includes('unveil') || eventName.includes('reveal')) {
+        eventAtmosphere = 'Anticipatory, exciting atmosphere building product/service launch hype with forward-looking energy. Dynamic, modern aesthetic creating buzz and excitement';
+      } else if (eventName.includes('webinar') || eventName.includes('workshop') || eventName.includes('training') || eventName.includes('seminar')) {
+        eventAtmosphere = 'Educational, professional atmosphere emphasizing value and learning opportunities. Trustworthy, informative design encouraging registration';
+      } else if (eventName.includes('sale') || eventName.includes('flash') || eventName.includes('deals')) {
+        eventAtmosphere = 'Energetic, time-sensitive atmosphere creating urgency and shopping excitement. Bold, promotional energy driving immediate action';
+      } else if (eventName.includes('grand opening') || eventName.includes('celebration') || eventName.includes('party')) {
+        eventAtmosphere = 'Celebratory, festive atmosphere with joyful, inviting energy. Exciting, welcoming design encouraging attendance';
+      } else {
+        eventAtmosphere = 'Engaging, inviting atmosphere generating interest and attendance desire. Professional yet exciting design creating anticipation';
+      }
+
+      customStyleNotes = `Event announcement design, ${userInput.eventName || 'upcoming event'}, engaging and informative`;
+
+      return {
+        finalPrompt: `
+A vibrant event announcement graphic featuring: ${userInput.eventName || 'Upcoming Event'}
+
+**SCENE DESCRIPTION:**
+Subject: ${userInput.eventName || 'Upcoming Event'} presented as compelling event announcement with clear information hierarchy
+Setting: Square format (1:1) event graphic design optimized for social media sharing and maximum visibility
+Composition: ${eventAtmosphere}
+Visual Focus: Event name "${userInput.eventName || 'Upcoming Event'}" as primary element with event details as supporting information
+Text Integration: Bold, clear typography rendering event information prominently and invitingly
+${userInput.eventDetails ? `Event Details: ${userInput.eventDetails} (displayed as important secondary information)` : ''}
+
+**PHOTOGRAPHY SPECIFICATIONS:**
+Camera Angle: Straight-on, frontal composition for maximum informational clarity and visual impact
+Lens: Standard perspective maintaining graphic clarity and professional presentation
+Lighting: Bright, inviting lighting aligned with event atmosphere. ${eventAtmosphere.includes('professional') ? 'Clean, professional illumination' : 'Dynamic, energetic lighting'} supporting readability and engagement
+Depth of Field: Graphic clarity maintaining focus on event information while creating visual interest
+
+**BRAND AUTHENTICITY (CRITICAL):**
+Brand: ${userBrandData.brandName || 'Your brand'}
+Brand Story: ${userBrandData.brandDescription || 'Professional brand presence'}
+Industry Context: ${userBrandData.industry || 'Professional services'}
+Visual Identity: ${userBrandData.imageStyleNotes || 'Vibrant, engaging, professional aesthetic'}
+
+**TEXT OVERLAY REQUIREMENTS:**
+Event Name: "${userInput.eventName || 'Upcoming Event'}" (displayed as large, primary text element)
+${userInput.eventDetails ? `Event Details: "${userInput.eventDetails}" (displayed as secondary text with date/time/location information)` : 'Event Details: No additional details provided (focus on event name and atmosphere)'}
+Typography: Bold, modern font creating excitement and readability
+Text Placement: Strategic positioning creating clear information hierarchy (event name → details → brand)
+Text Color: High contrast ensuring excellent readability across platforms
+Text Hierarchy: Event name as primary hero text, details as supporting secondary information
+Legibility: Crystal clear text rendering ensuring all event information is instantly readable
+Calendar Appeal: Design elements making viewers want to save the date
+
+**VISUAL EXECUTION:**
+Color Palette: Vibrant, attention-grabbing colors aligned with brand and event type creating appropriate mood
+Event Atmosphere: ${eventAtmosphere}
+Information Hierarchy: Event name dominant, details secondary, brand presence subtle but present
+Shareability: Engaging, shareable design that spreads organically across social platforms
+Anticipation Building: Visual elements creating excitement and desire to attend
+Save-Worthy Design: Calendar-ready graphic viewers want to save and share
+
+**COMPOSITION GUIDELINES:**
+${compositionGuide}
+Format: Square (1:1), social media optimized for maximum reach
+Layout: Clear visual hierarchy prioritizing event information over decorative elements
+Design Style: Event announcement aesthetic balancing professional credibility with excitement
+Balance: Asymmetrical dynamic composition or centered power composition based on event type
+
+**TECHNICAL REQUIREMENTS:**
+${technicalNotes}
+Quality: Professional event marketing-grade, social media and email ready
+Contrast: High readability with clear visual separation ensuring information accessibility
+Text Quality: Sharp, crisp, perfectly legible text rendering at all sizes
+Mood: ${eventAtmosphere.split('.')[0]} throughout design
+Cultural Sensitivity: Appropriate, inclusive event communication welcoming all potential attendees
+Shareability: Optimized for forwarding, sharing, and viral spread
+
+**OUTPUT REQUIREMENTS:**
+The final image must be a compelling event announcement featuring "${userInput.eventName || 'Upcoming Event'}" as the dominant text element${userInput.eventDetails ? ` with clear event details "${userInput.eventDetails}"` : ''}. The design must create interest, build anticipation, and drive event registration/attendance. Information hierarchy must be crystal clear with event name, details, and brand presence balanced effectively. Ready for social media sharing, email marketing, and event promotion campaigns.
+        `.trim(),
+        autoFilledFields: {
+          imageStyle: template.presets.imageStyle,
+          aspectRatio: template.presets.aspectRatio,
+          customStyleNotes,
+          negativePrompt: 'cluttered, confusing, hard to read, dull, boring, unprofessional, unclear information, poor hierarchy, messy layout, competing elements, missing information'
         }
       };
 

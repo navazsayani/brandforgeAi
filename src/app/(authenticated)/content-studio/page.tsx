@@ -1574,7 +1574,7 @@ Your mission is to create a compelling, brand-aligned visual asset that:
 
   const handleImageGenerationSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    
+
     const brandDesc = formSnapshot?.brandDescription || imageGenBrandDescription || brandData?.brandDescription || ""; 
     const imageStyle = formSnapshot?.imageStyle || (selectedImageStylePreset + (customStyleNotesInput ? ". " + customStyleNotesInput : "")); 
     
@@ -1607,13 +1607,19 @@ Your mission is to create a compelling, brand-aligned visual asset that:
         formData.set("industry", industryToSubmit);
         
         formData.set("imageStyle", imageStyle);
-        
-        
-        const exampleImgToUse = (isAdmin || isPremiumActive) ? formSnapshot?.exampleImage : (useExampleImageForGen && selectedExampleImageUrl ? selectedExampleImageUrl : undefined);
+
+
+        // Fix: Separate admin (with preview) from premium/free users
+        // Admin with preview uses formSnapshot, everyone else uses current state
+        const exampleImgToUse = isAdmin && formSnapshot?.exampleImage
+          ? formSnapshot.exampleImage
+          : (useExampleImageForGen && selectedExampleImageUrl ? selectedExampleImageUrl : undefined);
+
         if (typeof exampleImgToUse === 'string' && exampleImgToUse.trim() !== "") {
           formData.set("exampleImage", exampleImgToUse);
           // Pass imageMode only when image is present - use from formSnapshot to preserve selection from preview time
-          formData.set("imageMode", formSnapshot?.imageMode || imageMode);
+          const imageModeToSet = formSnapshot?.imageMode || imageMode;
+          formData.set("imageMode", imageModeToSet);
         } else {
           formData.delete("exampleImage");
           formData.delete("imageMode");

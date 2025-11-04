@@ -125,16 +125,18 @@ export function TemplateCarousel({
                 </ScrollArea>
               </div>
 
-              {/* Desktop: Grid */}
-              <div className="hidden lg:grid lg:grid-cols-2 xl:grid-cols-3 gap-3">
-                {templates.slice(0, 6).map((template) => (
-                  <ContentTemplateCard
-                    key={template.id}
-                    template={template}
-                    onSelect={handleTemplateSelect}
-                    isPremium={isPremium}
-                  />
-                ))}
+              {/* Desktop: Grid with scrolling */}
+              <div className="hidden lg:block max-h-[600px] overflow-y-auto pr-2">
+                <div className="grid lg:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {templates.map((template) => (
+                    <ContentTemplateCard
+                      key={template.id}
+                      template={template}
+                      onSelect={handleTemplateSelect}
+                      isPremium={isPremium}
+                    />
+                  ))}
+                </div>
               </div>
 
               {/* Show all templates on mobile if more than 6 */}

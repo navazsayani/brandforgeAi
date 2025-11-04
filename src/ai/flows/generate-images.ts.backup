@@ -1,7 +1,7 @@
 'use server';
 
-import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import {ai} from '@/ai/genkit';
+import {z} from 'genkit';
 import { Action } from 'genkit';
 import { describeImage } from './describe-image-flow'; // For Freepik description
 import { industries, freepikValidStyles } from '../../lib/constants'; // Added freepikValidStyles
@@ -41,25 +41,25 @@ const GenerateImagesInputSchema = z.object({
   finalizedTextPrompt: z.string().optional().describe("A complete, user-edited text prompt that should be used directly for image generation, potentially overriding constructed prompts."),
 
   freepikStylingColors: z.array(z.object({
-    color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a valid hex color code e.g. #FF0000"),
-    weight: z.number().min(0.05).max(1).default(0.5)
+      color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a valid hex color code e.g. #FF0000"),
+      weight: z.number().min(0.05).max(1).default(0.5) 
   })).min(1).max(5).optional().describe("Up to 5 dominant hex colors for Freepik image generation, with optional weights."),
   freepikEffectColor: z.string().optional().describe("Freepik specific color effect enum (e.g., for Imagen3: 'b&w', 'pastel')."),
   freepikEffectLightning: z.string().optional().describe("Freepik specific lightning effect enum (e.g., for Imagen3: 'studio', 'warm')."),
   freepikEffectFraming: z.string().optional().describe("Freepik specific framing effect enum (e.g., for Imagen3: 'portrait', 'macro')."),
-
+  
   // Fireworks AI specific parameters
   fireworksControlNet: z.object({
     type: z.enum(['canny', 'depth', 'openpose', 'scribble', 'seg']),
     conditioning_scale: z.number().min(0).max(2).default(1.0),
     control_image: z.string().optional().describe("Base64 encoded control image or URL")
   }).optional().describe("ControlNet configuration for Fireworks AI models"),
-
+  
   fireworksImg2ImgStrength: z.number().min(0).max(1).default(0.8).optional().describe("Strength for img2img transformation (0.0 = no change, 1.0 = complete transformation)"),
   fireworksGuidanceScale: z.number().min(1).max(20).default(7.5).optional().describe("Guidance scale for prompt adherence"),
   fireworksScheduler: z.enum(['DPMSolverMultistep', 'DDIM', 'PNDM', 'LMSDiscrete']).optional().describe("Sampling scheduler for generation"),
   fireworksNumInferenceSteps: z.number().min(1).max(50).optional().describe("Number of inference steps (more = higher quality, slower)"),
-
+  
   // Quality mode for intelligent model selection
   qualityMode: z.enum(['fast', 'balanced', 'premium']).optional().describe("Quality preference for intelligent model selection"),
 
@@ -70,7 +70,7 @@ export type GenerateImagesInput = z.infer<typeof GenerateImagesInputSchema>;
 
 const GenerateImagesOutputSchema = z.object({
   generatedImages: z.array(z
-    .string()
+    .string() 
     .describe(
       "A generated image as a data URI, a task ID for asynchronous providers, or a direct image URL if immediately available from providers like Freepik/Imagen3."
     )
@@ -82,7 +82,7 @@ export type GenerateImagesOutput = z.infer<typeof GenerateImagesOutputSchema>;
 
 async function _generateImageWithGemini(params: {
   aiInstance: typeof ai;
-  promptParts: ({ text: string } | { media: { url: string } })[];
+  promptParts: ({text: string} | {media: {url: string}})[];
   model: string;
   aspectRatio?: string;
 }): Promise<string> {
@@ -91,7 +91,7 @@ async function _generateImageWithGemini(params: {
   console.log("Final prompt parts array for Gemini _generateImageWithGemini:", JSON.stringify(promptParts, null, 2));
 
   try {
-    const { media } = await aiInstance.generate({
+    const {media} = await aiInstance.generate({
       model: model,
       prompt: promptParts,
       config: {
@@ -123,12 +123,12 @@ async function _generateImageWithGemini(params: {
 async function _generateImageWithLeonardoAI_stub(params: {
   brandDescription: string;
   industry?: string;
-  imageStyle: string;
+  imageStyle: string; 
   exampleImage?: string;
   aspectRatio?: string;
   negativePrompt?: string;
   seed?: number;
-  textPrompt: string;
+  textPrompt: string; 
 }): Promise<string> {
   console.warn("Leonardo.ai image generation is called but not implemented. Parameters:", params);
   throw new Error("Leonardo.ai provider is not implemented yet.");
@@ -184,21 +184,21 @@ function validateImagenModel(modelName: string): string {
     'imagen-4.0-generate-preview-06-06',
     'imagen-4.0-fast-generate-001'
   ];
-
+  
   // Remove "googleai/" prefix if present (Imagen API doesn't use this prefix)
   let cleanModelName = modelName.replace(/^googleai\//, '');
-
+  
   // Log prefix removal if it happened
   if (modelName !== cleanModelName) {
     console.log(`Removed "googleai/" prefix from Imagen model: "${modelName}" → "${cleanModelName}"`);
   }
-
+  
   // For debugging - let's not validate for now and just clean the prefix
   console.log(`Imagen model validation: input="${modelName}", cleaned="${cleanModelName}"`);
-
+  
   // Temporarily skip validation to test if the issue is with model names or API call
   return cleanModelName;
-
+  
   // Original validation (commented out for debugging)
   /*
   // Check if the cleaned model name is valid
@@ -214,7 +214,7 @@ function validateImagenModel(modelName: string): string {
 // Helper function to optimize prompts for Imagen models
 function optimizePromptForImagen(originalPrompt: string, modelName: string): string {
   console.log(`[Imagen] Optimizing prompt for model: ${modelName}`);
-
+  
   // Remove Gemini-specific formatting and instructions
   let optimizedPrompt = originalPrompt
     // Remove markdown formatting
@@ -223,7 +223,7 @@ function optimizePromptForImagen(originalPrompt: string, modelName: string): str
     .replace(/#{1,6}\s/g, '') // Remove markdown headers
     .replace(/^-\s/gm, '') // Remove bullet points
     .replace(/^\d+\.\s/gm, '') // Remove numbered lists
-
+    
     // Remove Gemini-specific instructions (using compatible regex)
     .replace(/You are creating[\s\S]*?platforms\./, '') // Remove "You are creating..." intro
     .replace(/Generate a new[\s\S]*?Instagram\./, '') // Remove "Generate a new..." intro
@@ -233,12 +233,12 @@ function optimizePromptForImagen(originalPrompt: string, modelName: string): str
     .replace(/IMPORTANT COMPOSITION RULE[\s\S]*?person\./, '') // Remove composition guidance
     .replace(/Important for batch generation[\s\S]*?variations\./, '') // Remove batch instructions
     .replace(/Avoid the following.*?image:/gi, '') // Remove negative prompt text (handled separately)
-
+    
     // Clean up extra whitespace and newlines
     .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double
     .replace(/^\s+|\s+$/g, '') // Trim whitespace
     .replace(/\s{2,}/g, ' '); // Replace multiple spaces with single
-
+  
   // For Imagen, focus on direct, descriptive language
   if (isImagen4Model(modelName)) {
     // Imagen 4.0 works best with concise, descriptive prompts
@@ -246,7 +246,7 @@ function optimizePromptForImagen(originalPrompt: string, modelName: string): str
       .replace(/^.*?concept:\s*"([^"]+)".*$/im, '$1') // Extract core concept if present
       .substring(0, 1000); // Limit length for better results
   }
-
+  
   console.log(`[Imagen] Original prompt length: ${originalPrompt.length}, Optimized length: ${optimizedPrompt.length}`);
   return optimizedPrompt;
 }
@@ -268,22 +268,22 @@ async function _generateImageWithImagen(params: {
   console.log(`Number of images: ${params.numberOfImages}`);
   console.log(`Aspect ratio: ${params.aspectRatio}`);
   console.log(`Model type: Imagen ${isImagen4Model(validatedModel) ? '4.0' : '3.0'}`);
-
+  
   // Optimize the prompt for Imagen models
   const optimizedPrompt = optimizePromptForImagen(params.prompt, validatedModel);
   console.log(`Optimized prompt: ${optimizedPrompt.substring(0, 200)}...`);
-
+  
   try {
     // Initialize GoogleGenAI with API key from environment
     const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_API_KEY;
     if (!apiKey) {
       throw new Error("Google AI API key not found. Please set GOOGLE_AI_API_KEY or GOOGLE_API_KEY environment variable.");
     }
-
+    
     console.log(`API key found: ${apiKey.substring(0, 10)}...`);
-
+    
     const ai = new GoogleGenAI({ apiKey });
-
+    
     // Build request config with model-specific optimizations
     const requestConfig: any = {
       numberOfImages: params.numberOfImages,
@@ -294,50 +294,50 @@ async function _generateImageWithImagen(params: {
     if (isImagen4Model(validatedModel)) {
       // Imagen 4.0 optimized parameters
       console.log(`Configuring for Imagen 4.0 model with enhanced parameters`);
-
+      
       // Imagen 4.0 supports enhanced safety and quality settings
       requestConfig.personGeneration = "allow_adult";
       requestConfig.safetySettings = "block_few"; // More permissive than default but safer than block_none
-
+      
       // Enhanced output options for Imagen 4.0
       requestConfig.outputOptions = {
         compressionQuality: "high",
         mimeType: "image/png"
       };
-
+      
       // Imagen 4.0 specific enhancements
       requestConfig.includeSafetyAttributes = false; // Disable safety attributes for cleaner output
       requestConfig.languageHints = ["en"]; // Optimize for English prompts
-
+      
       // Skip negative prompt for Imagen 4.0 (not supported)
       if (params.negativePrompt && params.negativePrompt.trim()) {
         console.log(`Skipping negative prompt for Imagen 4.0 model: "${params.negativePrompt.trim()}"`);
         console.log(`Imagen 4.0 uses advanced prompt understanding instead of negative prompts`);
       }
-
+      
       // Enhanced seed handling for Imagen 4.0
       if (params.seed !== undefined) {
         requestConfig.seed = params.seed;
         console.log(`Using seed for Imagen 4.0: ${params.seed}`);
       }
-
+      
     } else if (isImagen3Model(validatedModel)) {
       // Imagen 3.0 parameters (backward compatibility)
       console.log(`Configuring for Imagen 3.0 model with legacy parameters`);
-
+      
       requestConfig.personGeneration = "allow_adult";
       requestConfig.safetySettings = "block_none"; // More permissive for Imagen 3.0
       requestConfig.outputOptions = {
         compressionQuality: "high",
         mimeType: "image/png"
       };
-
+      
       // Add negative prompt for Imagen 3.0 (supported)
       if (params.negativePrompt && params.negativePrompt.trim()) {
         requestConfig.negativePrompt = params.negativePrompt.trim();
         console.log(`Using negative prompt for Imagen 3.0: ${params.negativePrompt.trim()}`);
       }
-
+      
       // Add seed for Imagen 3.0
       if (params.seed !== undefined) {
         requestConfig.seed = params.seed;
@@ -346,33 +346,33 @@ async function _generateImageWithImagen(params: {
     } else {
       // Fallback configuration for unknown Imagen models
       console.log(`Using fallback configuration for unknown Imagen model: ${validatedModel}`);
-
+      
       requestConfig.personGeneration = "allow_adult";
       requestConfig.safetySettings = "block_few"; // Conservative approach
       requestConfig.outputOptions = {
         compressionQuality: "high",
         mimeType: "image/png"
       };
-
+      
       // Conservative approach: skip negative prompt for unknown models
       if (params.negativePrompt && params.negativePrompt.trim()) {
         console.log(`Skipping negative prompt for unknown Imagen model version`);
       }
-
+      
       if (params.seed !== undefined) {
         requestConfig.seed = params.seed;
         console.log(`Using seed: ${params.seed}`);
       }
     }
-
+    
     console.log(`Full Imagen API request:`, {
       model: validatedModel,
       prompt: params.prompt.substring(0, 200) + "...",
       config: requestConfig
     });
-
+    
     console.log(`Making API call to ai.models.generateImages...`);
-
+    
     const response = await ai.models.generateImages({
       model: validatedModel,
       prompt: optimizedPrompt,
@@ -396,7 +396,7 @@ async function _generateImageWithImagen(params: {
         console.error(`Image ${index + 1} structure:`, JSON.stringify(generatedImage, null, 2));
         throw new Error(`Imagen API returned invalid image data for image ${index + 1}. Missing imageBytes.`);
       }
-
+      
       // Convert base64 imageBytes to data URI
       return `data:image/png;base64,${generatedImage.image.imageBytes}`;
     });
@@ -415,7 +415,7 @@ async function _generateImageWithImagen(params: {
     console.error("Error response:", error.response);
     console.error("Error stack:", error.stack);
     console.error("=== END ERROR DEBUG ===");
-
+    
     // Provide more specific error messages
     if (error.message?.includes('404') || error.status === 404) {
       throw new Error(`Imagen model "${validatedModel}" not found. Raw error: ${JSON.stringify(error.message)}. This could indicate: 1) The model name is incorrect, 2) The model is not available in your region, or 3) Your API key doesn't have access to Imagen models. Please verify the model name at: https://ai.google.dev/gemini-api/docs/imagen`);
@@ -424,7 +424,7 @@ async function _generateImageWithImagen(params: {
     } else if (error.message?.includes('403') || error.status === 403) {
       throw new Error(`Access denied for Imagen API. Your API key may not have access to Imagen models or you may have exceeded quota limits.`);
     }
-
+    
     throw new Error(`Imagen API request failed. Raw error: ${JSON.stringify(error, Object.getOwnPropertyNames(error))}`);
   }
 }
@@ -451,15 +451,15 @@ async function _generateImageWithFireworks(params: {
 }): Promise<{ images: string[]; actualModelUsed: string }> {
   console.log(`[Fireworks] Starting generation with model: ${params.model}`);
   console.log(`[Fireworks] Prompt: ${params.textPrompt.substring(0, 100)}...`);
-
+  
   // Get dimensions based on aspect ratio
   const dimensions = getFireworksDimensions(params.aspectRatio);
-
+  
   // Get admin-configurable model names with fallback
   const config = await getModelConfig();
   let modelName: string;
   let actualModelUsed: string;
-
+  
   if (params.model === 'sdxl-turbo') {
     modelName = config.fireworksSDXLTurboModel || '';
     if (!modelName.trim()) {
@@ -473,9 +473,9 @@ async function _generateImageWithFireworks(params: {
     }
     actualModelUsed = `SDXL 3 (${modelName})`;
   }
-
+  
   console.log(`[Fireworks] Using admin-configured model name: ${modelName}`);
-
+  
   // Prepare base64 image for img2img if example image is provided
   let base64Image: string | undefined;
   if (params.exampleImage) {
@@ -492,7 +492,7 @@ async function _generateImageWithFireworks(params: {
       throw new Error(`Failed to process example image: ${error.message}`);
     }
   }
-
+  
   // Prepare ControlNet if specified
   let controlNet: any = undefined;
   if (params.fireworksControlNet && params.fireworksControlNet.control_image) {
@@ -512,7 +512,7 @@ async function _generateImageWithFireworks(params: {
       throw new Error(`Failed to prepare ControlNet: ${error.message}`);
     }
   }
-
+  
   // Generate images (Fireworks supports batch generation)
   const results = await generateImageWithFireworks({
     model: modelName,
@@ -530,7 +530,7 @@ async function _generateImageWithFireworks(params: {
     // ControlNet parameters
     controlnet: controlNet
   });
-
+  
   console.log(`[Fireworks] Successfully generated ${results.length} image(s)`);
   return { images: results, actualModelUsed };
 }
@@ -544,7 +544,7 @@ async function selectOptimalModel(context: {
   hasAdvancedControls?: boolean; // ControlNet or img2img parameters
 }): Promise<string> {
   const config = await getModelConfig();
-
+  
   console.log(`[Intelligent Selection] DEBUG - Config check:`, {
     fireworksEnabled: config.fireworksEnabled,
     intelligentModelSelection: config.intelligentModelSelection,
@@ -554,24 +554,24 @@ async function selectOptimalModel(context: {
     fireworksSDXL3Model: config.fireworksSDXL3Model,
     qualityMode: context.qualityMode
   });
-
+  
   // If Fireworks is not enabled, use existing logic
   if (!config.fireworksEnabled || !config.intelligentModelSelection) {
     console.log(`[Intelligent Selection] Fireworks disabled or intelligent selection disabled - using Gemini`);
     return 'GEMINI';
   }
-
+  
   // Check if model names are configured, fallback to Gemini if not
   const hasTurboModel = config.fireworksSDXLTurboEnabled && config.fireworksSDXLTurboModel?.trim();
   const hasSDXL3Model = config.fireworksSDXL3Enabled && config.fireworksSDXL3Model?.trim();
-
+  
   console.log(`[Intelligent Selection] Model availability:`, {
     hasTurboModel,
     hasSDXL3Model,
     turboModelName: config.fireworksSDXLTurboModel,
     sdxl3ModelName: config.fireworksSDXL3Model
   });
-
+  
   // CRITICAL: Advanced controls (ControlNet, img2img) require Fireworks - Gemini doesn't support them
   if (context.hasAdvancedControls) {
     if (context.qualityMode === 'fast' && hasTurboModel) {
@@ -589,19 +589,19 @@ async function selectOptimalModel(context: {
     // If no Fireworks models available but advanced controls requested, throw error
     throw new Error('Advanced controls (ControlNet, img2img) require Fireworks AI models, but no Fireworks models are configured or enabled by administrator');
   }
-
+  
   // Premium mode: Always prefer SDXL 3 if available (highest quality)
   if (context.qualityMode === 'premium' && hasSDXL3Model) {
     console.log(`[Intelligent Selection] Premium mode: Using SDXL 3 for maximum quality`);
     return 'FIREWORKS_SDXL_3';
   }
-
+  
   // Fast mode: Always prefer SDXL Turbo if available (fastest generation)
   if (context.qualityMode === 'fast' && hasTurboModel) {
     console.log(`[Intelligent Selection] Fast mode: Using SDXL Turbo for speed`);
     return 'FIREWORKS_SDXL_TURBO';
   }
-
+  
   // Multimodal task differentiation (when example image is provided)
   if (context.hasExampleImage) {
     // For balanced mode with example images, use Gemini's multimodal understanding
@@ -611,25 +611,25 @@ async function selectOptimalModel(context: {
     }
     // If premium/fast modes didn't match above, fall through to other logic
   }
-
+  
   // Final assets: Prefer quality
   if (context.userIntent === 'final' && hasSDXL3Model) {
     console.log(`[Intelligent Selection] Final intent: Using SDXL 3 for quality`);
     return 'FIREWORKS_SDXL_3';
   }
-
+  
   // Preview/iteration: Prefer speed
   if ((context.userIntent === 'preview' || context.userIntent === 'iteration') && hasTurboModel) {
     console.log(`[Intelligent Selection] Preview/iteration intent: Using SDXL Turbo for speed`);
     return 'FIREWORKS_SDXL_TURBO';
   }
-
+  
   // Batch generation: Prefer speed
   if (context.numberOfImages > 2 && hasTurboModel) {
     console.log(`[Intelligent Selection] Batch generation (${context.numberOfImages} images): Using SDXL Turbo for speed`);
     return 'FIREWORKS_SDXL_TURBO';
   }
-
+  
   // Default fallback (balanced mode or when Fireworks models unavailable)
   console.log(`[Intelligent Selection] Default fallback: Using Gemini`);
   return 'GEMINI';
@@ -657,19 +657,19 @@ function getProviderDisplayName(provider: string, actualModelUsed?: string): str
 
 // For Freepik/Imagen3 provider
 const freepikImagen3ApiAspectRatios: Record<string, string> = {
-  "1:1": "square_1_1",
-  "9:16": "social_story_9_16",
-  "16:9": "widescreen_16_9",
-  "3:4": "traditional_3_4",
-  "4:3": "classic_4_3",
+    "1:1": "square_1_1",
+    "9:16": "social_story_9_16",
+    "16:9": "widescreen_16_9",
+    "3:4": "traditional_3_4",
+    "4:3": "classic_4_3",
 };
 
-async function _initiateFreepikImageTask(params: {
-  textPrompt: string;
+async function _initiateFreepikImageTask(params: { 
+  textPrompt: string; 
   imageStyle: string; // This is the combined string (preset + custom notes)
-  exampleImage?: string;
+  exampleImage?: string; 
   negativePrompt?: string;
-  aspectRatio?: string;
+  aspectRatio?: string; 
   freepikStylingColors?: { color: string; weight: number }[];
   freepikEffectColor?: string;
   freepikEffectLightning?: string;
@@ -684,73 +684,73 @@ async function _initiateFreepikImageTask(params: {
   if (params.textPrompt.length === 0) {
     throw new Error("Prompt cannot be empty for Freepik Imagen3 model.");
   }
-
+  
   let finalFreepikAspectRatio = freepikImagen3ApiAspectRatios[params.aspectRatio || "1:1"] || "square_1_1";
-  if (params.aspectRatio === "4:5") {
-    finalFreepikAspectRatio = "traditional_3_4";
-    console.log("Freepik/Imagen3: Mapping UI aspect ratio 4:5 to Freepik's 'traditional_3_4'");
+  if (params.aspectRatio === "4:5") { 
+      finalFreepikAspectRatio = "traditional_3_4"; 
+      console.log("Freepik/Imagen3: Mapping UI aspect ratio 4:5 to Freepik's 'traditional_3_4'");
   }
 
   const requestBody: any = {
     prompt: params.textPrompt,
     num_images: params.numberOfImages,
     aspect_ratio: finalFreepikAspectRatio,
-    person_generation: "allow_all",
-    safety_settings: "block_none",
+    person_generation: "allow_all", 
+    safety_settings: "block_none",  
   };
-
+  
   if (params.negativePrompt) {
     requestBody.negative_prompt = params.negativePrompt;
   }
 
   const styling: any = {};
   if (params.imageStyle) {
-    // Try to extract the first keyword from the combined imageStyle string (preset + custom notes)
-    // to set the structural Freepik style enum.
-    const firstStyleKeyword = params.imageStyle.toLowerCase().trim().split(/[,.]|\s-\s/)[0].trim();
-    const directFreepikStyleMatch = freepikValidStyles.find(s => s.toLowerCase() === firstStyleKeyword);
+      // Try to extract the first keyword from the combined imageStyle string (preset + custom notes)
+      // to set the structural Freepik style enum.
+      const firstStyleKeyword = params.imageStyle.toLowerCase().trim().split(/[,.]|\s-\s/)[0].trim(); 
+      const directFreepikStyleMatch = freepikValidStyles.find(s => s.toLowerCase() === firstStyleKeyword);
 
-    if (directFreepikStyleMatch) {
-      styling.style = directFreepikStyleMatch;
-      console.log(`Freepik/Imagen3 STRUCTURAL: Using direct style enum match: "${directFreepikStyleMatch}" from input imageStyle (preset part): "${params.imageStyle}"`);
-    } else {
-      console.warn(`Freepik/Imagen3 STRUCTURAL: Provided imageStyle "${params.imageStyle}" (or its first part "${firstStyleKeyword}") is not a direct Freepik enum. Freepik's 'style' parameter will default to 'photo' if not otherwise cued by text prompt or structural parameters.`);
-      if (params.imageStyle.toLowerCase().includes("photo") || params.imageStyle.toLowerCase().includes("photorealistic")) {
-        styling.style = "photo";
+      if (directFreepikStyleMatch) {
+          styling.style = directFreepikStyleMatch;
+          console.log(`Freepik/Imagen3 STRUCTURAL: Using direct style enum match: "${directFreepikStyleMatch}" from input imageStyle (preset part): "${params.imageStyle}"`);
       } else {
-        console.log("No direct Freepik style enum matched and not clearly 'photo'. Omitting structural 'styling.style'. Text prompt will guide Freepik, or it defaults to 'photo'.");
+          console.warn(`Freepik/Imagen3 STRUCTURAL: Provided imageStyle "${params.imageStyle}" (or its first part "${firstStyleKeyword}") is not a direct Freepik enum. Freepik's 'style' parameter will default to 'photo' if not otherwise cued by text prompt or structural parameters.`);
+          if (params.imageStyle.toLowerCase().includes("photo") || params.imageStyle.toLowerCase().includes("photorealistic")) {
+            styling.style = "photo"; 
+          } else {
+            console.log("No direct Freepik style enum matched and not clearly 'photo'. Omitting structural 'styling.style'. Text prompt will guide Freepik, or it defaults to 'photo'.");
+          }
       }
-    }
   }
 
   const effects: any = {};
   if (params.freepikEffectColor && params.freepikEffectColor !== "none") effects.color = params.freepikEffectColor;
   if (params.freepikEffectLightning && params.freepikEffectLightning !== "none") effects.lightning = params.freepikEffectLightning;
   if (params.freepikEffectFraming && params.freepikEffectFraming !== "none") effects.framing = params.freepikEffectFraming;
-
+  
   if (Object.keys(effects).length > 0) {
     styling.effects = effects;
   }
 
   if (params.freepikStylingColors && params.freepikStylingColors.length > 0) {
     styling.colors = params.freepikStylingColors.map(c => ({
-      color: c.color,
-      weight: c.weight
+        color: c.color,
+        weight: c.weight 
     }));
   }
-
+  
   if (Object.keys(styling).length > 0) {
-    requestBody.styling = styling;
+      requestBody.styling = styling;
   }
 
   if (params.exampleImage) {
     console.warn("Freepik/Imagen3 model (text-to-image endpoint) selected, but exampleImage was provided. The exampleImage itself will be ignored for this Freepik request, but its AI-generated description (if available) might be used in the text prompt.");
   }
-
+  
   console.log("Sending request to Freepik API (imagen3) with body:", JSON.stringify(requestBody, null, 2));
 
   try {
-    const response = await fetch("https://api.freepik.com/v1/ai/text-to-image/imagen3", {
+    const response = await fetch("https://api.freepik.com/v1/ai/text-to-image/imagen3", { 
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -767,10 +767,10 @@ async function _initiateFreepikImageTask(params: {
     }
 
     if (responseData.data && responseData.data.task_id && responseData.data.status) {
-      return {
-        taskId: responseData.data.task_id,
+      return { 
+        taskId: responseData.data.task_id, 
         status: responseData.data.status,
-        generatedUrls: responseData.data.generated || []
+        generatedUrls: responseData.data.generated || [] 
       };
     } else {
       throw new Error("Freepik API (imagen3) did not return task_id and status in expected format.");
@@ -818,10 +818,10 @@ const generateImagesFlow = ai.defineFlow(
     } = input;
 
     const { imageGenerationModel, textToImageModel, fireworksEnabled, intelligentModelSelection } = await getModelConfig();
-
+    
     // 🔥 RAG ENHANCEMENT: Get user ID from input (will be passed from actions)
     const userId = (input as any).userId;
-
+    
     // Determine the default provider based on Fireworks availability
     const getDefaultProvider = (): string => {
       if (fireworksEnabled && intelligentModelSelection) {
@@ -829,17 +829,17 @@ const generateImagesFlow = ai.defineFlow(
       }
       return process.env.IMAGE_GENERATION_PROVIDER || 'GEMINI'; // Fallback to Gemini when Fireworks is disabled
     };
-
+    
     // Get the chosen provider, defaulting intelligently based on admin settings
     let chosenProvider = input.provider || getDefaultProvider();
-
+    
     // Handle AUTO provider selection with intelligent model selection
     if (chosenProvider === 'AUTO' || (!input.provider && fireworksEnabled && intelligentModelSelection)) {
       console.log(`[Intelligent Selection] AUTO provider selected - analyzing context for optimal model selection`);
-
+      
       // Detect if advanced controls are being used
       const hasAdvancedControls = !!(fireworksControlNet || (exampleImage && fireworksImg2ImgStrength !== undefined));
-
+      
       const optimalProvider = await selectOptimalModel({
         qualityMode,
         hasExampleImage: !!exampleImage,
@@ -854,7 +854,7 @@ const generateImagesFlow = ai.defineFlow(
       console.log(`[Intelligent Selection] AUTO selected but intelligent selection disabled - falling back to Gemini`);
       chosenProvider = 'GEMINI';
     }
-
+    
     // Validate that advanced controls are not used with Gemini (which doesn't support them)
     if (chosenProvider.toUpperCase() === 'GEMINI') {
       if (fireworksControlNet) {
@@ -867,59 +867,59 @@ const generateImagesFlow = ai.defineFlow(
         console.warn('[Validation] Fireworks-specific parameters (guidance scale, scheduler, inference steps) will be ignored when using Gemini provider.');
       }
     }
-
+    
     console.log(`Image generation flow started. Chosen provider: ${chosenProvider}, Number of images: ${numberOfImages}`);
 
     const generatedImageResults: string[] = [];
     let actualPromptUsedForFirstImage = "";
     let actualProviderUsed = chosenProvider; // Track the actual provider used (may change due to fallbacks)
     let actualModelUsed: string | undefined; // Track the specific model used
-
+    
     // 🔥 RAG ENHANCEMENT: Declare RAG variables at function level
     let ragInsights: any[] = [];
     let wasRAGEnhanced = false;
     const compositionGuidance = "IMPORTANT COMPOSITION RULE: When depicting human figures as the primary subject, the image *must* be well-composed. Avoid awkward or unintentional cropping of faces or key body parts. Ensure the figure is presented naturally and fully within the frame, unless the prompt *explicitly* requests a specific framing like 'close-up', 'headshot', 'upper body shot', or an artistic crop. Prioritize showing the entire subject if it's a person.";
 
     let industryLabel = "";
-    if (industry && industry !== "_none_") {
-      const foundIndustry = industries.find(i => i.value === industry);
-      industryLabel = foundIndustry ? foundIndustry.label : industry;
+    if (industry && industry !== "_none_") { 
+        const foundIndustry = industries.find(i => i.value === industry);
+        industryLabel = foundIndustry ? foundIndustry.label : industry; 
     }
-    const industryContext = (industryLabel && industryLabel !== "None / Not Applicable")
-      ? ` The brand operates in the ${industryLabel} industry.`
-      : "";
+    const industryContext = (industryLabel && industryLabel !== "None / Not Applicable") 
+                            ? ` The brand operates in the ${industryLabel} industry.` 
+                            : "";
 
 
     if (chosenProvider.toUpperCase() === 'FREEPIK') {
-      console.log(`Freepik provider (imagen3) selected for a batch of ${numberOfImages} images.`);
-      let textPromptForFreepik = "";
+        console.log(`Freepik provider (imagen3) selected for a batch of ${numberOfImages} images.`);
+        let textPromptForFreepik = "";
 
-      if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
-        console.log(`Using finalized text prompt for Freepik batch: "${finalizedTextPrompt.substring(0, 100)}..."`);
-        textPromptForFreepik = finalizedTextPrompt;
-        if (
-          !finalizedTextPrompt.toLowerCase().includes("human figure") &&
-          !finalizedTextPrompt.toLowerCase().includes("crop") &&
-          !finalizedTextPrompt.toLowerCase().includes("close-up") &&
-          !finalizedTextPrompt.toLowerCase().includes("headshot") &&
-          !finalizedTextPrompt.toLowerCase().includes("portrait") &&
-          !finalizedTextPrompt.toLowerCase().includes("figure framing") &&
-          !finalizedTextPrompt.toLowerCase().includes("composition")
-        ) {
-          textPromptForFreepik += `\n\n${compositionGuidance}`;
-        }
-      } else {
-        console.log(`Constructing prompt for Freepik batch as no finalized prompt was provided or it was empty.`);
-        if (!brandDescription || !imageStyle) {
-          throw new Error("Brand description and image style (preset/custom notes) are required if not providing/using a finalized text prompt for Freepik.");
-        }
-
-        let baseContentPrompt = "";
-        if (exampleImageDescription) {
-          console.log(`Freepik prompt using example image description: "${exampleImageDescription.substring(0, 100)}..."`);
-          baseContentPrompt = `An example image was provided, which is described as: "${exampleImageDescription}". Using that description as primary inspiration for the subject and main visual elements, now generate an image based on the following concept: "${brandDescription}".`;
+        if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
+            console.log(`Using finalized text prompt for Freepik batch: "${finalizedTextPrompt.substring(0,100)}..."`);
+            textPromptForFreepik = finalizedTextPrompt;
+             if (
+                !finalizedTextPrompt.toLowerCase().includes("human figure") &&
+                !finalizedTextPrompt.toLowerCase().includes("crop") &&
+                !finalizedTextPrompt.toLowerCase().includes("close-up") &&
+                !finalizedTextPrompt.toLowerCase().includes("headshot") &&
+                !finalizedTextPrompt.toLowerCase().includes("portrait") &&
+                !finalizedTextPrompt.toLowerCase().includes("figure framing") &&
+                !finalizedTextPrompt.toLowerCase().includes("composition")
+            ) {
+                 textPromptForFreepik += `\n\n${compositionGuidance}`;
+            }
         } else {
-          baseContentPrompt = `Create a strategic brand marketing image that embodies the concept: "${brandDescription}".${industryContext}
+            console.log(`Constructing prompt for Freepik batch as no finalized prompt was provided or it was empty.`);
+            if (!brandDescription || !imageStyle) {
+                throw new Error("Brand description and image style (preset/custom notes) are required if not providing/using a finalized text prompt for Freepik.");
+            }
+            
+            let baseContentPrompt = "";
+            if (exampleImageDescription) {
+                console.log(`Freepik prompt using example image description: "${exampleImageDescription.substring(0,100)}..."`);
+                baseContentPrompt = `An example image was provided, which is described as: "${exampleImageDescription}". Using that description as primary inspiration for the subject and main visual elements, now generate an image based on the following concept: "${brandDescription}".`;
+            } else {
+                baseContentPrompt = `Create a strategic brand marketing image that embodies the concept: "${brandDescription}".${industryContext}
 
 **BRAND MARKETING OBJECTIVES:**
 - Capture attention in social media feeds with scroll-stopping visual appeal
@@ -935,144 +935,143 @@ const generateImagesFlow = ai.defineFlow(
 - Consider current social media trends while maintaining brand authenticity
 - Create content that works both standalone and in marketing campaigns
 - Ensure professional, market-ready quality suitable for paid advertising`;
-        }
-
-        let textualStyleComponent = "";
-        const firstStyleKeywordOfCombined = imageStyle.toLowerCase().trim().split(/[,.]|\s-\s/)[0].trim();
-        const isStructuralStyleLikelyApplied = freepikValidStyles.includes(firstStyleKeywordOfCombined);
-
-        if (isStructuralStyleLikelyApplied) {
-          // A structural style (like "photo") was likely applied by _initiateFreepikImageTask.
-          // We add the full imageStyle textually if it contains more than just the structural keyword
-          // (e.g., "photo with dramatic lighting" or if the preset itself was "photorealistic" which implies "photo" + "realistic").
-          if (imageStyle.toLowerCase().trim() !== firstStyleKeywordOfCombined) {
-            textualStyleComponent = `\nIncorporate these stylistic details and elements: "${imageStyle}".`;
-          } else {
-            // imageStyle is essentially just the structural keyword (e.g., "photo").
-            // No need to add it textually if _initiateFreepikImageTask handled it structurally.
-            textualStyleComponent = "";
-          }
-        } else {
-          // The primary style (e.g., "minimalist") is not a structural Freepik style, so the full `imageStyle` string is relevant textually.
-          textualStyleComponent = `\nIncorporate these stylistic details and elements: "${imageStyle}".`;
-        }
-
-        textPromptForFreepik = `${baseContentPrompt}${industryContext}${textualStyleComponent}`;
-        textPromptForFreepik += `\n\n${compositionGuidance}`;
-      }
-      actualPromptUsedForFirstImage = textPromptForFreepik;
-      console.log(`Text component of prompt for Freepik batch: "${textPromptForFreepik.substring(0, 200)}..."`);
-
-      try {
-        const freepikTask = await _initiateFreepikImageTask({
-          textPrompt: textPromptForFreepik,
-          imageStyle: imageStyle, // Pass the combined style string for _initiateFreepikImageTask to parse for structural style
-          exampleImage: exampleImage,
-          negativePrompt: negativePrompt,
-          aspectRatio: aspectRatio,
-          freepikStylingColors: freepikStylingColors,
-          freepikEffectColor: freepikEffectColor,
-          freepikEffectLightning: freepikEffectLightning,
-          freepikEffectFraming: freepikEffectFraming,
-          numberOfImages: numberOfImages,
-        });
-
-        if (freepikTask.generatedUrls && freepikTask.generatedUrls.length > 0) {
-          freepikTask.generatedUrls.forEach(url => {
-            if (url) {
-              generatedImageResults.push(`image_url:${url}`);
             }
-          });
-          console.log(`Freepik/Imagen3 task ${freepikTask.taskId} returned ${freepikTask.generatedUrls.length} image URL(s) directly.`);
-        } else {
-          generatedImageResults.push(`task_id:${freepikTask.taskId}`);
-          console.log(`Freepik/Imagen3 task initiated: ${freepikTask.taskId}, Status: ${freepikTask.status}. Polling needed for a batch of ${numberOfImages}.`);
-        }
-      } catch (error: any) {
-        console.error(`Error during Freepik batch generation. Full error:`, JSON.stringify(error, Object.getOwnPropertyNames(error)));
-        generatedImageResults.push(`error:Failed to process Freepik batch. ${error.message || 'Unknown error'}`);
-      }
-    } else {
-      for (let i = 0; i < numberOfImages; i++) {
-        let textPromptContent = "";
 
-        if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
-          console.log(`Using finalized text prompt for image ${i + 1}: "${finalizedTextPrompt.substring(0, 100)}..." (Provider: ${chosenProvider})`);
-          textPromptContent = finalizedTextPrompt;
+            let textualStyleComponent = "";
+            const firstStyleKeywordOfCombined = imageStyle.toLowerCase().trim().split(/[,.]|\s-\s/)[0].trim();
+            const isStructuralStyleLikelyApplied = freepikValidStyles.includes(firstStyleKeywordOfCombined);
 
-          // 🔥 RAG ENHANCEMENT: Enhance finalized prompt with adaptive RAG context
-          // Skip RAG when image is selected to avoid conflicting with image mode instructions
-          if (userId && !exampleImage) {
-            try {
-              const { context, insights } = await getAdaptiveRAGContext(
-                userId,
-                finalizedTextPrompt,
-                {
-                  userId,
-                  contentType: 'saved_image',
-                  industry,
-                  minPerformance: 0.6,
-                  limit: 8,
-                  includeIndustryPatterns: true,
-                  timeframe: 'recent'
+            if (isStructuralStyleLikelyApplied) {
+                // A structural style (like "photo") was likely applied by _initiateFreepikImageTask.
+                // We add the full imageStyle textually if it contains more than just the structural keyword
+                // (e.g., "photo with dramatic lighting" or if the preset itself was "photorealistic" which implies "photo" + "realistic").
+                if (imageStyle.toLowerCase().trim() !== firstStyleKeywordOfCombined) {
+                    textualStyleComponent = `\nIncorporate these stylistic details and elements: "${imageStyle}".`;
+                } else {
+                    // imageStyle is essentially just the structural keyword (e.g., "photo").
+                    // No need to add it textually if _initiateFreepikImageTask handled it structurally.
+                    textualStyleComponent = ""; 
                 }
-              );
-
-              ragInsights = insights;
-              wasRAGEnhanced = insights.length > 0;
-
-              if (wasRAGEnhanced) {
-                let ragContextText = '';
-                if (context.brandPatterns) ragContextText += `\n\nBRAND CONTEXT:\n${context.brandPatterns}`;
-                if (context.successfulStyles) ragContextText += `\n\nPROVEN SUCCESSFUL STYLES:\n${context.successfulStyles}`;
-                if (context.avoidPatterns) ragContextText += `\n\nAVOID PATTERNS:\n${context.avoidPatterns}`;
-                if (context.performanceInsights) ragContextText += `\n\nPERFORMANCE INSIGHTS:\n${context.performanceInsights}`;
-
-                textPromptContent += ragContextText;
-                console.log(`[RAG] Enhanced finalized prompt with ${insights.length} insights`);
-              }
-            } catch (error) {
-              console.log(`[RAG] Failed to enhance prompt, using original:`, error);
+            } else {
+                // The primary style (e.g., "minimalist") is not a structural Freepik style, so the full `imageStyle` string is relevant textually.
+                textualStyleComponent = `\nIncorporate these stylistic details and elements: "${imageStyle}".`;
             }
-          }
+            
+            textPromptForFreepik = `${baseContentPrompt}${industryContext}${textualStyleComponent}`;
+            textPromptForFreepik +=`\n\n${compositionGuidance}`;
+        }
+        actualPromptUsedForFirstImage = textPromptForFreepik; 
+        console.log(`Text component of prompt for Freepik batch: "${textPromptForFreepik.substring(0,200)}..."`);
 
-          /**
-           * KNOWN ISSUE / TECHNICAL DEBT:
-           *
-           * This backend imageMode prepending logic duplicates frontend preview logic
-           * (see page.tsx lines 1435-1456), but is REQUIRED for templates to work.
-           *
-           * FLOW:
-           * 1. Templates provide finalizedTextPrompt WITHOUT imageMode instructions
-           * 2. This code prepends enhance/reference instructions to template prompts
-           * 3. Admin preview shows template WITHOUT these instructions (mismatch)
-           * 4. After generation, "Prompt Used" shows WITH instructions (confusing)
-           *
-           * WHY "TEMPLATE REQUIREMENTS" TEXT:
-           * This header was designed for templates, but admin preview also uses PATH 1,
-           * so the text appears even when no template was used (misleading).
-           *
-           * IMPACT: Admin UX confusion only. Generation quality is CORRECT - templates
-           * work properly with imageMode. Non-admin users are unaffected.
-           *
-           * TODO (Low Priority):
-           * Option A - Move this logic to frontend, update templates to include imageMode
-           * Option B - Change text from "TEMPLATE REQUIREMENTS" → "BRAND REQUIREMENTS"
-           * Option C - Add source tracking to distinguish template vs preview prompts
-           *
-           * DO NOT REMOVE without updating templates to handle imageMode independently.
-           *
-           * Related: page.tsx lines 1435-1456 (frontend imageMode construction)
-           * Related: content-templates.ts (templates rely on this prepending)
-           */
+        try {
+            const freepikTask = await _initiateFreepikImageTask({
+                textPrompt: textPromptForFreepik, 
+                imageStyle: imageStyle, // Pass the combined style string for _initiateFreepikImageTask to parse for structural style
+                exampleImage: exampleImage,
+                negativePrompt: negativePrompt, 
+                aspectRatio: aspectRatio, 
+                freepikStylingColors: freepikStylingColors,
+                freepikEffectColor: freepikEffectColor,
+                freepikEffectLightning: freepikEffectLightning,
+                freepikEffectFraming: freepikEffectFraming,
+                numberOfImages: numberOfImages, 
+            });
+            
+            if (freepikTask.generatedUrls && freepikTask.generatedUrls.length > 0) {
+                freepikTask.generatedUrls.forEach(url => {
+                    if (url) {
+                        generatedImageResults.push(`image_url:${url}`); 
+                    }
+                });
+                 console.log(`Freepik/Imagen3 task ${freepikTask.taskId} returned ${freepikTask.generatedUrls.length} image URL(s) directly.`);
+            } else {
+                 generatedImageResults.push(`task_id:${freepikTask.taskId}`); 
+                 console.log(`Freepik/Imagen3 task initiated: ${freepikTask.taskId}, Status: ${freepikTask.status}. Polling needed for a batch of ${numberOfImages}.`);
+            }
+        } catch (error: any) {
+             console.error(`Error during Freepik batch generation. Full error:`, JSON.stringify(error, Object.getOwnPropertyNames(error)));
+             generatedImageResults.push(`error:Failed to process Freepik batch. ${error.message || 'Unknown error'}`);
+        }
+    } else { 
+        for (let i = 0; i < numberOfImages; i++) {
+            let textPromptContent = "";
+            
+            if (finalizedTextPrompt && finalizedTextPrompt.trim() !== "") {
+                console.log(`Using finalized text prompt for image ${i+1}: "${finalizedTextPrompt.substring(0,100)}..." (Provider: ${chosenProvider})`);
+                textPromptContent = finalizedTextPrompt;
 
-          // Handle imageMode even when using finalizedTextPrompt (for templates with suggestedImageMode)
-          const shouldEnhanceImage = imageMode === 'enhance' && exampleImage && chosenProvider === 'GEMINI';
+                // 🔥 RAG ENHANCEMENT: Enhance finalized prompt with adaptive RAG context
+                // Skip RAG when image is selected to avoid conflicting with image mode instructions
+                if (userId && !exampleImage) {
+                    try {
+                        const { context, insights } = await getAdaptiveRAGContext(
+                            userId,
+                            finalizedTextPrompt,
+                            {
+                                userId,
+                                contentType: 'saved_image',
+                                industry,
+                                minPerformance: 0.6,
+                                limit: 8,
+                                includeIndustryPatterns: true,
+                                timeframe: 'recent'
+                            }
+                        );
 
-          if (shouldEnhanceImage) {
-            // ENHANCE MODE: Prepend AI Photoshoot instructions to template prompt
-            // Using narrative style per Google Gemini guidelines: https://ai.google.dev/gemini-api/docs/image-generation
-            const enhanceInstructions = `**AI PHOTOSHOOT TRANSFORMATION MODE**
+                        ragInsights = insights;
+                        wasRAGEnhanced = insights.length > 0;
+
+                        if (wasRAGEnhanced) {
+                            let ragContextText = '';
+                            if (context.brandPatterns) ragContextText += `\n\nBRAND CONTEXT:\n${context.brandPatterns}`;
+                            if (context.successfulStyles) ragContextText += `\n\nPROVEN SUCCESSFUL STYLES:\n${context.successfulStyles}`;
+                            if (context.avoidPatterns) ragContextText += `\n\nAVOID PATTERNS:\n${context.avoidPatterns}`;
+                            if (context.performanceInsights) ragContextText += `\n\nPERFORMANCE INSIGHTS:\n${context.performanceInsights}`;
+
+                            textPromptContent += ragContextText;
+                            console.log(`[RAG] Enhanced finalized prompt with ${insights.length} insights`);
+                        }
+                    } catch (error) {
+                        console.log(`[RAG] Failed to enhance prompt, using original:`, error);
+                    }
+                }
+
+                /**
+                 * KNOWN ISSUE / TECHNICAL DEBT:
+                 *
+                 * This backend imageMode prepending logic duplicates frontend preview logic
+                 * (see page.tsx lines 1435-1456), but is REQUIRED for templates to work.
+                 *
+                 * FLOW:
+                 * 1. Templates provide finalizedTextPrompt WITHOUT imageMode instructions
+                 * 2. This code prepends enhance/reference instructions to template prompts
+                 * 3. Admin preview shows template WITHOUT these instructions (mismatch)
+                 * 4. After generation, "Prompt Used" shows WITH instructions (confusing)
+                 *
+                 * WHY "TEMPLATE REQUIREMENTS" TEXT:
+                 * This header was designed for templates, but admin preview also uses PATH 1,
+                 * so the text appears even when no template was used (misleading).
+                 *
+                 * IMPACT: Admin UX confusion only. Generation quality is CORRECT - templates
+                 * work properly with imageMode. Non-admin users are unaffected.
+                 *
+                 * TODO (Low Priority):
+                 * Option A - Move this logic to frontend, update templates to include imageMode
+                 * Option B - Change text from "TEMPLATE REQUIREMENTS" → "BRAND REQUIREMENTS"
+                 * Option C - Add source tracking to distinguish template vs preview prompts
+                 *
+                 * DO NOT REMOVE without updating templates to handle imageMode independently.
+                 *
+                 * Related: page.tsx lines 1435-1456 (frontend imageMode construction)
+                 * Related: content-templates.ts (templates rely on this prepending)
+                 */
+
+                // Handle imageMode even when using finalizedTextPrompt (for templates with suggestedImageMode)
+                const shouldEnhanceImage = imageMode === 'enhance' && exampleImage && chosenProvider === 'GEMINI';
+                if (shouldEnhanceImage) {
+                    // ENHANCE MODE: Prepend AI Photoshoot instructions to template prompt
+                    // Using narrative style per Google Gemini guidelines: https://ai.google.dev/gemini-api/docs/image-generation
+                    const enhanceInstructions = `**AI PHOTOSHOOT TRANSFORMATION MODE**
 
 You are transforming an uploaded photograph into a professional marketing photoshoot asset while maintaining complete fidelity to the original subjects.
 
@@ -1087,11 +1086,12 @@ Your output should look as if a world-class commercial photographer conducted a 
 **NOW APPLY THE FOLLOWING TEMPLATE REQUIREMENTS:**
 
 `;
-            textPromptContent = enhanceInstructions + textPromptContent;
-          } else if (exampleImage && chosenProvider === 'GEMINI') {
-            // REFERENCE MODE: Add reference mode context to template prompt
-            // Using narrative style per Google Gemini guidelines: https://ai.google.dev/gemini-api/docs/image-generation
-            const referenceInstructions = `**REFERENCE IMAGE MODE**
+                    textPromptContent = enhanceInstructions + textPromptContent;
+                    console.log(`[ImageMode] Applied 'enhance' mode to finalized template prompt`);
+                } else if (exampleImage && chosenProvider === 'GEMINI') {
+                    // REFERENCE MODE: Add reference mode context to template prompt
+                    // Using narrative style per Google Gemini guidelines: https://ai.google.dev/gemini-api/docs/image-generation
+                    const referenceInstructions = `**REFERENCE IMAGE MODE**
 
 You are creating an entirely new brand marketing image inspired by the provided reference image. The reference serves only as a category identifier and aesthetic guide—you should not preserve or copy any specific subjects, people, products, or brand elements from it. Instead, create completely original content that captures a similar style, mood, or category while being entirely new.
 
@@ -1104,60 +1104,61 @@ Focus on creating scroll-stopping social media content that communicates brand v
 **NOW APPLY THE FOLLOWING TEMPLATE REQUIREMENTS:**
 
 `;
-            textPromptContent = referenceInstructions + textPromptContent;
-          }
+                    textPromptContent = referenceInstructions + textPromptContent;
+                    console.log(`[ImageMode] Applied 'reference' mode to finalized template prompt`);
+                }
 
-          if (chosenProvider !== 'FREEPIK') {
-            if (aspectRatio && !finalizedTextPrompt.toLowerCase().includes("aspect ratio")) {
-              textPromptContent += `\n\n**CRITICAL REQUIREMENT**: The generated image *must* have an aspect ratio of exactly **${aspectRatio}**. The entire image canvas must conform to this ratio without any letterboxing or pillarboxing. This is a primary constraint.`;
-            }
-            if (seed !== undefined && !finalizedTextPrompt.toLowerCase().includes("seed:")) {
-              textPromptContent += `\n\nUse seed: ${seed}.`;
-            }
-            if (
-              !finalizedTextPrompt.toLowerCase().includes("human figure") &&
-              !finalizedTextPrompt.toLowerCase().includes("crop") &&
-              !finalizedTextPrompt.toLowerCase().includes("close-up") &&
-              !finalizedTextPrompt.toLowerCase().includes("headshot") &&
-              !finalizedTextPrompt.toLowerCase().includes("portrait") &&
-              !finalizedTextPrompt.toLowerCase().includes("figure framing") &&
-              !finalizedTextPrompt.toLowerCase().includes("composition")
-            ) {
-              textPromptContent += `\n\n${compositionGuidance}`;
-            }
-          }
-          // Skip batch variation instructions for enhance mode (conflicts with preservation directive)
-          if (numberOfImages > 1 && chosenProvider !== 'FREEPIK' && imageMode !== 'enhance') {
-            textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
-          }
-        } else {
-          /**
-           * BACKEND PATH 2: Construct prompt from scratch
-           *
-           * IMPORTANT: This prompt construction must stay in sync with frontend preview.
-           * Frontend location: /src/app/(authenticated)/content-studio/page.tsx lines 1363-1500 (handlePreviewPromptClick)
-           *
-           * When updating image generation prompts, update BOTH locations:
-           * 1. Backend PATH 2 (this section) - for actual generation
-           * 2. Frontend preview (page.tsx) - for admin inspection
-           *
-           * Regular users use THIS path directly (no preview).
-           * Admin users see preview from frontend, but final generation still uses this logic.
-           */
-          console.log(`Constructing prompt for image ${i + 1}/${numberOfImages}. (Provider: ${chosenProvider})`);
-          if (!brandDescription || !imageStyle) {
-            throw new Error("Brand description and image style are required if not providing/using a finalized text prompt.");
-          }
+                if (chosenProvider !== 'FREEPIK') { 
+                    if (aspectRatio && !finalizedTextPrompt.toLowerCase().includes("aspect ratio")) {
+                      textPromptContent += `\n\n**CRITICAL REQUIREMENT**: The generated image *must* have an aspect ratio of exactly **${aspectRatio}**. The entire image canvas must conform to this ratio without any letterboxing or pillarboxing. This is a primary constraint.`;
+                    }
+                    if (seed !== undefined && !finalizedTextPrompt.toLowerCase().includes("seed:")) {
+                      textPromptContent += `\n\nUse seed: ${seed}.`;
+                    }
+                     if (
+                        !finalizedTextPrompt.toLowerCase().includes("human figure") &&
+                        !finalizedTextPrompt.toLowerCase().includes("crop") &&
+                        !finalizedTextPrompt.toLowerCase().includes("close-up") &&
+                        !finalizedTextPrompt.toLowerCase().includes("headshot") &&
+                        !finalizedTextPrompt.toLowerCase().includes("portrait") &&
+                        !finalizedTextPrompt.toLowerCase().includes("figure framing") &&
+                        !finalizedTextPrompt.toLowerCase().includes("composition")
+                    ) {
+                        textPromptContent += `\n\n${compositionGuidance}`;
+                    }
+                }
+                 // Skip batch variation instructions for enhance mode (conflicts with preservation directive)
+                 if (numberOfImages > 1 && chosenProvider !== 'FREEPIK' && imageMode !== 'enhance') {
+                    textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
+                }
+            } else {
+                /**
+                 * BACKEND PATH 2: Construct prompt from scratch
+                 *
+                 * IMPORTANT: This prompt construction must stay in sync with frontend preview.
+                 * Frontend location: /src/app/(authenticated)/content-studio/page.tsx lines 1363-1500 (handlePreviewPromptClick)
+                 *
+                 * When updating image generation prompts, update BOTH locations:
+                 * 1. Backend PATH 2 (this section) - for actual generation
+                 * 2. Frontend preview (page.tsx) - for admin inspection
+                 *
+                 * Regular users use THIS path directly (no preview).
+                 * Admin users see preview from frontend, but final generation still uses this logic.
+                 */
+                console.log(`Constructing prompt for image ${i+1}/${numberOfImages}. (Provider: ${chosenProvider})`);
+                if (!brandDescription || !imageStyle) {
+                    throw new Error("Brand description and image style are required if not providing/using a finalized text prompt.");
+                }
 
-          let coreInstructions = "";
+                let coreInstructions = "";
 
-          // Check if we should enhance the uploaded image (preserve subjects)
-          const shouldEnhanceImage = imageMode === 'enhance' && exampleImage && chosenProvider === 'GEMINI';
+                // Check if we should enhance the uploaded image (preserve subjects)
+                const shouldEnhanceImage = imageMode === 'enhance' && exampleImage && chosenProvider === 'GEMINI';
 
-          if (shouldEnhanceImage) {
-            // ENHANCE MODE: AI Photoshoot - Transform into professional marketing image
-            // Using narrative style per Google Gemini guidelines: https://ai.google.dev/gemini-api/docs/image-generation
-            coreInstructions = `You are transforming an uploaded photograph into a professional marketing photoshoot asset while maintaining complete fidelity to the original subjects.
+                if (shouldEnhanceImage) {
+                    // ENHANCE MODE: AI Photoshoot - Transform into professional marketing image
+                    // Using narrative style per Google Gemini guidelines: https://ai.google.dev/gemini-api/docs/image-generation
+                    coreInstructions = `You are transforming an uploaded photograph into a professional marketing photoshoot asset while maintaining complete fidelity to the original subjects.
 
 Your primary directive is preservation: you must keep the exact people, products, and brand elements from the uploaded image completely unchanged. This means preserving faces, identities, expressions, body positions, product appearances, brand logos, packaging details, and any identifying characteristics. The people in the transformed image must be the same individuals with the same features, wearing the same clothing and accessories. Products must retain their exact appearance, colors, branding, and features. Think of this as if the same subjects were re-photographed by a professional photographer in a professional studio—the subjects themselves are identical, but everything around them and the technical quality has been elevated.
 
@@ -1166,16 +1167,16 @@ What you will transform is the environment and technical execution. Replace casu
 The brand context for this transformation is: ${brandDescription}${industryContext}. The desired visual style is: ${imageStyle}. Apply these brand aesthetics and style preferences to the background, lighting, atmosphere, and overall presentation—not to the subjects themselves. The subjects remain exactly as they appear in the uploaded image.
 
 Your output should look as if a world-class commercial photographer conducted a professional photoshoot using these exact same subjects, delivering a marketing-ready asset worthy of magazine covers and premium brand campaigns. The viewer should recognize the identical subjects from the uploaded image but marvel at the professional quality of the presentation.`;
-          } else if (exampleImage && chosenProvider === 'GEMINI') {
-            // REFERENCE MODE: Use as inspiration only (existing behavior)
-            // Using narrative style per Google Gemini guidelines: https://ai.google.dev/gemini-api/docs/image-generation
-            coreInstructions = `You are creating an entirely new brand marketing image inspired by the provided reference image. The reference serves only as a category identifier and aesthetic guide—you should not preserve or copy any specific subjects, people, products, or brand elements from it. Instead, create completely original content that captures a similar style, mood, or category while being entirely new.
+                } else if (exampleImage && chosenProvider === 'GEMINI') {
+                    // REFERENCE MODE: Use as inspiration only (existing behavior)
+                    // Using narrative style per Google Gemini guidelines: https://ai.google.dev/gemini-api/docs/image-generation
+                    coreInstructions = `You are creating an entirely new brand marketing image inspired by the provided reference image. The reference serves only as a category identifier and aesthetic guide—you should not preserve or copy any specific subjects, people, products, or brand elements from it. Instead, create completely original content that captures a similar style, mood, or category while being entirely new.
 
 Your mission is to generate fresh marketing content for this brand: ${brandDescription}${industryContext}. The desired visual style is: ${imageStyle}. Use the reference image to understand the general aesthetic direction, composition approach, or subject category, then create something completely new that embodies this brand's unique identity and appeals to their target audience.
 
 Think of the reference as inspiration, not a template. If the reference shows a lifestyle product shot, create your own original lifestyle scene with new subjects, new products, and new compositions that serve this brand's marketing objectives. Focus on creating scroll-stopping social media content that communicates brand values, resonates with the target demographic, and encourages engagement—while being entirely distinct from the reference image. The result should be professional marketing-grade quality optimized for social media platforms, culturally sensitive and inclusive, with technically excellent lighting, composition, and clarity that aligns with the brand's identity and messaging.`;
-          } else {
-            coreInstructions = `You are creating a strategic brand marketing image designed to drive engagement, build brand awareness, and convert viewers into customers on social media platforms.
+                } else {
+                    coreInstructions = `You are creating a strategic brand marketing image designed to drive engagement, build brand awareness, and convert viewers into customers on social media platforms.
 
 **BRAND STRATEGY CONTEXT:**
 Your mission is to create a compelling, brand-aligned visual asset that:
@@ -1236,274 +1237,274 @@ Your mission is to create a compelling, brand-aligned visual asset that:
 - Brand-appropriate messaging that aligns with company values and positioning
 - Market-ready quality suitable for paid advertising and organic content
 `;
-          }
-
-          // Conditional opening line based on imageMode (per Google Gemini guidelines for clarity)
-          const openingContext = (imageMode === 'enhance' && exampleImage)
-            ? `Transform the provided uploaded image into a professional marketing asset.\n\n`
-            : `Create a new, high-quality, visually appealing brand marketing image.\n\n`;
-
-          textPromptContent = openingContext + coreInstructions;
-
-          // 🔥 RAG ENHANCEMENT: Enhance constructed prompt with adaptive RAG context
-          // Skip RAG when image is selected to avoid conflicting with image mode instructions
-          if (userId && !exampleImage) {
-            try {
-              const { context, insights } = await getAdaptiveRAGContext(
-                userId,
-                textPromptContent,
-                {
-                  userId,
-                  contentType: 'saved_image',
-                  industry,
-                  minPerformance: 0.6,
-                  limit: 8,
-                  includeIndustryPatterns: true,
-                  timeframe: 'recent'
                 }
-              );
 
-              ragInsights = insights;
-              wasRAGEnhanced = insights.length > 0;
+                // Conditional opening line based on imageMode (per Google Gemini guidelines for clarity)
+                const openingContext = (imageMode === 'enhance' && exampleImage)
+                    ? `Transform the provided uploaded image into a professional marketing asset.\n\n`
+                    : `Create a new, high-quality, visually appealing brand marketing image.\n\n`;
 
-              if (wasRAGEnhanced) {
-                let ragContextText = '';
-                if (context.brandPatterns) ragContextText += `\n\nBRAND CONTEXT:\n${context.brandPatterns}`;
-                if (context.successfulStyles) ragContextText += `\n\nPROVEN SUCCESSFUL STYLES:\n${context.successfulStyles}`;
-                if (context.avoidPatterns) ragContextText += `\n\nAVOID PATTERNS:\n${context.avoidPatterns}`;
-                if (context.performanceInsights) ragContextText += `\n\nPERFORMANCE INSIGHTS:\n${context.performanceInsights}`;
+                textPromptContent = openingContext + coreInstructions;
 
-                textPromptContent += ragContextText;
-                console.log(`[RAG] Enhanced constructed prompt with ${insights.length} insights`);
-              }
-            } catch (error) {
-              console.log(`[RAG] Failed to enhance prompt, using original:`, error);
-            }
-          }
-
-          if (chosenProvider !== 'FREEPIK') {
-            if (negativePrompt) {
-              textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
-            }
-            if (aspectRatio) {
-              textPromptContent += `\n\n**CRITICAL REQUIREMENT**: The generated image *must* have an aspect ratio of exactly **${aspectRatio}**. The entire image canvas must conform to this ratio without any letterboxing or pillarboxing. This is a primary constraint.`;
-            }
-            if (seed !== undefined) {
-              textPromptContent += `\n\nUse seed: ${seed}.`;
-            }
-            textPromptContent += `\n\n${compositionGuidance}`;
-          }
-          // Skip batch variation instructions for enhance mode (conflicts with preservation directive)
-          if (numberOfImages > 1 && chosenProvider !== 'FREEPIK' && imageMode !== 'enhance') {
-            textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
-          }
-        }
-
-        if (i === 0) {
-          actualPromptUsedForFirstImage = textPromptContent;
-        }
-
-        console.log(`Text component of prompt for image ${i + 1}/${numberOfImages} (Provider: ${chosenProvider}): "${textPromptContent.substring(0, 200)}..."`);
-
-        try {
-          let resultValue = "";
-
-          switch (chosenProvider.toUpperCase()) {
-            case 'GEMINI':
-              const modelForGemini = exampleImage ? imageGenerationModel : textToImageModel;
-
-              // Check if this is an Imagen model for text-to-image generation (no example image)
-              if (!exampleImage && isImagenModel(modelForGemini)) {
-                console.log(`Imagen model detected for text-to-image: ${modelForGemini}. Using Imagen API instead of Genkit.`);
-
-                // For Imagen models, we need to generate all images at once, not individually
-                // So we break out of the loop and handle batch generation
-                if (i === 0) {
-                  // Validate and clean the model name before passing to Imagen API
-                  const cleanedModelName = validateImagenModel(modelForGemini);
-                  console.log(`Using cleaned Imagen model name: ${cleanedModelName} (original: ${modelForGemini})`);
-
-                  // Generate all images in one batch call
-                  const imagenResults = await _generateImageWithImagen({
-                    model: cleanedModelName,
-                    prompt: textPromptContent,
-                    aspectRatio: aspectRatio,
-                    numberOfImages: numberOfImages,
-                    negativePrompt: negativePrompt,
-                    seed: seed
-                  });
-
-                  // Add all results to the array
-                  imagenResults.forEach(dataUri => {
-                    generatedImageResults.push(dataUri);
-                  });
-
-                  console.log(`Imagen batch generation completed: ${imagenResults.length} image(s) generated.`);
-
-                  // Set the prompt used for the first image
-                  actualPromptUsedForFirstImage = textPromptContent;
-
-                  // Break out of the for loop since we've generated all images
-                  break;
-                } else {
-                  // Skip subsequent iterations since we already generated all images in the first iteration
-                  continue;
-                }
-              } else {
-                // Use regular Genkit generation for non-Imagen models or when example image is provided
-                const finalPromptPartsForGemini: ({ text: string } | { media: { url: string } })[] = [];
-
-                if (exampleImage) {
-                  // First verify the image exists
-                  const imageExists = await verifyImageUrlExists(exampleImage);
-                  if (!imageExists) {
-                    throw new Error(`Example image not found or inaccessible: ${exampleImage.substring(0, 100)}... This could indicate the image was deleted from Firebase Storage or the URL is invalid.`);
-                  }
-
-                  const decodedExampleImageUrl = decodeHtmlEntitiesInUrl(exampleImage);
-                  console.log(`Generate images flow - Original example image URL: ${exampleImage.substring(0, 100)}...`);
-                  console.log(`Generate images flow - Decoded example image URL: ${decodedExampleImageUrl.substring(0, 100)}...`);
-                  finalPromptPartsForGemini.push({ media: { url: decodedExampleImageUrl } });
-                }
-                finalPromptPartsForGemini.push({ text: textPromptContent });
-                console.log("Final prompt parts array for Gemini (loop):", JSON.stringify(finalPromptPartsForGemini, null, 2));
-                resultValue = await _generateImageWithGemini({
-                  aiInstance: ai,
-                  promptParts: finalPromptPartsForGemini,
-                  model: modelForGemini,
-                  aspectRatio: aspectRatio,
-                });
-              }
-              break;
-            case 'LEONARDO_AI':
-              resultValue = await _generateImageWithLeonardoAI_stub({ brandDescription, industry, imageStyle, exampleImage, aspectRatio, negativePrompt, seed, textPrompt: textPromptContent });
-              break;
-            case 'IMAGEN':
-              resultValue = await _generateImageWithImagen_stub({ brandDescription, industry, imageStyle, exampleImage, aspectRatio, negativePrompt, seed, textPrompt: textPromptContent });
-              break;
-            case 'FIREWORKS_SDXL_TURBO':
-              // Check if Fireworks is enabled
-              if (!fireworksEnabled) {
-                throw new Error('Fireworks AI is not enabled by administrator');
-              }
-              try {
-                const turboResults = await _generateImageWithFireworks({
-                  model: 'sdxl-turbo',
-                  textPrompt: textPromptContent,
-                  exampleImage: exampleImage,
-                  aspectRatio: aspectRatio,
-                  numberOfImages: 1, // Handle individually in loop
-                  negativePrompt: negativePrompt,
-                  seed: seed,
-                  fireworksControlNet: fireworksControlNet,
-                  fireworksImg2ImgStrength: fireworksImg2ImgStrength,
-                  fireworksGuidanceScale: fireworksGuidanceScale || 1.0, // SDXL Turbo uses lower guidance
-                  fireworksScheduler: fireworksScheduler,
-                  fireworksNumInferenceSteps: fireworksNumInferenceSteps || 4 // SDXL Turbo is fast
-                });
-                resultValue = turboResults.images[0]; // Get first result from batch
-                actualModelUsed = turboResults.actualModelUsed; // Track the actual model used
-              } catch (fireworksError: any) {
-                console.warn(`[Fallback] SDXL Turbo failed: ${fireworksError.message}. Falling back to Gemini.`);
-                actualProviderUsed = 'GEMINI'; // Update the actual provider used
-                actualModelUsed = 'Gemini (fallback from SDXL Turbo)'; // Track fallback
-                const modelForGemini = exampleImage ? imageGenerationModel : textToImageModel;
-                const finalPromptPartsForGemini: ({ text: string } | { media: { url: string } })[] = [];
-                if (exampleImage) {
-                  const decodedExampleImageUrl = decodeHtmlEntitiesInUrl(exampleImage);
-                  finalPromptPartsForGemini.push({ media: { url: decodedExampleImageUrl } });
-                }
-                finalPromptPartsForGemini.push({ text: textPromptContent });
-                resultValue = await _generateImageWithGemini({
-                  aiInstance: ai,
-                  promptParts: finalPromptPartsForGemini,
-                  model: modelForGemini,
-                  aspectRatio: aspectRatio,
-                });
-              }
-              break;
-            case 'FIREWORKS_SDXL_3':
-              // Check if Fireworks is enabled
-              if (!fireworksEnabled) {
-                throw new Error('Fireworks AI is not enabled by administrator');
-              }
-              try {
-                const sdxl3Results = await _generateImageWithFireworks({
-                  model: 'sdxl-3',
-                  textPrompt: textPromptContent,
-                  exampleImage: exampleImage,
-                  aspectRatio: aspectRatio,
-                  numberOfImages: 1, // Handle individually in loop
-                  negativePrompt: negativePrompt,
-                  seed: seed,
-                  fireworksControlNet: fireworksControlNet,
-                  fireworksImg2ImgStrength: fireworksImg2ImgStrength,
-                  fireworksGuidanceScale: fireworksGuidanceScale || 7.5, // SDXL 3 uses higher guidance
-                  fireworksScheduler: fireworksScheduler,
-                  fireworksNumInferenceSteps: fireworksNumInferenceSteps || 20 // SDXL 3 uses more steps
-                });
-                resultValue = sdxl3Results.images[0]; // Get first result from batch
-                actualModelUsed = sdxl3Results.actualModelUsed; // Track the actual model used
-              } catch (fireworksError: any) {
-                console.warn(`[Fallback] SDXL 3 failed: ${fireworksError.message}. Falling back to Gemini.`);
-                actualProviderUsed = 'GEMINI'; // Update the actual provider used
-                actualModelUsed = 'Gemini (fallback from SDXL 3)'; // Track fallback
-                const modelForGemini = exampleImage ? imageGenerationModel : textToImageModel;
-                const finalPromptPartsForGemini: ({ text: string } | { media: { url: string } })[] = [];
-                if (exampleImage) {
-                  const decodedExampleImageUrl = decodeHtmlEntitiesInUrl(exampleImage);
-                  finalPromptPartsForGemini.push({ media: { url: decodedExampleImageUrl } });
-                }
-                finalPromptPartsForGemini.push({ text: textPromptContent });
-                resultValue = await _generateImageWithGemini({
-                  aiInstance: ai,
-                  promptParts: finalPromptPartsForGemini,
-                  model: modelForGemini,
-                  aspectRatio: aspectRatio,
-                });
-              }
-              break;
-            default:
-              throw new Error(`Unsupported image generation provider in loop: ${chosenProvider}`);
-          }
-
-          // Only push result if we have one (Imagen batch generation handles this differently)
-          if (resultValue) {
-            generatedImageResults.push(resultValue);
-
-            // 🔥 RAG ENHANCEMENT: Store successful generation for future RAG
-            if (userId && i === 0) { // Store only first image to avoid duplicates
-              try {
-                const contentId = `generated_${Date.now()}_${i}`;
-                await storeContentForRAG(
-                  userId,
-                  'image',
-                  contentId,
-                  {
-                    prompt: textPromptContent,
-                    style: imageStyle,
-                    metadata: {
-                      provider: chosenProvider,
-                      qualityMode,
-                      industry,
-                      aspectRatio,
-                      wasRAGEnhanced: wasRAGEnhanced || false,
-                      ragInsights: ragInsights && ragInsights.length > 0 ? ragInsights : undefined
+                // 🔥 RAG ENHANCEMENT: Enhance constructed prompt with adaptive RAG context
+                // Skip RAG when image is selected to avoid conflicting with image mode instructions
+                if (userId && !exampleImage) {
+                    try {
+                        const { context, insights } = await getAdaptiveRAGContext(
+                            userId,
+                            textPromptContent,
+                            {
+                                userId,
+                                contentType: 'saved_image',
+                                industry,
+                                minPerformance: 0.6,
+                                limit: 8,
+                                includeIndustryPatterns: true,
+                                timeframe: 'recent'
+                            }
+                        );
+                        
+                        ragInsights = insights;
+                        wasRAGEnhanced = insights.length > 0;
+                        
+                        if (wasRAGEnhanced) {
+                            let ragContextText = '';
+                            if (context.brandPatterns) ragContextText += `\n\nBRAND CONTEXT:\n${context.brandPatterns}`;
+                            if (context.successfulStyles) ragContextText += `\n\nPROVEN SUCCESSFUL STYLES:\n${context.successfulStyles}`;
+                            if (context.avoidPatterns) ragContextText += `\n\nAVOID PATTERNS:\n${context.avoidPatterns}`;
+                            if (context.performanceInsights) ragContextText += `\n\nPERFORMANCE INSIGHTS:\n${context.performanceInsights}`;
+                            
+                            textPromptContent += ragContextText;
+                            console.log(`[RAG] Enhanced constructed prompt with ${insights.length} insights`);
+                        }
+                    } catch (error) {
+                        console.log(`[RAG] Failed to enhance prompt, using original:`, error);
                     }
+                }
+                
+                if (chosenProvider !== 'FREEPIK') { 
+                  if (negativePrompt) {
+                      textPromptContent += `\n\nAvoid the following elements or characteristics in the image: ${negativePrompt}.`;
                   }
-                );
-                console.log(`[RAG] Stored generated image for future context`);
-              } catch (error) {
-                console.log(`[RAG] Failed to store content for RAG:`, error);
-              }
+                  if (aspectRatio) { 
+                    textPromptContent += `\n\n**CRITICAL REQUIREMENT**: The generated image *must* have an aspect ratio of exactly **${aspectRatio}**. The entire image canvas must conform to this ratio without any letterboxing or pillarboxing. This is a primary constraint.`;
+                  }
+                  if (seed !== undefined) { 
+                    textPromptContent += `\n\nUse seed: ${seed}.`;
+                  }
+                   textPromptContent +=`\n\n${compositionGuidance}`;
+                }
+                // Skip batch variation instructions for enhance mode (conflicts with preservation directive)
+                if (numberOfImages > 1 && chosenProvider !== 'FREEPIK' && imageMode !== 'enhance') {
+                    textPromptContent += `\n\nImportant for batch generation: You are generating image ${i + 1} of a set of ${numberOfImages}. All images in this set should feature the *same core subject or item* as described/derived from the inputs. For this specific image (${i + 1}/${numberOfImages}), try to vary the pose, angle, or minor background details slightly compared to other images in the set, while maintaining the identity of the primary subject. The goal is a cohesive set of images showcasing the same item from different perspectives or with subtle variations.`;
+                }
             }
-          }
-        } catch (error: any) {
-          console.error(`Error during generation of image ${i + 1}/${numberOfImages} with provider ${chosenProvider}. Full error:`, JSON.stringify(error, Object.getOwnPropertyNames(error)));
-          generatedImageResults.push(`error:Failed to process image ${i + 1}. ${error.message || 'Unknown error'}`);
-        }
-      }
-    }
+            
+            if (i === 0) { 
+                actualPromptUsedForFirstImage = textPromptContent;
+            }
+            
+            console.log(`Text component of prompt for image ${i+1}/${numberOfImages} (Provider: ${chosenProvider}): "${textPromptContent.substring(0,200)}..."`);
+
+            try {
+                let resultValue = ""; 
+                
+                switch (chosenProvider.toUpperCase()) {
+                    case 'GEMINI':
+                        const modelForGemini = exampleImage ? imageGenerationModel : textToImageModel;
+                        
+                        // Check if this is an Imagen model for text-to-image generation (no example image)
+                        if (!exampleImage && isImagenModel(modelForGemini)) {
+                            console.log(`Imagen model detected for text-to-image: ${modelForGemini}. Using Imagen API instead of Genkit.`);
+                            
+                            // For Imagen models, we need to generate all images at once, not individually
+                            // So we break out of the loop and handle batch generation
+                            if (i === 0) {
+                                // Validate and clean the model name before passing to Imagen API
+                                const cleanedModelName = validateImagenModel(modelForGemini);
+                                console.log(`Using cleaned Imagen model name: ${cleanedModelName} (original: ${modelForGemini})`);
+                                
+                                // Generate all images in one batch call
+                                const imagenResults = await _generateImageWithImagen({
+                                    model: cleanedModelName,
+                                    prompt: textPromptContent,
+                                    aspectRatio: aspectRatio,
+                                    numberOfImages: numberOfImages,
+                                    negativePrompt: negativePrompt,
+                                    seed: seed
+                                });
+                                
+                                // Add all results to the array
+                                imagenResults.forEach(dataUri => {
+                                    generatedImageResults.push(dataUri);
+                                });
+                                
+                                console.log(`Imagen batch generation completed: ${imagenResults.length} image(s) generated.`);
+                                
+                                // Set the prompt used for the first image
+                                actualPromptUsedForFirstImage = textPromptContent;
+                                
+                                // Break out of the for loop since we've generated all images
+                                break;
+                            } else {
+                                // Skip subsequent iterations since we already generated all images in the first iteration
+                                continue;
+                            }
+                        } else {
+                            // Use regular Genkit generation for non-Imagen models or when example image is provided
+                            const finalPromptPartsForGemini: ({text: string} | {media: {url: string}})[] = [];
+                            
+                            if (exampleImage) {
+                                // First verify the image exists
+                                const imageExists = await verifyImageUrlExists(exampleImage);
+                                if (!imageExists) {
+                                    throw new Error(`Example image not found or inaccessible: ${exampleImage.substring(0, 100)}... This could indicate the image was deleted from Firebase Storage or the URL is invalid.`);
+                                }
+                                
+                                const decodedExampleImageUrl = decodeHtmlEntitiesInUrl(exampleImage);
+                                console.log(`Generate images flow - Original example image URL: ${exampleImage.substring(0, 100)}...`);
+                                console.log(`Generate images flow - Decoded example image URL: ${decodedExampleImageUrl.substring(0, 100)}...`);
+                                finalPromptPartsForGemini.push({ media: { url: decodedExampleImageUrl } });
+                            }
+                            finalPromptPartsForGemini.push({ text: textPromptContent });
+                            console.log("Final prompt parts array for Gemini (loop):", JSON.stringify(finalPromptPartsForGemini, null, 2));
+                            resultValue = await _generateImageWithGemini({
+                                aiInstance: ai,
+                                promptParts: finalPromptPartsForGemini,
+                                model: modelForGemini,
+                                aspectRatio: aspectRatio,
+                            });
+                        }
+                        break;
+                    case 'LEONARDO_AI':
+                        resultValue = await _generateImageWithLeonardoAI_stub({ brandDescription, industry, imageStyle, exampleImage, aspectRatio, negativePrompt, seed, textPrompt: textPromptContent });
+                        break;
+                    case 'IMAGEN':
+                        resultValue = await _generateImageWithImagen_stub({ brandDescription, industry, imageStyle, exampleImage, aspectRatio, negativePrompt, seed, textPrompt: textPromptContent });
+                        break;
+                    case 'FIREWORKS_SDXL_TURBO':
+                        // Check if Fireworks is enabled
+                        if (!fireworksEnabled) {
+                            throw new Error('Fireworks AI is not enabled by administrator');
+                        }
+                        try {
+                            const turboResults = await _generateImageWithFireworks({
+                                model: 'sdxl-turbo',
+                                textPrompt: textPromptContent,
+                                exampleImage: exampleImage,
+                                aspectRatio: aspectRatio,
+                                numberOfImages: 1, // Handle individually in loop
+                                negativePrompt: negativePrompt,
+                                seed: seed,
+                                fireworksControlNet: fireworksControlNet,
+                                fireworksImg2ImgStrength: fireworksImg2ImgStrength,
+                                fireworksGuidanceScale: fireworksGuidanceScale || 1.0, // SDXL Turbo uses lower guidance
+                                fireworksScheduler: fireworksScheduler,
+                                fireworksNumInferenceSteps: fireworksNumInferenceSteps || 4 // SDXL Turbo is fast
+                            });
+                            resultValue = turboResults.images[0]; // Get first result from batch
+                            actualModelUsed = turboResults.actualModelUsed; // Track the actual model used
+                        } catch (fireworksError: any) {
+                            console.warn(`[Fallback] SDXL Turbo failed: ${fireworksError.message}. Falling back to Gemini.`);
+                            actualProviderUsed = 'GEMINI'; // Update the actual provider used
+                            actualModelUsed = 'Gemini (fallback from SDXL Turbo)'; // Track fallback
+                            const modelForGemini = exampleImage ? imageGenerationModel : textToImageModel;
+                            const finalPromptPartsForGemini: ({text: string} | {media: {url: string}})[] = [];
+                            if (exampleImage) {
+                                const decodedExampleImageUrl = decodeHtmlEntitiesInUrl(exampleImage);
+                                finalPromptPartsForGemini.push({ media: { url: decodedExampleImageUrl } });
+                            }
+                            finalPromptPartsForGemini.push({ text: textPromptContent });
+                            resultValue = await _generateImageWithGemini({
+                                aiInstance: ai,
+                                promptParts: finalPromptPartsForGemini,
+                                model: modelForGemini,
+                                aspectRatio: aspectRatio,
+                            });
+                        }
+                        break;
+                    case 'FIREWORKS_SDXL_3':
+                        // Check if Fireworks is enabled
+                        if (!fireworksEnabled) {
+                            throw new Error('Fireworks AI is not enabled by administrator');
+                        }
+                        try {
+                            const sdxl3Results = await _generateImageWithFireworks({
+                                model: 'sdxl-3',
+                                textPrompt: textPromptContent,
+                                exampleImage: exampleImage,
+                                aspectRatio: aspectRatio,
+                                numberOfImages: 1, // Handle individually in loop
+                                negativePrompt: negativePrompt,
+                                seed: seed,
+                                fireworksControlNet: fireworksControlNet,
+                                fireworksImg2ImgStrength: fireworksImg2ImgStrength,
+                                fireworksGuidanceScale: fireworksGuidanceScale || 7.5, // SDXL 3 uses higher guidance
+                                fireworksScheduler: fireworksScheduler,
+                                fireworksNumInferenceSteps: fireworksNumInferenceSteps || 20 // SDXL 3 uses more steps
+                            });
+                            resultValue = sdxl3Results.images[0]; // Get first result from batch
+                            actualModelUsed = sdxl3Results.actualModelUsed; // Track the actual model used
+                        } catch (fireworksError: any) {
+                            console.warn(`[Fallback] SDXL 3 failed: ${fireworksError.message}. Falling back to Gemini.`);
+                            actualProviderUsed = 'GEMINI'; // Update the actual provider used
+                            actualModelUsed = 'Gemini (fallback from SDXL 3)'; // Track fallback
+                            const modelForGemini = exampleImage ? imageGenerationModel : textToImageModel;
+                            const finalPromptPartsForGemini: ({text: string} | {media: {url: string}})[] = [];
+                            if (exampleImage) {
+                                const decodedExampleImageUrl = decodeHtmlEntitiesInUrl(exampleImage);
+                                finalPromptPartsForGemini.push({ media: { url: decodedExampleImageUrl } });
+                            }
+                            finalPromptPartsForGemini.push({ text: textPromptContent });
+                            resultValue = await _generateImageWithGemini({
+                                aiInstance: ai,
+                                promptParts: finalPromptPartsForGemini,
+                                model: modelForGemini,
+                                aspectRatio: aspectRatio,
+                            });
+                        }
+                        break;
+                    default:
+                        throw new Error(`Unsupported image generation provider in loop: ${chosenProvider}`);
+                }
+                
+                // Only push result if we have one (Imagen batch generation handles this differently)
+                if (resultValue) {
+                    generatedImageResults.push(resultValue);
+                    
+                    // 🔥 RAG ENHANCEMENT: Store successful generation for future RAG
+                    if (userId && i === 0) { // Store only first image to avoid duplicates
+                        try {
+                            const contentId = `generated_${Date.now()}_${i}`;
+                            await storeContentForRAG(
+                                userId,
+                                'image',
+                                contentId,
+                                {
+                                    prompt: textPromptContent,
+                                    style: imageStyle,
+                                    metadata: {
+                                        provider: chosenProvider,
+                                        qualityMode,
+                                        industry,
+                                        aspectRatio,
+                                        wasRAGEnhanced: wasRAGEnhanced || false,
+                                        ragInsights: ragInsights && ragInsights.length > 0 ? ragInsights : undefined
+                                    }
+                                }
+                            );
+                            console.log(`[RAG] Stored generated image for future context`);
+                        } catch (error) {
+                            console.log(`[RAG] Failed to store content for RAG:`, error);
+                        }
+                    }
+                }
+            } catch (error: any) {
+                 console.error(`Error during generation of image ${i+1}/${numberOfImages} with provider ${chosenProvider}. Full error:`, JSON.stringify(error, Object.getOwnPropertyNames(error)));
+                 generatedImageResults.push(`error:Failed to process image ${i+1}. ${error.message || 'Unknown error'}`);
+            }
+        } 
+    } 
 
     const finalGeneratedImages = generatedImageResults.filter(res => !res.startsWith('error:'));
     const errorsEncountered = generatedImageResults.filter(res => res.startsWith('error:')).map(err => err.substring(6));
@@ -1516,17 +1517,17 @@ Your mission is to create a compelling, brand-aligned visual asset that:
     if (errorsEncountered.length > 0) {
       console.warn(`Some images/tasks in the batch failed: ${errorsEncountered.join('; ')}`);
     }
-
+    
     if (chosenProvider.toUpperCase() === 'FREEPIK' && !actualPromptUsedForFirstImage && finalizedTextPrompt) {
-      actualPromptUsedForFirstImage = finalizedTextPrompt;
+        actualPromptUsedForFirstImage = finalizedTextPrompt; 
     } else if (chosenProvider.toUpperCase() === 'FREEPIK' && !actualPromptUsedForFirstImage) {
-      // Fallback if something went wrong before full prompt capture
-      actualPromptUsedForFirstImage = `Concept: "${brandDescription}". Add stylistic details: "${imageStyle}". (Error occurred before full prompt capture for batch)`;
+        // Fallback if something went wrong before full prompt capture
+        actualPromptUsedForFirstImage = `Concept: "${brandDescription}". Add stylistic details: "${imageStyle}". (Error occurred before full prompt capture for batch)`;
     }
 
     // Use helper function to get user-friendly display name
     const displayProviderName = getProviderDisplayName(actualProviderUsed, actualModelUsed);
-
+    
     // Add RAG metadata to output for UI components
     const result = {
       generatedImages: finalGeneratedImages,
@@ -1539,7 +1540,7 @@ Your mission is to create a compelling, brand-aligned visual asset that:
         userId
       } : undefined
     };
-
+    
     return result;
   }
 );
