@@ -231,11 +231,16 @@ Visual Identity: ${userBrandData.imageStyleNotes || 'Professional, high-quality 
 
 **TEXT OVERLAY REQUIREMENTS:**
 Headline Text: "${userInput.keyMessage || 'Professional brand presence'}"
-Typography: Modern, bold, highly readable sans-serif font
-Text Placement: Positioned in area with good contrast, readable against background
-Text Color: High contrast with background (white on dark areas, dark on light areas)
-Text Style: Professional, clean, brand-appropriate styling
-Legibility: Text must be clearly readable at all sizes
+Typography: Sophisticated, contemporary sans-serif with elegant proportions (Inter Display/SF Pro Display/Cabinet Grotesk style)
+- Font Weight: Medium to Semibold (500-600), creating refined presence without excessive heaviness
+- Font Style: Clean geometric or humanist sans-serif with premium letterforms and generous character spacing
+- Visual Character: Large, elegant headlines with excellent readability and contemporary design aesthetic
+- Design Quality: Premium typography matching high-end editorial and luxury brand standards (think Apple, Vogue, or premium automotive campaigns)
+Text Placement: Positioned in area with good contrast, elegantly integrated into composition with ample breathing room
+Text Color: High contrast with background (white on dark areas, dark on light areas) with subtle refinement
+Text Characteristics: Generous letter-spacing (tracking), balanced kerning, sophisticated proportions
+Legibility: Crystal clear at all sizes with elegant, refined presentation
+Design Aesthetic: Contemporary, visually striking typography that elevates brand perception
 
 **VISUAL EXECUTION:**
 Color Palette: Aligned with brand aesthetic, colors that support ${mood} mood with excellent text contrast
@@ -312,12 +317,14 @@ Visual Identity: ${userBrandData.imageStyleNotes || 'Professional, high-quality 
 
 **TEXT OVERLAY REQUIREMENTS:**
 Quote Text: "${userInput.quote || 'Your inspiring quote here'}"
-Typography: Professional, readable typeface matching ${visualStyle} aesthetic
-Text Placement: Strategically positioned for maximum impact and readability
-Text Color: High contrast with background ensuring perfect legibility
-Text Size: Large enough to be easily read on mobile devices
-Text Rendering: Crystal clear, sharp text with professional quality
-Emphasis: Key words or phrases visually emphasized through size, weight, or color
+Typography: ${visualStyle === 'Bold Typography' ? 'Strong, contemporary display font (Bebas Neue/Oswald/League Spartan style) with 700 weight - impactful but refined, not overly thick' : visualStyle === 'Elegant' ? 'Sophisticated serif or refined sans-serif (Playfair Display/Cormorant Garamond/Libre Baskerville style) with 400-500 weight - graceful, timeless elegance' : visualStyle === 'Modern Gradient' ? 'Clean, contemporary sans-serif (Inter/Poppins/DM Sans style) with 500-600 weight - modern, sleek, visually balanced' : visualStyle === 'Natural/Organic' ? 'Warm, friendly sans-serif or casual serif (Lora/Montserrat/Nunito style) with 400-500 weight - approachable, organic feel' : 'Minimalist, refined sans-serif (Inter/Helvetica Now/GT America style) with 400 weight - clean, spacious, effortlessly elegant'}
+- Visual Character: Beautiful, readable typography with excellent proportions and generous spacing
+- Letter-spacing: Generous tracking creating sophisticated, airy presentation (2-4% for minimalist, tighter for bold)
+- Design Quality: Premium typography matching contemporary design trends and social media aesthetics
+Text Placement: Strategically centered or offset with ample negative space and visual breathing room
+Text Color: High contrast with background (sophisticated color choices, not just black/white)
+Text Rendering: Crystal clear, sharp text with elegant rendering and anti-aliasing
+Visual Hierarchy: Thoughtful emphasis on key words through subtle size variation or refined color accents (not excessive bolding)
 
 **VISUAL EXECUTION:**
 Color Palette: Brand-aligned colors supporting ${visualStyle} aesthetic and ensuring excellent text contrast
@@ -755,11 +762,15 @@ Visual Identity: ${userBrandData.imageStyleNotes || 'Professional, engaging aest
 **TEXT OVERLAY REQUIREMENTS:**
 Announcement Text: "${userInput.announcementType || 'important update'}"
 Urgency Label: "${urgency}" (displayed as secondary text element)
-Typography: Bold, modern sans-serif font appropriate for ${urgency} level
-Text Placement: Centrally positioned or strategically placed for maximum impact
-Text Color: High contrast ensuring excellent readability (typically white on dark, dark on light)
-Text Hierarchy: Main announcement as primary text, urgency level as supporting text
-Legibility: Crystal clear text rendering at all sizes
+Typography: ${urgency === 'Urgent Alert' ? 'Strong but sophisticated sans-serif (Inter Bold/Roboto Bold style) with 700 weight - commanding attention without appearing garish' : urgency === 'Important Update' ? 'Professional, clear sans-serif (Inter Semibold/SF Pro Semibold style) with 600 weight - authoritative yet approachable' : urgency === 'Coming Soon' ? 'Contemporary, elegant sans-serif (Poppins Medium/DM Sans Medium style) with 500-600 weight - intriguing and modern' : 'Friendly, contemporary sans-serif (Inter Medium/Montserrat Medium style) with 500 weight - positive and engaging'}
+- Visual Character: Clear, readable typography with contemporary appeal and appropriate urgency level
+- Font Style: Clean geometric sans-serif with balanced proportions, not overly condensed or heavy
+- Letter-spacing: Moderate tracking creating clarity and visual appeal
+- Design Quality: Professional announcement typography matching modern social media standards
+Text Placement: Centered or strategically placed with ample spacing and visual impact
+Text Color: High contrast with sophisticated color choices (refined darks/lights, not harsh black/white)
+Text Hierarchy: Main announcement prominent (larger size, appropriate weight), urgency label supportive (smaller, lighter weight)
+Legibility: Crystal clear text rendering with elegant presentation at all sizes
 
 **VISUAL EXECUTION:**
 Color Palette: High contrast, attention-grabbing colors aligned with brand aesthetic and ${urgency} tone
@@ -824,12 +835,17 @@ Visual Identity: ${userBrandData.imageStyleNotes || 'Clean, trustworthy, minimal
 **TEXT OVERLAY REQUIREMENTS:**
 Testimonial Quote: "${userInput.testimonialText || 'customer testimonial'}"
 Attribution: ${userInput.clientName ? `"${userInput.clientName}" (displayed as secondary attribution element)` : 'Anonymous testimonial (no attribution displayed)'}
-Typography: Professional, readable font conveying trust and authenticity
-Text Placement: Centrally positioned or strategically placed for maximum readability
-Text Color: High contrast ensuring excellent legibility (clean, professional color scheme)
-Text Hierarchy: Testimonial quote as primary text, client name as supporting attribution
-Legibility: Crystal clear text rendering at all sizes
-Quote Marks: Subtle visual quote marks or formatting indicating testimonial nature
+Typography: Clean, trustworthy sans-serif (Inter/Source Sans Pro/Open Sans style) creating honest, approachable feel
+- Quote Text: Regular to Medium weight (400-500) - comfortable reading weight that feels genuine and unpretentious
+- Attribution Text: Medium to Semibold weight (500-600) - slightly emphasized for credibility without heaviness
+- Font Style: Neutral, highly readable humanist sans-serif with warm, friendly character
+- Visual Character: Approachable, honest typography that builds trust through clarity and refinement
+- Design Quality: Professional testimonial typography avoiding overly decorative or sales-focused appearance
+Text Placement: Centered with generous margins and comfortable line-spacing for easy reading
+Text Color: Sophisticated neutrals (refined grays, soft blacks) creating calm, trustworthy atmosphere
+Text Hierarchy: Quote larger and lighter weight, attribution smaller and slightly bolder for subtle emphasis
+Legibility: Excellent readability with comfortable font size and line-height
+Quote Marks: Elegant, subtle quotation marks integrated tastefully (not oversized or decorative)
 
 **VISUAL EXECUTION:**
 Color Palette: Clean, minimal colors aligned with brand aesthetic conveying trust and professionalism
@@ -909,12 +925,17 @@ Visual Identity: ${userBrandData.imageStyleNotes || 'Vibrant, energetic, convers
 **TEXT OVERLAY REQUIREMENTS:**
 Main Offer Text: "${userInput.offer || 'Special Offer'}" (displayed as large, dominant text element)
 ${userInput.offerDetails ? `Offer Details: "${userInput.offerDetails}" (displayed as secondary text providing context and urgency)` : 'Offer Details: No additional details (focus entirely on main offer)'}
-Typography: Extra bold, attention-grabbing font that screams value and urgency
-Text Placement: Centrally positioned or strategically placed as focal point for scroll-stopping impact
-Text Color: Maximum contrast ensuring instant readability (often white on bold colors, or bold text on vibrant backgrounds)
-Text Hierarchy: Offer as primary hero text (largest), details as supporting secondary text
-Legibility: Ultra-clear text rendering visible at thumbnail sizes
-Sale Indicators: Badge, label, or starburst elements emphasizing promotional nature
+Typography: Bold, energetic display font (Oswald/League Gothic/Bebas Neue style) with 700 weight - high energy but tasteful
+- Main Offer: Strong, confident typography creating excitement without appearing cheap or garish
+- Font Style: Contemporary display or condensed sans-serif with character and impact
+- Visual Character: Eye-catching typography that conveys value through design quality, not just weight
+- Design Quality: Modern promotional typography matching contemporary e-commerce and retail standards (think premium flash sales, not discount bin)
+- Refinement: Bold presence balanced with sophistication - energetic but not desperate
+Text Placement: Strategic positioning creating focal point with dynamic, engaging layout
+Text Color: High-contrast vibrant colors that pop without being harsh (refined bright tones, not crude neons)
+Text Hierarchy: Offer prominently sized (bold weight), details supportive (medium weight, smaller size)
+Legibility: Crystal clear at all sizes with excellent rendering
+Promotional Elements: Tasteful badges or accents enhancing value perception without cluttering design
 
 **VISUAL EXECUTION:**
 Color Palette: High-energy, attention-grabbing colors creating urgency (reds, oranges, yellows, or brand colors amplified). High saturation and contrast
@@ -997,12 +1018,17 @@ Visual Identity: ${userBrandData.imageStyleNotes || 'Vibrant, engaging, professi
 **TEXT OVERLAY REQUIREMENTS:**
 Event Name: "${userInput.eventName || 'Upcoming Event'}" (displayed as large, primary text element)
 ${userInput.eventDetails ? `Event Details: "${userInput.eventDetails}" (displayed as secondary text with date/time/location information)` : 'Event Details: No additional details provided (focus on event name and atmosphere)'}
-Typography: Bold, modern font creating excitement and readability
-Text Placement: Strategic positioning creating clear information hierarchy (event name → details → brand)
-Text Color: High contrast ensuring excellent readability across platforms
-Text Hierarchy: Event name as primary hero text, details as supporting secondary information
-Legibility: Crystal clear text rendering ensuring all event information is instantly readable
-Calendar Appeal: Design elements making viewers want to save the date
+Typography: Friendly, contemporary sans-serif (Poppins/Montserrat/Quicksand style) creating inviting, approachable feel
+- Event Name: Semibold to Bold weight (600-700) - confident and exciting without being heavy or intimidating
+- Event Details: Regular to Medium weight (400-500) - clear, readable information text
+- Font Style: Rounded or geometric sans-serif with warm, friendly character and modern appeal
+- Visual Character: Vibrant, inviting typography that builds anticipation and encourages attendance
+- Design Quality: Contemporary event typography matching modern design trends (think Eventbrite, Meetup, or premium event marketing)
+Text Placement: Clear hierarchical layout with event name prominent and details organized below
+Text Color: Vibrant, engaging colors that pop while maintaining readability (colorful but sophisticated)
+Text Hierarchy: Event name large and bold, details smaller and lighter for comfortable information scanning
+Legibility: Excellent readability optimized for quick scanning and social sharing
+Visual Energy: Dynamic, exciting typography creating desire to attend and participate
 
 **VISUAL EXECUTION:**
 Color Palette: Vibrant, attention-grabbing colors aligned with brand and event type creating appropriate mood
@@ -1036,6 +1062,315 @@ The final image must be a compelling event announcement featuring "${userInput.e
           aspectRatio: template.presets.aspectRatio,
           customStyleNotes,
           negativePrompt: 'cluttered, confusing, hard to read, dull, boring, unprofessional, unclear information, poor hierarchy, messy layout, competing elements, missing information'
+        }
+      };
+
+    case 'product_carousel':
+      // Determine carousel theme-specific visual approach
+      let carouselVisuals = '';
+      let carouselComposition = '';
+      const carouselTheme = userInput.carouselTheme || 'Product Variations';
+
+      if (carouselTheme === 'Features Breakdown') {
+        carouselVisuals = 'Clear feature-focused presentation with clean visual hierarchy highlighting key product benefits and specifications';
+        carouselComposition = 'Organized layout with feature as hero element, supported by visual demonstration and clear benefit communication';
+      } else if (carouselTheme === 'Before/After/Result') {
+        carouselVisuals = 'Transformation-focused aesthetic showing clear progression and results with compelling visual storytelling';
+        carouselComposition = 'Sequential visual narrative with clear before/after/result progression creating anticipation and proof';
+      } else if (carouselTheme === 'Lifestyle Collection') {
+        carouselVisuals = 'Lifestyle-driven aesthetic showing products in authentic, aspirational contexts building emotional connection';
+        carouselComposition = 'Natural lifestyle scenes with product integration feeling organic and desirable within real-world scenarios';
+      } else {
+        carouselVisuals = 'Product variation showcase with consistent styling highlighting differences while maintaining cohesive visual identity';
+        carouselComposition = 'Uniform product presentation with variations clearly displayed, creating swipeable series with strong visual continuity';
+      }
+
+      customStyleNotes = `Instagram carousel ${carouselTheme} format, swipeable series, consistent visual identity`;
+
+      return {
+        finalPrompt: `
+A photorealistic carousel-optimized product image featuring: ${userInput.productSeries || 'product series'}
+
+**SCENE DESCRIPTION:**
+Subject: ${userInput.productSeries || 'product series'} presented as part of Instagram carousel series
+Setting: Square format (1:1) optimized for carousel swiping with consistent visual framework across series
+Composition: ${carouselComposition}
+Carousel Strategy: ${carouselTheme} approach creating compelling swipeable content that drives engagement and reach
+Visual Continuity: Strong visual identity allowing seamless carousel flow while each image stands alone effectively
+
+**PHOTOGRAPHY SPECIFICATIONS:**
+Camera Angle: Consistent perspective across carousel maintaining visual unity and professional presentation
+Lens: Standard to slight telephoto (50-85mm equivalent) ensuring natural product proportions and viewer comfort
+Lighting: ${carouselTheme === 'Lifestyle Collection' ? 'Natural, lifestyle-appropriate lighting creating authentic atmosphere' : 'Professional, consistent lighting across series maintaining uniform quality and visual cohesion'}
+Depth of Field: Appropriate depth creating visual interest while maintaining clarity on key elements (f/4-f/8 equivalent)
+
+**BRAND AUTHENTICITY (CRITICAL):**
+Brand: ${userBrandData.brandName || 'Your brand'}
+Brand Story: ${userBrandData.brandDescription || 'Professional brand presence'}
+Industry Context: ${userBrandData.industry || 'E-commerce'}
+Visual Identity: ${userBrandData.imageStyleNotes || 'Professional, carousel-optimized aesthetic'}
+
+**VISUAL EXECUTION:**
+Color Palette: Consistent color story across carousel aligned with brand identity, creating cohesive swipeable experience
+${carouselVisuals}
+Engagement Driver: Visual hooks encouraging swipes and carousel interaction (1.4x more reach than single images)
+Series Consistency: Uniform styling, lighting, and composition creating professional carousel that flows seamlessly
+Individual Strength: Each image compelling on its own while contributing to larger carousel narrative
+
+**COMPOSITION GUIDELINES:**
+${compositionGuide}
+Format: Square (1:1), Instagram carousel standard
+Carousel Flow: Designed for left-to-right swiping with visual continuity between images
+Layout: ${carouselTheme}-optimized composition balancing consistency with variety
+Visual Identity: Strong brand presence and styling consistency across entire carousel series
+
+**TECHNICAL REQUIREMENTS:**
+${technicalNotes}
+Quality: Professional product photography-grade, carousel-optimized for maximum engagement
+Swipeability: Visual design encouraging carousel interaction and complete series viewing
+Consistency: Uniform quality and styling across all carousel images
+Mood: ${carouselTheme} tone throughout creating appropriate atmosphere
+Cultural Sensitivity: Inclusive and appropriate visual communication
+
+**OUTPUT REQUIREMENTS:**
+The final image must be carousel-optimized presenting "${userInput.productSeries || 'product series'}" using ${carouselTheme} approach. Must maintain strong visual consistency for carousel coherence while standing alone effectively. Design should drive swipes and maximize Instagram carousel engagement (1.4x more reach). Ready for Instagram carousel publishing with professional quality.
+        `.trim(),
+        autoFilledFields: {
+          imageStyle: template.presets.imageStyle,
+          aspectRatio: template.presets.aspectRatio,
+          customStyleNotes,
+          negativePrompt: 'inconsistent, messy, cluttered, poor flow, disconnected, low quality, amateur, conflicting styles, carousel-unfriendly'
+        }
+      };
+
+    case 'ugc_authentic':
+      // Determine UGC style-specific visual approach
+      let ugcVisuals = '';
+      let ugcAuthenticity = '';
+      const ugcStyle = userInput.ugcStyle || 'Unfiltered Selfie';
+
+      if (ugcStyle === 'Customer Review') {
+        ugcVisuals = 'Customer testimonial aesthetic showing genuine product experience with authentic, unpolished presentation';
+        ugcAuthenticity = 'Real customer perspective with visible authenticity markers - natural lighting, everyday environment, honest product showcase';
+      } else if (ugcStyle === 'Day-in-Life') {
+        ugcVisuals = 'Documentary-style lifestyle content capturing product in authentic daily routine with relatable, genuine moments';
+        ugcAuthenticity = 'Natural integration into real life showing how product fits seamlessly into authentic daily experiences';
+      } else if (ugcStyle === 'Tutorial/Demo') {
+        ugcVisuals = 'User-generated tutorial aesthetic with hands-on demonstration showing real usage and authentic application';
+        ugcAuthenticity = 'DIY tutorial feel with approachable, genuine instruction and realistic demonstration of product benefits';
+      } else {
+        ugcVisuals = 'Unfiltered selfie-style content with raw, authentic personal perspective showing genuine product interaction';
+        ugcAuthenticity = 'First-person authentic moment with visible imperfections, natural expressions, and genuine product experience';
+      }
+
+      customStyleNotes = `UGC-style ${ugcStyle} content, authentic user-generated aesthetic, high engagement`;
+
+      return {
+        finalPrompt: `
+A photorealistic UGC-style photograph capturing: ${userInput.contentScenario || 'authentic product moment'}
+
+**SCENE DESCRIPTION:**
+Subject: ${userInput.contentScenario || 'authentic product moment'} presented with user-generated content aesthetic
+Setting: Vertical format (4:5) with authentic, unpolished environment creating genuine UGC feel
+Composition: ${ugcVisuals}
+UGC Authenticity: ${ugcAuthenticity}
+Engagement Factor: Raw, relatable content driving 5x engagement boost through authentic connection
+
+**PHOTOGRAPHY SPECIFICATIONS:**
+Camera Angle: ${ugcStyle === 'Unfiltered Selfie' ? 'First-person selfie perspective with natural arm-length distance and authentic angle' : 'Natural, handheld perspective with slight imperfections showing genuine user-generated capture'}
+Lens: Smartphone camera equivalent (wide-angle 24-28mm) with natural mobile photography characteristics
+Lighting: Natural, available lighting with authentic imperfections - no studio setup, real-world illumination
+Depth of Field: Mobile camera depth characteristics with natural focus and authentic background rendering
+
+**BRAND AUTHENTICITY (CRITICAL):**
+Brand: ${userBrandData.brandName || 'Your brand'}
+Brand Story: ${userBrandData.brandDescription || 'Professional brand presence'}
+Industry Context: ${userBrandData.industry || 'Consumer products'}
+Visual Identity: ${userBrandData.imageStyleNotes || 'Authentic, user-generated aesthetic'}
+
+**VISUAL EXECUTION:**
+Color Palette: Natural, unfiltered colors with authentic mobile photography characteristics
+UGC Markers: Visible authenticity indicators - natural lighting variations, everyday environment, genuine expressions
+Relatability: Content feels like real person sharing genuine experience, not branded content
+Authenticity: Intentional imperfections creating trust and genuine feel (5x engagement boost)
+Connection: Peer-to-peer communication style building authentic brand-customer relationship
+
+**COMPOSITION GUIDELINES:**
+${compositionGuide}
+Format: Vertical (4:5), mobile-native UGC standard
+Framing: Natural, handheld framing with authentic mobile photography feel
+UGC Style: ${ugcStyle} aesthetic with appropriate authenticity markers
+Spontaneity: Captures feeling of genuine, spontaneous content sharing
+
+**TECHNICAL REQUIREMENTS:**
+${technicalNotes}
+Quality: High-quality UGC aesthetic - professional enough to be usable, authentic enough to be believable
+Authenticity Balance: Polished enough for brand use, raw enough to feel genuine
+UGC Indicators: Visible markers of user-generated content (natural lighting, everyday setting, authentic moments)
+Mood: Genuine, relatable, trustworthy, peer-to-peer
+Cultural Sensitivity: Inclusive and authentic representation
+
+**OUTPUT REQUIREMENTS:**
+The final image must capture "${userInput.contentScenario || 'authentic product moment'}" with convincing UGC aesthetic using ${ugcStyle} approach. Must balance professional quality with authentic, user-generated feel that drives 5x engagement. Should feel like genuine customer content, not branded marketing. Ready for social media with high authenticity and relatability.
+        `.trim(),
+        autoFilledFields: {
+          imageStyle: template.presets.imageStyle,
+          aspectRatio: template.presets.aspectRatio,
+          customStyleNotes,
+          negativePrompt: 'overly polished, studio quality, professional lighting, staged, fake, artificial, branded feel, marketing-heavy, perfect, unrealistic, disconnected'
+        }
+      };
+
+    case 'unboxing_moment':
+      // Determine unboxing mood-specific visual approach
+      let unboxingVisuals = '';
+      let unboxingAtmosphere = '';
+      const unboxingMood = userInput.unboxingMood || 'Excited Discovery';
+
+      if (unboxingMood === 'Luxury Reveal') {
+        unboxingVisuals = 'Premium unboxing experience with sophisticated presentation emphasizing luxury, quality, and exclusive nature of reveal';
+        unboxingAtmosphere = 'Elegant, refined atmosphere with soft lighting, premium materials visible, and sense of luxury and special occasion';
+      } else if (unboxingMood === 'Casual Everyday') {
+        unboxingVisuals = 'Relaxed, everyday unboxing with natural, comfortable presentation showing accessible, approachable product experience';
+        unboxingAtmosphere = 'Casual, comfortable environment with natural lighting and everyday setting creating relatable, friendly unboxing moment';
+      } else if (unboxingMood === 'Gift Unwrapping') {
+        unboxingVisuals = 'Gift-giving excitement with anticipatory presentation focusing on surprise, delight, and special occasion magic';
+        unboxingAtmosphere = 'Warm, celebratory atmosphere with gift-giving excitement, anticipation building, and joyful discovery moment';
+      } else {
+        unboxingVisuals = 'Exciting discovery moment with energetic presentation capturing initial product reveal and genuine enthusiasm';
+        unboxingAtmosphere = 'High energy, exciting atmosphere with bright lighting and dynamic composition creating anticipation and delight';
+      }
+
+      customStyleNotes = `Unboxing experience, ${unboxingMood} mood, first-person POV, e-commerce engagement`;
+
+      return {
+        finalPrompt: `
+A photorealistic first-person unboxing photograph featuring: ${userInput.productUnboxing || 'product'}
+
+**SCENE DESCRIPTION:**
+Subject: ${userInput.productUnboxing || 'product'} being unboxed in first-person perspective
+Setting: Vertical format (4:5) with ${unboxingMood} presentation creating immersive unboxing experience
+Composition: ${unboxingVisuals}
+POV Perspective: First-person hands visible in frame creating viewer immersion and tactile connection
+Unboxing Atmosphere: ${unboxingAtmosphere}
+
+**PHOTOGRAPHY SPECIFICATIONS:**
+Camera Angle: First-person overhead or slightly angled perspective showing hands opening package and revealing product
+Lens: Standard mobile or camera lens (35-50mm equivalent) creating natural, relatable viewing distance
+Lighting: ${unboxingMood === 'Luxury Reveal' ? 'Soft, sophisticated lighting with premium quality illumination' : 'Bright, natural lighting showcasing packaging and product details clearly'}
+Depth of Field: Moderate depth (f/4-f/5.6 equivalent) with hands and product sharp, background softly rendered creating focus on reveal
+
+**BRAND AUTHENTICITY (CRITICAL):**
+Brand: ${userBrandData.brandName || 'Your brand'}
+Brand Story: ${userBrandData.brandDescription || 'Professional brand presence'}
+Industry Context: ${userBrandData.industry || 'E-commerce'}
+Visual Identity: ${userBrandData.imageStyleNotes || 'Professional, engaging unboxing aesthetic'}
+
+**VISUAL EXECUTION:**
+Color Palette: ${unboxingMood}-appropriate colors aligned with brand and product premium level
+Tactile Elements: Visible textures of packaging, product materials, and unboxing components creating sensory appeal
+Hands Presence: Natural, relatable hands in frame creating first-person immersion and human connection
+Packaging Details: Brand packaging, tissue paper, protective elements visible creating complete unboxing narrative
+Discovery Moment: Capture anticipation and reveal creating 2x engagement boost through unboxing psychology
+
+**COMPOSITION GUIDELINES:**
+${compositionGuide}
+Format: Vertical (4:5), mobile-optimized for social media
+POV Style: First-person perspective with hands prominently featured
+Moment Capture: Peak unboxing moment - product partially revealed creating maximum anticipation
+Engagement Driver: Unboxing psychology leveraging curiosity and discovery (2x engagement for e-commerce)
+
+**TECHNICAL REQUIREMENTS:**
+${technicalNotes}
+Quality: Professional unboxing photography creating premium first impression
+Immersion: Strong POV perspective making viewer feel part of experience
+Packaging Showcase: Brand packaging and unboxing experience clearly visible
+Mood: ${unboxingMood} tone throughout creating appropriate emotional response
+Cultural Sensitivity: Inclusive hand representation and appropriate presentation
+
+**OUTPUT REQUIREMENTS:**
+The final image must capture compelling first-person unboxing moment of "${userInput.productUnboxing || 'product'}" with ${unboxingMood} atmosphere. Must create immersive POV experience showing hands, packaging, and reveal moment driving e-commerce engagement (2x boost). Balance professional quality with authentic unboxing excitement. Ready for social media and product marketing.
+        `.trim(),
+        autoFilledFields: {
+          imageStyle: template.presets.imageStyle,
+          aspectRatio: template.presets.aspectRatio,
+          customStyleNotes,
+          negativePrompt: 'third-person view, no hands visible, staged, fake, poor packaging, damaged, messy, unprofessional, disconnected, stock photo feel'
+        }
+      };
+
+    case 'product_in_action':
+      // Determine hand presence-specific visual approach
+      let actionVisuals = '';
+      let demonstrationStyle = '';
+      const handPresence = userInput.handPresence || 'Hands Visible';
+
+      if (handPresence === 'Hands-Free Usage') {
+        actionVisuals = 'Product functioning independently with clear demonstration of autonomous features and benefits without manual interaction';
+        demonstrationStyle = 'Showcase product in use without hand interaction, emphasizing ease of use and automatic functionality';
+      } else if (handPresence === 'Close-Up Interaction') {
+        actionVisuals = 'Intimate close-up showing detailed hand-product interaction with focus on tactile experience and precise usage demonstration';
+        demonstrationStyle = 'Macro perspective capturing detailed interaction, texture, application method, and intimate product experience';
+      } else {
+        actionVisuals = 'Natural hand-product interaction showing real-world usage with clear demonstration of application and benefits';
+        demonstrationStyle = 'Hands prominently featured demonstrating product use, creating relatable tutorial-style presentation';
+      }
+
+      customStyleNotes = `Product in action, ${handPresence} demonstration, functional showcase, conversion-focused`;
+
+      return {
+        finalPrompt: `
+A photorealistic product demonstration photograph showing: ${userInput.usageScenario || 'product being used'}
+
+**SCENE DESCRIPTION:**
+Subject: ${userInput.usageScenario || 'product being used'} in real-world functional demonstration
+Setting: Vertical format (4:5) with authentic usage context creating practical, relatable presentation
+Composition: ${actionVisuals}
+Demonstration Focus: ${demonstrationStyle}
+Real-World Context: Product shown in actual use case scenario demonstrating clear benefits and functionality
+
+**PHOTOGRAPHY SPECIFICATIONS:**
+Camera Angle: ${handPresence === 'Close-Up Interaction' ? 'Macro or close-up perspective showing detailed interaction and tactile experience' : 'Natural viewing angle showing clear product usage and demonstration'}
+Lens: ${handPresence === 'Close-Up Interaction' ? 'Macro lens (85-100mm equivalent) capturing intimate detail and texture' : 'Standard lens (50-85mm equivalent) creating natural, comfortable viewing perspective'}
+Lighting: Natural, functional lighting showcasing product usage clearly without harsh shadows or distractions
+Depth of Field: ${handPresence === 'Close-Up Interaction' ? 'Shallow depth (f/2.8-f/4 equivalent) isolating interaction with artistic bokeh' : 'Moderate depth (f/4-f/5.6 equivalent) balancing product focus with context visibility'}
+
+**BRAND AUTHENTICITY (CRITICAL):**
+Brand: ${userBrandData.brandName || 'Your brand'}
+Brand Story: ${userBrandData.brandDescription || 'Professional brand presence'}
+Industry Context: ${userBrandData.industry || 'Consumer products'}
+Visual Identity: ${userBrandData.imageStyleNotes || 'Professional, demonstrative aesthetic'}
+
+**VISUAL EXECUTION:**
+Color Palette: Natural, true-to-life colors showing product accurately in real usage context
+${handPresence === 'Hands Visible' || handPresence === 'Close-Up Interaction' ? 'Hands Presence: Natural, relatable hands demonstrating usage creating human connection and tutorial value' : 'Hands-Free Presentation: Product functionality clearly visible without manual interaction'}
+Functionality Focus: Clear demonstration of how product works and benefits delivered
+Real-World Application: Authentic usage scenario showing practical benefits (2.3x conversion boost)
+Tutorial Value: Educational demonstration helping viewers understand product usage and advantages
+
+**COMPOSITION GUIDELINES:**
+${compositionGuide}
+Format: Vertical (4:5), mobile-optimized for social media
+Action Capture: Product actively being used showing clear functionality and benefits
+Context: Real-world environment appropriate for usage scenario
+Demonstration Clarity: Usage method and benefits clearly visible and understandable
+
+**TECHNICAL REQUIREMENTS:**
+${technicalNotes}
+Quality: Professional product demonstration photography showing clear usage
+Functionality Showcase: Product features and benefits clearly demonstrated
+Conversion Focus: Demonstrates value proposition driving 2.3x conversion improvement
+Mood: Functional, practical, demonstrative, trust-building
+Cultural Sensitivity: Inclusive representation and appropriate usage context
+
+**OUTPUT REQUIREMENTS:**
+The final image must demonstrate "${userInput.usageScenario || 'product being used'}" with ${handPresence} presentation showing clear functionality and real-world benefits. Must create practical, conversion-focused demonstration driving 2.3x conversion boost through clear value communication. Balance professional quality with authentic, relatable usage context. Ready for product marketing and social commerce.
+        `.trim(),
+        autoFilledFields: {
+          imageStyle: template.presets.imageStyle,
+          aspectRatio: template.presets.aspectRatio,
+          customStyleNotes,
+          negativePrompt: 'unclear usage, confusing, staged, fake, disconnected, poor demonstration, hidden product, no context, artificial, stock photo, unhelpful'
         }
       };
 
@@ -2172,11 +2507,11 @@ Make the transformation vivid and tangible with specific details.
 }
 
 // ============================================
-// UNIVERSAL TEMPLATES (26 total - optimized for quality AI output)
+// UNIVERSAL TEMPLATES (27 total - optimized for quality AI output)
 // ============================================
 
 export const contentTemplates: ContentTemplate[] = [
-  // IMAGE GENERATION TEMPLATES (14)
+  // IMAGE GENERATION TEMPLATES (18)
   {
     id: 'product_photo',
     name: 'Product Photo',
@@ -2532,6 +2867,141 @@ export const contentTemplates: ContentTemplate[] = [
     estimatedTime: '35 seconds',
     premium: false,
     tags: ['event', 'announcement', 'webinar', 'launch']
+  },
+  {
+    id: 'product_carousel',
+    name: 'Product Carousel Showcase',
+    icon: '🎠',
+    description: 'Instagram carousel-optimized product showcase for maximum reach',
+    category: 'image',
+    industries: null,
+    presets: {
+      imageStyle: 'photorealistic',
+      aspectRatio: '1:1',
+      compositionGuide: 'Consistent carousel composition with strong visual identity across series',
+      technicalNotes: 'Clean, cohesive design optimized for Instagram carousel format'
+    },
+    requiredUserInputs: [
+      {
+        key: 'productSeries',
+        label: 'Describe your product series or collection',
+        placeholder: 'e.g., Our three signature face cream variants',
+        type: 'text',
+        maxLength: 200
+      },
+      {
+        key: 'carouselTheme',
+        label: 'Carousel theme',
+        placeholder: 'Select theme',
+        type: 'select',
+        options: ['Product Variations', 'Features Breakdown', 'Before/After/Result', 'Lifestyle Collection']
+      }
+    ],
+    estimatedTime: '35 seconds',
+    premium: false,
+    tags: ['carousel', 'instagram', 'product', 'series', 'engagement']
+  },
+  {
+    id: 'ugc_authentic',
+    name: 'UGC-Style Authentic Content',
+    icon: '📱',
+    description: 'User-generated style content for authentic engagement (upload your photo for best results)',
+    category: 'image',
+    industries: null,
+    suggestedImageMode: 'enhance', // Transform uploaded photos into UGC-style content
+    presets: {
+      imageStyle: 'photorealistic',
+      aspectRatio: '4:5',
+      compositionGuide: 'Raw, authentic UGC aesthetic with unfiltered genuine feel',
+      technicalNotes: 'Natural, user-generated quality with authentic imperfections'
+    },
+    requiredUserInputs: [
+      {
+        key: 'contentScenario',
+        label: 'Describe the authentic moment or scenario',
+        placeholder: 'e.g., Morning coffee with our product on kitchen counter',
+        type: 'text',
+        maxLength: 200
+      },
+      {
+        key: 'ugcStyle',
+        label: 'UGC style preference',
+        placeholder: 'Select style',
+        type: 'select',
+        options: ['Unfiltered Selfie', 'Customer Review', 'Day-in-Life', 'Tutorial/Demo']
+      }
+    ],
+    estimatedTime: '30 seconds',
+    premium: false,
+    tags: ['ugc', 'authentic', 'user-generated', 'engagement', 'testimonial']
+  },
+  {
+    id: 'unboxing_moment',
+    name: 'Unboxing Moment',
+    icon: '📦',
+    description: 'First-person unboxing experience (upload your unboxing photo for transformation)',
+    category: 'image',
+    industries: null,
+    suggestedImageMode: 'enhance', // Transform uploaded unboxing photos
+    presets: {
+      imageStyle: 'photorealistic',
+      aspectRatio: '4:5',
+      compositionGuide: 'First-person POV unboxing with tactile anticipation and discovery',
+      technicalNotes: 'Immersive, engaging unboxing experience with authentic excitement'
+    },
+    requiredUserInputs: [
+      {
+        key: 'productUnboxing',
+        label: 'What product is being unboxed?',
+        placeholder: 'e.g., Our premium gift set with custom packaging',
+        type: 'text',
+        maxLength: 150
+      },
+      {
+        key: 'unboxingMood',
+        label: 'Unboxing mood',
+        placeholder: 'Select mood',
+        type: 'select',
+        options: ['Excited Discovery', 'Luxury Reveal', 'Casual Everyday', 'Gift Unwrapping']
+      }
+    ],
+    estimatedTime: '30 seconds',
+    premium: false,
+    tags: ['unboxing', 'product', 'ecommerce', 'excitement', 'first-impression']
+  },
+  {
+    id: 'product_in_action',
+    name: 'Product in Action',
+    icon: '🙌',
+    description: 'Hands-on product usage demonstration (upload your product photo for transformation)',
+    category: 'image',
+    industries: null,
+    suggestedImageMode: 'enhance', // Transform uploaded product photos into action shots
+    presets: {
+      imageStyle: 'photorealistic',
+      aspectRatio: '4:5',
+      compositionGuide: 'Functional demonstration showing real-world product usage and benefits',
+      technicalNotes: 'Clear, demonstrative, real-world context with authentic usage'
+    },
+    requiredUserInputs: [
+      {
+        key: 'usageScenario',
+        label: 'Describe how the product is being used',
+        placeholder: 'e.g., Applying face serum during morning skincare routine',
+        type: 'text',
+        maxLength: 200
+      },
+      {
+        key: 'handPresence',
+        label: 'Hand/interaction style',
+        placeholder: 'Select style',
+        type: 'select',
+        options: ['Hands Visible', 'Hands-Free Usage', 'Close-Up Interaction']
+      }
+    ],
+    estimatedTime: '30 seconds',
+    premium: false,
+    tags: ['product', 'demonstration', 'hands-on', 'usage', 'tutorial']
   },
   // SOCIAL POST TEMPLATES (9 - optimized for quality AI output)
   {

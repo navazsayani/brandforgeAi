@@ -1782,12 +1782,12 @@ Your mission is to create a compelling, brand-aligned visual asset that:
         if (result.autoFilledFields.aspectRatio) {
           setSelectedAspectRatio(result.autoFilledFields.aspectRatio);
         }
-        if (result.autoFilledFields.customStyleNotes) {
-          setCustomStyleNotesInput(result.autoFilledFields.customStyleNotes);
-        }
-        if (result.autoFilledFields.negativePrompt) {
-          setImageGenNegativePrompt(result.autoFilledFields.negativePrompt);
-        }
+
+        // Always set template-specific fields (clear if template doesn't provide them)
+        // This prevents contamination: previous template's notes won't persist to new template
+        // User can still manually edit these fields after template is applied
+        setCustomStyleNotesInput(result.autoFilledFields.customStyleNotes || "");
+        setImageGenNegativePrompt(result.autoFilledFields.negativePrompt || "");
 
         // Set imageMode if template suggests it (AI Photoshoot feature)
         // This is a ONE-TIME action when template is applied - user can uncheck/change afterward
